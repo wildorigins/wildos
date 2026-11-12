@@ -4,11 +4,11 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.webp">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.webp">
-    <img alt="Wild OS. Linux privacy, Windows ease." src="docs/assets/banner-dark.webp" width="100%">
+    <img alt="Wild OS. Leave Windows. Keep your apps." src="docs/assets/banner-dark.webp" width="100%">
   </picture>
 </a>
 
-### A hardened Linux desktop with your Windows apps built in, plus our own Mail, Write, Tables and Remote.
+### A free, private Linux desktop laid out like Windows, with real Windows apps when you need them.
 
 **[Website](https://wildos.io)** · **[Take the tour](https://wildos.io/tour/)** · **[How it works](https://wildos.io/how-it-works/)** · **[FAQ](https://wildos.io/faq/)** · **[Download](https://wildos.io/faq/)**
 
@@ -22,28 +22,56 @@
 > [!IMPORTANT]
 > Wild OS is young and moving fast. [Download the latest release](https://wildos.io/faq/), and back up anything that matters before you install.
 
+## Two ways to use it
+
+Most people need the first. The second is there for the day you can't avoid a Windows program.
+
+| | Use it as it comes | Add Windows mode |
+| --- | --- | --- |
+| **Who it's for** | You browse, write, email and watch things | You need Microsoft 365, Adobe or a program that only exists for Windows |
+| **What you get** | Sixteen apps already installed, and more in the Store | Real Windows programs in normal windows, next to everything else |
+| **What it costs** | Nothing | Nothing from us. You need your own Windows 11 Pro licence |
+| **The catch** | Files from Word and Excel open in Write and Tables, and complex layouts can shift | It wants 16 GB of memory to feel comfortable, and games with kernel anti-cheat won't run |
+
 ## Why Wild OS
 
-<img src="docs/assets/features/windows-apps.webp" alt="Your Windows programs, in normal windows" width="100%">
+<img src="docs/assets/features/windows-apps.webp" alt="Real Windows apps, set up for you" width="100%">
 
-<img src="docs/assets/features/our-apps.webp" alt="Mail, Write, Tables and Remote, built in" width="100%">
+<img src="docs/assets/features/our-apps.webp" alt="Sixteen apps, already installed: Write, Tables, Mail, PDF, Capture, Notes, Remote, Store, Music, Videos, Voice, Backup, Archive, Calculator, Terminal and Settings" width="100%">
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/features/free.webp" alt="Over £170 a year of apps, for nothing" width="100%"></td>
-    <td width="50%"><img src="docs/assets/features/privacy.webp" alt="Private by default: no account, no telemetry, no adverts" width="100%"></td>
+    <td width="50%"><img src="docs/assets/features/free.webp" alt="No licence, no account, no catch" width="100%"></td>
+    <td width="50%"><img src="docs/assets/features/privacy.webp" alt="What Wild OS sends about you: nothing. No usage data, no advertising ID, no account" width="100%"></td>
   </tr>
   <tr>
-    <td><img src="docs/assets/features/security.webp" alt="Hardened from the ground up: signed updates, sandboxed apps, encrypted disk, hardened Debian" width="100%"></td>
-    <td><img src="docs/assets/features/light.webp" alt="Windows only runs when you need it: running, paused, saved to disk" width="100%"></td>
+    <td><img src="docs/assets/features/security.webp" alt="Locked down before you touch it: disk encrypted at install, firewall closed, USB protected, signed updates" width="100%"></td>
+    <td><img src="docs/assets/features/light.webp" alt="Windows only runs while you need it" width="100%"></td>
   </tr>
   <tr>
-    <td><img src="docs/assets/features/desktop.webp" alt="A desktop you already know: Start, taskbar, snap, Alt+Tab" width="100%"></td>
-    <td><img src="docs/assets/features/remote.webp" alt="Every server and PC in one app" width="100%"></td>
+    <td><img src="docs/assets/features/desktop.webp" alt="Nothing to relearn: Start, the taskbar, Snap and your shortcuts" width="100%"></td>
+    <td><img src="docs/assets/features/remote.webp" alt="Remote Desktop and SSH in one app" width="100%"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/features/recovery.webp" alt="A bad update is easy to undo" width="100%"></td>
+    <td><img src="docs/assets/features/backup.webp" alt="Lose the laptop, keep the files: daily encrypted backups" width="100%"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/features/gaming.webp" alt="Your Steam library comes with you" width="100%"></td>
+    <td><img src="docs/assets/features/themes.webp" alt="Six themes, one click" width="100%"></td>
   </tr>
 </table>
 
-<img src="docs/assets/features/themes.webp" alt="Six one-click themes with RGB lighting" width="100%">
+## How it compares
+
+Checked in November 2026. If something here is out of date, [open an issue](https://github.com/wildorigins/wildos/issues) and we'll fix it.
+
+| | Wild OS | Zorin OS 18 | CachyOS | Winux |
+| --- | --- | --- | --- | --- |
+| **Built on** | Debian 13 | Ubuntu 24.04 | Arch, rolling | Ubuntu 24.04 |
+| **Windows programs** | Real Windows 11 in a hidden virtual machine, set up for you | Wine | WinBoat, offered in the Welcome app | WinBoat, preinstalled |
+| **Price** | Free | Free, or Pro at $47.99 | Free | Free, or PowerTools at $19.99 |
+| **Made for** | People leaving Windows | People leaving Windows or macOS | Performance and gaming | People who want the Windows look |
 
 ## How it's built
 
@@ -55,7 +83,7 @@ Wild OS is a free, open source operating system in three layers, and each one ha
 | **The Wild desktop** | KDE's proven engine underneath, with every screen you touch redesigned: Start, the taskbar, Settings, Files, the Store, the installer, first start and the system dialogs. Not a theme, a rebuilt interface. |
 | **Windows mode** | A genuine copy of Windows 11 Pro running out of sight. Each Windows program opens as its own normal window on your desktop. |
 
-On top sit our own apps: Mail and Calendar, Write, Tables and Remote. The full story is at **[wildos.io](https://wildos.io)**.
+On top sit our own apps: Write, Tables, Mail and Calendar, PDF, Capture, Notes, Remote, Music, Videos, Voice, Backup and Archive. The full story is at **[wildos.io](https://wildos.io)**.
 
 ## See it
 
@@ -73,6 +101,10 @@ Real screens from the Wild OS designs every screen is built to.
   <tr>
     <td><img src="docs/assets/screens/remote-terminal.webp" alt="Remote with server tabs, suggestions and snippets"><br><sub><b>Remote.</b> Tabs, suggestions from your history and saved snippets.</sub></td>
     <td><img src="docs/assets/screens/start.webp" alt="The Start menu"><br><sub><b>Start.</b> Pinned apps, recent files and search.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screens/backup.webp" alt="Backup showing files backed up to a drive"><br><sub><b>Backup.</b> Daily, encrypted, to a drive you plug in.</sub></td>
+    <td><img src="docs/assets/screens/recovery.webp" alt="The recovery screen offering the earlier version"><br><sub><b>Recovery.</b> If an update goes wrong, start the version that worked.</sub></td>
   </tr>
 </table>
 
@@ -92,6 +124,10 @@ Real screens from the Wild OS designs every screen is built to.
 | ![The installer's encryption step](docs/assets/screens/installerencryption.webp) | ![A permission prompt](docs/assets/screens/dialogpermission.webp) |
 | ![Shutting down with unsaved work](docs/assets/screens/winmodeshutdown.webp) | ![Task Manager](docs/assets/screens/taskmanagerperf.webp) |
 | ![First start welcome](docs/assets/screens/welcome.webp) | ![The lock screen](docs/assets/screens/lock.webp) |
+| ![PDF](docs/assets/screens/pdf.webp) | ![Capture](docs/assets/screens/capture.webp) |
+| ![Notes](docs/assets/screens/notes.webp) | ![Music](docs/assets/screens/music.webp) |
+| ![Display settings](docs/assets/screens/display.webp) | ![Reviewing a problem report before sending it](docs/assets/screens/report.webp) |
+| ![The Windows mode check before setup](docs/assets/screens/winmodecheck.webp) | ![Windows mode setup](docs/assets/screens/winmodesetup.webp) |
 | ![Loading screens for the four apps](docs/assets/screens/splashes.webp) | ![Windows programs found at first start](docs/assets/screens/firstwinapps.webp) |
 
 Or click through every screen yourself in the **[interactive tour](https://wildos.io/tour/)**.
@@ -208,6 +244,9 @@ The ISO is written to `out/`. The first build downloads about 3 GB of packages; 
 - [x] Signed update channel with stable and beta
 - [x] Windows mode for PCs with Windows 11 Pro, with pause, save to disk, restart and shut down
 - [x] Our own apps: Mail and Calendar, Write, Tables and Remote
+- [x] More of our own apps: PDF, Capture, Notes, Music, Videos, Voice, Archive and Backup
+- [x] Restore points before updates, and a recovery screen that offers the last working version
+- [x] Problem reports you read before you send
 - [x] Themes and RGB lighting
 - [x] Taskbar previews, snap assist, Quick Look and the rest of the little things
 - [x] Windows started ahead of time after you sign in, so the first Windows program opens quickly
