@@ -1,7 +1,7 @@
 <div align="center">
 
 <a href="https://wildos.io">
-  <img alt="Wild OS. Free and open source, wildos.io. Mail, Write and Tables open on the desktop." src="docs/assets/banner-dark.webp" width="100%">
+  <img alt="Wild OS. Free and open source, wildos.io. Mail, Write and Tables open on the desktop." src="docs/assets/banner.webp" width="100%">
 </a>
 
 ### A free, private Linux desktop laid out like Windows, with real Windows apps when you need them.
