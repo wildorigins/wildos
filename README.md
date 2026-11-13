@@ -10,12 +10,16 @@
 
 ### A free, private Linux desktop laid out like Windows, with real Windows apps when you need them.
 
-**[Website](https://wildos.io)** · **[Take the tour](https://wildos.io/tour/)** · **[How it works](https://wildos.io/how-it-works/)** · **[FAQ](https://wildos.io/faq/)** · **[Download](https://wildos.io/download/)**
+**[Website](https://wildos.io)** · **[Watch the film](https://www.youtube.com/watch?v=rSHQM93AHvI)** · **[Take the tour](https://wildos.io/tour/)** · **[How it works](https://wildos.io/how-it-works/)** · **[FAQ](https://wildos.io/faq/)** · **[Download](https://wildos.io/download/)**
 
 [![Release](https://img.shields.io/github/v/release/wildorigins/wildos?include_prereleases&label=release&style=flat-square)](https://github.com/wildorigins/wildos/releases)
 [![Licence](https://img.shields.io/badge/licence-GPL--3.0--or--later-3a56c4?style=flat-square)](LICENSE)
 [![Debian 13](https://img.shields.io/badge/base-Debian%2013-a80030?style=flat-square)](https://www.debian.org)
 [![KDE Plasma](https://img.shields.io/badge/engine-KDE%20Plasma%206-5a72c8?style=flat-square)](https://kde.org/plasma-desktop/)
+
+<a href="https://www.youtube.com/watch?v=rSHQM93AHvI">
+  <img alt="Watch the Wild OS film on YouTube, 46 seconds" src="docs/assets/film.webp" width="100%">
+</a>
 
 </div>
 
