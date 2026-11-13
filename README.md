@@ -1,11 +1,7 @@
 <div align="center">
 
 <a href="https://wildos.io">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.webp">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.webp">
-    <img alt="Wild OS. Leave Windows. Keep your apps." src="docs/assets/banner-dark.webp" width="100%">
-  </picture>
+  <img alt="Wild OS. Leave Windows. Keep your apps." src="docs/assets/banner-dark.webp" width="100%">
 </a>
 
 ### A free, private Linux desktop laid out like Windows, with real Windows apps when you need them.
