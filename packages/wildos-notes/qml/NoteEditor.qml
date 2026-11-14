@@ -156,6 +156,11 @@ Item {
             const selected = selectionStart !== selectionEnd;
             const control = (event.modifiers & Qt.ControlModifier) !== 0;
             const shift = (event.modifiers & Qt.ShiftModifier) !== 0;
+            if (textMenu.isMenuKey(event)) {
+                textMenu.openAtCaret();
+                event.accepted = true;
+                return;
+            }
             if (readOnly) {
                 return;
             }
@@ -210,6 +215,13 @@ Item {
                 root.list("check");
                 event.accepted = true;
             }
+        }
+
+        // Undo goes through the editor, as Ctrl+Z does, so stepping back
+        // keeps each edit's line spacing with it.
+        UI.TextMenu {
+            id: textMenu
+            undoAction: () => editor.undo()
         }
 
         // Ctrl+click follows a link, as in other editors; a plain click

@@ -255,6 +255,12 @@ void Users::reload()
             continue;
         }
         const QString name = QString::fromUtf8(pw->pw_name);
+        // The guest session's account comes and goes with its switch on
+        // Advanced protection (wildos-base guest-account); making it an
+        // administrator or removing it here would undo what that promises.
+        if (!own && name == QLatin1String("guest") && pw->pw_passwd[0] == '\0') {
+            continue;
+        }
         const QString full = QString::fromUtf8(pw->pw_gecos).section(QLatin1Char(','), 0, 0).trimmed();
         const bool admin = isAdmin(pw->pw_name, pw->pw_gid);
         if (admin && pw->pw_uid >= 1000) {

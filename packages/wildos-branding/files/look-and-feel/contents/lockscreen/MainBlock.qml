@@ -35,6 +35,8 @@ FocusScope {
 
     // How far down the screen the virtual keyboard must leave visible.
     readonly property real visibleBoundary: column.y + pill.y + pill.height + 12
+    // Where the avatar starts, so what sits above can keep clear of it.
+    readonly property real contentTop: column.y
 
     signal passwordResult(string password)
     signal switchUserRequested()

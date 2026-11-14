@@ -1,3 +1,35 @@
+wildos-store (0.1.9) trixie; urgency=medium
+
+  * An app from a repository only some PCs use is listed only where that
+    repository is set up.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:30:00 +0000
+
+wildos-store (0.1.8) trixie; urgency=medium
+
+  * The Wild OS section lists only the apps that can be removed and put
+    back, so the Store and Settings are no longer in it.
+  * Reinstall all sits beside the section's title, in place of the
+    summary box.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 14:37:24 +0000
+
+wildos-store (0.1.7) trixie; urgency=medium
+
+  * New Wild OS section: every app we make, with Reinstall for any
+    that were removed and Reinstall all.
+  * The Store can't be removed, even from a terminal.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 14:12:36 +0000
+
+wildos-store (0.1.6) trixie; urgency=medium
+
+  * Apps installed from a .flatpakref file, such as the Install button on
+    flathub.org, are really installed. The Store said they were installed
+    without downloading anything.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 13:47:46 +0000
+
 wildos-store (0.1.5) trixie; urgency=medium
 
   * New Store and Settings icons: a white shopping bag with the Wild OS

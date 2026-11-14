@@ -23,13 +23,14 @@ Depends:
  xdg-desktop-portal,
  xdg-desktop-portal-kde,
  kio6,
+ kio-extras,
  qml6-module-qtcore,
  qml6-module-qtquick,
  qml6-module-qtquick-controls,
  qml6-module-qtquick-layouts,
  qml6-module-qtquick-templates,
  qml6-module-qtquick-window,
- wildos-ui,
+ wildos-ui (>= 0.1.11),
 Description: Wild OS Open and Save dialog and file clash dialog
  One Open and Save dialog for every app, laid out like the one on Windows:
  places on the left, a path bar, the file list with dates, types and sizes,

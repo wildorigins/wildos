@@ -16,3 +16,24 @@ PowerProfile=power-saver
 # battery changes either.
 [AC][SuspendAndShutdown]
 AutoSuspendAction=0
+
+# Battery saver ends when the PC is plugged in, as on Windows. powerdevil
+# changes the power mode only for a profile that names one, so without this
+# the PC stayed in power-saver after charging, at a fraction of its speed,
+# and kept it across restarts. Settings > Home still changes the mode by hand.
+[AC][Performance]
+PowerProfile=balanced
+
+# The keyboard light keeps whatever level it was left at: every start-up
+# turns it on (kbd-backlight-default) at the step used at the last shut
+# down. A level per profile would undo that at every sign-in and every time
+# the charger went in or out. While the screen dims for being idle the
+# light goes off, and it comes back with the next key press or touch.
+[AC][Keyboard]
+UseProfileSpecificKeyboardBrightness=false
+
+[Battery][Keyboard]
+UseProfileSpecificKeyboardBrightness=false
+
+[LowBattery][Keyboard]
+UseProfileSpecificKeyboardBrightness=false

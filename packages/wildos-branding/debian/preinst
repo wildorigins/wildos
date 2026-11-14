@@ -12,6 +12,9 @@ if [ "$1" = "install" ] || [ "$1" = "upgrade" ]; then
     # Ark ships its own defaults file; ours replaces it.
     dpkg-divert --package wildos-branding --add --rename \
         --divert /etc/xdg/arkrc.ark /etc/xdg/arkrc >/dev/null
+    # Plasma's app matching rules, with our additions.
+    dpkg-divert --package wildos-branding --add --rename \
+        --divert /etc/xdg/taskmanagerrulesrc.plasma /etc/xdg/taskmanagerrulesrc >/dev/null
 fi
 
 #DEBHELPER#

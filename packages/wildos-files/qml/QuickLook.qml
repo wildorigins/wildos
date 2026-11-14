@@ -471,6 +471,16 @@ UI.AppWindow {
                     color: UI.Style.ink
                     selectionColor: UI.Style.textSelection
                     selectedTextColor: UI.Style.ink
+                    Keys.onPressed: event => {
+                        if (codeMenu.isMenuKey(event)) {
+                            codeMenu.openAtCaret();
+                            event.accepted = true;
+                        }
+                    }
+
+                    UI.TextMenu {
+                        id: codeMenu
+                    }
                 }
             }
             UI.Label {

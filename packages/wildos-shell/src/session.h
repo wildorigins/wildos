@@ -26,6 +26,8 @@ class Session : public QObject
     // The names (QScreen::name, Screen.name in QML) of the screens KWin has
     // switched off.
     Q_PROPERTY(QStringList screensOff READ screensOff NOTIFY screensOffChanged)
+    // The sign-in splash is still covering the screen.
+    Q_PROPERTY(bool splashShowing READ splashShowing NOTIFY splashShowingChanged)
 
 public:
     explicit Session(QObject *parent = nullptr);
@@ -33,11 +35,17 @@ public:
     bool locked() const { return m_locked; }
     bool powerSaver() const { return m_powerSaver; }
     QStringList screensOff() const { return m_screensOff; }
+    bool splashShowing() const { return m_splashShowing; }
+
+    // The taskbar has loaded and drawn what it draws ahead of time, so the
+    // sign-in splash can go (wildos-wait-desktop, before KSplash's "ready").
+    Q_INVOKABLE void desktopReady();
 
 Q_SIGNALS:
     void lockedChanged();
     void powerSaverChanged();
     void screensOffChanged();
+    void splashShowingChanged();
 
 private Q_SLOTS:
     void setLocked(bool locked);
@@ -53,4 +61,5 @@ private:
     bool m_locked = false;
     bool m_powerSaver = false;
     QStringList m_screensOff;
+    bool m_splashShowing = false;
 };

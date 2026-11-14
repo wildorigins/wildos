@@ -14,6 +14,8 @@ UI.AppWindow {
 
     // From main.cpp: why the file it was started with didn't open.
     property string openError
+    // From main.cpp: the tool to start with, "sign" for --sign.
+    property string startTool
     property string tool: "select"
     property bool showThumbnails: true
     // Set while a save opens the saved file again, so the view stays put.
@@ -507,11 +509,33 @@ UI.AppWindow {
                             follow();
                             window.focusPages();
                         }
+                        // The text menu holds focus while it is open, and coming
+                        // back from it keeps the selection it worked on.
+                        property bool inMenu: false
                         onActiveFocusChanged: {
-                            if (activeFocus) {
-                                selectAll();
+                            if (pageMenu.opened) {
+                                inMenu = true;
+                            } else if (activeFocus) {
+                                if (!inMenu) {
+                                    selectAll();
+                                }
+                                inMenu = false;
                             } else {
                                 follow();
+                            }
+                        }
+                        Keys.onPressed: event => {
+                            if (pageMenu.isMenuKey(event)) {
+                                pageMenu.openAtCaret();
+                                event.accepted = true;
+                            }
+                        }
+
+                        UI.TextMenu {
+                            id: pageMenu
+                            onFocusLeft: {
+                                pageInput.inMenu = false;
+                                pageInput.follow();
                             }
                         }
                     }
@@ -946,6 +970,8 @@ UI.AppWindow {
     Component.onCompleted: {
         if (PdfDocument.locked) {
             passwordDialog.ask();
+        } else if (startTool.length > 0) {
+            setTool(startTool);
         } else {
             focusPages();
         }

@@ -107,6 +107,14 @@ rm -f "$root/etc/sddm.conf"
 install -d "$root/var/lib/wildos"
 : > "$root/var/lib/wildos/first-boot-setup"
 
+# Calamares clears the system partition's crypttab options when /boot is not
+# encrypted, which is Wild OS's layout; put back TRIM and the faster
+# encryption settings (wildos-base's crypttab-speed) before the start-up image
+# copies crypttab.
+if [ -x "$root/usr/libexec/wildos/crypttab-speed" ]; then
+    in_target /usr/libexec/wildos/crypttab-speed >/dev/null || true
+fi
+
 # The initramfs copied from the image was generated in the build container and
 # knows nothing about this machine's disks or encryption. Regenerate it now
 # that crypttab exists and the live packages are gone.

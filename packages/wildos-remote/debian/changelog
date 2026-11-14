@@ -1,3 +1,10 @@
+wildos-remote (0.1.7) trixie; urgency=medium
+
+  * Connection details and public keys can be copied from a right-
+    click menu.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-remote (0.1.6) trixie; urgency=medium
 
   * All my monitors lays the remote desktop out with each screen beside

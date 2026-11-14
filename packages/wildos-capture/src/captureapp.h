@@ -14,6 +14,7 @@
 #include <functional>
 
 #include "recorder.h"
+#include "scanner.h"
 #include "sharer.h"
 
 class FrozenImages;
@@ -43,6 +44,7 @@ class CaptureApp : public QObject
     Q_PROPERTY(bool canRecord READ canRecord CONSTANT)
     Q_PROPERTY(Recorder *recorder READ recorder CONSTANT)
     Q_PROPERTY(Sharer *sharer READ sharer CONSTANT)
+    Q_PROPERTY(Scanner *scanner READ scanner CONSTANT)
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
     // The toolbar goes on the main screen only.
     Q_PROPERTY(QString primaryScreen READ primaryScreen NOTIFY selectingChanged)
@@ -75,6 +77,7 @@ public:
     bool canRecord() const;
     Recorder *recorder() const { return m_recorder; }
     Sharer *sharer() const { return m_sharer; }
+    Scanner *scanner() const { return m_scanner; }
     QString message() const { return m_message; }
     QString primaryScreen() const;
     QString pickedScreen() const { return m_pickedScreen; }
@@ -87,8 +90,8 @@ public:
     bool includePointer() const { return m_includePointer; }
     void setIncludePointer(bool on);
 
-    // From the command line, or a second launch: --record, --mode <name>,
-    // --edit <file>.
+    // From the command line, or a second launch: --record, --scan,
+    // --mode <name>, --edit <file>.
     void handle(const QStringList &arguments);
 
     // The overlay's choices, in each screen's own logical coordinates.
@@ -110,6 +113,12 @@ public:
     Q_INVOKABLE void openFile(const QUrl &file);
     Q_INVOKABLE void showInFolder(const QUrl &file);
     Q_INVOKABLE void editorClosed(const QString &key);
+    // The Scan tab: opened from the toolbar's Scan or --scan, and its
+    // Screenshot and Record going back to the toolbar.
+    Q_INVOKABLE void openScan();
+    Q_INVOKABLE void scanClosed();
+    Q_INVOKABLE void startCapture(bool record);
+    Q_INVOKABLE void markUpScanPage(const QString &path);
     Q_INVOKABLE void windowClosed();
 
 Q_SIGNALS:
@@ -125,6 +134,9 @@ Q_SIGNALS:
     // `saved` whether the picture is there already.
     void editRequested(const QUrl &source, const QString &key, const QString &path, bool saved);
     void shareRequested(const QUrl &file);
+    void scanRequested();
+    // A scanned page in the editor; saving it there sends it back.
+    void scanPageEditRequested(const QUrl &source, const QString &path);
 
 private:
     void freeze();
@@ -142,6 +154,10 @@ private:
     Grabber *m_grabber;
     Recorder *m_recorder;
     Sharer *m_sharer;
+    Scanner *m_scanner;
+    bool m_scanOpen = false;
+    // The toolbar came from the Scan window's Screenshot or Record.
+    bool m_fromScan = false;
     bool m_selecting = false;
     QString m_mode = QStringLiteral("rectangle");
     bool m_recordMode = false;

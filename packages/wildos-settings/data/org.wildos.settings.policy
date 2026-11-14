@@ -6,9 +6,11 @@
      /usr/libexec/wildos, which takes only its own fixed requests:
      settings-update-policy (Updates), settings-users and
      settings-fingerprint (Accounts),
-     settings-locale (Time and language), settings-protection (Privacy
-     and security), settings-network (the VPN kill switch) and
-     settings-brave-spelling (Typing). settings-cpu-threads and
+     settings-locale (Time and language), settings-protection,
+     settings-firewall and settings-firewall-off (Privacy and security),
+     settings-advanced (Advanced protection), settings-network (the VPN
+     kill switch), settings-brave-spelling (Typing)
+     and settings-free-space (Storage). settings-cpu-threads and
      settings-32bit change start-up options. -->
 <policyconfig>
   <vendor>Wild OS</vendor>
@@ -36,6 +38,30 @@
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-protection</annotate>
+  </action>
+
+  <action id="org.wildos.settings.firewall">
+    <description>Change the firewall</description>
+    <message>Change what other computers can reach on this PC?</message>
+    <icon_name>security-high</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-firewall</annotate>
+  </action>
+
+  <action id="org.wildos.settings.firewall-off">
+    <description>Turn the firewall off</description>
+    <message>Turn the firewall off? Other computers will be able to reach any app on this PC that waits for connections.</message>
+    <icon_name>security-low</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-firewall-off</annotate>
   </action>
 
   <action id="org.wildos.settings.cpu-threads">
@@ -86,6 +112,18 @@
     <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-fingerprint</annotate>
   </action>
 
+  <action id="org.wildos.settings.advanced">
+    <description>Change Advanced protection</description>
+    <message>Change Wild OS's advanced protection?</message>
+    <icon_name>security-high</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-advanced</annotate>
+  </action>
+
   <action id="org.wildos.settings.network">
     <description>Turn the VPN kill switch on or off</description>
     <message>Change whether Wild OS blocks the internet when a VPN drops?</message>
@@ -96,6 +134,68 @@
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-network</annotate>
+  </action>
+
+  <!-- No password: Free up space measuring what it could give back. It
+       only reads, and answers with sizes and the paths it measured.
+       pkexec picks this action only for "measure"; nothing else
+       settings-free-space does runs under it. -->
+  <action id="org.wildos.settings.free-space.measure">
+    <description>Measure what Free up space could remove</description>
+    <message>Measure what Wild OS can clear to free up space?</message>
+    <icon_name>drive-harddisk</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-free-space</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">measure</annotate>
+  </action>
+
+  <!-- Clearing what was measured: old restore points, update files, old
+       kernels, removed packages' settings and Windows mode's TRIM. -->
+  <action id="org.wildos.settings.free-space.clean">
+    <description>Free up space</description>
+    <message>Free up space by removing what Wild OS no longer needs?</message>
+    <icon_name>drive-harddisk</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-free-space</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">clean</annotate>
+  </action>
+
+  <!-- Choosing what Tidy up automatically may clear takes the password. -->
+  <action id="org.wildos.settings.free-space.set-auto">
+    <description>Change what Free up space clears by itself</description>
+    <message>Let Wild OS free up space by itself when the disk is nearly full?</message>
+    <icon_name>drive-harddisk</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-free-space</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">set-auto</annotate>
+  </action>
+
+  <!-- No password: Tidy up automatically itself. It takes no request; it
+       does nothing unless less than 10% of the disk is free, and clears
+       only what set-auto stored behind the password. -->
+  <action id="org.wildos.settings.free-space.auto">
+    <description>Free up space when the disk is nearly full</description>
+    <message>Free up space now that the disk is nearly full?</message>
+    <icon_name>drive-harddisk</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-free-space</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">auto-system</annotate>
   </action>
 
   <!-- No password: it only sets which languages Brave checks spelling in,

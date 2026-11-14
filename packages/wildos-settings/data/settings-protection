@@ -12,7 +12,9 @@
 #   maximum    Strict, plus the firewall blocks network discovery (finding
 #              printers and screens), Bluetooth is off and the camera's
 #              driver is blocked.
-#   boot       Loads the firewall for the saved level (the service's job).
+#              Strict and Maximum also switch on some of Advanced
+#              protection's options (settings-advanced level).
+#   boot      Loads the firewall for the saved level (the service's job).
 #
 # The screen lock times that go with each level belong to the person, not
 # the system, so Settings sets those itself.
@@ -23,48 +25,19 @@ LEVEL_FILE=/etc/wildos/protection-level
 USBGUARD_CONF=/etc/usbguard/usbguard-daemon.conf
 USBGUARD_RULES=/etc/usbguard/rules.d/50-wildos-protection.conf
 CAMERA_BLOCK=/etc/modprobe.d/60-wildos-protection-camera.conf
-TABLE=wildos_protection
-# Written once nft has taken the rules, so security-status (which runs
-# without root and cannot list them) can say the firewall is up.
-FIREWALL_MARK=/run/wildos/firewall
+FIREWALL=/usr/libexec/wildos/settings-firewall
 
 saved_level() {
     level=$(cat "$LEVEL_FILE" 2>/dev/null || true)
     case "$level" in strict | maximum) echo "$level" ;; *) echo standard ;; esac
 }
 
-# Incoming connections are refused unless they answer something this
-# computer asked for. The Windows mode bridge (virbr-wildos) stays open:
-# Windows gets its address and DNS from this computer through it, and
-# Windows mode's own table (wildos_win) already limits what may come in
-# there. A drop here would be final whatever that table allows. mDNS stays
-# open at Standard and Strict, which is how printers and screens on the
-# network are found. Nothing outgoing is limited at any level.
+# The firewall's rules come from settings-firewall, which builds them from
+# the level saved here and the choices on Settings > Privacy and security >
+# Firewall. Maximum keeps network discovery off whatever is chosen there.
 firewall() {
-    rm -f "$FIREWALL_MARK"
-    nft delete table inet "$TABLE" 2>/dev/null || true
-    command -v nft >/dev/null || return 0
-    discovery='udp dport 5353 accept'
-    [ "$1" = maximum ] && discovery=''
-    nft -f - <<EOF
-table inet $TABLE {
-    chain input {
-        type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid drop
-        iif lo accept
-        iifname { "virbr-wildos", "wildos-win*" } accept
-        meta l4proto ipv6-icmp accept
-        icmp type { echo-reply, destination-unreachable, time-exceeded, parameter-problem } accept
-        udp sport 67 udp dport 68 accept
-        udp sport 547 udp dport 546 accept
-        $discovery
-    }
-}
-EOF
-    mkdir -p "$(dirname "$FIREWALL_MARK")"
-    echo "$1" > "$FIREWALL_MARK"
-    chmod 644 "$FIREWALL_MARK"
+    [ -x "$FIREWALL" ] || return 0
+    "$FIREWALL" apply || true
 }
 
 # Every device attached when Strict is chosen is allowed first, so nothing
@@ -116,23 +89,31 @@ case "${1:-}" in
     standard | strict | maximum)
         previous=$(saved_level)
         mkdir -p "$(dirname "$LEVEL_FILE")"
-        firewall "$1"
-        usb "$1"
-        bluetooth "$1" "$previous"
-        camera "$1"
-        # Strict and Maximum keep every CPU flaw protection on and the kernel's
-        # 32-bit layer out, so hyper-threading and 32-bit apps go off from the
-        # next start-up. Standard leaves the person's choices.
-        if [ "$1" != standard ] && [ -x /usr/libexec/wildos/settings-cpu-threads ]; then
-            /usr/libexec/wildos/settings-cpu-threads off || true
-        fi
-        if [ "$1" != standard ] && [ -x /usr/libexec/wildos/settings-32bit ]; then
-            /usr/libexec/wildos/settings-32bit off || true
-        fi
         if [ "$1" = standard ]; then
             rm -f "$LEVEL_FILE"
         else
             echo "$1" > "$LEVEL_FILE"
+        fi
+        firewall
+        # For Settings > System > History.
+        if [ "$previous" != "$1" ] && command -v logger >/dev/null 2>&1; then
+            logger -t settings-protection "HISTORY {\"what\": \"level\", \"level\": \"$1\", \"from\": \"$previous\", \"by\": ${PKEXEC_UID:-0}}" || true
+        fi
+        usb "$1"
+        bluetooth "$1" "$previous"
+        camera "$1"
+        # Advanced protection: the level switches some of its options on
+        # (settings-advanced has which), never one the person set by hand.
+        if [ -x /usr/libexec/wildos/settings-advanced ]; then
+            /usr/libexec/wildos/settings-advanced level "$1" || true
+        fi
+        # Strict and Maximum keep the kernel's 32-bit layer out, so 32-bit
+        # apps go off from the next start-up. Every processor flaw
+        # protection and the thread choice need nothing here: 40_wildos.cfg
+        # reads the level, so going back to Standard brings back the
+        # person's own choices.
+        if [ "$1" != standard ] && [ -x /usr/libexec/wildos/settings-32bit ]; then
+            /usr/libexec/wildos/settings-32bit off || true
         fi
         # Standard relaxes a few of Kicksecure's start-up options for speed
         # (/etc/default/grub.d/40_wildos.cfg reads the saved level), so
@@ -147,7 +128,7 @@ case "${1:-}" in
         esac
         ;;
     boot)
-        firewall "$(saved_level)"
+        firewall
         ;;
     *)
         echo "usage: settings-protection standard|strict|maximum|boot" >&2

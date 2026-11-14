@@ -224,6 +224,7 @@ UI.Dialog {
             Accessible.name: "Password"
             placeholderText: "Password"
             revealable: true
+            UI.NoPaste {}
             error: dialog.tried && dialog.passwordProblem.length > 0
         }
         UI.TextField {
@@ -234,6 +235,7 @@ UI.Dialog {
             Accessible.name: "Type the password again"
             placeholderText: "Type the password again"
             revealable: true
+            UI.NoPaste {}
             error: dialog.tried && dialog.passwordProblem.length > 0
         }
         UI.Label {

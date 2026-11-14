@@ -1,3 +1,285 @@
+wildos-settings (0.1.55) trixie; urgency=medium
+
+  * The fingerprint keeps working after a restart again: asking for the
+    password after a restart or every so many hours is off unless you
+    switch it on in Advanced protection (Strict and Maximum switch it on).
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 16:00:00 +0000
+
+wildos-settings (0.1.54) trixie; urgency=medium
+
+  * Privacy and security > Advanced protection: extra protection for
+    people who want it, in one page. Ignore new USB devices while
+    locked, the fingerprint needing your password after a restart and
+    every so many hours, restart when left locked, Wi-Fi and Bluetooth
+    switching themselves off, encrypted DNS with a choice of Quad9,
+    Mullvad or Cloudflare, block
+    everything unless the VPN is on, the clipboard forgetting passwords,
+    presenting mode and password-locked USB sticks, with Reset to
+    defaults.
+  * Strict protection also asks for the password after 24 hours of
+    fingerprint sign-in and restarts a PC left locked for 18 hours.
+    Maximum asks for it after 12 hours, and also switches Wi-Fi and
+    Bluetooth off when unused and encrypts DNS on every network.
+    Anything you set on Advanced protection stays as you set it.
+  * Block new USB devices and the VPN kill switch are the same switches
+    as their rows on Advanced protection.
+  * Encrypted DNS can be switched off on Advanced protection, which puts
+    each network back on its own DNS, unencrypted. Switching it back on
+    gives every network the encryption it had before.
+  * Restart when left locked can close open apps anyway after the time is
+    up, for when an app with unsaved work would otherwise keep the PC from
+    restarting. Unsaved work in those apps is lost. Waiting for apps to
+    close stays the default.
+  * History lists each time an app used the camera or microphone, with when
+    it started and stopped. This week on the taskbar's camera and
+    microphone light opens History showing just those.
+  * Accounts leaves out the Guest account while Guest session is on, so
+    it can't be made an administrator or deleted by hand.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:56:10 +0000
+
+wildos-settings (0.1.53) trixie; urgency=medium
+
+  * Add a keyboard finds layouts by country, language and key order too:
+    Belgium, Dutch or AZERTY find Belgian, not only its own name.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 12:20:00 +0000
+
+wildos-settings (0.1.52) trixie; urgency=medium
+
+  * Password boxes for other accounts and Wi-Fi take only what is typed:
+    nothing can be pasted into them.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 10:30:00 +0000
+
+wildos-settings (0.1.51) trixie; urgency=medium
+
+  * Password boxes in Sign-in options and fingerprint setup take only what
+    is typed: nothing can be pasted into them.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:45:00 +0000
+
+wildos-settings (0.1.50) trixie; urgency=medium
+
+  * The password box in fingerprint setup has the right-click menu
+    with Paste and Select all, and the technical detail of a History
+    event can be selected and copied from one. Pasting a colour into
+    the underglow box from its menu is no longer undone.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
+wildos-settings (0.1.49) trixie; urgency=medium
+
+  * Windows mode: Use a licence on my Microsoft account, with the steps
+    for Microsoft's activation troubleshooter.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:39:52 +0000
+
+wildos-settings (0.1.48) trixie; urgency=medium
+
+  * Updates waits for the clock when it is hours behind at start-up (seen
+    on a PC whose hardware clock kept local time for Windows): every update
+    then looks signed in the future, sqv's "Not live until". The check
+    waits for sdwdate to set the clock through Tor, up to 15 minutes, says
+    so while it waits, and checks again as soon as it has. If the clock is
+    still wrong, the page says how far behind it is at least and offers
+    Date and time.
+  * Date and time shows that the clock is set automatically through Tor
+    while sdwdate runs, instead of "No time service is installed".
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:33:55 +0000
+
+wildos-settings (0.1.47) trixie; urgency=medium
+
+  * Steam and 32-bit apps: games run through Proton use the kernel's
+    Windows-style locking (ntsync) for smoother frame times.
+  * Recovery: Open Backup opens Backup again.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 22:47:33 +0000
+
+wildos-settings (0.1.46) trixie; urgency=medium
+
+  * Storage > Free up space: clears the Recycle Bins on internal drives,
+    old restore points (the newest three stay), update files already
+    installed, unused Flatpak runtimes, old kernels and app caches, and on
+    request leftovers of removed apps, unused space inside Windows mode
+    (Windows TRIMs it while it is on) and large old downloads chosen in
+    Review. Each item shows its real size; files open apps are using stay.
+  * Tidy up automatically clears the ticked items when less than 10% of the
+    disk is free, says what it removed, and History shows it.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 19:54:39 +0000
+
+wildos-settings (0.1.45) trixie; urgency=medium
+
+  * Settings > Updates and the Updates icon on the taskbar share one check
+    and always show the same state, including a failed check's reason.
+  * A signature dated after the clock (sdwdate set it back after start-up)
+    is retried quietly even when PackageKit calls it a signing error.
+  * With no connection at all, after the first minutes since start-up, the
+    check says "not connected" at once instead of waiting minutes on Tor.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 19:23:03 +0000
+
+wildos-settings (0.1.44) trixie; urgency=medium
+
+  * Turning the firewall off asks for the password every time
+    (settings-firewall-off, its own polkit action with auth_admin), and the
+    security tiles update as soon as the switch changes.
+  * What the firewall blocked offers Allow for every device on this
+    network, as the design shows, not only where an app is listening.
+  * Network discovery lets in mDNS (5353) only, as before the Firewall
+    page; SSDP and WS-Discovery are no longer opened.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 19:01:35 +0000
+
+wildos-settings (0.1.43) trixie; urgency=medium
+
+  * Personalisation > Taskbar has an End task switch, off by default, that
+    adds End task to an app's right-click menu on the taskbar. Searching
+    for "end task", "kill" or "force close" finds it.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:44:54 +0000
+
+wildos-settings (0.1.42) trixie; urgency=medium
+
+  * Settings > Accessibility > Pointer has a fifth choice, Your own: use a
+    Windows pointer (.cur, or an animated .ani), a Windows pointer pack (a
+    .zip or its install.inf, with every role it covers: help, busy, text,
+    resize, link and the rest), or a PNG or SVG picture with the spot it
+    points from. Roles the file doesn't cover stay white, the size slider
+    works with it, and X11 apps use it too. A file that isn't a pointer is
+    refused without changing anything.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:17:04 +0000
+
+wildos-settings (0.1.41) trixie; urgency=medium
+
+  * Updates no longer says it could not check right after start-up. A
+    check that fails while the connection, Tor or the clock is still
+    settling (the clock can be set back a minute or two at start-up, which
+    makes a fresh release look signed in the future) tries again by itself
+    for about three minutes. When it still fails, the page says why: no
+    internet, Wild OS's update server, Debian's updates through Tor,
+    another install still running or a signature problem, with Try again
+    and a link to copy the technical details.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:00:15 +0000
+
+wildos-settings (0.1.40) trixie; urgency=medium
+
+  * Printers and scanners looks for printers and scanners as soon as it
+    opens and offers each one it finds with a single Add. Printers that
+    need no driver, and network scanners, work straight away. Each printer
+    in the list says whether it is the default, whether it also scans and,
+    where the printer reports it, how much ink or toner is left. New help
+    for adding a printer by its address, a printer with only a Windows
+    driver, printing a test page and scanning with Capture.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 16:50:00 +0000
+
+wildos-settings (0.1.39) trixie; urgency=medium
+
+  * History no longer says the PC didn't shut down properly after a normal
+    shutdown or restart whose last log lines were cut short. Start-ups
+    already listed that way are checked again.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:00:00 +0000
+
+wildos-settings (0.1.38) trixie; urgency=medium
+
+  * History also says when the PC started and how long it took, when it
+    shut down, restarted or slept and why, when it didn't shut down
+    properly, and when the lid was closed but it stayed on, with the
+    reason. It shows sign-ins and unlocks with a fingerprint, fingerprints
+    that weren't recognised, disk errors, Windows mode failing to start,
+    going back to a restore point, Reset, and changes to the firewall and
+    the protection level.
+  * Clear the list in What the firewall blocked clears History's copies
+    too.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 16:07:27 +0000
+
+wildos-settings (0.1.37) trixie; urgency=medium
+
+  * Firewall: a network you join counts as Home only once you choose Home
+    for it. Until then only network discovery gets in, so file sharing,
+    Remote Desktop, SSH and ports you allowed at home never open on a cafe
+    or hotel Wi-Fi.
+  * Firewall: devices joining this PC's hotspot get an address again.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 16:45:00 +0000
+
+wildos-settings (0.1.36) trixie; urgency=medium
+
+  * Privacy and security has Extra processor protection, off by default:
+    every processor flaw protection forced on and one thread per core.
+    Strict and Maximum include it.
+  * Use every processor thread is on by default where the processor is
+    safe for it.
+  * Steam and 32-bit apps also stops newer Intel processors slowing down
+    games that use split locks.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 16:30:00 +0000
+
+wildos-settings (0.1.35) trixie; urgency=medium
+
+  * System > Devices: every device in this PC by its plain name, with what
+    it really is, the driver running it and where it is connected. Devices
+    with no driver, on a stand-in driver, short of firmware or not set up
+    come first, each with the button that fixes it. The internal drive
+    shows its own health check. Check again looks once more.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 15:04:10 +0000
+
+wildos-settings (0.1.34) trixie; urgency=medium
+
+  * System > History: what happened on this PC in plain words, newest
+    first: apps that closed unexpectedly, sign-ins, wrong passwords, USB
+    drives, updates, restore points, apps installed and removed, Backup and
+    what the firewall blocked. Details says what happened, what Wild OS did
+    and what you can do, and can send it with Report a problem. Kept on
+    this PC for 30 days; nothing is sent anywhere.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 14:12:47 +0000
+
+wildos-settings (0.1.33) trixie; urgency=medium
+
+  * Installed apps uninstalls Wild OS's own apps and Windows apps
+    installed through Windows mode.
+  * Settings can't be removed, even from a terminal.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 13:36:51 +0000
+
+wildos-settings (0.1.32) trixie; urgency=medium
+
+  * Privacy and security > Firewall: switch the firewall off and on, mark a
+    network Home or Public, turn network discovery, file sharing, Remote
+    Desktop and SSH on or off, allow an app or port for this network, one
+    device or anyone, and see what the firewall blocked.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 09:49:55 +0000
+
+wildos-settings (0.1.31) trixie; urgency=medium
+
+  * Uninstall says Recycle Bin, as Files and the desktop do.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 12 Nov 2026 22:02:34 +0000
+
+wildos-settings (0.1.30) trixie; urgency=medium
+
+  * Installed apps can uninstall apps that installed themselves in the home
+    folder, such as AppImages and apps with their own install script.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 12 Nov 2026 21:30:51 +0000
+
+wildos-settings (0.1.29) trixie; urgency=medium
+
+  * Settings no longer crashes as it closes.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 12 Nov 2026 21:07:25 +0000
+
 wildos-settings (0.1.28) trixie; urgency=medium
 
   * Steam and 32-bit apps also turns on Steam's controller support: game

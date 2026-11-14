@@ -137,6 +137,14 @@ FocusScope {
         if (calc) {
             items.push({ header: false, kind: "calc", src: -1, title: calc.value, subtitle: calc.expression, detail: calc.expression + " =", icon: "accessories-calculator", plain: calc.plain });
         }
+        // Wild OS's own Settings pages, which KRunner doesn't know: first
+        // when the name was typed, after the rest when only a keyword was.
+        const pages = (filter === "all" || filter === "settings" ? Helpers.wildosPageMatches(launcher.query) : [])
+            .map(p => ({ header: false, kind: "settings", src: -1, page: p.page, title: p.title, subtitle: p.category, detail: p.category,
+                         icon: "preferences-system", plain: "", named: p.named }));
+        for (const p of pages.filter(p => p.named)) {
+            items.push(p);
+        }
         for (let i = 0; i < matches.count; i++) {
             const entry = matches.objectAt(i);
             if (!entry) {
@@ -153,6 +161,9 @@ FocusScope {
             // back to the generic app icon.
             const icon = entry.model.decoration || (kind === "folders" ? "folder" : "unknown");
             items.push({ header: false, kind: kind, src: i, title: text.title, subtitle: text.subtitle, detail: text.detail, icon: icon, plain: "" });
+        }
+        for (const p of pages.filter(p => !p.named)) {
+            items.push(p);
         }
 
         const out = [];
@@ -216,7 +227,7 @@ FocusScope {
             return;
         }
         if (entry.kind === "settings") {
-            const page = Helpers.settingsPage(modelOf(entry).model.url);
+            const page = entry.page ? { page: entry.page } : Helpers.settingsPage(modelOf(entry).model.url);
             if (!page || !launcher.openSettingsPage(page.page)) {
                 launcher.settingsMissing();
             }

@@ -1,0 +1,6 @@
+Name: Note password sign-ins for fingerprint sign-in (Wild OS)
+Default: yes
+Priority: 0
+Auth-Type: Additional
+Auth:
+	optional	pam_exec.so quiet seteuid expose_authtok /usr/libexec/wildos/fingerprint-stamp

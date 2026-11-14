@@ -1,0 +1,5 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/wildos/crossfade/">
+    <file alias="crossfade.frag">shaders/crossfade.frag</file>
+</qresource>
+</RCC>

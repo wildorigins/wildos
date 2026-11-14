@@ -97,6 +97,14 @@ entry "Wild OS" wildos "gnulinux-simple-$device_id" "$args"
 entry "Wild OS (safe graphics)" wildos-safe-graphics "wildos-safe-graphics-$device_id" "$args nomodeset \${wildos_safe}"
 
 previous=$(echo "$kernels" | sed -n 2p)
+# After a new kernel failed to reach the desktop, the PC starts this entry
+# (wildos-recovery's 15_wildos_recovery). Point it at the last kernel that
+# did, when that is still installed, rather than simply the second newest,
+# which after a further update could be the one that failed.
+ok=$(grub-editenv /boot/grub/grubenv list 2>/dev/null | sed -n 's/^wildos_kernel_ok=//p')
+if [ -n "$ok" ] && [ "/boot/vmlinuz-$ok" != "$(echo "$kernels" | sed -n 1p)" ]     && grub_file_is_not_garbage "/boot/vmlinuz-$ok"; then
+    previous=/boot/vmlinuz-$ok
+fi
 if [ -n "$previous" ]; then
     use_kernel "$previous"
     # The way back when an update leaves Wild OS unable to start. The id

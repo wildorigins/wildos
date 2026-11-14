@@ -272,6 +272,16 @@ UI.AppWindow {
                         window.focusList();
                     }
                     Keys.onDownPressed: window.focusList()
+                    Keys.onPressed: event => {
+                        if (searchMenu.isMenuKey(event)) {
+                            searchMenu.openAtCaret();
+                            event.accepted = true;
+                        }
+                    }
+
+                    UI.TextMenu {
+                        id: searchMenu
+                    }
 
                     UI.Label {
                         anchors.verticalCenter: parent.verticalCenter

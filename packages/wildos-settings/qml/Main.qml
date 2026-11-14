@@ -50,6 +50,18 @@ UI.AppWindow {
         if (id === "update-install") {
             Navigator.request = "install";
         }
+        // The camera and microphone lights' This week: History, showing
+        // only their uses in the last seven days.
+        if (id === "history-camera") {
+            Navigator.request = "camera-mic";
+            id = "history";
+        }
+        // Start's Uninstall for an app that installed itself in the home
+        // folder: Installed apps opens with the app's dialog.
+        if (id.startsWith("uninstall:")) {
+            Navigator.request = id;
+            id = "installedapps";
+        }
         id = Pages.resolve(id);
         let p = Pages.page(id);
         if (!p || !Pages.exists(id)) {

@@ -1,3 +1,10 @@
+wildos-welcome (0.1.5) trixie; urgency=medium
+
+  * Password boxes in setup (your account and Wi-Fi) take only what is
+    typed: nothing can be pasted into them.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 10:30:00 +0000
+
 wildos-welcome (0.1.4) trixie; urgency=medium
 
   * Step 7 asks whether to use your Windows programs here, only when

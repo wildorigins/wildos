@@ -16,12 +16,31 @@ Item {
     anchors.fill: parent
     z: 2000
 
+    // The last press on a grip. The first press hands the pointer to KWin
+    // for the resize, so no double-click event ever arrives; a second press
+    // on the same grip soon after is the double click.
+    property int lastEdges: 0
+    property double lastPress: 0
+
     component Grip: MouseArea {
         property int edges
         enabled: handles.active
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
-        onPressed: if (Window.window) Window.window.startSystemResize(edges)
+        onPressed: {
+            const now = Date.now();
+            // As on Windows: double-click the top or bottom edge for the
+            // screen's full height, a side for its width.
+            if (handles.lastEdges === edges && now - handles.lastPress <= Qt.styleHints.mouseDoubleClickInterval) {
+                handles.lastEdges = 0;
+                System.maximizeEdge(edges);
+                return;
+            }
+            handles.lastEdges = edges;
+            handles.lastPress = now;
+            if (Window.window)
+                Window.window.startSystemResize(edges);
+        }
     }
 
     Grip { edges: Qt.LeftEdge; x: 0; y: handles.corner; width: handles.edge; height: parent.height - 2 * handles.corner; cursorShape: Qt.SizeHorCursor }

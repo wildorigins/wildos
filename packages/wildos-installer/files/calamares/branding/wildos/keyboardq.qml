@@ -31,6 +31,26 @@ WPage {
 
     // Layouts for languages whose keyboard is not named after the country
     // or the language code.
+    // What people search for besides a layout's name: its countries,
+    // languages and the letter order on the keys ("Belgium" or "AZERTY"
+    // find Belgian). Settings gets these from xkeyboard-config itself.
+    readonly property var searchWords: ({
+        "be": "belgium belgique belgie dutch flemish french german azerty",
+        "fr": "france french azerty", "ca": "canada canadian french",
+        "de": "germany deutschland german qwertz", "at": "austria german qwertz",
+        "ch": "switzerland swiss schweiz suisse german french italian qwertz",
+        "gb": "uk united kingdom britain british england scotland wales english", "ie": "ireland irish",
+        "us": "usa united states america english", "nl": "netherlands holland dutch",
+        "es": "spain espana spanish", "latam": "latin america mexico argentina colombia chile spanish",
+        "pt": "portugal portuguese", "br": "brazil brasil portuguese", "it": "italy italia italian",
+        "pl": "poland polska polish", "cz": "czechia czech republic czech qwertz", "sk": "slovakia slovak qwertz",
+        "hu": "hungary magyar hungarian qwertz", "ro": "romania romanian", "gr": "greece greek",
+        "tr": "turkey turkiye turkish", "ru": "russia russian", "ua": "ukraine ukrainian", "by": "belarus belarusian",
+        "se": "sweden swedish", "no": "norway norwegian", "dk": "denmark danish", "fi": "finland finnish",
+        "jp": "japan japanese", "kr": "korea korean", "cn": "china chinese", "tw": "taiwan chinese",
+        "in": "india hindi", "vn": "vietnam vietnamese", "ara": "arabic", "id": "indonesia indonesian"
+    })
+
     readonly property var layoutFor: ({
         "en": "us", "en_US": "us", "en_GB": "gb", "en_AU": "au", "en_CA": "ca", "en_IE": "ie",
         "en_IN": "in", "en_NZ": "nz", "en_ZA": "za", "ast": "es", "ca": "es", "eu": "es", "gl": "es",
@@ -66,7 +86,11 @@ WPage {
         var out = [];
         var query = search.text.trim().toLowerCase();
         var current = layouts.currentIndex;
-        function matches(label) { return query === "" || label.toLowerCase().indexOf(query) >= 0; }
+        function matches(label, key) {
+            if (query === "" || label.toLowerCase().indexOf(query) >= 0)
+                return true;
+            return !!key && (key === query || (searchWords[key] || "").indexOf(query) >= 0);
+        }
         function note(key, label) {
             if (key === detectedKey)
                 return qsTr("Detected from your language");
@@ -77,12 +101,12 @@ WPage {
         if (current >= 0) {
             var label = cell(layouts, current, Qt.DisplayRole);
             var key = cell(layouts, current, layoutKeyRole);
-            if (matches(label))
+            if (matches(label, key))
                 out.push({ layout: current, variant: -1, label: label, note: note(key, label) });
             for (var v = 0; v < variants.rowCount(); ++v) {
                 var vkey = cell(variants, v, variantKeyRole);
                 var vlabel = cell(variants, v, Qt.DisplayRole);
-                if (vkey && matches(vlabel))
+                if (vkey && matches(vlabel, key))
                     out.push({ layout: current, variant: v, label: vlabel, note: note("", vlabel) });
             }
         }
@@ -91,7 +115,7 @@ WPage {
             if (r === current)
                 continue;
             var l = cell(layouts, r, Qt.DisplayRole);
-            if (matches(l))
+            if (matches(l, cell(layouts, r, layoutKeyRole)))
                 others.push({ layout: r, variant: -1, label: l, note: "" });
         }
         others.sort(function(a, b) {

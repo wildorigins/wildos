@@ -1,0 +1,12 @@
+[Unit]
+Description=Switch Wi-Fi and Bluetooth off when nothing has been connected for 30 minutes
+Documentation=file:///usr/libexec/wildos/wildos-radios-idle
+After=NetworkManager.service bluetooth.service dbus.service
+
+[Service]
+ExecStart=/usr/libexec/wildos/wildos-radios-idle
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

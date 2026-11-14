@@ -10,3 +10,7 @@ usr/lib/wildos/grub.d/31_wildos_firmware etc/grub.d/31_wildos_firmware
 # use for it, and NFSv4 shares still mount without it, so it is masked.
 dev/null etc/systemd/system/rpcbind.service
 dev/null etc/systemd/system/rpcbind.socket
+
+# Turned on for every installed system; it only acts where the installer
+# found Windows on the same computer.
+usr/lib/systemd/system/wildos-windows-clock.service usr/lib/systemd/system/multi-user.target.wants/wildos-windows-clock.service

@@ -203,6 +203,7 @@ FocusScope {
                         Layout.topMargin: 2
                         visible: row.needsPassword && row.connState === PlasmaNM.Enums.Deactivated
                         revealable: true
+                        UI.NoPaste {}
                         inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                         placeholderText: "Password"
                         Accessible.name: "Password for " + row.title
@@ -319,6 +320,7 @@ FocusScope {
                     id: hiddenPassword
                     Layout.fillWidth: true
                     revealable: true
+                    UI.NoPaste {}
                     placeholderText: "Password, if it has one"
                     inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     onAccepted: {

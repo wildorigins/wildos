@@ -1,0 +1,6 @@
+# Stops the install before the disk is touched unless the licence page's
+# box was ticked. See main.py.
+type: "job"
+name: "wildoslicence"
+interface: "python"
+script: "main.py"

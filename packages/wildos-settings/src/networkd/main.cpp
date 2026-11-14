@@ -10,6 +10,18 @@
 // servers is left as it is, and so is anything the person changes
 // afterwards: each profile is only ever defaulted once.
 //
+// Settings > Privacy and security > Advanced protection's Encrypted DNS
+// (dns, dns_strict and dns_provider in /etc/wildos/advanced-protection).
+// On is the default above, with the chosen provider in Quad9's place.
+// Strict (Maximum protection) makes every network Wild OS looks after use
+// the provider over TLS only, with nothing sent in plain text: the
+// profiles defaulted above and those left on the network's own servers.
+// Off, the person's choice, puts the profiles on Wild OS's default back on
+// the network's own servers, unencrypted, and new profiles stay there.
+// Servers someone typed in, or a provider picked for one network in
+// Advanced network settings, stay as they are. Each profile changed is
+// noted with what it had, so coming back to on puts that back.
+//
 // The VPN kill switch, when /etc/wildos/vpn-kill-switch exists. From the
 // moment a VPN is connected, nothing leaves this computer except through a
 // VPN, to the VPN's own servers (so it can reconnect), on the local network
@@ -22,7 +34,21 @@
 // when encrypted (DNS over TLS); plain DNS outside the tunnel is refused.
 // While the Mullvad app's own tunnel is up, its kill switch is in charge
 // and this one stands aside rather than fight it.
+//
+// The firewall (settings-firewall) lets in what Settings allows from the
+// networks this computer is on, so its rules are loaded again whenever a
+// network comes or goes, an address changes or an allowed time runs out.
+// What it turns away is collected by BlockedLog, and Settings asks here
+// which programs wait for connections (only root can name them all).
+//
+// Settings > System > History: as the lid closes, settings-history notes
+// what decides whether anything happens next (KDE's lid setting, other
+// screens, apps holding inhibitor locks), which the journal never says,
+// so History can explain a lid that was closed while the PC stayed on. It
+// notes the lid opening too: UPower reads the switch itself, and logind
+// says nothing about it on some laptops while KDE holds the lid.
 
+#include "blocked.h"
 #include "netshared.h"
 
 #include <QCoreApplication>
@@ -30,6 +56,7 @@
 #include <QDBusMessage>
 #include <QDBusServiceWatcher>
 #include <QDBusVariant>
+#include <QDateTime>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -37,10 +64,16 @@
 #include <QHash>
 #include <QHostAddress>
 #include <QHostInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkInterface>
+#include <QRegularExpression>
 #include <QProcess>
 #include <QSaveFile>
 #include <QSet>
 #include <QTimer>
+#include <QVariantMap>
 
 #include <iterator>
 #include <utility>
@@ -55,7 +88,11 @@ const QString runDir = QStringLiteral("/run/wildos");
 const QString stateFile = QStringLiteral("/run/wildos/kill-switch");
 const QString armedFile = QStringLiteral("/run/wildos/kill-switch.armed");
 const QString defaultedFile = QStringLiteral("/var/lib/wildos/network-dns-defaulted");
+const QString heldFile = QStringLiteral("/var/lib/wildos/network-dns-held");
+const QString advancedFile = QStringLiteral("/etc/wildos/advanced-protection");
 const QString table = QStringLiteral("wildos_kill_switch");
+const QString firewallHelper = QStringLiteral("/usr/libexec/wildos/settings-firewall");
+const QString firewallState = QStringLiteral("/run/wildos/firewall-state.json");
 
 const QString wifiType = QStringLiteral("802-11-wireless");
 const QString wiredType = QStringLiteral("802-3-ethernet");
@@ -145,11 +182,25 @@ void writeFile(const QString &path, const QString &text)
     }
 }
 
+// One key of Advanced protection's store, or its default when missing.
+QString advanced(const QString &key, const QString &fallback)
+{
+    QString value = fallback;
+    for (const QString &line : readLines(advancedFile)) {
+        if (line.startsWith(key + QLatin1Char('='))) {
+            value = line.mid(key.size() + 1).trimmed();
+        }
+    }
+    return value;
+}
+
 bool isVpn(const QString &type)
 {
     return type == QLatin1String("vpn") || type == QLatin1String("wireguard");
 }
 }
+
+const QString historyTool = QStringLiteral("/usr/libexec/wildos/settings-history");
 
 class NetworkService : public QObject
 {
@@ -162,9 +213,17 @@ public:
         m_timer.setSingleShot(true);
         m_timer.setInterval(300);
         connect(&m_timer, &QTimer::timeout, this, &NetworkService::reconcile);
+        m_expiry.setSingleShot(true);
+        connect(&m_expiry, &QTimer::timeout, this, &NetworkService::schedule);
 
         for (const QString &uuid : readLines(defaultedFile)) {
             m_defaulted.insert(uuid.trimmed());
+        }
+        for (const QString &line : readLines(heldFile)) {
+            const QStringList parts = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            if (parts.size() == 2) {
+                m_held.insert(parts.at(0), parts.at(1));
+            }
         }
         for (const QString &line : readLines(armedFile)) {
             const QStringList parts = line.split(QLatin1Char(' '));
@@ -180,6 +239,8 @@ public:
                     QStringLiteral("NewConnection"), this, SLOT(schedule()));
         bus.connect(NetShared::nmService, QStringLiteral("/org/freedesktop/NetworkManager/Settings"), QStringLiteral("org.freedesktop.NetworkManager.Settings"),
                     QStringLiteral("ConnectionRemoved"), this, SLOT(schedule()));
+        bus.connect(QStringLiteral("org.freedesktop.UPower"), QStringLiteral("/org/freedesktop/UPower"), QStringLiteral("org.freedesktop.DBus.Properties"),
+                    QStringLiteral("PropertiesChanged"), this, SLOT(upowerChanged(QString, QVariantMap, QStringList)));
         auto watcher = new QDBusServiceWatcher(NetShared::nmService, bus, QDBusServiceWatcher::WatchForRegistration, this);
         connect(watcher, &QDBusServiceWatcher::serviceRegistered, this, &NetworkService::schedule);
 
@@ -215,10 +276,78 @@ public Q_SLOTS:
         schedule();
     }
 
+    // "What the firewall blocked" > Clear the list. It only empties a list
+    // kept on this computer, so it asks for no password.
+    Q_SCRIPTABLE void ClearBlocked()
+    {
+        m_blocked.clear();
+        // Cleared means cleared: History's copies go too.
+        QProcess::startDetached(historyTool, {QStringLiteral("forget"), QStringLiteral("firewall")});
+    }
+
+    // Programs waiting for connections from other computers, as JSON:
+    // [{proto, port, process, app}], app being a Flatpak or desktop id
+    // where the program's cgroup names one. Loopback-only sockets, and the
+    // ones a DHCP client, name lookups or network discovery hold, are left
+    // out, as security-status leaves them out.
+    Q_SCRIPTABLE QString Listening()
+    {
+        static const QSet<QString> system{QStringLiteral("avahi-daemon"), QStringLiteral("systemd-resolve"), QStringLiteral("NetworkManager"),
+                                          QStringLiteral("dhclient"),     QStringLiteral("dnsmasq"),         QStringLiteral("chronyd"),
+                                          QStringLiteral("cupsd"),        QStringLiteral("systemd-network"), QStringLiteral("sdwdate")};
+        static const QRegularExpression proc(QStringLiteral("\\(\\(\"([^\"]+)\",pid=(\\d+)"));
+        bool ok = false;
+        const QString out = run(QStringLiteral("ss"), {QStringLiteral("-Hltunp")}, &ok);
+        QJsonArray list;
+        QSet<QString> seen;
+        for (const QString &line : out.split(QLatin1Char('\n'), Qt::SkipEmptyParts)) {
+            const QStringList f = line.simplified().split(QLatin1Char(' '));
+            if (f.size() < 5) {
+                continue;
+            }
+            const QString local = f.at(4);
+            const int colon = local.lastIndexOf(QLatin1Char(':'));
+            const int port = local.mid(colon + 1).toInt();
+            QString address = local.left(colon).remove(QLatin1Char('[')).remove(QLatin1Char(']')).section(QLatin1Char('%'), 0, 0);
+            if (address.startsWith(QLatin1String("::ffff:"))) {
+                address = address.mid(7);
+            }
+            const QHostAddress host(address);
+            if (port <= 0 || (!host.isNull() && host.isLoopback()) || local.contains(QLatin1String("%lo:"))) {
+                continue;
+            }
+            const QString proto = f.at(0);
+            if (proto == QLatin1String("udp") && (port == 68 || port == 546 || port == 5353 || port >= 32768)) {
+                continue;
+            }
+            const QRegularExpressionMatch m = proc.match(line);
+            const QString process = m.hasMatch() ? m.captured(1) : QString();
+            const QString key = proto + QString::number(port);
+            if (system.contains(process) || seen.contains(key)) {
+                continue;
+            }
+            seen.insert(key);
+            list.append(QJsonObject{{QStringLiteral("proto"), proto},
+                                    {QStringLiteral("port"), port},
+                                    {QStringLiteral("process"), process},
+                                    {QStringLiteral("app"), m.hasMatch() ? appId(m.captured(2)) : QString()}});
+        }
+        return QString::fromUtf8(QJsonDocument(list).toJson(QJsonDocument::Compact));
+    }
+
 private Q_SLOTS:
     void schedule()
     {
         m_timer.start();
+    }
+
+    void upowerChanged(const QString &interface, const QVariantMap &changed, const QStringList &)
+    {
+        // Both ways: while KDE holds the lid, logind may not log it at all.
+        if (interface == QLatin1String("org.freedesktop.UPower") && changed.contains(QStringLiteral("LidIsClosed"))) {
+            const bool closed = changed.value(QStringLiteral("LidIsClosed")).toBool();
+            QProcess::startDetached(historyTool, {closed ? QStringLiteral("lid-closed") : QStringLiteral("lid-opened")});
+        }
     }
 
     void activeStateChanged(uint state, uint reason, const QDBusMessage &message)
@@ -237,7 +366,9 @@ private Q_SLOTS:
         readActive();
         const auto all = readAll();
         stampDefaults(all);
+        advancedDns(all);
         killSwitch(all);
+        firewall();
     }
 
 private:
@@ -284,6 +415,7 @@ private:
     void stampDefaults(const QHash<QString, QPair<QString, QString>> &all)
     {
         const int before = m_defaulted.size();
+        bool heldChanged = false;
         for (auto it = all.cbegin(); it != all.cend(); ++it) {
             const QString &uuid = it.key();
             const QString &type = it.value().first;
@@ -306,9 +438,16 @@ private:
             if (hotspot || ownServers) {
                 continue;
             }
+            // With Encrypted DNS off the profile keeps the network's own
+            // servers, noted as owed the default when it is switched on.
+            if (dnsMode() == QLatin1String("off")) {
+                m_held.insert(uuid, QStringLiteral("default"));
+                heldChanged = true;
+                continue;
+            }
             bool ok = false;
             nmcli(QStringList{QStringLiteral("connection"), QStringLiteral("modify"), uuid}
-                      + NetShared::dnsModifyArgs(QStringLiteral("quad9"), {}, NetShared::ipv4TakesDns(method4), NetShared::ipv6TakesDns(method6), true),
+                      + NetShared::dnsModifyArgs(dnsProvider(), {}, NetShared::ipv4TakesDns(method4), NetShared::ipv6TakesDns(method6), true),
                   &ok);
             if (ok) {
                 m_reapply.insert(uuid);
@@ -319,9 +458,154 @@ private:
             lines.sort();
             writeFile(defaultedFile, lines.join(QLatin1Char('\n')) + QLatin1Char('\n'));
         }
+        if (heldChanged) {
+            writeHeld();
+        }
 
-        // A connection being joined right now started with the network's
-        // servers; once it is up it takes the new ones in place.
+        reapplyJoined();
+    }
+
+    // "on", "strict" or "off". Off is the person's own choice, so it wins
+    // over strictness a protection level asked for.
+    static QString dnsMode()
+    {
+        if (advanced(QStringLiteral("dns"), QStringLiteral("on")) == QLatin1String("off")) {
+            return QStringLiteral("off");
+        }
+        return advanced(QStringLiteral("dns_strict"), QStringLiteral("off")) == QLatin1String("on") ? QStringLiteral("strict") : QStringLiteral("on");
+    }
+
+    void writeHeld()
+    {
+        QString text;
+        for (auto it = m_held.cbegin(); it != m_held.cend(); ++it) {
+            text += it.key() + QLatin1Char(' ') + it.value() + QLatin1Char('\n');
+        }
+        writeFile(heldFile, text);
+    }
+
+    static QString dnsProvider()
+    {
+        const QString id = advanced(QStringLiteral("dns_provider"), QStringLiteral("quad9"));
+        return NetShared::provider(id) ? id : QStringLiteral("quad9");
+    }
+
+    // Goes through every profile only when the choice changed or a profile
+    // came along that it has not seen, so a change the person makes to one
+    // network afterwards is left alone, as with the default.
+    void advancedDns(const QHash<QString, QPair<QString, QString>> &all)
+    {
+        const QString mode = dnsMode();
+        const QString provider = dnsProvider();
+        const QString choice = mode + QLatin1Char(' ') + provider;
+        QSet<QString> uuids;
+        for (auto it = all.cbegin(); it != all.cend(); ++it) {
+            if (it.value().first == wifiType || it.value().first == wiredType) {
+                uuids.insert(it.key());
+            }
+        }
+        if (choice == m_dnsChoice && uuids == m_dnsSeen) {
+            return;
+        }
+        const bool everything = choice != m_dnsChoice;
+        bool heldChanged = false;
+        for (const QString &uuid : std::as_const(uuids)) {
+            if (!everything && m_dnsSeen.contains(uuid)) {
+                continue;
+            }
+            const QString path = all.value(uuid).second;
+            if (connectionFlags(path) & externalFlag) {
+                continue;
+            }
+            const NetShared::Profile p = NetShared::profile(path);
+            if (p.isEmpty()) {
+                continue;
+            }
+            const QVariantMap ipv4 = p.value(QStringLiteral("ipv4"));
+            const QString method4 = ipv4.value(QStringLiteral("method")).toString();
+            const QString method6 = p.value(QStringLiteral("ipv6")).value(QStringLiteral("method")).toString();
+            if (p.value(wifiType).value(QStringLiteral("mode")).toString() == QLatin1String("ap") || method4 == QLatin1String("shared")) {
+                continue;
+            }
+            const bool ignoreAuto = ipv4.value(QStringLiteral("ignore-auto-dns")).toBool();
+            const QString now = NetShared::dnsChoice(NetShared::profileDnsAddresses(p), ignoreAuto);
+            const int tls = p.value(QStringLiteral("connection")).value(QStringLiteral("dns-over-tls"), -1).toInt();
+            // NetShared::dnsModifyArgs' asDefault: a provider, opportunistic,
+            // with the network's own servers behind it.
+            const bool wildosDefault = NetShared::provider(now) && tls == 1 && !ignoreAuto;
+            // What strict and off leave a profile with. A noted profile that
+            // looks like neither was changed by the person since, in
+            // Advanced network settings, and is theirs again.
+            const bool asLeft = (NetShared::provider(now) && tls == 2 && ignoreAuto) || now == QLatin1String("automatic");
+            if (m_held.contains(uuid) && !asLeft) {
+                m_held.remove(uuid);
+                heldChanged = true;
+                continue;
+            }
+            const bool held = m_held.contains(uuid);
+
+            QString target;
+            bool asDefault = false;
+            if (mode == QLatin1String("strict")) {
+                if (held ? !(now == provider && tls == 2) : (wildosDefault || now == QLatin1String("automatic"))) {
+                    if (!held) {
+                        m_held.insert(uuid, wildosDefault ? QStringLiteral("default") : QStringLiteral("automatic"));
+                        heldChanged = true;
+                    }
+                    target = provider;
+                }
+            } else if (mode == QLatin1String("off")) {
+                if (held ? now != QLatin1String("automatic") : wildosDefault) {
+                    if (!held) {
+                        m_held.insert(uuid, QStringLiteral("default"));
+                        heldChanged = true;
+                    }
+                    target = QStringLiteral("automatic");
+                }
+            } else if (held) {
+                const QString before = m_held.take(uuid);
+                heldChanged = true;
+                target = before == QLatin1String("automatic") ? QStringLiteral("automatic") : provider;
+                asDefault = target != QLatin1String("automatic");
+                if (target == now && (!asDefault || tls == 1)) {
+                    target.clear();
+                }
+            } else if (wildosDefault && now != provider) {
+                target = provider;
+                asDefault = true;
+            }
+            if (target.isEmpty()) {
+                continue;
+            }
+            bool ok = false;
+            nmcli(QStringList{QStringLiteral("connection"), QStringLiteral("modify"), uuid}
+                      + NetShared::dnsModifyArgs(target, {}, NetShared::ipv4TakesDns(method4), NetShared::ipv6TakesDns(method6), asDefault),
+                  &ok);
+            if (ok) {
+                m_reapply.insert(uuid);
+            }
+        }
+        for (auto it = m_held.begin(); it != m_held.end();) {
+            if (all.contains(it.key())) {
+                ++it;
+            } else {
+                it = m_held.erase(it);
+                heldChanged = true;
+            }
+        }
+        if (heldChanged) {
+            writeHeld();
+        }
+        m_dnsChoice = choice;
+        m_dnsSeen = uuids;
+        reapplyJoined();
+    }
+
+    // A connection being joined right now started with the network's
+    // servers, or the ones it had; once it is up it takes the new ones in
+    // place.
+    void reapplyJoined()
+    {
         for (const Active &a : std::as_const(m_active)) {
             if (m_reapply.contains(a.uuid) && a.state == QLatin1String("activated") && !a.device.isEmpty()) {
                 m_reapply.remove(a.uuid);
@@ -403,6 +687,73 @@ private:
             m_armedText = armed;
             m_report = report;
         }
+    }
+
+    static QString appId(const QString &pid)
+    {
+        // Flatpak runs each app in app-flatpak-<id>-<n>.scope, and the
+        // desktop starts others in app-<desktop id>-<random>.scope or
+        // app-<desktop id>@<instance>.service.
+        static const QRegularExpression flatpak(QStringLiteral("app-flatpak-([A-Za-z0-9._-]+?)-[0-9]+\\.scope"));
+        static const QRegularExpression desktop(QStringLiteral("/app-([A-Za-z0-9._-]+?)(?:@[^/]*)?(?:-[0-9a-f]{6,})?\\.(?:scope|service)$"));
+        QFile file(QStringLiteral("/proc/%1/cgroup").arg(pid));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        const QString cgroup = QString::fromUtf8(file.readAll()).trimmed();
+        QRegularExpressionMatch m = flatpak.match(cgroup);
+        if (m.hasMatch()) {
+            return m.captured(1);
+        }
+        m = desktop.match(cgroup);
+        return m.hasMatch() ? m.captured(1) : QString();
+    }
+
+    // Loads the firewall again when the networks it allows things from have
+    // changed, or a rule's time is up.
+    void firewall()
+    {
+        if (!QFile::exists(firewallHelper)) {
+            return;
+        }
+        QStringList parts;
+        for (const Active &a : std::as_const(m_active)) {
+            if (a.state != QLatin1String("activated") || a.device.isEmpty() || isVpn(a.type)) {
+                continue;
+            }
+            QString part = a.uuid + QLatin1Char('@') + a.device;
+            for (const QNetworkAddressEntry &e : QNetworkInterface::interfaceFromName(a.device).addressEntries()) {
+                part += QLatin1Char(' ') + e.ip().toString() + QLatin1Char('/') + QString::number(e.prefixLength());
+            }
+            parts.append(part);
+        }
+        parts.sort();
+        const QString signature = parts.join(QLatin1Char('\n'));
+
+        const qint64 now = QDateTime::currentSecsSinceEpoch();
+        qint64 expiry = nextExpiry();
+        if (signature != m_firewallSignature || (expiry > 0 && expiry <= now)) {
+            bool ok = false;
+            run(firewallHelper, {QStringLiteral("apply")}, &ok);
+            if (ok) {
+                m_firewallSignature = signature;
+            }
+            expiry = nextExpiry();
+        }
+        if (expiry > now) {
+            m_expiry.start(int(qMin<qint64>(expiry - now, 3600)) * 1000 + 500);
+        } else {
+            m_expiry.stop();
+        }
+    }
+
+    static qint64 nextExpiry()
+    {
+        QFile state(firewallState);
+        if (!state.open(QIODevice::ReadOnly)) {
+            return 0;
+        }
+        return QJsonDocument::fromJson(state.readAll()).object().value(QStringLiteral("next_expiry")).toInteger();
     }
 
     QStringList resolveServers(const QString &path)
@@ -511,11 +862,19 @@ private:
 
     QTimer m_timer;
     QTimer m_poll;
+    QTimer m_expiry;
+    BlockedLog m_blocked;
+    QString m_firewallSignature;
     QFileSystemWatcher m_files;
     QList<Active> m_active;
     QHash<QString, QString> m_pathToUuid;
     QSet<QString> m_defaulted;
     QSet<QString> m_reapply;
+    // Profiles Encrypted DNS's strict or off choice changed: uuid to what
+    // they had, "default" or "automatic".
+    QHash<QString, QString> m_held;
+    QString m_dnsChoice;
+    QSet<QString> m_dnsSeen;
     QHash<QString, Armed> m_armed;
     QSet<QString> m_userOff;
     QSet<QString> m_wasUp;

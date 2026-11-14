@@ -20,7 +20,7 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends},
  qtermwidget-data,
- wildos-ui,
+ wildos-ui (>= 0.1.11),
  qml6-module-qtcore,
  qml6-module-qtquick,
  qml6-module-qtquick-controls,

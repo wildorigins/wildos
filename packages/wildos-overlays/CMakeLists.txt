@@ -78,6 +78,7 @@ qt_add_qml_module(wildos-clipboard
     QML_FILES ${CLIPBOARD_QML}
     SOURCES
         clipboard/panelapp.cpp clipboard/panelapp.h
+        clipboard/secretwiper.cpp clipboard/secretwiper.h
         clipboard/pins.cpp clipboard/pins.h
         clipboard/emojimodel.cpp clipboard/emojimodel.h
 )

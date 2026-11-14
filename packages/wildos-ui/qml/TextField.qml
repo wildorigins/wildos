@@ -7,10 +7,9 @@ import QtQuick.Templates as T
 // is the 42px, radius 10, 14px field of the account and installer forms
 // (Account.dc). A password field gets a show and hide button with
 // `revealable`. A right click, the Menu key or Shift+F10 opens the text
-// menu (MenusApps.dc "Text you're typing"): Undo, Cut, Copy, Paste, Select
-// all and Emoji, with their shortcuts. A single line field holds plain
-// text only, so Paste already pastes plain text and the board's "Paste as
-// plain text" has nothing to add here; spelling suggestions need a spell
+// menu (TextMenu.qml). A single line field holds plain text only, so
+// Paste already pastes plain text and the board's "Paste as plain
+// text" has nothing to add here; spelling suggestions need a spell
 // checked text box, which this is not.
 T.TextField {
     id: control
@@ -24,6 +23,11 @@ T.TextField {
     property alias trailing: trailingRow.data
     // Off for a field that brings its own right-click menu.
     property bool textMenu: true
+    // The text menu holds focus while it is open. A field that ends its
+    // editing when focus leaves waits while this is true, and finishes on
+    // textMenuFocusLeft if a click elsewhere closed the menu.
+    readonly property bool textMenuOpen: menu.opened
+    signal textMenuFocusLeft()
 
     readonly property bool large: size === "large"
     readonly property bool editingNow: activeFocus || previewFocus
@@ -45,56 +49,24 @@ T.TextField {
     opacity: enabled ? 1 : 0.5
     Accessible.name: placeholderText
 
-    property Menu textMenuPopup: null
-
     function openTextMenu(px: real, py: real): void {
-        if (!textMenuPopup) {
-            textMenuPopup = menuComponent.createObject(control);
-        }
-        const secret = echoMode === TextInput.Password || echoMode === TextInput.PasswordEchoOnEdit;
-        const entries = [];
-        if (!readOnly) {
-            entries.push({ text: "Undo", icon: "undo", shortcut: "Ctrl+Z", enabled: canUndo, run: () => control.undo() },
-                { separator: true });
-        }
-        if (!readOnly && !secret) {
-            entries.push({ text: "Cut", icon: "menu-cut", shortcut: "Ctrl+X", enabled: selectedText.length > 0, run: () => control.cut() });
-        }
-        if (!secret) {
-            entries.push({ text: "Copy", icon: "menu-copy", shortcut: "Ctrl+C", enabled: selectedText.length > 0, run: () => control.copy() });
-        }
-        if (!readOnly) {
-            entries.push({ text: "Paste", icon: "menu-paste", shortcut: "Ctrl+V", enabled: canPaste, run: () => control.paste() });
-        }
-        if (entries.length > 0 && !entries[entries.length - 1].separator) {
-            entries.push({ separator: true });
-        }
-        entries.push({ text: "Select all", icon: "select-all", shortcut: "Ctrl+A", enabled: length > 0, run: () => control.selectAll() });
-        if (!readOnly && !secret && System.canRun("wildos-clipboard")) {
-            entries.push({ text: "Emoji", icon: "emoji", shortcut: "Win+.", run: () => System.run("wildos-clipboard", ["--emoji"]) });
-        }
-        forceActiveFocus(Qt.PopupFocusReason);
-        textMenuPopup.entries = entries;
-        textMenuPopup.popup(control, px, py);
+        menu.open(px, py);
     }
 
-    Component {
-        id: menuComponent
-        Menu {
-            minimumWidth: 236
-        }
-    }
-
-    TapHandler {
+    TextMenu {
+        id: menu
         enabled: control.textMenu && control.enabled
-        acceptedButtons: Qt.RightButton
-        onTapped: eventPoint => control.openTextMenu(eventPoint.position.x, eventPoint.position.y)
+        onFocusLeft: control.textMenuFocusLeft()
+    }
+
+    // A password shown as text is copied marked as a secret.
+    SecretCopy {
+        enabled: control.revealable
     }
 
     Keys.onPressed: event => {
-        if (textMenu && (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier)))) {
-            const caret = cursorRectangle;
-            openTextMenu(caret.x, caret.y + caret.height);
+        if (textMenu && menu.isMenuKey(event)) {
+            menu.openAtCaret();
             event.accepted = true;
         }
     }

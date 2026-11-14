@@ -1,0 +1,17 @@
+[Unit]
+Description=Note a password unlock for fingerprint sign-in
+CollectMode=inactive-or-failed
+
+[Service]
+ExecStart=/usr/libexec/wildos/fingerprint-stamp --serve
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+# Reads /etc/shadow through unix_chkpwd and writes only /run/wildos.
+ProtectSystem=strict
+ReadWritePaths=/run/wildos
+ProtectHome=yes
+PrivateNetwork=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX

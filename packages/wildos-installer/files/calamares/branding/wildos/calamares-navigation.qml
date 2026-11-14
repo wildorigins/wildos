@@ -17,14 +17,21 @@ Item {
     height: 76
 
     readonly property int current: ViewManager.currentStepIndex
-    readonly property int checksStep: 0
-    readonly property int keyboardStep: 2
-    readonly property int diskStep: 3
-    readonly property int encryptionStep: 4
-    readonly property int summaryStep: 5
-    readonly property int installStep: 6
+    readonly property int licenceStep: 0
+    readonly property int checksStep: 1
+    readonly property int keyboardStep: 3
+    readonly property int diskStep: 4
+    readonly property int encryptionStep: 5
+    readonly property int summaryStep: 6
+    readonly property int installStep: 7
     readonly property bool installing: current === installStep
     readonly property bool atEnd: current > installStep
+
+    Binding {
+        target: Installer
+        property: "exitQuickly"
+        value: footer.current < footer.installStep
+    }
     readonly property bool failed: Installer.finished ? Installer.finished.failed : false
     // The disk step has two pages; the editor's note differs. Global storage
     // has no change signal QML can safely use, so this looks while there.
@@ -48,6 +55,8 @@ Item {
 
     readonly property string note: {
         switch (current) {
+        case licenceStep:
+            return qsTr("Nothing on this PC has changed yet.");
         case checksStep:
             return Installer.alongsideBlocked !== "" ? qsTr("You can still replace Windows completely without changing anything.") : "";
         case keyboardStep:
@@ -100,10 +109,19 @@ Item {
             onClicked: Installer.runChecks()
         }
 
+        // Nothing has been chosen yet, so Quit closes without asking.
+        WButton {
+            text: qsTr("Quit")
+            visible: footer.current === footer.licenceStep
+            onClicked: Installer.quitNow()
+        }
+
         WButton {
             text: qsTr("Back")
-            visible: ViewManager.backAndNextVisible && footer.current > 0 && footer.current < footer.installStep
-            enabled: ViewManager.backEnabled
+            visible: ViewManager.backAndNextVisible && footer.current > footer.licenceStep && footer.current < footer.installStep
+            // Calamares' welcome step always refuses Back, because it expects
+            // to be first; here the licence comes before it.
+            enabled: ViewManager.backEnabled || footer.current === footer.checksStep
             onClicked: ViewManager.back()
         }
 
@@ -112,6 +130,7 @@ Item {
             text: ViewManager.nextIcon === "run-install" ? qsTr("Install") : qsTr("Continue")
             visible: ViewManager.backAndNextVisible && footer.current < footer.installStep
             enabled: ViewManager.nextEnabled
+                     && (footer.current !== footer.licenceStep || Installer.licenceAccepted)
                      && (footer.current !== footer.encryptionStep || Installer.encryptionReady)
                      && (footer.current !== footer.checksStep || !Installer.checking)
             onClicked: ViewManager.next()

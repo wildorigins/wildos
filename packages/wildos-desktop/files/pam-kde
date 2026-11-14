@@ -13,6 +13,10 @@ auth    required        pam_succeed_if.so user != root quiet_success
 # nullok: the live session user has no password; installed accounts always
 # do, because the installer refuses an empty one.
 auth    required        pam_unix.so nullok try_first_pass
+# A password unlock lets the fingerprint back in for Advanced protection's
+# "Fingerprint needs your password sometimes". fingerprint-stamp checks
+# the password again itself, so a wrong one notes nothing.
+auth    optional        pam_exec.so quiet seteuid expose_authtok /usr/libexec/wildos/fingerprint-stamp
 auth    optional        pam_kwallet5.so
 
 @include common-account

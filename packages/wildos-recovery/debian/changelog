@@ -1,3 +1,31 @@
+wildos-recovery (0.1.7) trixie; urgency=medium
+
+  * The disk password box takes only what is typed: nothing can be pasted
+    into it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:45:00 +0000
+
+wildos-recovery (0.1.6) trixie; urgency=medium
+
+  * When a new kernel can't reach the desktop, the next start uses the
+    last one that could, and stays on it until a newer one arrives.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 22:52:35 +0000
+
+wildos-recovery (0.1.5) trixie; urgency=medium
+
+  * Going back to a restore point or resetting Wild OS keeps Settings >
+    System > History as it is.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 15:37:21 +0000
+
+wildos-recovery (0.1.4) trixie; urgency=medium
+
+  * The reset copy downloads a release once, not after every start-up, when
+    its files do not verify, and its copying no longer crowds out open apps.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 12 Nov 2026 21:14:46 +0000
+
 wildos-recovery (0.1.3) trixie; urgency=medium
 
   * Going back to a restore point keeps Steam's controller support as it

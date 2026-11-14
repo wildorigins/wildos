@@ -105,6 +105,11 @@ void PanelApp::setSkinTone(int tone)
 
 void PanelApp::handle(const QStringList &arguments)
 {
+    if (arguments.contains(QStringLiteral("--clear"))) {
+        setShown(false);
+        Q_EMIT clearRequested();
+        return;
+    }
     if (arguments.contains(QStringLiteral("--daemon"))) {
         return;
     }
@@ -117,6 +122,13 @@ void PanelApp::handle(const QStringList &arguments)
     }
     setTab(wanted);
     setShown(true);
+}
+
+void PanelApp::clearClipboard()
+{
+    auto *clipboard = KSystemClipboard::instance();
+    clipboard->clear(QClipboard::Clipboard);
+    clipboard->clear(QClipboard::Selection);
 }
 
 void PanelApp::pasteIntoApp(bool terminal)

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(wildos-installer-qml LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Qml)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Widgets)
 qt_standard_project_setup(REQUIRES 6.5)
 include(GNUInstallDirs)
 
@@ -15,6 +15,10 @@ qt_add_qml_module(wildosinstaller
     SOURCES
         installer.h installer.cpp
 )
+
+# Widgets for the licence's save dialog: Calamares is a widgets application,
+# so its file dialog is already loaded.
+target_link_libraries(wildosinstaller PRIVATE Qt6::Gui Qt6::Widgets)
 
 set(WILDOS_QML_DIR "${CMAKE_INSTALL_LIBDIR}/qt6/qml/WildOS/Installer")
 install(TARGETS wildosinstaller LIBRARY DESTINATION ${WILDOS_QML_DIR})

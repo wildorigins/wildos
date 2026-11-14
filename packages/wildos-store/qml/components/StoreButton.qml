@@ -19,6 +19,9 @@ T.AbstractButton {
     property bool showStatus: !big
     // A curated line for when there is no status to give ("Opens PSD").
     property string note
+    property color noteColor: Metrics.inkTertiary
+    // What Get says: "Reinstall" for one of Wild OS's own apps.
+    property string getLabel: "Get"
 
     // Turned into Open (or Update, or Installed) from a ring: the app page
     // gives its icon a small bounce.
@@ -34,7 +37,7 @@ T.AbstractButton {
         : shown === "installed" ? "Installed"
         : shown === "update" ? "Update"
         : shown === "retry" ? "Retry"
-        : "Get"
+        : getLabel
 
     readonly property int buttonHeight: big ? 34 : 28
     readonly property int minWidth: big ? 84 : 66
@@ -135,7 +138,7 @@ T.AbstractButton {
         font.letterSpacing: UI.Style.tracking(UI.Style.px(control.fontSize))
         font.pixelSize: UI.Style.px(control.fontSize)
         font.weight: UI.Style.weightBold
-        text: "Installed"
+        text: control.getLabel.length > "Installed".length ? control.getLabel : "Installed"
     }
 
     contentItem: Item {}
@@ -256,9 +259,10 @@ T.AbstractButton {
             visible: control.showStatus && text.length > 0
             y: control.buttonHeight + 3
             x: Math.min(control.width - width, pillLayer.centreX - width / 2)
-            text: control.app && control.app.statusLine.length > 0 ? control.app.statusLine : control.note
+            readonly property bool status: control.app && control.app.statusLine.length > 0
+            text: status ? control.app.statusLine : control.note
             size: 11
-            color: Metrics.inkTertiary
+            color: status ? Metrics.inkTertiary : control.noteColor
         }
     }
 }

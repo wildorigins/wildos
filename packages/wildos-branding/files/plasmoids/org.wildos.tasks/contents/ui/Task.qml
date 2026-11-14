@@ -32,10 +32,17 @@ Item {
     readonly property var tasksModel: tasksRoot.tasksModel
     readonly property var backend: tasksRoot.backend
 
+    // A pin whose app was uninstalled: Plasma keeps it, as a blank page
+    // that only plays the error sound. It stays in the list, out of sight,
+    // so putting the app back from the Store brings its pin back where it
+    // was.
+    readonly property bool orphaned: model.IsLauncher === true && String(model.AppId || "") === ""
+
+    visible: !orphaned
     width: Style.button
     height: Style.button
 
-    activeFocusOnTab: true
+    activeFocusOnTab: !orphaned
 
     readonly property string launcherKey: String(model.LauncherUrlWithoutIcon || "")
     readonly property string appKey: String(model.AppId || "").replace(/\.desktop$/, "")
@@ -78,16 +85,30 @@ Item {
         awaitingTimer.restart();
     }
 
+    property int lastChildCount: childCount
     onChildCountChanged: {
         if (awaitingWindow && isWindow && childCount > childCountAtLaunch) {
             awaitingWindow = false;
         }
+        if (isWindow && childCount > lastChildCount) {
+            tasksRoot.windowOpened([launcherKey, appKey, desktopKey]);
+        }
+        lastChildCount = childCount;
     }
 
     Timer {
         id: awaitingTimer
         interval: 10000
         onTriggered: task.awaitingWindow = false
+    }
+
+    Connections {
+        target: task.tasksRoot
+        function onLaunchFinished(key: string): void {
+            if (key === task.desktopKey) {
+                task.awaitingWindow = false;
+            }
+        }
     }
 
     Accessible.role: Accessible.Button
@@ -181,6 +202,7 @@ Item {
         }
 
         if (isWindow) {
+            tasksRoot.windowOpened([launcherKey, appKey, desktopKey]);
             publishGeometry.start();
             updateAudioStreams();
         }
@@ -189,6 +211,7 @@ Item {
     onIsWindowChanged: {
         if (isWindow) {
             awaitingWindow = false;
+            tasksRoot.windowOpened([launcherKey, appKey, desktopKey]);
             publishGeometry.start();
             updateAudioStreams();
         }
@@ -306,7 +329,7 @@ Item {
     // The fill keyframes: widest and brightest 60% of the way through.
     SequentialAnimation {
         id: stretch
-        running: task.starting && !task.reducedMotion
+        running: task.starting && task.visible && !task.reducedMotion
         loops: Animation.Infinite
         onRunningChanged: {
             if (!running) {

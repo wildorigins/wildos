@@ -76,8 +76,17 @@ Rectangle {
             // Characters a name cannot hold are refused as they are typed.
             if (event.text === "/") {
                 event.accepted = true;
+            } else if (nameMenu.isMenuKey(event)) {
+                nameMenu.openAtCaret();
+                event.accepted = true;
             }
         }
-        onActiveFocusChanged: if (!activeFocus) field.finish(true)
+        // The text menu holds focus while it is open; the rename is not over.
+        onActiveFocusChanged: if (!activeFocus && !nameMenu.opened) field.finish(true)
+
+        UI.TextMenu {
+            id: nameMenu
+            onFocusLeft: field.finish(true)
+        }
     }
 }

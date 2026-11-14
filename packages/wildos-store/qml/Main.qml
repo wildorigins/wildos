@@ -35,7 +35,7 @@ UI.AppWindow {
     title: "Store"
     deep: true
 
-    readonly property var sections: ["discover", "swap", "create", "work", "play", "develop", "categories", "windowsapps", "updates", "library"]
+    readonly property var sections: ["discover", "wildos", "swap", "create", "work", "play", "develop", "categories", "windowsapps", "updates", "library"]
     // Names other parts of Wild OS, the command line and D-Bus may still
     // use for the pages these replaced.
     readonly property var aliases: ({ home: "discover", installed: "library", windows: "swap" })
@@ -43,6 +43,7 @@ UI.AppWindow {
     function titleOf(entry) {
         switch (entry.page) {
         case "discover": return "Discover";
+        case "wildos": return "Wild OS";
         case "swap": return "Swap from Windows";
         case "create": return "Create";
         case "work": return "Work";
@@ -71,6 +72,7 @@ UI.AppWindow {
         }
         const urls = {
             discover: "pages/DiscoverPage.qml",
+            wildos: "pages/WildOSPage.qml",
             swap: "pages/SwapPage.qml",
             create: "pages/CategoryPage.qml",
             work: "pages/CategoryPage.qml",
@@ -365,6 +367,13 @@ UI.AppWindow {
                 text: "Discover"
                 current: root.current.section === "discover"
                 onClicked: root.open("discover")
+            }
+
+            NavItem {
+                mark: true
+                text: "Wild OS"
+                current: root.current.section === "wildos"
+                onClicked: root.open("wildos")
             }
 
             NavItem {

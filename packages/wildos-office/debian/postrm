@@ -6,4 +6,7 @@ UI=/usr/lib/libreoffice/share/config/soffice.cfg/vcl/ui/printdialog.ui
 if [ "$1" = remove ] || [ "$1" = abort-install ] || [ "$1" = disappear ]; then
     dpkg-divert --package wildos-office --rename --divert "$UI.libreoffice" --remove "$UI"
 fi
+if [ "$1" = purge ]; then
+    rm -f /var/lib/wildos/office-split
+fi
 exit 0

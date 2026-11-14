@@ -119,7 +119,8 @@ HomeCard {
             title: modelData.title
             value: card.rowValue(modelData)
             valueColor: rowTone === "warn" ? UI.Style.warning : UI.Style.inkMuted
-            onClicked: protectionDialog.show(modelData)
+            // The firewall has a page of its own to change it on.
+            onClicked: modelData.key === "firewall" && Firewall.available ? Navigator.open("firewall") : protectionDialog.show(modelData)
         }
     }
 

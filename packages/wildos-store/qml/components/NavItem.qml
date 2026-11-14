@@ -12,6 +12,8 @@ T.AbstractButton {
     property bool current: false
     property int badge: 0
     property bool working: false
+    // The Wild OS mark in place of a line icon.
+    property bool mark: false
 
     implicitHeight: Math.max(34, Math.ceil(label.implicitHeight) + 14)
     // Read by the window, which widens the sidebar to fit the longest name.
@@ -43,10 +45,18 @@ T.AbstractButton {
             id: icon
             x: 10
             anchors.verticalCenter: parent.verticalCenter
+            visible: !item.mark
             name: item.iconName
             size: 17
             strokeWidth: 1.8
             color: item.current ? UI.Style.accent : Metrics.inkSecondary
+        }
+
+        WildOSMark {
+            visible: item.mark
+            x: 10
+            anchors.verticalCenter: parent.verticalCenter
+            size: 17
         }
 
         UI.Label {

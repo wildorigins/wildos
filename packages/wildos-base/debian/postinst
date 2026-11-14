@@ -45,6 +45,29 @@ if [ "$1" = "configure" ]; then
     hand_over_unconfigured_scripts
     disarm_hidden_scripts
 
+    # Faster encrypted SSDs and a start-up image that unpacks faster, on PCs
+    # installed before these: the start-up image carries its own crypttab
+    # and is built with the compression of its day, so it is rebuilt once.
+    # The image build has no grub.cfg and makes its own.
+    if [ -e /boot/grub/grub.cfg ]; then
+        speed=$(/usr/libexec/wildos/crypttab-speed || true)
+        if [ "$speed" = changed ] || [ ! -e /var/lib/wildos/initramfs-zstd ]; then
+            if command -v dracut >/dev/null && dracut --force --regenerate-all >/dev/null 2>&1; then
+                mkdir -p /var/lib/wildos
+                : > /var/lib/wildos/initramfs-zstd
+            else
+                echo "wildos-base: rebuilding the start-up image failed; it is rebuilt on the next update" >&2
+            fi
+        fi
+    fi
+    if [ -d /run/systemd/system ]; then
+        systemd-tmpfiles --create wildos-mglru.conf >/dev/null 2>&1 || true
+    fi
+
+    # Settings used to write the processor thread choice as its own start-up
+    # file; 40_wildos.cfg reads /etc/wildos/cpu-threads itself now.
+    rm -f /etc/default/grub.d/41_wildos_cpu_threads.cfg
+
     # Installed systems pick up the new menu now. The image has no grub.cfg
     # (the installer makes one), so its build skips this.
     if [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null; then
@@ -63,6 +86,8 @@ fi
 # sign in (the console group) gets it here.
 if [ "$1" = "configure" ] && getent group privleap >/dev/null && getent group console >/dev/null; then
     for account in $(getent group console | cut -d: -f4 | tr ',' ' '); do
+        # The guest session's account gets no more than it was made with.
+        [ "$account" != guest ] || continue
         id -nG "$account" 2>/dev/null | tr ' ' '\n' | grep -qx privleap || usermod -aG privleap "$account" || true
     done
 fi
@@ -76,6 +101,8 @@ if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
     systemctl daemon-reload || true
     systemctl start systemd-zram-setup@zram0.service || true
     systemctl enable --now systemd-oomd.service || true
+    # The guest session's sign-out rule (50-wildos-guest.conf).
+    systemctl reload systemd-logind.service || true
 elif [ "$1" = "configure" ]; then
     systemctl enable systemd-oomd.service || true
 fi

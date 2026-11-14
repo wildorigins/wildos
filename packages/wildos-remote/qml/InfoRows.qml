@@ -82,6 +82,16 @@ Rectangle {
                         selectionColor: UI.Style.textSelection
                         font.family: "JetBrains Mono"
                         font.pixelSize: UI.Style.px(12)
+                        Keys.onPressed: event => {
+                            if (valueMenu.isMenuKey(event)) {
+                                valueMenu.openAtCaret();
+                                event.accepted = true;
+                            }
+                        }
+
+                        UI.TextMenu {
+                            id: valueMenu
+                        }
                     }
                 }
             }

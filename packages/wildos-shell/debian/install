@@ -3,3 +3,5 @@ decoration/aurorae.qml usr/share/kwin/aurorae/
 sessions/wildos.desktop usr/share/wayland-sessions/
 applet/CompactApplet.qml usr/share/plasma/shells/org.kde.plasma.desktop/contents/applet/
 updates/wildos-docked-taskbar.js usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/
+splash/wildos-wait-desktop usr/libexec/wildos/
+splash/plasma-ksplash-ready.service.d usr/lib/systemd/user/

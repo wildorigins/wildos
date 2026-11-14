@@ -1,0 +1,17 @@
+#!/bin/sh
+# Runs before KSplash's "ready" stage closes the sign-in splash. Waits, for
+# at most 3 seconds, until plasmashell says the taskbar has loaded and Start
+# has drawn its pop-up once under the splash (Session.desktopReady in
+# org.wildos.shell), so neither the taskbar's loading nor Start's first
+# draw is seen.
+mark="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/wildos-desktop-ready"
+i=0
+while [ $i -lt 30 ]; do
+    shell=$(pgrep -u "$(id -u)" -x plasmashell | head -n 1)
+    if [ -n "$shell" ] && [ "$(cat "$mark" 2>/dev/null)" = "$shell" ]; then
+        exit 0
+    fi
+    sleep 0.1
+    i=$((i + 1))
+done
+exit 0

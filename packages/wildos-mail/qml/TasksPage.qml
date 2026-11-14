@@ -645,6 +645,16 @@ Item {
                                         page.pending = ({});
                                         focus = false;
                                     }
+                                    Keys.onPressed: event => {
+                                        if (newTaskMenu.isMenuKey(event)) {
+                                            newTaskMenu.openAtCaret();
+                                            event.accepted = true;
+                                        }
+                                    }
+
+                                    UI.TextMenu {
+                                        id: newTaskMenu
+                                    }
                                     UI.Label {
                                         anchors.verticalCenter: parent.verticalCenter
                                         visible: newTask.text.length === 0
@@ -892,10 +902,24 @@ Item {
                                         background: null
                                         Keys.onReturnPressed: focus = false
                                         Keys.onEnterPressed: focus = false
-                                        onActiveFocusChanged: {
-                                            if (!activeFocus && text.trim() && text.trim() !== page.current.rawTitle) {
+                                        function save() {
+                                            if (text.trim() && text.trim() !== page.current.rawTitle) {
                                                 TasksEngine.setTitle(page.current.key, text);
                                             }
+                                        }
+                                        // The text menu holds focus while it is open; the
+                                        // title is saved once typing is over.
+                                        onActiveFocusChanged: if (!activeFocus && !titleMenu.opened) save()
+                                        Keys.onPressed: event => {
+                                            if (titleMenu.isMenuKey(event)) {
+                                                titleMenu.openAtCaret();
+                                                event.accepted = true;
+                                            }
+                                        }
+
+                                        UI.TextMenu {
+                                            id: titleMenu
+                                            onFocusLeft: titleEdit.save()
                                         }
                                     }
                                     UI.IconButton {
@@ -997,6 +1021,16 @@ Item {
                                             clip: true
                                             Accessible.role: Accessible.EditableText
                                             Accessible.name: qsTr("Add a step")
+                                            Keys.onPressed: event => {
+                                                if (newStepMenu.isMenuKey(event)) {
+                                                    newStepMenu.openAtCaret();
+                                                    event.accepted = true;
+                                                }
+                                            }
+
+                                            UI.TextMenu {
+                                                id: newStepMenu
+                                            }
                                             onAccepted: {
                                                 const t = text.trim();
                                                 if (t) {
@@ -1107,10 +1141,24 @@ Item {
                                             border.width: 1
                                             border.color: notesEdit.activeFocus ? UI.Style.accent : UI.Style.borderSubtle
                                         }
-                                        onActiveFocusChanged: {
-                                            if (!activeFocus && text !== (page.current.notes || "")) {
+                                        function save() {
+                                            if (text !== (page.current.notes || "")) {
                                                 TasksEngine.setNotes(page.current.key, text);
                                             }
+                                        }
+                                        // The text menu holds focus while it is open; the
+                                        // note is saved once typing is over.
+                                        onActiveFocusChanged: if (!activeFocus && !notesMenu.opened) save()
+                                        Keys.onPressed: event => {
+                                            if (notesMenu.isMenuKey(event)) {
+                                                notesMenu.openAtCaret();
+                                                event.accepted = true;
+                                            }
+                                        }
+
+                                        UI.TextMenu {
+                                            id: notesMenu
+                                            onFocusLeft: notesEdit.save()
                                         }
                                     }
                                 }

@@ -1,0 +1,21 @@
+#!/bin/sh
+# Advanced protection's "Block everything unless the VPN is on": the VPN
+# kill switch of Advanced network settings, one switch shown in both
+# places. wildos-network watches the flag and does the blocking.
+set -eu
+
+FLAG=/etc/wildos/vpn-kill-switch
+
+case "${1:-}" in
+    on)
+        mkdir -p "$(dirname "$FLAG")"
+        echo "# Written by Wild OS Settings: the VPN kill switch is on." > "$FLAG"
+        ;;
+    off)
+        rm -f "$FLAG"
+        ;;
+    *)
+        exit 2
+        ;;
+esac
+systemctl start wildos-network.service >/dev/null 2>&1 || true

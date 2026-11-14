@@ -1,0 +1,22 @@
+#!/bin/sh
+# Advanced protection's "Ignore new USB devices while locked" is USBGuard,
+# the same switch as Block new USB devices on Privacy and security. On,
+# new devices wait to be allowed, and while the session is locked
+# wildos-usb-lock holds back even the kinds that normally work at once.
+# Off, USBGuard stops and USB devices work as soon as they are plugged in
+# (usb-release lets go of any it was holding back).
+set -eu
+
+# usbguard-dbus needs usbguard and is enabled on its own, so left enabled
+# it would start USBGuard again at the next start-up.
+case "${1:-}" in
+    on)
+        systemctl enable --now usbguard.service usbguard-dbus.service
+        ;;
+    off)
+        systemctl disable --now usbguard-dbus.service usbguard.service
+        ;;
+    *)
+        exit 2
+        ;;
+esac

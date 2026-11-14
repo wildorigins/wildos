@@ -251,6 +251,13 @@ Item {
             y: Math.round(lockScreenRoot.height * 96 / 900) + mainStack.y
         }
 
+        LockNotices {
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: clock.y + clock.height + 20
+            backdrop: lockScreenUi.backdrop
+            availableHeight: mainStack.y + mainBlock.contentTop - y - 20
+        }
+
         StackView {
             id: mainStack
 

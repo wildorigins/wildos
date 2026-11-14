@@ -38,12 +38,6 @@ DEFAULTS = {
     # keep, save or automatic
     "when_idle": "automatic",
     "guest_exe": DATA + "/guest/wild-guest.exe",
-    # The RemoteApp client: "auto" is Wild OS's own (wildos-rdp) when it is
-    # installed, "xfreerdp3" the fallback.
-    "rdp_client": "auto",
-    # The whole Windows desktop (Settings, "Open Windows desktop"):
-    # "xfreerdp3", or "remote" for the Remote app's desktop window.
-    "desktop_client": "xfreerdp3",
 }
 
 OPTION_KEYS = {"when_idle": ("keep", "save", "automatic")}

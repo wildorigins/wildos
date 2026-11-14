@@ -221,6 +221,7 @@ PageScroll {
             Layout.fillWidth: true
             placeholderText: "Password"
             revealable: true
+            UI.NoPaste {}
             error: text.length > 0 && text.length < 8
             onAccepted: confirmField.forceActiveFocus()
         }
@@ -236,6 +237,7 @@ PageScroll {
             Layout.fillWidth: true
             placeholderText: "Confirm the password"
             revealable: true
+            UI.NoPaste {}
             error: text.length > 0 && text !== passwordField.text
             onAccepted: createButton.clicked()
         }

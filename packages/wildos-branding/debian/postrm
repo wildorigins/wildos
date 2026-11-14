@@ -8,6 +8,8 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ] || [ "$1" = "abort-install" ]; then
         --divert "$SHIM.plasma" "$SHIM" >/dev/null || true
     dpkg-divert --package wildos-branding --remove --rename \
         --divert /etc/xdg/arkrc.ark /etc/xdg/arkrc >/dev/null || true
+    dpkg-divert --package wildos-branding --remove --rename \
+        --divert /etc/xdg/taskmanagerrulesrc.plasma /etc/xdg/taskmanagerrulesrc >/dev/null || true
 fi
 
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
@@ -21,6 +23,10 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     if [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null; then
         update-grub || echo "wildos-branding: update-grub failed; run it again to restore the start-up menu" >&2
     fi
+fi
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    update-alternatives --remove x-cursor-theme /usr/share/wildos/cursor/white.theme || true
 fi
 
 #DEBHELPER#

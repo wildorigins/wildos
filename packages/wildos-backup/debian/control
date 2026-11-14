@@ -24,7 +24,7 @@ Depends:
  restic,
  udisks2,
  pkexec,
- wildos-ui (>= 0.1.6),
+ wildos-ui (>= 0.1.12),
  qml6-module-qtcore,
  qml6-module-qtquick,
  qml6-module-qtquick-controls,

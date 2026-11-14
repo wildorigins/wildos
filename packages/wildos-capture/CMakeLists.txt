@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(wildos-capture VERSION 0.1.1 LANGUAGES C CXX)
+project(wildos-capture VERSION 0.1.4 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,6 +19,10 @@ find_package(KPipeWire REQUIRED)
 find_package(PlasmaWaylandProtocols REQUIRED)
 find_package(WaylandScanner REQUIRED)
 find_package(Wayland REQUIRED COMPONENTS Client)
+# Scanning goes through SANE: sane-airscan for driverless network scanners,
+# SANE's own backends for USB ones.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SANE REQUIRED IMPORTED_TARGET sane-backends)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -42,6 +46,9 @@ qt_add_qml_module(wildos-capture
         src/recorder.cpp src/recorder.h
         src/sharer.cpp src/sharer.h
         src/frozenimage.cpp src/frozenimage.h
+        src/scanner.cpp src/scanner.h
+        src/scanworker.cpp src/scanworker.h
+        src/scanprocess.cpp src/scanprocess.h
 )
 
 # The recording stream comes from KWin's screencast protocol.
@@ -54,6 +61,7 @@ target_link_libraries(wildos-capture PRIVATE
     Qt6::Widgets Qt6::DBus Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::WaylandClient
     KF6::Notifications KF6::DBusAddons KF6::GuiAddons KF6::WindowSystem KF6::ConfigCore KF6::Purpose
     K::KPipeWireRecord
+    PkgConfig::SANE
     Wayland::Client
 )
 

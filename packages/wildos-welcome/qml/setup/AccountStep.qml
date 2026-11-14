@@ -169,6 +169,7 @@ StepPage {
                     Layout.fillWidth: true
                     size: "large"
                     revealable: true
+                    UI.NoPaste {}
                     error: page.passwordShort && !activeFocus
                     Accessible.name: "Password"
                     onAccepted: page.submit()
@@ -190,6 +191,7 @@ StepPage {
                     Layout.fillWidth: true
                     size: "large"
                     revealable: true
+                    UI.NoPaste {}
                     error: page.mismatch && !activeFocus
                     Accessible.name: "Type the password again"
                     onAccepted: page.submit()

@@ -171,6 +171,7 @@ PageScroll {
                                 Layout.fillWidth: true
                                 placeholderText: "Network password"
                                 revealable: true
+                                UI.NoPaste {}
                                 onAccepted: connectButton.clicked()
                                 Keys.onEscapePressed: page.expanded = ""
                             }

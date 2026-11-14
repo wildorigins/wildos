@@ -6,10 +6,15 @@
 #include <QAbstractListModel>
 #include <QDateTime>
 #include <QObject>
+#include <QPointer>
 #include <QQmlEngine>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QVariantList>
+#include <QWindow>
+
+class QNetworkAccessManager;
+class QNetworkReply;
 
 // The lines of whatever the preview pane shows. A log line has a time and a
 // source; anything else is just text.
@@ -70,13 +75,21 @@ class Report : public QObject
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     Q_PROPERTY(QString savedText READ savedText NOTIFY savedChanged)
     Q_PROPERTY(QString savedPath READ savedPath NOTIFY savedChanged)
+    // After Open GitHub: "opening" while the zip is written and the browser
+    // starts, "waiting" while the issue is finished there, "posted" once it
+    // shows up on GitHub, empty otherwise.
+    Q_PROPERTY(QString handoff READ handoff NOTIFY handoffChanged)
+    Q_PROPERTY(bool watching READ watching NOTIFY handoffChanged)
+    Q_PROPERTY(QString handoffZip READ handoffZip NOTIFY handoffChanged)
+    Q_PROPERTY(int postedNumber READ postedNumber NOTIFY handoffChanged)
 
 public:
     static Report *instance();
     static Report *create(QQmlEngine *, QJSEngine *) { return instance(); }
 
     // From the command line or a second launch: wildos-report:<part>,
-    // --part, and --crash/--app after a crash notification.
+    // --part, --crash/--app after a crash notification, and --event FILE
+    // from History.
     void handle(const QStringList &arguments);
     // `--save DIR` from start-up recovery, without a window: builds the
     // whole report and writes it to DIR. Returns the zip's path, or empty.
@@ -114,6 +127,10 @@ public:
     void setTitle(const QString &title);
     QString savedText() const { return m_savedText; }
     QString savedPath() const { return m_savedPath; }
+    QString handoff() const { return m_handoff; }
+    bool watching() const { return m_watching; }
+    QString handoffZip() const { return m_handoffZip; }
+    int postedNumber() const { return m_postedNumber; }
 
     // Step 2 opens: gather for the chosen part and time, unless that is
     // what was last gathered, and remove personal details from it all.
@@ -124,8 +141,15 @@ public:
     Q_INVOKABLE void removeWord(const QString &word);
     Q_INVOKABLE void takeScreenshot();
     Q_INVOKABLE void removeScreenshot(int index);
+    // Pictures already on the PC: the Open dialog, starting in Pictures >
+    // Screenshots, in front of `window`.
+    Q_INVOKABLE void chooseScreenshotFiles(QWindow *window);
+    void addScreenshotFiles(const QList<QUrl> &files);
     Q_INVOKABLE void suggestTitle();
-    Q_INVOKABLE bool openGitHub();
+    Q_INVOKABLE void openGitHub();
+    Q_INVOKABLE void reopenGitHub();
+    Q_INVOKABLE void endHandoff();
+    Q_INVOKABLE void viewPosted();
     Q_INVOKABLE bool saveTo(const QUrl &file);
     Q_INVOKABLE void copyDescription();
     Q_INVOKABLE void copyPreview();
@@ -149,6 +173,7 @@ Q_SIGNALS:
     void sizeChanged();
     void titleChanged();
     void savedChanged();
+    void handoffChanged();
     // The window gets out of the way of Capture, and comes back after.
     void hideForCapture();
     void captureDone();
@@ -156,7 +181,13 @@ Q_SIGNALS:
     // Another launch asked for the window.
     void raiseRequested();
 
+private Q_SLOTS:
+    void pickerResponse(uint response, const QVariantMap &results);
+    void pickerOpened();
+    void pickerFailed();
+
 private:
+    QUrl screenshotsFolder() const;
     // One per process: QML gets it through create(), not a constructor.
     explicit Report(QObject *parent = nullptr);
 
@@ -172,6 +203,9 @@ private:
     QPair<QDateTime, QDateTime> window() const;
     QString describe() const;
     QString repeatText() const;
+    // Reads what History handed over, then deletes it; returns the part
+    // of Wild OS it is about, or empty.
+    QString readEvent(const QString &path);
     void collected(const RawReport &raw);
     void redactAll();
     void measure();
@@ -183,6 +217,9 @@ private:
     QString uniquePath(const QString &folder) const;
     QString issueBody(const QString &zipName, int budget) const;
     void showPreview();
+    void setHandoff(const QString &state);
+    void watchNext(int seconds);
+    void watchOnce();
 
     QString m_part = QStringLiteral("other");
     QString m_when = QStringLiteral("now");
@@ -193,6 +230,9 @@ private:
     QString m_title;
     bool m_titleTouched = false;
     QStringList m_shots;
+    // The name a chosen picture had, shown only beside it on this page.
+    QHash<QString, QString> m_shotNames;
+    QString m_pickerRequest;
     QTemporaryDir m_temp;
     bool m_capturing = false;
     QString m_capturePath;
@@ -204,6 +244,9 @@ private:
     QDateTime m_fixedUntil;
     QString m_crashApp;
     QDateTime m_crashTime;
+    // An event handed over from Settings > System > History (--event).
+    QString m_eventTitle;
+    QDateTime m_eventTime;
 
     Collector m_collector;
     bool m_collecting = false;
@@ -221,4 +264,16 @@ private:
     PreviewModel m_preview;
     QString m_savedText;
     QString m_savedPath;
+    QString m_handoff;
+    int m_handoffSerial = 0;
+    QString m_handoffUrl;
+    QString m_handoffZip;
+    QDateTime m_handoffAt;
+    QTimer m_watchTimer;
+    bool m_watching = false;
+    QNetworkAccessManager *m_net = nullptr;
+    QPointer<QNetworkReply> m_watchReply;
+    QByteArray m_watchTag;
+    int m_postedNumber = 0;
+    QString m_postedUrl;
 };

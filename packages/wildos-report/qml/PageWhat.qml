@@ -5,7 +5,8 @@ import WildOS.Report
 import WildOS.UI as UI
 
 // Step 1, What happened (ReportDescribe.dc): which part, when, what went
-// wrong, whether it happens again, and screenshots.
+// wrong, whether it happens again, and screenshots: a new one taken with
+// Capture, or pictures already on the PC.
 Item {
     id: page
 
@@ -93,8 +94,9 @@ Item {
                         text: qsTr("at")
                         color: UI.Style.inkMuted
                     }
-                    TextField {
+                    UI.TextField {
                         id: timeField
+                        escapeClears: false
                         implicitWidth: 72
                         implicitHeight: 32
                         text: Report.pickTime
@@ -152,7 +154,7 @@ Item {
                     anchors.fill: parent
                     ScrollBar.vertical: UI.ScrollBar {}
 
-                    TextArea {
+                    UI.TextArea {
                         id: description
                         text: Report.description
                         onTextChanged: Report.description = text
@@ -266,16 +268,26 @@ Item {
                 }
 
                 Item {
-                    width: addShot.width
-                    height: Report.screenshots.length > 0 ? 58 : addShot.height
+                    width: addButtons.width
+                    height: Report.screenshots.length > 0 ? 58 : addButtons.height
 
-                    ActionButton {
-                        id: addShot
+                    Row {
+                        id: addButtons
                         anchors.verticalCenter: parent.verticalCenter
-                        iconName: "image-plus"
-                        text: Report.capturing ? qsTr("Waiting for Capture") : qsTr("Add a screenshot")
-                        enabled: !Report.capturing
-                        onClicked: Report.takeScreenshot()
+                        spacing: 8
+
+                        ActionButton {
+                            iconName: "image-plus"
+                            text: Report.capturing ? qsTr("Waiting for Capture") : qsTr("Take a screenshot")
+                            enabled: !Report.capturing
+                            onClicked: Report.takeScreenshot()
+                        }
+                        ActionButton {
+                            iconName: "folder"
+                            text: qsTr("Choose a picture")
+                            enabled: !Report.capturing
+                            onClicked: Report.chooseScreenshotFiles(page.Window.window)
+                        }
                     }
                 }
             }

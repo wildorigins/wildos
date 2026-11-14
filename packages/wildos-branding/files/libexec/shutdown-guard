@@ -1,0 +1,318 @@
+#!/usr/bin/python3
+"""Sees a shutdown or restart through to the end once Plasma has started it.
+
+Plasma signs out before it shuts down: plasma-shutdown asks ksmserver and
+KWin to close every app, stops the session's services and only then asks
+logind to power off. Two things went wrong on the way.
+
+The lid. PowerDevil holds logind's handle-lid-switch lock for the whole
+session and is one of the services stopped while signing out. If the lid is
+closed at that moment (closing it is what started a lid shutdown), logind
+sees a closed lid nobody is handling and suspends, a fraction of a second
+before plasma-shutdown's PowerOff, which logind then refuses because a
+suspend is under way. The PC slept instead of shutting down and woke up to
+a black screen with the session gone. So from the moment a shutdown or
+restart is asked for, this process holds the lid lock itself; it is not
+part of the graphical session, so signing out leaves it running.
+
+Apps with unsaved work. KWin asks each window to close; one that answers
+with "save changes?" stops the sign-out and ksmserver calls the whole thing
+off. That is right when someone is at the screen, but a lid or power button
+shutdown is asked for by someone walking away, so like Windows it gives the
+apps a while and then shuts down anyway. Whatever was still open then is
+written down, and `shutdown-guard --notice` says which apps were closed
+once the desktop is up at the next sign-in.
+"""
+
+import json
+import os
+import sys
+import time
+
+from gi.repository import Gio, GLib
+
+# How long a lid or power button shutdown waits for apps before going ahead.
+GRACE = 15
+# After plasma-shutdown goes away, how long to wait for logind's
+# PrepareForShutdown before deciding the shutdown was called off.
+SETTLE = 3
+
+LOGIND = ("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager")
+# PowerDevil's name on the session bus: lid, power button and low battery
+# actions come from it, other shutdowns from someone at the screen.
+POWERDEVIL = "org.kde.Solid.PowerManagement"
+ACTIONS = {"logoutAndShutdown": "PowerOff", "logoutAndReboot": "Reboot"}
+
+STATE_DIR = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "wildos")
+NOTICE = os.path.join(STATE_DIR, "closed-at-shutdown.json")
+
+
+def log(*args):
+    print(*args, flush=True)
+
+
+class Guard:
+    def __init__(self):
+        self.session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        self.system = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        self.powerdevil = None
+        self.lock = None
+        self.pending = None
+        self.timer = 0
+        Gio.bus_watch_name_on_connection(self.session, POWERDEVIL, Gio.BusNameWatcherFlags.NONE,
+                                         self._powerdevil_up, self._powerdevil_gone)
+        Gio.bus_watch_name_on_connection(self.session, "org.kde.Shutdown", Gio.BusNameWatcherFlags.NONE,
+                                         None, self._shutdown_gone)
+        self.system.signal_subscribe(LOGIND[0], LOGIND[2], "PrepareForShutdown", LOGIND[1], None,
+                                     Gio.DBusSignalFlags.NONE, self._prepare, None)
+        self._monitor()
+
+    def _powerdevil_up(self, conn, name, owner):
+        self.powerdevil = owner
+
+    def _powerdevil_gone(self, conn, name):
+        # Kept: PowerDevil stops during the sign-out its own call started,
+        # and the call is matched to it after that.
+        pass
+
+    def _monitor(self):
+        """org.kde.Shutdown's calls, seen as a monitor on a connection of
+        their own: every way of shutting down in Plasma goes through them."""
+        address = Gio.dbus_address_get_for_bus_sync(Gio.BusType.SESSION, None)
+        self.monitor = Gio.DBusConnection.new_for_address_sync(
+            address, Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION,
+            None, None)
+        self.monitor.add_filter(self._filter)
+        rules = ["type='method_call',interface='org.kde.Shutdown',member='%s'" % m for m in ACTIONS]
+        self.monitor.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus.Monitoring",
+                               "BecomeMonitor", GLib.Variant("(asu)", (rules, 0)), None, Gio.DBusCallFlags.NONE, 3000, None)
+
+    def _filter(self, conn, message, incoming):
+        # GDBus's worker thread: hand over to the main loop. The lid lock has
+        # to be taken within the fraction of a second before PowerDevil
+        # stops, so this is the first thing that happens.
+        if incoming and message.get_message_type() == Gio.DBusMessageType.METHOD_CALL \
+                and message.get_interface() == "org.kde.Shutdown" and message.get_member() in ACTIONS:
+            GLib.idle_add(self._asked, message.get_member(), message.get_sender())
+            return None
+        return message
+
+    def _asked(self, member, sender):
+        action = ACTIONS[member]
+        self._hold_lid()
+        unattended = bool(sender) and sender == self.powerdevil
+        lid = self._lid_closed()
+        log("%s asked for by %s%s" % (action, "PowerDevil" if unattended else sender or "someone",
+                                       ", lid closed" if lid else ""))
+        if unattended:
+            if self.timer:
+                GLib.source_remove(self.timer)
+            self.pending = {"action": action, "lid": lid, "at": time.time()}
+            self.timer = GLib.timeout_add_seconds(GRACE, self._deadline)
+        return False
+
+    def _hold_lid(self):
+        if self.lock is not None:
+            return
+        try:
+            reply, fds = self.system.call_with_unix_fd_list_sync(
+                LOGIND[0], LOGIND[1], LOGIND[2], "Inhibit",
+                GLib.Variant("(ssss)", ("handle-lid-switch", "Wild OS", "Shutting down", "block")),
+                GLib.VariantType("(h)"), Gio.DBusCallFlags.NONE, 3000, None, None)
+            self.lock = fds.steal_fds()[reply.unpack()[0]]
+        except GLib.Error as e:
+            log("could not hold the lid:", e.message)
+
+    def _release_lid(self):
+        if self.lock is not None:
+            os.close(self.lock)
+            self.lock = None
+
+    def _lid_closed(self):
+        try:
+            reply = self.system.call_sync(LOGIND[0], LOGIND[1], "org.freedesktop.DBus.Properties", "Get",
+                                          GLib.Variant("(ss)", (LOGIND[2], "LidClosed")), GLib.VariantType("(v)"),
+                                          Gio.DBusCallFlags.NONE, 3000, None)
+            return bool(reply.unpack()[0])
+        except GLib.Error:
+            return False
+
+    def _shutting_down(self):
+        try:
+            reply = self.system.call_sync(LOGIND[0], LOGIND[1], "org.freedesktop.DBus.Properties", "Get",
+                                          GLib.Variant("(ss)", (LOGIND[2], "PreparingForShutdown")),
+                                          GLib.VariantType("(v)"), Gio.DBusCallFlags.NONE, 3000, None)
+            return bool(reply.unpack()[0])
+        except GLib.Error:
+            return False
+
+    def _prepare(self, conn, sender, path, iface, signal, params, data):
+        if params.unpack()[0]:
+            # Under way: logind ignores the lid from here on, and this
+            # process ends with the session.
+            if self.timer:
+                GLib.source_remove(self.timer)
+                self.timer = 0
+            self.pending = None
+
+    def _shutdown_gone(self, conn, name):
+        # plasma-shutdown quits once it has asked logind, or when the
+        # sign-out was called off. Someone at the screen who called it off
+        # gets the lid back; an unattended shutdown waits for its deadline.
+        if self.lock is not None and self.pending is None:
+            GLib.timeout_add_seconds(SETTLE, self._settle)
+
+    def _settle(self):
+        if self.pending is None and not self._shutting_down():
+            log("the shutdown was called off")
+            self._release_lid()
+        return False
+
+    def _deadline(self):
+        self.timer = 0
+        pending, self.pending = self.pending, None
+        if pending is None or self._shutting_down():
+            return False
+        apps = open_apps()
+        log("apps still open after %d s: %s; going ahead without them" % (GRACE, ", ".join(apps) or "none"))
+        if apps:
+            os.makedirs(STATE_DIR, exist_ok=True)
+            with open(NOTICE + ".new", "w") as f:
+                json.dump({"t": round(pending["at"]), "lid": pending["lid"], "apps": apps,
+                           "action": pending["action"]}, f)
+            os.replace(NOTICE + ".new", NOTICE)
+        try:
+            self.system.call_sync(LOGIND[0], LOGIND[1], LOGIND[2], pending["action"], GLib.Variant("(b)", (False,)),
+                                  None, Gio.DBusCallFlags.NONE, 10000, None)
+        except GLib.Error as e:
+            # Better asleep with the lid shut than on all night.
+            log("logind refused %s: %s" % (pending["action"], e.message))
+            try:
+                os.unlink(NOTICE)
+            except OSError:
+                pass
+            self._release_lid()
+        return False
+
+
+def unescape(s):
+    out, i = "", 0
+    while i < len(s):
+        if s.startswith("\\x", i) and i + 4 <= len(s):
+            try:
+                out += chr(int(s[i + 2:i + 4], 16))
+                i += 4
+                continue
+            except ValueError:
+                pass
+        out += s[i]
+        i += 1
+    return out
+
+
+def app_name(unit, description):
+    """The app's own name for a systemd unit Plasma started it in:
+    app-<id>@<n>.service or app-<id>-<n>.scope, the id its .desktop file."""
+    base = unit[4:]
+    if base.endswith(".service"):
+        base = base[:-8].split("@", 1)[0]
+    elif base.endswith(".scope"):
+        base = base[:-6].rsplit("-", 1)[0]
+    base = unescape(base)
+    candidates = [base]
+    if "-" in base:
+        # A launcher's prefix: app-flatpak-<id>-<n>.scope and the like.
+        candidates.append(base.split("-", 1)[1])
+    for desktop_id in candidates:
+        try:
+            info = Gio.DesktopAppInfo.new(desktop_id + ".desktop")
+        except TypeError:
+            info = None
+        if info:
+            return info.get_name()
+    return description if description and not description.startswith("app-") else base
+
+
+def open_apps():
+    """Apps still running in the session: the ones that didn't close when
+    asked. Things started at sign-in (@autostart) are the desktop's own."""
+    try:
+        session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        reply = session.call_sync("org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                                  "org.freedesktop.systemd1.Manager", "ListUnitsByPatterns",
+                                  GLib.Variant("(asas)", (["active"], ["app-*.service", "app-*.scope"])),
+                                  None, Gio.DBusCallFlags.NONE, 5000, None)
+    except GLib.Error as e:
+        log("could not list the open apps:", e.message)
+        return []
+    names = []
+    for unit in reply.unpack()[0]:
+        name, description = unit[0], unit[1]
+        # What Plasma opens gets a unit of its own, named with a random
+        # instance (app-<id>@<n>.service). Packaged background services
+        # such as the remote desktop server have no instance, and those
+        # started at sign-in have "autostart" as theirs.
+        if name.endswith(".service") and ("@" not in name or "@autostart." in name):
+            continue
+        label = app_name(name, description)
+        if label and label not in names:
+            names.append(label)
+    return sorted(names)
+
+
+def notice():
+    """Says which apps the last unattended shutdown closed. Run once the
+    desktop is up (wildos-shutdown-notice.service): a notification sent
+    while Plasma is still starting goes straight to its history unseen."""
+    try:
+        with open(NOTICE) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return 0
+    except (OSError, ValueError):
+        data = {}
+    apps = [a for a in data.get("apps", []) if isinstance(a, str)]
+    if not apps:
+        os.unlink(NOTICE)
+        return 0
+    names = apps[0] if len(apps) == 1 else ", ".join(apps[:-1]) + " and " + apps[-1]
+    one = len(apps) == 1
+    did = "restarted" if data.get("action") == "Reboot" else "shut down"
+    if data.get("lid"):
+        start = "You closed the lid while %s %s still open" % (names, "was" if one else "were")
+    else:
+        start = "The PC %s while %s %s still open" % (did, names, "was" if one else "were")
+    body = ("%s. %s didn't close within %d seconds, so Wild OS %s anyway. Anything you hadn't saved in %s may be lost."
+            % (start, "It" if one else "They", GRACE, did, "it" if one else "them"))
+    title = "%s was closed without saving" % apps[0] if one else "Apps were closed without saving"
+    try:
+        session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        session.call_sync("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                          "org.freedesktop.Notifications", "Notify",
+                          GLib.Variant("(susssasa{sv}i)", ("Wild OS", 0, "dialog-warning", title, body, [],
+                                                           {"urgency": GLib.Variant("y", 1)},
+                                                           # Stays until read: it is about lost work.
+                                                           0)),
+                          None, Gio.DBusCallFlags.NONE, 10000, None)
+    except GLib.Error as e:
+        # Kept for the next sign-in.
+        log("could not show the notice:", e.message)
+        return 1
+    os.unlink(NOTICE)
+    log("told the person:", body)
+    return 0
+
+
+def main():
+    if sys.argv[1:] == ["--notice"]:
+        return notice()
+    if len(sys.argv) > 1:
+        print("usage: shutdown-guard [--notice]", file=sys.stderr)
+        return 2
+    Guard()
+    GLib.MainLoop().run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

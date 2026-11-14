@@ -1,0 +1,113 @@
+#!/bin/sh
+# The panic key from Advanced protection, Ctrl+Alt+End while "Panic key" is
+# on (panic_key in /etc/wildos/advanced-protection, off unless set to on).
+#
+#   panic-key          the key itself (wildos-panic.service, which the
+#                      org.wildos.panickey KWin script starts)
+#   panic-key switch   load or unload that KWin script for this account, at
+#                      sign-in and whenever the switch changes
+#                      (wildos-panic-key.service and .path)
+#   panic-key offer    once the screen is unlocked, offer to turn the network
+#                      back on (wildos-panic-offer.service)
+#
+# The network stays off until the person turns it back on: after they
+# unlock, a notification offers to, and every sign-in offers again for as
+# long as it is still off.
+
+set -u
+
+state=${XDG_STATE_HOME:-$HOME/.local/state}/wildos
+cut=$state/panic-network
+store=/etc/wildos/advanced-protection
+
+panic() {
+    # The screen locker answers once the lock screen is up. loginctl is the
+    # way round when it is missing, with the account's graphical session
+    # named, as this service is not in one.
+    if ! busctl --user call org.freedesktop.ScreenSaver /ScreenSaver org.freedesktop.ScreenSaver Lock >/dev/null 2>&1; then
+        session=$(loginctl show-user "$(id -un)" -p Display --value 2>/dev/null)
+        loginctl lock-session ${session:+"$session"}
+    fi
+
+    # The history Win+V shows lives in wildos-clipboard, which empties it
+    # and its pins (kept on disk, pictures and all), then the clipboard and
+    # the middle-click selection.
+    wildos-clipboard --clear >/dev/null 2>&1
+
+    # Only what this turns off comes back later, added to what an earlier
+    # press turned off. NetworkManager lets the person at the screen switch
+    # networking off and on without a password (polkit
+    # org.freedesktop.NetworkManager.enable-disable-network); Bluetooth goes
+    # through the same switch as Quick settings.
+    networking=no
+    bluetooth=no
+    [ -r "$cut" ] && . "$cut"
+    if [ "$(nmcli networking 2>/dev/null)" = enabled ]; then
+        nmcli networking off && networking=yes
+    fi
+    if rfkill list bluetooth 2>/dev/null | grep -q 'Soft blocked: no'; then
+        rfkill block bluetooth && bluetooth=yes
+    fi
+    if [ "$networking" = yes ] || [ "$bluetooth" = yes ]; then
+        mkdir -p "$state"
+        printf 'networking=%s\nbluetooth=%s\n' "$networking" "$bluetooth" > "$cut"
+        systemctl --user start --no-block wildos-panic-offer.service
+    fi
+}
+
+switch() {
+    value=$(sed -n 's/^panic_key=//p' "$store" 2>/dev/null | tail -n 1 | tr -d "\"' ")
+    if [ "$value" = on ]; then
+        kwriteconfig6 --file kwinrc --group Plugins --key org.wildos.panickeyEnabled true
+        busctl --user call org.kde.KWin /Scripting org.kde.kwin.Scripting start >/dev/null 2>&1
+    else
+        kwriteconfig6 --file kwinrc --group Plugins --key org.wildos.panickeyEnabled false
+        busctl --user call org.kde.KWin /Scripting org.kde.kwin.Scripting unloadScript s org.wildos.panickey >/dev/null 2>&1
+    fi
+    if [ -e "$cut" ]; then
+        systemctl --user start --no-block wildos-panic-offer.service
+    fi
+}
+
+offer() {
+    [ -r "$cut" ] || exit 0
+    networking=no
+    bluetooth=no
+    . "$cut"
+
+    # Nothing is offered over the lock screen, where it could not be seen.
+    while busctl --user call org.freedesktop.ScreenSaver /ScreenSaver org.freedesktop.ScreenSaver GetActive 2>/dev/null |
+            grep -q true; do
+        sleep 2
+    done
+
+    # Turned back on some other way meanwhile: nothing to offer.
+    if [ "$networking" = yes ] && [ "$(nmcli networking 2>/dev/null)" = enabled ]; then
+        networking=no
+    fi
+    if [ "$bluetooth" = yes ] && ! rfkill list bluetooth 2>/dev/null | grep -q 'Soft blocked: yes'; then
+        bluetooth=no
+    fi
+    if [ "$networking" = no ] && [ "$bluetooth" = no ]; then
+        rm -f "$cut"
+        exit 0
+    fi
+
+    # Critical, so it waits on screen until answered instead of timing out
+    # into the history, where its button would no longer work.
+    answer=$(notify-send --app-name="Wild OS" --icon=network-offline --urgency=critical \
+        --action=on="Turn back on" --wait \
+        "The network is off" "The panic key cut it. Turn it back on when you are ready.")
+    [ "$answer" = on ] || exit 0
+
+    [ "$networking" = yes ] && nmcli networking on
+    [ "$bluetooth" = yes ] && rfkill unblock bluetooth
+    rm -f "$cut"
+}
+
+case ${1:-} in
+    "") panic ;;
+    switch) switch ;;
+    offer) offer ;;
+    *) echo "usage: panic-key [switch|offer]" >&2; exit 2 ;;
+esac

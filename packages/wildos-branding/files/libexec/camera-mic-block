@@ -1,0 +1,95 @@
+#!/bin/sh
+# The switches in the camera and microphone panel on the taskbar: each one
+# blocks its device for every app and every account, until it is switched
+# back on. Runs as root through pkexec (org.wildos.camera-mic.policy).
+# Takes only the requests below.
+#
+#   block microphone    Capture devices become root's alone (udev,
+#                       72-wildos-camera-mic.rules), so neither PipeWire
+#                       nor an app opening the device itself can start
+#                       listening. The session's camera-mic service ends
+#                       the streams already running and mutes the
+#                       microphones.
+#   block camera        The same for cameras, and the USB camera driver
+#                       (uvcvideo) is taken out and kept out, which also
+#                       cuts off an app that already has the camera open.
+#   unblock DEVICE      Back as Wild OS ships it.
+#   release camera      The Stop button for an app that opened a USB camera
+#                       itself: the camera is unplugged in software and
+#                       plugged back, which closes it for whoever has it.
+
+set -eu
+export LC_ALL=C
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+FLAGS=/etc/wildos
+CAMERA_DRIVER_BLOCK=/etc/modprobe.d/60-wildos-camera-off.conf
+# Maximum protection's own block, which this never removes.
+MAXIMUM_BLOCK=/etc/modprobe.d/60-wildos-protection-camera.conf
+
+uvc_interfaces() {
+    for dev in /sys/bus/usb/drivers/uvcvideo/*:*; do
+        [ -e "$dev" ] && basename "$dev"
+    done
+}
+
+# Switched off: udev forgets the devices and finds them again, so the rules
+# start afresh without the uaccess tag a device keeps from earlier events
+# (logind would otherwise give the access list back at the next sign-in).
+# Mode 0600 also empties the access list already on the device file.
+# Takes udevadm trigger's matches for the devices.
+lock() {
+    udevadm trigger --action=remove "$@" >/dev/null 2>&1 || true
+    udevadm settle --timeout=10 >/dev/null 2>&1 || true
+    udevadm trigger --action=add "$@" >/dev/null 2>&1 || true
+    udevadm settle --timeout=10 >/dev/null 2>&1 || true
+}
+
+# Switched on: owner, group, mode and the signed-in person's access list
+# come back from the rules as Wild OS ships them. udev only sets the owner
+# and group of a device it is adding, so it is found again here too.
+unlock() {
+    lock "$@"
+}
+
+case "${1:-}:${2:-}" in
+    block:microphone)
+        mkdir -p "$FLAGS"
+        : > "$FLAGS/microphone-off"
+        lock --subsystem-match=sound --sysname-match="pcmC*D*c"
+        ;;
+    unblock:microphone)
+        rm -f "$FLAGS/microphone-off"
+        unlock --subsystem-match=sound --sysname-match="pcmC*D*c"
+        ;;
+    block:camera)
+        mkdir -p "$FLAGS"
+        : > "$FLAGS/camera-off"
+        printf '%s\n' '# Written by the camera switch on the taskbar: the camera is off for every app.' \
+            'install uvcvideo /bin/false' > "$CAMERA_DRIVER_BLOCK"
+        # Unbinding first takes the camera from an app holding it open,
+        # which would otherwise keep the driver from unloading.
+        for intf in $(uvc_interfaces); do
+            echo "$intf" > /sys/bus/usb/drivers/uvcvideo/unbind 2>/dev/null || true
+        done
+        modprobe -r uvcvideo 2>/dev/null || true
+        lock --subsystem-match=video4linux --subsystem-match=media
+        ;;
+    unblock:camera)
+        rm -f "$FLAGS/camera-off" "$CAMERA_DRIVER_BLOCK"
+        if [ ! -e "$MAXIMUM_BLOCK" ]; then
+            modprobe uvcvideo 2>/dev/null || true
+        fi
+        unlock --subsystem-match=video4linux --subsystem-match=media
+        ;;
+    release:camera)
+        for intf in $(uvc_interfaces); do
+            echo "$intf" > /sys/bus/usb/drivers/uvcvideo/unbind 2>/dev/null || true
+            echo "$intf" > /sys/bus/usb/drivers/uvcvideo/bind 2>/dev/null || true
+        done
+        ;;
+    *)
+        echo "usage: camera-mic-block block|unblock microphone|camera, or release camera" >&2
+        exit 2
+        ;;
+esac

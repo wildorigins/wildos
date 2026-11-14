@@ -943,6 +943,15 @@ Window {
                 font.family: "Albert Sans"
                 font.pixelSize: 14
                 placeholderText: "Disk password"
+                // Only what is typed: no Ctrl+V, Shift+Insert or middle click.
+                Keys.onPressed: event => {
+                    if (event.matches(StandardKey.Paste) || (event.key === Qt.Key_Insert && (event.modifiers & Qt.ShiftModifier)))
+                        event.accepted = true;
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.MiddleButton
+                }
                 placeholderTextColor: Qt.rgba(1, 1, 1, 0.5)
                 background: Rectangle {
                     implicitHeight: 42

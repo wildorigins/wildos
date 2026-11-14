@@ -1,0 +1,9 @@
+[Unit]
+Description=Free up space when the disk is nearly full
+Documentation=file:///usr/libexec/wildos/settings-free-space
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wildos/settings-free-space run --auto
+Nice=10
+IOSchedulingClass=idle

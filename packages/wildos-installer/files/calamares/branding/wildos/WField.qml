@@ -35,6 +35,7 @@ ColumnLayout {
         size: "large"
         error: field.error !== ""
         revealable: field.echoMode === TextInput.Password
+        UI.NoPaste { enabled: field.echoMode === TextInput.Password }
         Accessible.name: field.label
     }
 

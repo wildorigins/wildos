@@ -1,0 +1,4 @@
+#!/bin/sh
+# The camera and microphone lights have no switch: they are always on, and
+# this only tells Settings > Privacy and security > Advanced protection so.
+exit 0

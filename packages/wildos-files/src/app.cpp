@@ -160,6 +160,38 @@ void App::openWindow(const QList<QUrl> &urls, const QString &formatUdi)
     }
 }
 
+void App::ChooseRemovedDetails()
+{
+    if (!m_engine) {
+        return;
+    }
+    // One window at a time: a second request brings the open one forward.
+    if (m_choices) {
+        m_choices->requestActivate();
+        KWindowSystem::activateWindow(m_choices);
+        return;
+    }
+    QQmlComponent component(m_engine, QStringLiteral("WildOS.Files"), QStringLiteral("RemoveDetailsWindow"));
+    QObject *object = component.create();
+    auto window = qobject_cast<QQuickWindow *>(object);
+    if (!window) {
+        qWarning() << component.errors();
+        delete object;
+        return;
+    }
+    object->setParent(this);
+    m_choices = window;
+    connect(window, &QQuickWindow::visibleChanged, window, [window] {
+        if (!window->isVisible()) {
+            window->deleteLater();
+        }
+    });
+    KWindowSystem::updateStartupId(window);
+    window->show();
+    window->requestActivate();
+    KWindowSystem::activateWindow(window);
+}
+
 FileManager1::FileManager1(QObject *parent)
     : QObject(parent)
 {

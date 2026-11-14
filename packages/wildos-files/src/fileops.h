@@ -146,6 +146,13 @@ public:
     Q_INVOKABLE void duplicate(const QUrl &url);
     Q_INVOKABLE void applyProperties(const QUrl &url, const QString &fileName, bool isDir, const QString &typed, bool hidden);
 
+    // Advanced protection, see protectionops.cpp: a copy without personal
+    // details, and opening a file in the safe box.
+    Q_INVOKABLE bool canRemoveDetails(const QList<QUrl> &urls) const;
+    Q_INVOKABLE void removeDetails(const QList<QUrl> &urls);
+    Q_INVOKABLE QVariantMap safeBoxPlan(const QUrl &url) const;
+    Q_INVOKABLE void openInSafeBox(const QUrl &url);
+
     Q_INVOKABLE void answer(const QString &choice, bool applyToAll);
     Q_INVOKABLE void ejectDrive(const QString &udi);
 

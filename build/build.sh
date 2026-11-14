@@ -616,6 +616,94 @@ COPYRIGHT
     fi
     cp "$cached"/*.deb "$WORK/repo/"
 )
+# kactivitymanagerd, which keeps the recent files history, with the patch
+# from build/patches/kactivitymanagerd: Forget Recent Files on one app's
+# taskbar menu forgets only that app's files instead of emptying Start's
+# recent list too.
+(
+    cd "$WORK"
+    version=$(apt-cache policy kactivitymanagerd | sed -n 's/^  Candidate: //p')
+    if [ -z "$version" ] || [ "$version" = "(none)" ]; then
+        apt-get update -qq
+        version=$(apt-cache policy kactivitymanagerd | sed -n 's/^  Candidate: //p')
+    fi
+    stamp=$(cat "$SRC"/build/patches/kactivitymanagerd/*.patch | sha256sum | cut -c1-12)
+    cached="$REBUILDS/kactivitymanagerd/$version$(wildos_suffix kactivitymanagerd)-$stamp"
+    if [ ! -d "$cached" ]; then
+        log "Building patched kactivitymanagerd $version"
+        echo "deb-src http://deb.debian.org/debian $SUITE main" > /etc/apt/sources.list.d/wildos-src.list
+        apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive apt-get build-dep -y -qq "kactivitymanagerd=$version" >/dev/null
+        rm -rf kactivitymanagerd-src && mkdir kactivitymanagerd-src && cd kactivitymanagerd-src
+        apt-get source -qq "kactivitymanagerd=$version" >/dev/null
+        cd kactivitymanagerd-*/
+        mkdir -p debian/patches
+        for patch in "$SRC"/build/patches/kactivitymanagerd/*.patch; do
+            cp "$patch" debian/patches/
+            basename "$patch" >> debian/patches/series
+        done
+        {
+            printf 'kactivitymanagerd (%s%s) %s; urgency=medium\n\n' "$version" "$(wildos_suffix kactivitymanagerd)" "$SUITE"
+            printf '  * Wild OS patches: %s\n\n' "$(cd "$SRC/build/patches/kactivitymanagerd" && ls *.patch | tr '\n' ' ')"
+            printf ' -- Wild OS Developers <dev@wildos.io>  %s\n\n' "$(date -R)"
+            cat debian/changelog
+        } > debian/changelog.new
+        mv debian/changelog.new debian/changelog
+        DEB_BUILD_OPTIONS="nocheck nodoc parallel=$BUILD_THREADS" dpkg-buildpackage -us -uc -b >/dev/null
+        fill="$cached.part.$BASHPID"
+        rm -rf "$fill" && mkdir -p "$fill"
+        cp ../*+wildos[0-9]*_*.deb "$fill/"
+        rm -f "$fill"/*dbgsym*
+        cd "$WORK" && rm -rf kactivitymanagerd-src
+        # Another build may have made the same one meanwhile; either copy is good.
+        mv -T "$fill" "$cached" 2>/dev/null || rm -rf "$fill"
+    fi
+    cp "$cached"/*.deb "$WORK/repo/"
+)
+# Plasma's platform theme for Qt apps with the patch from
+# build/patches/plasma-integration: a Qt or KDE app's Open and Save dialog
+# (Wild OS's, through the desktop portal) is attached to the app's window on
+# Wayland, with no taskbar button of its own. Republished +wildos1 like KIO.
+(
+    cd "$WORK"
+    version=$(apt-cache policy plasma-integration | sed -n 's/^  Candidate: //p')
+    if [ -z "$version" ] || [ "$version" = "(none)" ]; then
+        apt-get update -qq
+        version=$(apt-cache policy plasma-integration | sed -n 's/^  Candidate: //p')
+    fi
+    stamp=$(cat "$SRC"/build/patches/plasma-integration/*.patch | sha256sum | cut -c1-12)
+    cached="$REBUILDS/plasma-integration/$version$(wildos_suffix plasma-integration)-$stamp"
+    if [ ! -d "$cached" ]; then
+        log "Building patched plasma-integration $version"
+        echo "deb-src http://deb.debian.org/debian $SUITE main" > /etc/apt/sources.list.d/wildos-src.list
+        apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive apt-get build-dep -y -qq "plasma-integration=$version" >/dev/null
+        rm -rf plasma-integration-src && mkdir plasma-integration-src && cd plasma-integration-src
+        apt-get source -qq "plasma-integration=$version" >/dev/null
+        cd plasma-integration-*/
+        mkdir -p debian/patches
+        for patch in "$SRC"/build/patches/plasma-integration/*.patch; do
+            cp "$patch" debian/patches/
+            basename "$patch" >> debian/patches/series
+        done
+        {
+            printf 'plasma-integration (%s%s) %s; urgency=medium\n\n' "$version" "$(wildos_suffix plasma-integration)" "$SUITE"
+            printf '  * Wild OS patches: %s\n\n' "$(cd "$SRC/build/patches/plasma-integration" && ls *.patch | tr '\n' ' ')"
+            printf ' -- Wild OS Developers <dev@wildos.io>  %s\n\n' "$(date -R)"
+            cat debian/changelog
+        } > debian/changelog.new
+        mv debian/changelog.new debian/changelog
+        DEB_BUILD_OPTIONS="nocheck nodoc parallel=$BUILD_THREADS" dpkg-buildpackage -us -uc -b >/dev/null
+        fill="$cached.part.$BASHPID"
+        rm -rf "$fill" && mkdir -p "$fill"
+        cp ../*+wildos[0-9]*_*.deb "$fill/"
+        rm -f "$fill"/*dbgsym*
+        cd "$WORK" && rm -rf plasma-integration-src
+        # Another build may have made the same one meanwhile; either copy is good.
+        mv -T "$fill" "$cached" 2>/dev/null || rm -rf "$fill"
+    fi
+    cp "$cached"/*.deb "$WORK/repo/"
+)
 # evolution-data-server with Camel's mail modules (IMAP, SMTP and the rest)
 # split into evolution-data-server-camel-providers, which needs only
 # libcamel, and its calendar and contacts services into
@@ -962,6 +1050,9 @@ log "Bootstrapping root filesystem"
 # adduser goes in straight after the essential packages: security-misc
 # creates groups in its preinst, which runs before apt has configured
 # adduser unless something else pulled adduser in earlier.
+# wildos-base's apt pins go in before anything is chosen, so the image gets
+# the same kernel, firmware, Mesa and FreeRDP versions as an updated PC
+# rather than trixie's own.
 mmdebstrap \
     --mode=root \
     --variant=apt \
@@ -972,6 +1063,7 @@ mmdebstrap \
     --skip=essential/unlink \
     --setup-hook='mkdir -p "$1/var/cache/apt/archives" "$1/usr/share/keyrings" "$1/var/lib/security-misc" "$1/etc/dpkg/dpkg.cfg.d" "$1/etc/apt/preferences.d"' \
     --setup-hook="copy-in $SRC/packages/wildos-base/files/apt/wildos-freerdp.pref /etc/apt/preferences.d/" \
+    --setup-hook="copy-in $SRC/packages/wildos-base/files/apt/wildos-newer.pref /etc/apt/preferences.d/" \
     --setup-hook="copy-in $SRC/build/90-wildos-slim /etc/dpkg/dpkg.cfg.d/" \
     --essential-hook='APT_CONFIG="$MMDEBSTRAP_APT_CONFIG" apt-get install --yes -qq adduser >/dev/null' \
     --setup-hook='touch "$1/var/lib/security-misc/skip_install_check"' \

@@ -1,3 +1,16 @@
+wildos-backup (0.1.3) trixie; urgency=medium
+
+  * Backup's password boxes take only what is typed: nothing can be
+    pasted into them.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 10:30:00 +0000
+
+wildos-backup (0.1.2) trixie; urgency=medium
+
+  * The backup password can be copied from a right-click menu.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-backup (0.1.1) trixie; urgency=medium
 
   * Drives plugged in lists every drive you plug in. One Backup can't use

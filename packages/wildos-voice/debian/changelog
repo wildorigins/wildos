@@ -1,3 +1,10 @@
+wildos-voice (0.1.1) trixie; urgency=medium
+
+  * The empty search box stays open while its right-click menu is up,
+    so you can paste into it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-voice (0.1.0) trixie; urgency=medium
 
   * Initial release.

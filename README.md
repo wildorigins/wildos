@@ -233,7 +233,7 @@ The ISO is written to `out/`. The first build downloads about 3 GB of packages; 
 | Path | What's in it |
 | --- | --- |
 | `build/` | Image build: builder container, package list, chroot hooks, boot menu, patches to upstream packages |
-| `packages/` | Wild OS's own Debian packages: base system, desktop and shell, Settings, Files, Store, Mail and Calendar (`wildos-mail`), Write and Tables (`wildos-office`), Remote (`wildos-remote`), PDF (`wildos-pdf`), Capture (`wildos-capture`), Notes (`wildos-notes`), Music (`wildos-music`), Videos (`wildos-videos`), Archive (`wildos-archive`), Voice (`wildos-voice`), Backup (`wildos-backup`), Report a problem (`wildos-report`), Terminal, Task Manager, lighting, welcome, installer and Windows mode (`wildos-winmode`) |
+| `packages/` | Wild OS's own Debian packages: base system, desktop and shell, Settings, Files, Store, Mail and Calendar (`wildos-mail`), Write and Tables (`wildos-write` and `wildos-tables`, sharing `wildos-office`), Remote (`wildos-remote`), PDF (`wildos-pdf`), Capture (`wildos-capture`), Notes (`wildos-notes`), Music (`wildos-music`), Videos (`wildos-videos`), Archive (`wildos-archive`), Voice (`wildos-voice`), Backup (`wildos-backup`), Report a problem (`wildos-report`), Terminal, Task Manager, lighting, welcome, installer and Windows mode (`wildos-winmode`) |
 | `branding/` | Logo, glyphs and wallpaper |
 | `docs/assets/` | The images on this page |
 

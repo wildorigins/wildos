@@ -15,6 +15,8 @@ find_package(KF6WindowSystem REQUIRED)
 find_package(KF6Purpose REQUIRED)
 find_package(KF6Archive REQUIRED)
 find_package(KF6FileMetaData REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SECCOMP REQUIRED IMPORTED_TARGET libseccomp)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -45,6 +47,10 @@ qt_add_qml_module(wildos-files
         src/filemeta.cpp src/filemeta.h
         src/imageproviders.cpp src/imageproviders.h
         src/previewsource.cpp src/previewsource.h
+        src/programs.cpp src/programs.h
+        src/protection.cpp src/protection.h
+        src/protectionops.cpp
+        src/safeboxplan.cpp src/safeboxplan.h
 )
 
 target_include_directories(wildos-files PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -56,6 +62,12 @@ target_link_libraries(wildos-files PRIVATE
     KF6::Archive KF6::FileMetaData
 )
 
+# The safe box: a small program of its own, so the box outlives the Files
+# window it was opened from.
+add_executable(wildos-safebox src/safebox/main.cpp src/safeboxplan.cpp src/programs.cpp)
+target_include_directories(wildos-safebox PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(wildos-safebox PRIVATE Qt6::Core Qt6::DBus KF6::KIOCore KF6::Service PkgConfig::SECCOMP)
+
 if(WILDOS_FILES_TESTS)
     find_package(Qt6 REQUIRED COMPONENTS Test)
     enable_testing()
@@ -65,7 +77,11 @@ if(WILDOS_FILES_TESTS)
     add_test(NAME formatsafety COMMAND formatsafety-test)
 endif()
 
-install(TARGETS wildos-files RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS wildos-files wildos-safebox RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(PROGRAMS data/remove-details DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+# Advanced protection's rows for these two appear when their hooks exist;
+# Files itself reads the switches (src/protection.cpp).
+install(PROGRAMS data/advanced-protection/scrub_files data/advanced-protection/safebox DESTINATION lib/wildos/advanced-protection.d)
 install(FILES data/org.wildos.files.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/org.wildos.Files.service data/org.wildos.files.FileManager1.service DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/services)
 install(FILES data/fm-shim-wildos-files.conf DESTINATION lib/systemd/user/fm-shim.service.d RENAME 50-wildos-files.conf)

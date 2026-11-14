@@ -153,7 +153,9 @@ FocusScope {
                 }
                 field.edited();
             }
-            onEditingFinished: field.commit()
+            // The text menu holds focus while it is open; what is typed so
+            // far is not a whole address yet.
+            onEditingFinished: if (!inputMenu.opened) field.commit()
 
             Text {
                 visible: input.text.length === 0 && field.people.length === 0
@@ -175,7 +177,15 @@ FocusScope {
                     field.people = field.people.slice(0, -1);
                     field.edited();
                     event.accepted = true;
+                } else if (inputMenu.isMenuKey(event)) {
+                    inputMenu.openAtCaret();
+                    event.accepted = true;
                 }
+            }
+
+            UI.TextMenu {
+                id: inputMenu
+                onFocusLeft: field.commit()
             }
         }
     }

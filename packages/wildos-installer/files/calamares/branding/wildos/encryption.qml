@@ -73,6 +73,7 @@ WPage {
                 Layout.fillWidth: true
                 label: qsTr("Disk password")
                 echoMode: TextInput.Password
+                UI.NoPaste {}
             }
             RowLayout {
                 spacing: 8
@@ -112,6 +113,7 @@ WPage {
                 Layout.fillWidth: true
                 label: qsTr("Type it again")
                 echoMode: TextInput.Password
+                UI.NoPaste {}
             }
             RowLayout {
                 spacing: 6

@@ -26,8 +26,8 @@ WPage {
     readonly property string diskText: qsTr("%1, %2").arg(diskName).arg(gb(plan.diskSize || 0))
 
     // The step indexes in settings.conf, for the Change links.
-    readonly property int keyboardStep: 2
-    readonly property int diskStep: 3
+    readonly property int keyboardStep: 3
+    readonly property int diskStep: 4
 
     title: qsTr("Ready to install")
     subtitle: qsTr("Check everything below. This is the last step before anything on your disk changes.")

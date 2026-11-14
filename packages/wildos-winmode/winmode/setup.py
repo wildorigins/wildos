@@ -30,6 +30,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from . import config, firewall, isocheck, msdl, qga, virsh
@@ -119,6 +120,97 @@ def runtime_installed():
 
 class Stopped(Exception):
     """The worker was asked to stop (cancel, or the service is going)."""
+
+
+def apt_locked(p):
+    """An apt-get run that stopped because another one, or Settings'
+    updates, held the package lock."""
+    out = (p.stderr or "") + (p.stdout or "")
+    return "Could not get lock" in out or "Unable to acquire" in out or "is held by process" in out
+
+
+# How long a download may sit without a byte before it counts as stopped.
+READ_TIMEOUT = 20
+# While offline: how often to look again, and how often to try the server
+# itself in case NetworkManager's own check is what fails (a network that
+# blocks it).
+OFFLINE_POLL = 3
+OFFLINE_PROBE = 30
+OFFLINE_TEXT = "Waiting for the internet. Setup carries on by itself as soon as you're back online."
+# The units apt-get runs in, outside Windows mode's own service: one that
+# installs, which is always let finish, and one that only refreshes the
+# package lists, which can be stopped at any point.
+APT_UNIT = "wildos-winmode-runtime-install"
+APT_REFRESH_UNIT = "wildos-winmode-apt-refresh"
+APT_LOG = "/run/wildos-winmode-apt.log"
+
+
+def online():
+    """False when NetworkManager says this PC has no working way to the
+    internet: no connection, a sign-in page or limited. When there is no
+    NetworkManager to ask, or it doesn't know, the download decides."""
+    try:
+        from gi.repository import Gio, GLib
+        bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        reply = bus.call_sync("org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager",
+                              "org.freedesktop.DBus.Properties", "Get",
+                              GLib.Variant("(ss)", ("org.freedesktop.NetworkManager", "Connectivity")),
+                              GLib.VariantType("(v)"), Gio.DBusCallFlags.NONE, 3000, None)
+        # 1 none, 2 portal, 3 limited, 4 full, 0 unknown
+        return reply.unpack()[0] not in (1, 2, 3)
+    except Exception:  # noqa: BLE001 (no NetworkManager, or no D-Bus: can't tell)
+        return True
+
+
+def reachable(host, port=443, timeout=5):
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def apt_command(args, unit=APT_UNIT):
+    """apt-get (or dpkg) in a unit of its own. Run as a child of the
+    service, it was killed with it when the service stopped part way (Task
+    Manager, or an update of Windows mode), and dpkg killed mid-install
+    leaves every later install refusing to run, Settings' updates included,
+    until someone runs dpkg --configure -a."""
+    if shutil.which("systemd-run") and os.path.isdir("/run/systemd/system"):
+        return ["systemd-run", "--quiet", "--wait", "--collect", "--service-type=exec", f"--unit={unit}",
+                "--setenv=DEBIAN_FRONTEND=noninteractive", "--setenv=LC_ALL=C.UTF-8",
+                f"--property=StandardOutput=truncate:{APT_LOG}", f"--property=StandardError=append:{APT_LOG}",
+                "--property=Nice=10", "--"] + args
+    return args
+
+
+def dpkg_interrupted(p):
+    out = (p.stderr or "") + (p.stdout or "")
+    return "dpkg was interrupted" in out
+
+
+def apt_progress(line):
+    """A line apt writes to APT::Status-Fd as what setup shows: the part
+    being downloaded or installed and how far through it is, or None."""
+    kind, _, rest = line.partition(":")
+    if kind not in ("dlstatus", "pmstatus"):
+        return None
+    try:
+        pct = int(float(rest.split(":")[1]))
+    except (IndexError, ValueError):
+        return None
+    verb = "Downloading" if kind == "dlstatus" else "Installing"
+    return f"{verb} the parts Windows mode runs on, {max(0, min(100, pct))}%"
+
+
+def latest_apt_progress(text):
+    """The last progress line in apt's output so far, as apt_progress
+    shows it, or None."""
+    for line in reversed(text.splitlines()):
+        shown = apt_progress(line)
+        if shown:
+            return shown
+    return None
 
 
 class Problem(Exception):
@@ -460,8 +552,15 @@ class Setup:
     def rec(self):
         return self.svc.state.get("setup") or {}
 
+    def cancelled(self):
+        """Start over has removed the record: whatever the worker was still
+        finishing must not write a new one."""
+        return self.stop.is_set() and "setup" not in self.svc.state
+
     def save(self, **changes):
         with self.lock:
+            if self.cancelled():
+                return
             rec = dict(self.rec)
             rec.update(changes)
             self.svc.state["setup"] = rec
@@ -471,6 +570,8 @@ class Setup:
 
     def set_stage(self, stage, state, percent=None, detail=None):
         with self.lock:
+            if self.cancelled():
+                return
             rec = dict(self.rec)
             stages = dict(rec.get("stages") or {})
             s = dict(stages.get(stage) or {})
@@ -540,6 +641,12 @@ class Setup:
     def start(self, request, owner_uid):
         """Starts setting up from the wizard's request: {licence: {source:
         firmware|key|none, key}, options: {...}}. "" or why not."""
+        if self.thread and self.thread.is_alive() and self.stop.is_set():
+            # Start over, straight after: the last worker may still be
+            # finishing a step it can't cut short (installing the runtime).
+            self.thread.join(90)
+            if self.thread.is_alive():
+                return "The last setup is still stopping. Try again in a minute."
         if self.thread and self.thread.is_alive():
             return "Windows mode is already being set up."
         if self.rec.get("running"):
@@ -762,8 +869,13 @@ class Setup:
             except Problem as p:
                 log("problem:", p.kind, p.text)
                 if p.kind == "download":
-                    self.save(problem={"kind": "download", "text": p.text,
-                                       "received": (self.rec.get("download") or {}).get("received", 0)}, paused=True)
+                    if not online():
+                        # Every step that downloads carries on from where it
+                        # stopped, so going round again once back online is
+                        # the same as resuming.
+                        self.wait_online()
+                        continue
+                    self.save(problem={"kind": "download", "text": p.text}, paused=True)
                     return
                 if p.kind == "space":
                     # Board 9.7: free some space and carry on; nothing failed.
@@ -833,6 +945,29 @@ class Setup:
     def wait(self, seconds):
         if self.stop.wait(seconds):
             raise Stopped()
+
+    def wait_online(self, host=None):
+        """Shows board 9.7's Download paused card and waits until the PC is
+        back online, then returns for the step to carry on where it stopped.
+        Pause and Start over work meanwhile; Try again looks at once."""
+        log("offline; waiting for the connection to come back")
+        problem = self.offline_problem()
+        probed = time.monotonic()
+        while True:
+            if self.rec.get("problem") != problem and not self.rec.get("paused"):
+                self.save(problem=problem)
+            self.resume_event.wait(OFFLINE_POLL)
+            self.resume_event.clear()
+            self.check()
+            if online():
+                break
+            if host and time.monotonic() - probed >= OFFLINE_PROBE:
+                probed = time.monotonic()
+                if reachable(host):
+                    break
+        log("back online")
+        if (self.rec.get("problem") or {}).get("offline"):
+            self.save(problem=None)
 
     def stage_done(self, stage):
         """A stage finished: marked done, and any automatic recovery for it
@@ -944,23 +1079,110 @@ class Setup:
             raise Problem("space", f"Windows mode needs {size_text(need)} free and this PC has {size_text(free)}.")
 
     def runtime(self):
-        """The virtual PC (QEMU, libvirt, FreeRDP) is its own package, which
+        """The virtual PC (QEMU, libvirt, wildos-rdp) is its own package, which
         the Wild OS image leaves out so that people who never set up Windows
         mode never download it."""
         if runtime_installed():
             return
-        self.set_stage("media", "active", 1, "Getting the parts Windows mode runs on")
+        # No percentage until apt can give a real one: refreshing the package
+        # lists has none, and over Tor it takes minutes.
+        self.set_stage("media", "active", 0, "Getting ready to download the parts Windows mode runs on")
         env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", LC_ALL="C.UTF-8")
         # Waits out an update that is already installing rather than failing.
         apt = ["apt-get", "-o", "DPkg::Lock::Timeout=900", "-o", "Dpkg::Options::=--force-confold"]
-        subprocess.run(apt + ["update", "-qq"], env=env, capture_output=True, timeout=900)
-        p = subprocess.run(apt + ["install", "-y", "-qq", "--no-install-recommends", "wildos-winmode-runtime"], env=env,
-                           capture_output=True, text=True, timeout=3600)
+        # One left running by a service that was stopped part way: a refresh
+        # is stopped and done again, an install is let finish rather than
+        # started twice.
+        subprocess.run(["systemctl", "stop", APT_REFRESH_UNIT], capture_output=True)
+        while subprocess.run(["systemctl", "is-active", "--quiet", APT_UNIT]).returncode == 0:
+            self.wait(5)
+        # The lock timeout covers installing, not refreshing the package
+        # lists: while Settings checks for updates the refresh fails at once,
+        # and installing from a fresh install's old lists asks for versions
+        # the repository has since replaced. So the refresh waits its turn.
+        deadline = time.monotonic() + 900
+        while True:
+            p = self.apt(apt + ["update", "-qq"], env, 900, refresh=True)
+            if p.returncode != 0 and not online():
+                raise Problem("download", "Windows mode couldn't download the parts it runs on.")
+            if p.returncode == 0 or not apt_locked(p) or time.monotonic() > deadline:
+                break
+            self.wait(10)
+        if p.returncode != 0:
+            log("apt-get update:", (p.stderr or p.stdout).strip()[-500:])
+        self.check()
+        install = apt + ["install", "-y", "-qq", "--no-install-recommends", "wildos-winmode-runtime"]
+        p = self.apt(install, env, 3600, progress=True)
+        if p.returncode != 0 and dpkg_interrupted(p):
+            # An install cut off part way, by anything: finishing it is what
+            # apt itself asks for, and nothing installs until it's done.
+            log("dpkg was interrupted; finishing what it was doing")
+            self.apt(["dpkg", "--configure", "-a", "--force-confold"], env, 1800)
+            p = self.apt(install, env, 3600, progress=True)
         if p.returncode != 0:
             log("apt-get:", (p.stderr or p.stdout).strip()[-500:])
-            raise Problem("download", "Windows mode couldn't download the parts it runs on. Check you're "
-                                      "online, then carry on.")
+            if apt_locked(p):
+                raise Problem("download", "Wild OS is installing updates. Try again when they've finished.")
+            if dpkg_interrupted(p):
+                raise Problem("failed", "An earlier software install on this PC was left half done, and Windows mode "
+                                        "couldn't finish it. Send it with Report a problem so we can put it right.",
+                              retry=False)
+            raise Problem("download", "Windows mode couldn't download the parts it runs on.")
         self.svc.runtime_installed()
+
+    def apt(self, args, env, timeout, refresh=False, progress=False):
+        """apt-get or dpkg through apt_command, with its output read back
+        from the log the unit writes. apt can take minutes to give up on a
+        connection, so the network is watched meanwhile: offline shows the
+        Download paused card at once, and a refresh of the package lists
+        (refresh, which changes nothing installed) is stopped so setup
+        waits for the connection instead. An install is let finish.
+
+        With progress, apt's own figures for downloading and installing are
+        read from the log as it goes and shown in the stage's line."""
+        name = APT_REFRESH_UNIT if refresh else APT_UNIT
+        if progress:
+            args = args + ["-o", "APT::Status-Fd=1"]
+        cmd = apt_command(args, name)
+        unit = cmd[0] == "systemd-run"
+        proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        deadline = time.monotonic() + timeout
+        shown = False
+        last = None
+        while True:
+            try:
+                out, err = proc.communicate(timeout=OFFLINE_POLL)
+                break
+            except subprocess.TimeoutExpired:
+                pass
+            if progress and unit:
+                now = latest_apt_progress(_read(APT_LOG))
+                if now and now != last:
+                    last = now
+                    self.set_stage("media", "active", 0, now)
+            offline = not online()
+            if offline != shown:
+                shown = offline
+                self.save(problem=self.offline_problem() if offline else None)
+            ended = time.monotonic() > deadline or (refresh and (offline or self.stop.is_set()))
+            if ended:
+                if unit:
+                    subprocess.run(["systemctl", "stop", name], capture_output=True)
+                proc.kill()
+                out, err = proc.communicate()
+                break
+        if shown:
+            self.save(problem=None)
+        p = subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+        if unit:
+            p.stdout = _read(APT_LOG)
+        if progress:
+            p.stdout = "\n".join(line for line in (p.stdout or "").splitlines() if apt_progress(line) is None)
+        return p
+
+    def offline_problem(self):
+        received = (self.rec.get("download") or {}).get("received", 0)
+        return {"kind": "download", "offline": True, "received": received, "text": OFFLINE_TEXT}
 
     def licence_ready(self):
         """What the install and activate stages read from the licence step:
@@ -1146,7 +1368,7 @@ class Setup:
             if have:
                 req.add_header("Range", f"bytes={have}-")
             try:
-                with urllib.request.urlopen(req, timeout=60) as r:
+                with urllib.request.urlopen(req, timeout=READ_TIMEOUT) as r:
                     if have and r.status != 206:
                         have = 0
                     total = have + int(r.headers.get("Content-Length") or 0)
@@ -1182,11 +1404,16 @@ class Setup:
                     continue
                 raise
             except (urllib.error.URLError, OSError, socket.timeout) as e:
-                tries += 1
                 log("download:", e)
+                if not online():
+                    self.wait_online(urllib.parse.urlsplit(url).hostname)
+                    tries = 0
+                    continue
+                tries += 1
                 if tries >= 6:
-                    raise Problem("download", "The internet connection dropped. Setup carries on when it's back.") from e
-                time.sleep(min(60, 5 * tries))
+                    raise Problem("download", "The download kept stopping, although this PC is online. "
+                                              "The server may be busy.") from e
+                self.wait(min(60, 5 * tries))
 
     def virtio_iso(self):
         iso = os.path.join(CACHE, "virtio-win.iso")

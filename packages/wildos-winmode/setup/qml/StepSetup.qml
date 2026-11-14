@@ -16,6 +16,12 @@ Page {
     readonly property var problem: status.problem || ({})
     readonly property bool paused: status.paused === true
     readonly property bool waitingForWindows: problem.kind === "iso" || problem.kind === "iso-refused"
+    // Setup is waiting for the internet and carries on by itself.
+    readonly property bool offline: problem.kind === "download" && problem.offline === true
+    // Start over pressed: the service is stopping setup and clearing up,
+    // which can take a little while; the window then goes back to the checks.
+    property bool stopping: false
+    onVisibleChanged: if (!visible) stopping = false
     readonly property var active: {
         for (const s of stages) {
             if (s.state === "active") {
@@ -52,13 +58,14 @@ Page {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: page.paused ? "Paused" : page.waitingForWindows ? "Waiting for Windows" : page.active ? page.activeLabel(page.active.id) : "Getting ready"
+                    text: page.stopping ? "Stopping setup" : page.paused ? "Paused" : page.offline ? "Waiting for the internet"
+                        : page.waitingForWindows ? "Waiting for Windows" : page.active ? page.activeLabel(page.active.id) : "Getting ready"
                     size: 13
                     font.weight: UI.Style.weightSemiBold
                 }
 
                 UI.Label {
-                    text: page.paused || page.waitingForWindows ? "" : (page.status.left || "")
+                    text: page.stopping || page.paused || page.offline || page.waitingForWindows ? "" : (page.status.left || "")
                     size: 13
                     color: UI.Style.inkMuted
                 }
@@ -147,7 +154,14 @@ Page {
     }
 
     Banner {
-        visible: !page.waitingForWindows && !page.status.notice
+        visible: page.offline && !page.stopping
+        iconName: "wifi-off"
+        title: "Waiting for the internet"
+        text: "This PC is offline. Setup carries on from where it stopped as soon as you're back online, with nothing to press."
+    }
+
+    Banner {
+        visible: !page.waitingForWindows && !page.status.notice && !page.offline
         iconName: "monitor"
         title: "Carry on while it works"
         text: "Close this window and Wild OS tells you when it's ready. Setup only uses spare capacity."
@@ -171,6 +185,7 @@ Page {
                 text: "Start over"
                 onClicked: {
                     startOverDialog.close();
+                    page.stopping = true;
                     Setup.cancel();
                 }
             },
@@ -184,12 +199,12 @@ Page {
     buttons: [
         UI.Button {
             text: "Start over"
-            visible: page.status.state === "setup" || page.status.state === "failed"
+            visible: !page.stopping && (page.status.state === "setup" || page.status.state === "failed")
             onClicked: startOverDialog.open()
         },
         UI.Button {
             text: page.paused ? "Resume" : "Pause"
-            visible: page.status.state === "setup" && page.problem.kind !== "download" && !page.waitingForWindows
+            visible: !page.stopping && page.status.state === "setup" && (page.problem.kind !== "download" || page.offline) && !page.waitingForWindows
             onClicked: page.paused ? Setup.resume() : Setup.pause()
         },
         UI.Button {

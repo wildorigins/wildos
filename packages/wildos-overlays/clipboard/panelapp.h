@@ -45,6 +45,8 @@ public:
 
     // --emoji opens on the emoji tab, nothing (or --clipboard) on the
     // clipboard; the same shortcut again hides it. --daemon starts hidden.
+    // --clear empties the history, the pins and the clipboard itself,
+    // without showing anything (the panic key).
     void handle(const QStringList &arguments);
 
     // After the clipboard has been set: hide, then paste into the app.
@@ -54,12 +56,16 @@ public:
     Q_INVOKABLE void typeText(const QString &text, bool terminal);
     Q_INVOKABLE void addRecentEmoji(const QString &emoji);
     Q_INVOKABLE void copyText(const QString &text);
+    // After the history has gone: what is on the clipboard and the
+    // middle-click selection goes too.
+    Q_INVOKABLE void clearClipboard();
 
 Q_SIGNALS:
     void shownChanged();
     void tabChanged();
     void recentEmojiChanged();
     void skinToneChanged();
+    void clearRequested();
 
 private:
     bool m_shown = false;

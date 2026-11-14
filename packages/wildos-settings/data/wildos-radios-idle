@@ -1,0 +1,127 @@
+#!/usr/bin/python3 -I
+"""Advanced protection's "Wi-Fi and Bluetooth switch themselves off".
+
+Wi-Fi that has been on for 30 minutes without being connected to a network
+is switched off (NetworkManager's WirelessEnabled), and so is Bluetooth
+that has been on for 30 minutes with no device connected (BlueZ's Powered,
+adapter by adapter). Each is timed on its own. A radio switched on again,
+by hand or by anything else, gets a fresh 30 minutes, and so does
+everything after the PC wakes from sleep: the time asleep doesn't count,
+and a network needs a moment to join after waking.
+
+Runs only while radios_idle_off is on (its hook enables this service).
+"""
+
+import sys
+import time
+
+from gi.repository import Gio, GLib
+
+IDLE = 30 * 60
+CHECK = 30
+
+NM = ("org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager")
+NM_DEVICE = "org.freedesktop.NetworkManager.Device"
+NM_WIFI = 2
+NM_ACTIVATED = 100
+BLUEZ = "org.bluez"
+LOGIN1 = ("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager")
+
+
+def log(*args):
+    print(*args, flush=True)
+
+
+class Radios:
+    def __init__(self):
+        self.bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        # When each radio was last seen on and connected, or switched on.
+        self.wifi_since = None
+        self.adapters = {}
+        self.bus.signal_subscribe(LOGIN1[0], LOGIN1[2], "PrepareForSleep", LOGIN1[1], None,
+                                  Gio.DBusSignalFlags.NONE, self._sleep, None)
+        GLib.timeout_add_seconds(CHECK, self._tick)
+        self._tick()
+
+    def _call(self, name, path, iface, method, args, reply_type):
+        try:
+            return self.bus.call_sync(name, path, iface, method, args,
+                                      GLib.VariantType(reply_type) if reply_type else None,
+                                      Gio.DBusCallFlags.NONE, 5000, None)
+        except GLib.Error:
+            return None
+
+    def _prop(self, name, path, iface, prop):
+        reply = self._call(name, path, "org.freedesktop.DBus.Properties", "Get",
+                           GLib.Variant("(ss)", (iface, prop)), "(v)")
+        return reply.unpack()[0] if reply else None
+
+    def _set(self, name, path, iface, prop, value):
+        return self._call(name, path, "org.freedesktop.DBus.Properties", "Set",
+                          GLib.Variant("(ssv)", (iface, prop, value)), None) is not None
+
+    def _sleep(self, conn, sender, path, iface, signal, params, data):
+        if not params.unpack()[0]:
+            now = time.monotonic()
+            if self.wifi_since is not None:
+                self.wifi_since = now
+            self.adapters = {a: now for a in self.adapters}
+
+    def _wifi(self, now):
+        if not self._prop(NM[0], NM[1], NM[2], "WirelessEnabled"):
+            self.wifi_since = None
+            return
+        connected = False
+        for path in self._prop(NM[0], NM[1], NM[2], "Devices") or []:
+            if self._prop(NM[0], path, NM_DEVICE, "DeviceType") == NM_WIFI \
+                    and self._prop(NM[0], path, NM_DEVICE, "State") == NM_ACTIVATED:
+                connected = True
+        if connected or self.wifi_since is None:
+            self.wifi_since = now
+        elif now - self.wifi_since >= IDLE:
+            if self._set(NM[0], NM[1], NM[2], "WirelessEnabled", GLib.Variant("b", False)):
+                log("Wi-Fi switched off: not connected for 30 minutes")
+            self.wifi_since = None
+
+    def _bluetooth(self, now):
+        reply = self._call(BLUEZ, "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects", None,
+                           "(a{oa{sa{sv}}})")
+        objects = reply.unpack()[0] if reply else {}
+        powered = {}
+        busy = set()
+        for path, ifaces in objects.items():
+            adapter = ifaces.get("org.bluez.Adapter1")
+            if adapter is not None and adapter.get("Powered"):
+                powered[path] = True
+            device = ifaces.get("org.bluez.Device1")
+            if device is not None and device.get("Connected") and device.get("Adapter"):
+                busy.add(device["Adapter"])
+        for path in list(self.adapters):
+            if path not in powered:
+                del self.adapters[path]
+        for path in powered:
+            if path in busy or path not in self.adapters:
+                self.adapters[path] = now
+            elif now - self.adapters[path] >= IDLE:
+                if self._set(BLUEZ, path, "org.bluez.Adapter1", "Powered", GLib.Variant("b", False)):
+                    log("Bluetooth switched off on %s: nothing connected for 30 minutes" % path)
+                del self.adapters[path]
+
+    def _tick(self):
+        now = time.monotonic()
+        self._wifi(now)
+        self._bluetooth(now)
+        return True
+
+
+def main():
+    if len(sys.argv) > 1:
+        print("usage: wildos-radios-idle", file=sys.stderr)
+        return 2
+    Radios()
+    GLib.MainLoop().run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

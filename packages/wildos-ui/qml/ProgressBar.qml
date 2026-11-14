@@ -42,7 +42,10 @@ T.ProgressBar {
             color: Style.accent
 
             NumberAnimation on x {
+                // Stops in hidden and minimised windows too (see Spinner).
                 running: control.indeterminate && control.visible
+                    && control.Window.visibility !== Window.Hidden
+                    && control.Window.visibility !== Window.Minimized
                 from: -sweep.width
                 to: control.width
                 duration: 1400

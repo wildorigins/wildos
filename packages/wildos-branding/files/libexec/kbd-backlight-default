@@ -1,0 +1,52 @@
+#!/bin/sh
+# Keyboard lights are on at every start-up.
+#
+#   kbd-backlight-default <led>               from udev, as each light appears
+#   kbd-backlight-default --restored <unit>   after systemd-backlight's restore
+#
+# Laptops start with the light off, so the disk unlock password was typed in
+# the dark: the first time a light appears in a start-up, from the initramfs
+# on, it comes on. The marker in /run outlives the move from the initramfs to
+# the system, so the second "add" udev replays there, or a driver reload
+# later on, leaves the level alone.
+#
+# Once the disk is open, systemd-backlight puts back the level saved at the
+# last shut down. That keeps the step someone picked, but a saved "off" is
+# nearly always the lid closing or the screen going idle just before the
+# save, so the light comes on again instead of staying dark.
+
+if [ "$1" = --restored ]; then
+    # systemd-backlight's instance, such as leds:dell::kbd_backlight.
+    case $2 in
+        leds:*::kbd_backlight*) led=${2#leds:} ;;
+        *) exit 0 ;;
+    esac
+    restored=1
+else
+    led=$1
+fi
+dir=/sys/class/leds/$led
+marks=/run/wildos/kbd-backlight
+
+[ -n "$led" ] && [ -e "$dir/brightness" ] || exit 0
+if [ -z "$restored" ]; then
+    [ -e "$marks/$led" ] && exit 0
+    mkdir -p "$marks" && : > "$marks/$led" || exit 0
+fi
+
+read -r max < "$dir/max_brightness" || exit 0
+read -r now < "$dir/brightness" || exit 0
+[ "$max" -gt 0 ] 2>/dev/null || exit 0
+# Some firmware keeps the level from the last start-up (or the one set in
+# its own setup screen); that is a choice too.
+[ "$now" = 0 ] || exit 0
+
+# Two or three steps (off, low, high) are made to be used at the top one;
+# a light with many steps is bright enough at half.
+if [ "$max" -le 3 ]; then
+    level=$max
+else
+    level=$(( (max + 1) / 2 ))
+fi
+echo "$level" > "$dir/brightness"
+exit 0

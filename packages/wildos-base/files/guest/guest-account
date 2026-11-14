@@ -1,0 +1,156 @@
+#!/bin/sh
+# The guest session (Settings > Privacy and security > Advanced protection >
+# Guest session): an account called guest, offered on the sign-in screen
+# without a password, whose Home is an empty folder in memory for each
+# visit, gone at sign-out with everything it left elsewhere on the PC.
+#
+#   on     make the account
+#   off    sign the guest out if they are in, then remove the account
+#   start  (user-runtime-dir@UID, as the guest signs in) a fresh Home
+#   stop   (user-runtime-dir@UID, after the last guest process ended)
+#          Home and the rest wiped
+#
+# What the guest can't do: open other accounts' files (other homes lose any
+# access for others here), use sudo or give an administrator's password
+# (no admin groups; 05-wildos-guest.rules refuses every system request
+# beyond signing out, Wi-Fi and plugging in a USB stick), use Windows mode,
+# share folders on the network, or install anything system-wide. logind
+# ends every guest process at sign-out (50-wildos-guest.conf), so nothing
+# keeps running to see the next visitor.
+#
+# Every failure ends with one plain sentence on stderr.
+
+set -eu
+
+NAME=guest
+HOME_DIR=/home/guest
+MARK=/etc/wildos/guest-account
+SKEL=/usr/share/wildos/guest-skel
+DROPIN_NAME=50-wildos-guest.conf
+GROUPS_WANTED="console audio video"
+
+fail() {
+    echo "$1" >&2
+    exit "${2:-1}"
+}
+
+ours() {
+    [ -f "$MARK" ] && getent passwd "$NAME" >/dev/null &&
+        [ "$(getent passwd "$NAME" | cut -d: -f3)" = "$(cat "$MARK")" ]
+}
+
+dropin_dir() {
+    echo "/etc/systemd/system/user-runtime-dir@$1.service.d"
+}
+
+wipe_leftovers() {
+    uid=$1
+    # Files the guest left outside Home: shared temporary folders, shared
+    # memory, mail, scheduled jobs, lingering, crash dumps and the guest's
+    # own journal.
+    for dir in /tmp /var/tmp /dev/shm; do
+        find "$dir" -xdev -mindepth 1 -user "$uid" -delete 2>/dev/null || true
+    done
+    rm -f "/var/mail/$NAME" "/var/spool/cron/crontabs/$NAME" "/var/lib/systemd/linger/$NAME"
+    find /var/spool/cron/atjobs -user "$uid" -delete 2>/dev/null || true
+    find /var/lib/systemd/coredump -name "core.*.$uid.*" -delete 2>/dev/null || true
+    journalctl --rotate >/dev/null 2>&1 || true
+    find /var/log/journal /run/log/journal -name "user-$uid.journal*" -delete 2>/dev/null || true
+    find /var/log/journal /run/log/journal -name "user-$uid@*" -delete 2>/dev/null || true
+    # Wi-Fi networks the guest added for themselves only (their passwords
+    # included) are stored system-wide by NetworkManager.
+    if command -v nmcli >/dev/null 2>&1; then
+        nmcli -t -f UUID connection show 2>/dev/null | while read -r uuid; do
+            if nmcli -g connection.permissions connection show "$uuid" 2>/dev/null | tr ',' '\n' | grep -qx "user:$NAME"; then
+                nmcli connection delete "$uuid" >/dev/null 2>&1 || true
+            fi
+        done
+    fi
+}
+
+case "${1:-}" in
+    on)
+        if getent passwd "$NAME" >/dev/null; then
+            ours && exit 0
+            fail "An account called guest already exists, so the guest session can't use that name."
+        fi
+        getent group console >/dev/null || fail "Wild OS is missing the console group, so a guest could not sign in."
+        groups=""
+        for g in $GROUPS_WANTED; do
+            if getent group "$g" >/dev/null; then groups="$groups,$g"; fi
+        done
+        useradd --no-create-home --home-dir "$HOME_DIR" --shell /bin/bash --comment Guest \
+            --user-group --groups "${groups#,}" "$NAME" || fail "The guest account could not be made."
+        uid=$(id -u "$NAME")
+        # No password. The sign-in screen shows an account as passwordless
+        # only when its passwd entry, not just its shadow one, is empty.
+        passwd --delete "$NAME" >/dev/null
+        sed -i "s/^$NAME:x:/$NAME::/" /etc/passwd
+        mkdir -p "$(dirname "$MARK")"
+        echo "$uid" > "$MARK"
+        # The empty folder Home is mounted over. Only root can write to it,
+        # so nothing lands on the disk when no guest is in.
+        mkdir -p "$HOME_DIR"
+        chown root:root "$HOME_DIR"
+        chmod 0755 "$HOME_DIR"
+        mkdir -p "$(dropin_dir "$uid")"
+        cat > "$(dropin_dir "$uid")/$DROPIN_NAME" <<EOF
+# The guest session (wildos-base guest-account): a fresh Home in memory as
+# the guest signs in, and everything wiped once their last process is gone.
+[Service]
+ExecStartPre=/usr/libexec/wildos/guest-account start
+ExecStopPost=/usr/libexec/wildos/guest-account stop
+EOF
+        # Homes of people are only theirs: drop any access others have.
+        getent passwd | while IFS=: read -r user _ id _ _ home shell; do
+            if [ "$id" -ge 1000 ] && [ "$id" -lt 60000 ] && [ "$user" != "$NAME" ] && [ -d "$home" ] &&
+                [ "${home#/home/}" != "$home" ]; then
+                chmod o-rwx "$home"
+            fi
+        done
+        systemctl daemon-reload
+        ;;
+    off)
+        getent passwd "$NAME" >/dev/null || { rm -f "$MARK"; exit 0; }
+        ours || fail "The account called guest isn't the guest session's, so it was left alone."
+        uid=$(id -u "$NAME")
+        if loginctl show-user "$uid" >/dev/null 2>&1; then
+            loginctl terminate-user "$uid" 2>/dev/null || true
+            for _ in $(seq 1 20); do
+                systemctl is-active --quiet "user-runtime-dir@$uid.service" || break
+                sleep 0.5
+            done
+        fi
+        pkill -KILL -u "$uid" 2>/dev/null || true
+        if mountpoint -q "$HOME_DIR"; then umount -l "$HOME_DIR"; fi
+        wipe_leftovers "$uid"
+        userdel "$NAME" 2>/dev/null || [ $? -eq 12 ] || fail "The guest account could not be removed."
+        getent group "$NAME" >/dev/null && groupdel "$NAME" 2>/dev/null || true
+        rm -f "/var/lib/AccountsService/users/$NAME" "/var/lib/AccountsService/icons/$NAME"
+        rmdir "$HOME_DIR" 2>/dev/null || true
+        rm -rf "$(dropin_dir "$uid")"
+        rm -f "$MARK"
+        systemctl daemon-reload
+        ;;
+    start)
+        ours || fail "There is no guest account."
+        uid=$(id -u "$NAME")
+        gid=$(id -g "$NAME")
+        if mountpoint -q "$HOME_DIR"; then umount -l "$HOME_DIR"; fi
+        mount -t tmpfs -o "size=50%,mode=0700,uid=$uid,gid=$gid,nosuid,nodev" wildos-guest "$HOME_DIR"
+        cp -a /etc/skel/. "$HOME_DIR/"
+        if [ -d "$SKEL" ]; then cp -a "$SKEL/." "$HOME_DIR/"; fi
+        chown -R "$uid:$gid" "$HOME_DIR"
+        ;;
+    stop)
+        ours || exit 0
+        uid=$(id -u "$NAME")
+        pkill -KILL -u "$uid" 2>/dev/null || true
+        if mountpoint -q "$HOME_DIR"; then umount "$HOME_DIR" 2>/dev/null || umount -l "$HOME_DIR"; fi
+        wipe_leftovers "$uid"
+        ;;
+    *)
+        echo "usage: guest-account on|off|start|stop" >&2
+        exit 2
+        ;;
+esac

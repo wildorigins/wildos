@@ -1,0 +1,15 @@
+[Unit]
+Description=Advanced protection in this session: presenting mode and restart when left locked
+Documentation=file:///usr/libexec/wildos/wildos-advanced-session
+PartOf=graphical-session.target
+After=graphical-session.target
+# The sign-in screen's account has no session of its own to look after.
+ConditionUser=!@system
+
+[Service]
+ExecStart=/usr/libexec/wildos/wildos-advanced-session
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

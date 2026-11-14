@@ -270,6 +270,16 @@ UI.Dialog {
                     border.width: 1
                     border.color: notesField.activeFocus ? UI.Style.accent : UI.Style.borderField
                 }
+                Keys.onPressed: event => {
+                    if (notesMenu.isMenuKey(event)) {
+                        notesMenu.openAtCaret();
+                        event.accepted = true;
+                    }
+                }
+
+                UI.TextMenu {
+                    id: notesMenu
+                }
             }
 
             UI.Label {

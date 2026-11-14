@@ -72,6 +72,27 @@ PlasmoidItem {
         return keys.some(key => key && launches[key] !== undefined && now - launches[key] < 15000);
     }
 
+    // A window of the app turned up, so its start is over. Without this, a
+    // pin that Plasma brings back when that window closes would take the
+    // recent launch for one still on its way and pulse.
+    function windowOpened(keys: var): void {
+        const ids = keys.filter(key => key);
+        if (ids.some(key => launches[key] !== undefined)) {
+            const next = Object.assign({}, launches);
+            ids.forEach(key => delete next[key]);
+            launches = next;
+        }
+        if (ids.some(key => daemonIds[key] === true && settled[key] !== true)) {
+            const next = Object.assign({}, settled);
+            ids.forEach(key => {
+                if (daemonIds[key] === true) {
+                    next[key] = true;
+                }
+            });
+            settled = next;
+        }
+    }
+
     // What wildos-launchd is still opening, by lower-case desktop id. KWin's
     // launch feedback (Plasma's IsStartup) stops the moment another window
     // is activated, while the daemon keeps waiting for the app's window. The watcher lives in
@@ -85,7 +106,65 @@ PlasmoidItem {
         component.destroy();
         return watcher;
     }
-    readonly property var daemonLaunches: launchWatcher ? launchWatcher.launches : []
+    readonly property var allDaemonLaunches: launchWatcher ? launchWatcher.launches : []
+    readonly property var daemonIds: {
+        const ids = {};
+        allDaemonLaunches.forEach(launch => ids[launch.desktopId] = true);
+        return ids;
+    }
+    // Launches the daemon still lists although the app has shown a window
+    // since, under an id it did not recognise. They never count as starting.
+    property var settled: ({})
+
+    // The daemon ended a launch it was following: the window is there, under
+    // whatever button it went to, or the app gave up. The button's own wait
+    // ends with it.
+    signal launchFinished(key: string)
+    property var followed: ({})
+    onAllDaemonLaunchesChanged: {
+        const listed = {};
+        const now = {};
+        allDaemonLaunches.forEach(launch => {
+            listed[launch.desktopId] = true;
+            if (launch.confirmed) {
+                now[launch.desktopId] = true;
+            }
+        });
+        const ended = Object.keys(followed).filter(key => listed[key] !== true);
+        followed = now;
+        if (ended.length > 0) {
+            const next = Object.assign({}, launches);
+            Object.keys(next).forEach(key => {
+                if (ended.indexOf(desktopIdOf(key)) >= 0) {
+                    delete next[key];
+                }
+            });
+            launches = next;
+            ended.forEach(key => launchFinished(key));
+        }
+    }
+
+    // A launcher URL or app id as a lower-case desktop id, as the daemon
+    // names its launches.
+    function desktopIdOf(key: string): string {
+        return String(key).replace(/^.*[\/:]/, "").replace(/\.desktop$/, "").toLowerCase();
+    }
+
+    onDaemonIdsChanged: {
+        const next = {};
+        let dropped = false;
+        Object.keys(settled).forEach(key => {
+            if (daemonIds[key] === true) {
+                next[key] = true;
+            } else {
+                dropped = true;
+            }
+        });
+        if (dropped) {
+            settled = next;
+        }
+    }
+    readonly property var daemonLaunches: allDaemonLaunches.filter(launch => settled[launch.desktopId] !== true)
     readonly property var daemonStarting: {
         const ids = {};
         daemonLaunches.forEach(launch => ids[launch.desktopId] = true);
@@ -237,7 +316,7 @@ PlasmoidItem {
         }
 
         Component.onCompleted: {
-            launcherList = Plasmoid.configuration.launchers;
+            launcherList = tasks.mendLaunchers(Plasmoid.configuration.launchers);
             groupingAppIdBlacklist = Plasmoid.configuration.groupingAppIdBlacklist;
             groupingLauncherUrlBlacklist = Plasmoid.configuration.groupingLauncherUrlBlacklist;
 
@@ -279,7 +358,7 @@ PlasmoidItem {
         target: Plasmoid.configuration
 
         function onLaunchersChanged(): void {
-            tasksModel.launcherList = Plasmoid.configuration.launchers;
+            tasksModel.launcherList = tasks.mendLaunchers(Plasmoid.configuration.launchers);
         }
         function onGroupingAppIdBlacklistChanged(): void {
             tasksModel.groupingAppIdBlacklist = Plasmoid.configuration.groupingAppIdBlacklist;
@@ -439,6 +518,21 @@ PlasmoidItem {
     }
 
     readonly property bool supportsLaunchers: true
+
+    // Start's Pin to taskbar once wrote "applications:applications:<app>"
+    // for apps picked from search or the pinned grid, which Plasma cannot
+    // resolve: a blank button that only plays the error sound. Such pins are
+    // mended where they are read, and the mended list is saved back.
+    function mendLaunchers(launchers: var): var {
+        const mended = [];
+        Array.from(launchers ?? []).forEach(launcher => {
+            const url = String(launcher).replace(/^(applications:)+/, "applications:");
+            if (!mended.includes(url)) {
+                mended.push(url);
+            }
+        });
+        return mended;
+    }
 
     function hasLauncher(url: url): bool {
         return tasksModel.launcherPosition(url) !== -1;

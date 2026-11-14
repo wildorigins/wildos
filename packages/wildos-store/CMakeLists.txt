@@ -44,6 +44,7 @@ qt_add_qml_module(wildos-store
         src/catalog.cpp src/catalog.h
         src/storeapp.cpp src/storeapp.h
         src/packagekitbackend.cpp src/packagekitbackend.h
+        src/packagesizes.cpp src/packagesizes.h
         src/flatpakbackend.cpp src/flatpakbackend.h
         src/localpackage.cpp src/localpackage.h
         src/network.cpp src/network.h
@@ -64,5 +65,8 @@ install(TARGETS wildos-store RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.store.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/curated.json DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos-store)
 install(FILES data/org.wildos.store.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+# Apps listed in the Wild OS section before they are installed need their
+# Wild OS theme icon to be here already (Ganger's package used to ship it).
+install(FILES data/icons/wildos-ganger.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/WildOS/scalable/apps)
 install(FILES data/60wildos-store-icons DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/apt/apt.conf.d)
 install(FILES data/wildos-store-update.service data/wildos-store-update.timer DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)

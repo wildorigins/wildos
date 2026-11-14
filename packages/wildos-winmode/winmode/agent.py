@@ -38,6 +38,10 @@ XML = """
       <arg name="args" type="as" direction="in"/>
       <arg type="s" direction="out"/>
     </method>
+    <method name="UninstallApp">
+      <arg name="app" type="s" direction="in"/>
+      <arg type="s" direction="out"/>
+    </method>
     <method name="RunInstaller">
       <arg name="path" type="s" direction="in"/>
       <arg type="s" direction="out"/>
@@ -67,6 +71,9 @@ XML = """
     </method>
     <method name="CheckUpdates"><arg type="s" direction="out"/></method>
     <method name="OpenDesktop"><arg type="s" direction="out"/></method>
+    <method name="ActivateWithAccount"><arg type="s" direction="out"/></method>
+    <method name="EndActivation"><arg type="s" direction="out"/></method>
+    <method name="ActivationPassword"><arg type="s" direction="out"/></method>
     <method name="Repair"><arg type="s" direction="out"/></method>
     <method name="Remove"><arg type="s" direction="out"/></method>
     <method name="StartSetup">
@@ -90,6 +97,11 @@ XML = """
 
 NOT_YET = "This isn't available yet."
 REMOVING = "Windows mode is being removed."
+ACTIVATING = ("Windows is open for activation. Finish in the Windows desktop, or press Cancel in Settings, "
+              "then try again.")
+# How often Windows is asked whether it is activated while the person works
+# through Microsoft's troubleshooter.
+ACTIVATION_CHECK_SECONDS = 10
 # How long a launch waits for a new connection's session to be up.
 SESSION_WAIT = 90
 # Seconds after sign-in before Windows is started ahead of time.
@@ -287,7 +299,17 @@ class Agent:
         # Anything installed from the whole Windows desktop gets its Start
         # entry once the desktop closes.
         self.desktop = rdp.Connection(self.desktop_changed, self.auth_failed,
-                                      os.path.join(config.user_data_dir(), "desktop.log"), program=rdp.desktop_client())
+                                      os.path.join(config.user_data_dir(), "desktop.log"), desktop=True)
+        # Activating with a Microsoft account (issue 56): the desktop signed
+        # in to the account made for it, what stage it is at (starting, open
+        # or ending) and how the last one went.
+        self.activation_desktop = rdp.Connection(self.activation_desktop_changed, lambda: None,
+                                                 os.path.join(config.user_data_dir(), "activation.log"), desktop=True)
+        self.activation = None
+        self.activation_account = None
+        self.activation_result = None
+        self.activation_timer = None
+        self.activation_tidied = False
         # wildos-rdp's windows for apps being opened, by token, and its
         # interface on the session bus.
         self.loading = {}
@@ -304,6 +326,7 @@ class Agent:
             "Launch": (self.m_launch, "s", False),
             "LaunchProgram": (self.m_launch_program, "s", False),
             "RunInstaller": (self.m_run_installer, "s", False),
+            "UninstallApp": (self.m_uninstall_app, "s", False),
             "OutsideSharedFolders": (self.m_outside, "as", False),
             "CopyIntoDocuments": (self.m_copy, "as", False),
             "RefreshApps": (self.m_refresh, "s", False),
@@ -313,6 +336,9 @@ class Agent:
             "SetProductKey": (self.m_set_product_key, "s", False),
             "CheckUpdates": (lambda sender: NOT_YET, "s", False),
             "OpenDesktop": (self.m_open_desktop, "s", False),
+            "ActivateWithAccount": (self.m_activate_with_account, "s", False),
+            "EndActivation": (self.m_end_activation, "s", False),
+            "ActivationPassword": (self.m_activation_password, "s", False),
             "Repair": (lambda sender: NOT_YET, "s", False),
             "Remove": (self.m_remove, "s", False),
             "StartSetup": (self.m_start_setup, "s", False),
@@ -353,7 +379,7 @@ class Agent:
         self.session_end = xsmp.Client(session, self.windows_open, self.ask_before_leaving, log)
 
     def prestart(self):
-        if self.host.get("kept") or self.removing:
+        if self.host.get("kept") or self.removing or self.activation:
             return
         def done(reply):
             if isinstance(reply, GLib.Error):
@@ -371,9 +397,9 @@ class Agent:
         """Windows was started ahead of time: it is signed in to as well, and
         the session left disconnected, so the first app takes it over in a
         couple of seconds instead of waiting for Windows to sign in and start
-        its shell (about three seconds more, measured). Only with wildos-rdp,
-        and only while no connection is open or opening."""
-        if not self.conn.native or self.conn.running or self.preparing is not None:
+        its shell (about three seconds more, measured). Only while no
+        connection is open or opening."""
+        if self.conn.running or self.preparing is not None or self.activation:
             return
 
         def go(creds):
@@ -465,6 +491,12 @@ class Agent:
                 if isinstance(st.get("windows"), list):
                     self.set_windows(st["windows"])
                 self.end_connection_if_gone(st)
+                if st.get("activation") and not self.activation and not self.activation_tidied:
+                    self.activation_tidied = True
+                    # Started before this agent did (it restarted part way):
+                    # nothing here can finish it, so it is tidied up.
+                    log("an activation from before this agent started is being ended")
+                    self.finish_activation("restarted")
             self.changed()
             if then:
                 then()
@@ -642,6 +674,9 @@ class Agent:
         if self.removing:
             done(REMOVING)
             return
+        if self.activation:
+            done(ACTIVATING)
+            return
         started = time.monotonic()
         self.end_preparing()
         window = self.open_app_window(app_id, name, path)
@@ -749,9 +784,7 @@ class Agent:
         """wildos-rdp's window for an app being opened: through the running
         client when the connection is open, or by starting the client now
         when it is not, so the window is there while Windows wakes. Returns
-        what close_app_window() needs, or None with xfreerdp3."""
-        if not self.conn.native:
-            return None
+        what close_app_window() needs."""
         known = app_id in self.registry
         desktop_id = launchers.PREFIX + app_id if known else ""
         icon = launchers.PREFIX + app_id if known else ""
@@ -935,8 +968,137 @@ class Agent:
 
         if self.removing:
             return REMOVING
+        if self.activation:
+            return ACTIVATING
         self.call_json("Wake", done=woke)
         return defer
+
+    def m_activate_with_account(self, sender, defer):
+        """Settings' Use a licence on my Microsoft account: the service makes
+        a second Windows account just for this (activation.py), and the whole
+        desktop opens signed in to it for Microsoft's troubleshooter. The
+        app connection and any Windows desktop close first, since Windows
+        shows one session at a time; their apps keep running and come back
+        afterwards."""
+        if self.removing:
+            return REMOVING
+        if self.activation:
+            return ""
+        self.activation = "starting"
+        self.activation_result = None
+        self.changed()
+
+        def started(reply):
+            if not reply.get("password"):
+                self.activation = None
+                if reply.get("activated"):
+                    self.activation_result = {"activated": True, "already": True, "message": ""}
+                    self.refresh_host()
+                    defer.done("")
+                    return
+                self.changed()
+                defer.done(reply.get("message") or "Windows mode's background service didn't answer. Restart the PC, then try again.")
+                return
+            account = reply["account"]
+            self.activation_account = account
+            self.keyring.memory[account] = reply["password"]
+            dbusutil.in_thread(self.keyring.put, account, reply["password"])
+            self.conn.stop_now()
+            self.end_preparing()
+            self.desktop.stop_now()
+            if self.activation_desktop.running:
+                self.activation_desktop.stop_now()
+            args = rdp.desktop_arguments(self.host.get("guest_address"), self.host.get("rdp_port", 3389), account,
+                                         reply.get("domain", ""), title="Activate Windows")
+            self.activation = "open"
+            try:
+                self.activation_desktop.start(args, reply["password"])
+            except OSError as e:
+                self.finish_activation("failed")
+                defer.done(f"The Windows desktop couldn't open. ({e.strerror})")
+                return
+            self.activation_timer = GLib.timeout_add_seconds(ACTIVATION_CHECK_SECONDS, self.check_activation)
+            self.refresh_host()
+            defer.done("")
+
+        # Windows may have to start from off, then the account is made.
+        self.call_json("ActivationStart", done=started, timeout=840)
+        return defer
+
+    def check_activation(self):
+        if self.activation != "open":
+            self.activation_timer = None
+            return False
+
+        def got(reply):
+            if self.activation != "open":
+                return
+            if reply.get("activated"):
+                log("Windows says it is activated")
+                self.finish_activation("activated")
+            elif reply.get("active") is False:
+                # The service ended it itself: its hour was up.
+                self.finish_activation("expired")
+        self.call_json("ActivationCheck", done=got, timeout=90)
+        return True
+
+    def activation_desktop_changed(self, is_open):
+        if not is_open and self.activation == "open":
+            self.finish_activation("closed")
+
+    def m_end_activation(self, sender, defer):
+        """Done or Cancel in Settings."""
+        if self.activation in (None, "starting"):
+            return ""
+        self.finish_activation("done", defer.done)
+        return defer
+
+    def m_activation_password(self, sender):
+        """For the one time Windows asks for the account's current password
+        (turning it into a Microsoft account), and only while it exists."""
+        if self.activation != "open" or not self.activation_account:
+            return ""
+        return self.keyring.memory.get(self.activation_account, "")
+
+    def finish_activation(self, why, done=None):
+        """The desktop closes and the service signs the account out, deletes
+        it and its profile and protects Windows mode's own account again.
+        Windows is asked once more first, so Done pressed straight after
+        the troubleshooter still counts."""
+        if self.activation == "ending":
+            if done:
+                done("")
+            return
+        self.activation = "ending"
+        if self.activation_timer:
+            GLib.source_remove(self.activation_timer)
+            self.activation_timer = None
+        self.activation_desktop.close()
+        self.changed()
+        account = self.activation_account
+
+        def ended(reply, activated):
+            message = reply if isinstance(reply, str) else \
+                "Windows mode's background service didn't answer. It removes the extra account by itself when it next starts."
+            self.activation = None
+            self.activation_account = None
+            if account:
+                dbusutil.in_thread(self.keyring.forget, account)
+            self.activation_result = {"activated": activated, "message": message}
+            log("activation ended:", why, "activated" if activated else "not activated", message)
+            self.refresh_host()
+            self.reopen_windows(within=60)
+            if done:
+                done("")
+
+        def checked(reply):
+            activated = bool(reply.get("activated")) or why == "activated"
+            self.call("ActivationEnd", done=lambda r: ended(r, activated), timeout=420)
+
+        if why in ("activated", "restarted", "failed"):
+            checked({"activated": why == "activated"})
+        else:
+            self.call_json("ActivationCheck", done=checked, timeout=90)
 
     def credentials(self, done):
         """The account and its password: from the keyring (secret-tool, which
@@ -1113,6 +1275,9 @@ class Agent:
             "lastApp": self.app_summary(launchers.last_app(self.registry, self.last_app, self.history)),
             "progressRequests": self.progress_requests,
             "removing": self.removing,
+            # Settings' Microsoft account activation: starting, open, ending
+            # or "", and how the last one went ({activated, message}).
+            "activation": {"state": self.activation or "", "result": self.activation_result},
         }
 
     def app_summary(self, app_id):
@@ -1137,6 +1302,56 @@ class Agent:
     def m_launch_program(self, sender, path, args, defer):
         app_id = launchers.app_id_for_image(path, self.registry)
         self.launch(path, list(args), launchers.exe_stem(path) or "Windows app", app_id, defer.done)
+        return defer
+
+    def m_uninstall_app(self, sender, app_id, defer):
+        """Settings' Uninstall for a Windows app. A Store app is removed
+        inside Windows at once; any other program's own uninstaller opens
+        in a window like an installer, and its Start entry goes once that
+        window closes. The answer is JSON: "removed" (gone already),
+        "opened" (its uninstaller is on screen) or a message."""
+        def answer(state, message=""):
+            defer.done(json.dumps({"state": state, "message": message}))
+
+        if self.removing:
+            return json.dumps({"state": "failed", "message": REMOVING})
+        app = self.registry.get(app_id)
+        if not app:
+            return json.dumps({"state": "removed", "message": ""})
+        name = app.get("name") or "That app"
+        deadline = time.monotonic() + SESSION_WAIT
+
+        def found(reply):
+            kind = reply.get("type")
+            if kind == "uninstalled" or reply.get("error") == "not-installed":
+                self.m_refresh(None)
+                answer("removed")
+            elif kind == "uninstaller" and reply.get("program"):
+                program = reply["program"]
+                self.installers[launchers.exe_stem(program)] = False
+                self.installed_since_refresh = True
+                self.launch(program, split_arguments(reply.get("arguments", "")), name, "installer",
+                            lambda message: answer("failed", message) if message else answer("opened"))
+            elif reply.get("error") in ("not-connected", "timeout") and time.monotonic() < deadline:
+                # Windows has only just started: wild-guest connects soon.
+                GLib.timeout_add_seconds(2, lambda: (ask(), False)[1])
+            elif reply.get("error") == "no-uninstaller":
+                answer("failed", f"Windows doesn't list an uninstaller for {name}. Open the Windows desktop from Windows mode "
+                       "in Settings and remove it in Windows' own Settings.")
+            else:
+                log("uninstall failed:", reply)
+                answer("failed", f"{name} couldn't be uninstalled. Try again.")
+
+        def ask():
+            self.call_json("Uninstall", (app["target"],), "(s)", found, timeout=210)
+
+        def woke(reply):
+            if not reply.get("ok"):
+                answer("failed", reply.get("message") or "Windows mode couldn't start. Try again, or restart the PC.")
+                return
+            ask()
+
+        self.call_json("Wake", done=woke)
         return defer
 
     def m_run_installer(self, sender, host_path, defer):
@@ -1572,6 +1787,7 @@ def main():
     # its windows on screen and hold up systemd stopping the agent.
     agent.conn.stop_now()
     agent.desktop.stop_now()
+    agent.activation_desktop.stop_now()
     # Held until here, so it lives as long as the loop.
     del agent
     return 0

@@ -1,11 +1,13 @@
 #pragma once
 
 #include <QObject>
+#include <QPointer>
 #include <QQmlEngine>
 #include <QUrl>
 
 class QQmlApplicationEngine;
 class QQmlComponent;
+class QQuickWindow;
 
 // Opens Files windows. Like Explorer, every launch opens a new window in
 // the one running process, so they share the clipboard, the Recycle Bin watcher
@@ -30,6 +32,9 @@ public Q_SLOTS:
     // UDisks2 block object path. A drive Files would not format gets a
     // message instead.
     Q_SCRIPTABLE void Format(const QString &device);
+    // "Choose what is removed" for Remove personal details, which Settings'
+    // Advanced protection page opens.
+    Q_SCRIPTABLE void ChooseRemovedDetails();
     Q_INVOKABLE void openWindow(const QList<QUrl> &urls, const QString &formatUdi = QString());
     Q_INVOKABLE void newWindow() { openWindow({}); }
 
@@ -38,6 +43,7 @@ private:
 
     QQmlApplicationEngine *m_engine = nullptr;
     QQmlComponent *m_component = nullptr;
+    QPointer<QQuickWindow> m_choices;
 };
 
 // org.freedesktop.FileManager1, so "Show in folder" in browsers and other

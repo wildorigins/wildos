@@ -1,0 +1,9 @@
+# Only for NVIDIA's driver (see /etc/apt/preferences.d/wildos-newer.pref,
+# which keeps everything else here from installing). The non-free parts
+# only, so checking for updates fetches a small list.
+Types: deb
+URIs: tor+https://deb.debian.org/debian
+Suites: sid
+Components: non-free non-free-firmware
+Architectures: amd64 i386
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg

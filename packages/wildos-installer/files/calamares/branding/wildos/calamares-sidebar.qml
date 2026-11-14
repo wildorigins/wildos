@@ -2,9 +2,9 @@
  *
  * Calamares has one entry per module, more than people need to see, so
  * several modules share a step here. The ranges follow the sequence in
- * settings.conf and must change with it: welcomeq and localeq (no page),
- * keyboardq, partition, notesqml@encryption, then summaryq, the install
- * itself and finishedq.
+ * settings.conf and must change with it: notesqml@licence, welcomeq and
+ * localeq (no page), keyboardq, partition, notesqml@encryption, then
+ * summaryq, the install itself and finishedq.
  */
 import io.calamares.ui 1.0
 import io.calamares.core 1.0
@@ -26,16 +26,17 @@ Rectangle {
     bottomLeftRadius: 20
 
     readonly property int current: ViewManager.currentStepIndex
-    readonly property int diskStep: 3
-    readonly property int encryptionStep: 4
-    readonly property int installStep: 6
-    readonly property int finishedStep: 7
+    readonly property int diskStep: 4
+    readonly property int encryptionStep: 5
+    readonly property int installStep: 7
+    readonly property int finishedStep: 8
     readonly property var steps: [
-        { label: qsTr("Before we start"), first: 0, last: 1 },
-        { label: qsTr("Keyboard"), first: 2, last: 2 },
-        { label: qsTr("Where to install"), first: 3, last: 3 },
-        { label: qsTr("Encryption"), first: 4, last: 4 },
-        { label: qsTr("Install"), first: 5, last: 7 }
+        { label: qsTr("Licence"), first: 0, last: 0 },
+        { label: qsTr("Before we start"), first: 1, last: 2 },
+        { label: qsTr("Keyboard"), first: 3, last: 3 },
+        { label: qsTr("Where to install"), first: 4, last: 4 },
+        { label: qsTr("Encryption"), first: 5, last: 5 },
+        { label: qsTr("Install"), first: 6, last: 8 }
     ]
 
     Rectangle {

@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Layouts
 import WildOS.UI as UI
 
-// The taskbar button: a 16 px update icon in a 32 px cell with a 32 by 36
-// hover, the same as the tray's icons and the security button beside it. A dot on the
-// icon when updates are ready to install (sand when security fixes are
-// among them), the icon turning while something checks or installs, and
-// the warning sign when the last check failed.
+// The taskbar button, there only while an update downloads or installs:
+// the two-arrow refresh icon in white, a little smaller than the shield
+// beside it because it fills more of its square, so the two look the same
+// size. It turns while the work is under way, and stands still while the
+// install waits its turn. A 32 px cell with a 32 by 36 hover, the same as
+// the tray's icons and the shield.
 MouseArea {
     id: button
 
@@ -43,13 +44,15 @@ MouseArea {
         }
     }
 
-    UI.Icon {
+    UI.Glyph {
         id: icon
         anchors.centerIn: parent
-        name: button.updates.failed ? "warning" : "update"
-        size: 16
-        strokeWidth: 2
-        color: button.updates.failed ? UI.Style.warning : UI.Style.iconInk
+        width: 14
+        height: 14
+        path: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"
+        // The shield's line weight at 16 px, drawn at 14.
+        strokeWidth: 2.3
+        color: button.updates.failed ? UI.Style.warning : UI.Style.dark ? "#ffffff" : UI.Style.iconInk
 
         // A plain number animation, not an animator, so the angle is known
         // when the work ends and the turn can finish instead of snapping back
@@ -63,7 +66,7 @@ MouseArea {
             to: 360
             duration: 1200
             loops: Animation.Infinite
-            running: button.updates.busy
+            running: button.updates.working
         }
         NumberAnimation {
             id: settle
@@ -75,8 +78,8 @@ MouseArea {
         }
         Connections {
             target: button.updates
-            function onBusyChanged() {
-                if (button.updates.busy) {
+            function onWorkingChanged() {
+                if (button.updates.working) {
                     settle.stop();
                 } else if (icon.rotation > 0) {
                     settle.duration = Math.max(200, 2 * (360 - icon.rotation) / 360 * 1200);
@@ -86,8 +89,7 @@ MouseArea {
         }
     }
 
-    // On the arrow's end, top right of the icon, where it reads as a badge
-    // without covering the arrow.
+    // Updates are waiting: amber when one of them fixes a security problem.
     Rectangle {
         visible: button.updates.ready
         x: icon.x + icon.width - width + 1

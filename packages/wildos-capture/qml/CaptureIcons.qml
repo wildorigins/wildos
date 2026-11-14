@@ -3,7 +3,7 @@ pragma Singleton
 import QtQuick
 
 // Capture's own line icons, on the system set's 24px grid, taken from the
-// boards (AppCapture.dc, AppCaptureEdit.dc). Anything not here comes from
+// boards (AppCapture.dc, AppCaptureEdit.dc, CaptureScan.dc). Anything not here comes from
 // WildOS.UI Icons.
 QtObject {
     readonly property var paths: ({
@@ -29,6 +29,10 @@ QtObject {
         "redo": "M15 14l5 -5l-5 -5M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13",
         "copy": "M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2H10a2 2 0 0 1 -2 -2V10a2 2 0 0 1 2 -2zM4 16c-1.1 0 -2 -0.9 -2 -2V4c0 -1.1 0.9 -2 2 -2h10c1.1 0 2 0.9 2 2",
         "share": "M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-8M16 6l-4 -4l-4 4M12 2v13",
+        "scan": "M3 7V5a2 2 0 0 1 2 -2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1 -2 2h-2M7 21H5a2 2 0 0 1 -2 -2v-2M7 12h10",
+        "rotate": "M21 12a9 9 0 1 1 -9 -9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5",
+        "remove": "M3 6h18M19 6v14c0 1 -1 2 -2 2H7c-1 0 -2 -1 -2 -2V6M8 6V4c0 -1 1 -2 2 -2h4c1 0 2 1 2 2v2",
+        "plus": "M5 12h14M12 5v14",
         "save": "M15.2 3a2 2 0 0 1 1.4 0.6l3.8 3.8a2 2 0 0 1 0.6 1.4V19a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2zM17 21v-7a1 1 0 0 0 -1 -1H8a1 1 0 0 0 -1 1v7M7 3v4a1 1 0 0 0 1 1h7"
     })
 }

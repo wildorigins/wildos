@@ -194,6 +194,9 @@ const PointerColour pointerList[] = {
     {"seaglass", "Sea glass", "#7fd6c8", "WildOS-SeaGlass"},
 };
 
+const QString customId = QStringLiteral("custom");
+const QString customTheme = QStringLiteral("WildOS-Custom");
+
 // wildos-shell's effects, by their KWin plugin ids.
 const QString outlineEffect = QStringLiteral("wildos_outline");
 const QString blurEffect = QStringLiteral("wildos_blurinactive");
@@ -588,9 +591,22 @@ QVariantList pointerColours()
     return list;
 }
 
+QString customPointerTheme()
+{
+    return customTheme;
+}
+
+QString customPointerDir()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/icons/") + customTheme;
+}
+
 QString pointerColour()
 {
     const QString theme = cursorTheme();
+    if (theme == customTheme) {
+        return customId;
+    }
     for (const PointerColour &p : pointerList) {
         if (theme == QLatin1String(p.theme)) {
             return QString::fromLatin1(p.id);
@@ -618,6 +634,9 @@ void setPointer(const QString &colourId, int size)
         if (colourId == QLatin1String(p.id)) {
             theme = QString::fromLatin1(p.theme);
         }
+    }
+    if (colourId == customId && QFileInfo::exists(customPointerDir() + QStringLiteral("/index.theme"))) {
+        theme = customTheme;
     }
     KSharedConfigPtr input = fresh(QStringLiteral("kcminputrc"));
     KConfigGroup mouse = input->group(QStringLiteral("Mouse"));

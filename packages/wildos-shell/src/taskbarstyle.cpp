@@ -41,4 +41,9 @@ void TaskbarStyle::read()
         m_batteryPercent = battery;
         Q_EMIT itemsChanged();
     }
+    const bool endTask = taskbar.readEntry("EndTask", false);
+    if (endTask != m_endTask) {
+        m_endTask = endTask;
+        Q_EMIT endTaskChanged();
+    }
 }

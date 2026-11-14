@@ -214,6 +214,7 @@ Item {
 
                 UI.TextField {
                     id: password
+                    UI.NoPaste {}
                     Layout.fillWidth: true
                     implicitHeight: 40
                     echoMode: TextInput.Password
@@ -304,6 +305,16 @@ Item {
                                 font.family: UI.Style.fontFamily
                                 font.letterSpacing: UI.Style.tracking(UI.Style.px(12))
                                 font.pixelSize: UI.Style.px(12)
+                                Keys.onPressed: event => {
+                                    if (valueMenu.isMenuKey(event)) {
+                                        valueMenu.openAtCaret();
+                                        event.accepted = true;
+                                    }
+                                }
+
+                                UI.TextMenu {
+                                    id: valueMenu
+                                }
                             }
                         }
                     }

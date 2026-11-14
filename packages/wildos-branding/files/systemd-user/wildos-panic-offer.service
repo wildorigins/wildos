@@ -1,0 +1,7 @@
+[Unit]
+Description=Offer to turn the network back on after the panic key
+ConditionUser=!@system
+
+[Service]
+Type=exec
+ExecStart=/usr/libexec/wildos/panic-key offer

@@ -1,3 +1,52 @@
+wildos-shell (0.1.16) trixie; urgency=medium
+
+  * The desktop is ready a little sooner after signing in.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:08:15 +0000
+
+wildos-shell (0.1.15) trixie; urgency=medium
+
+  * Tells the start-up animation when the taskbar is ready, so it can open
+    onto the desktop.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 13:52:18 +0000
+
+wildos-shell (0.1.14) trixie; urgency=medium
+
+  * Double-clicking the edge of an app that draws its own frame, such as
+    Brave, stretches it to the screen's full height or width, as it
+    already did for other windows. Wild OS's own apps ask for the same.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 10:05:00 +0000
+
+wildos-shell (0.1.13) trixie; urgency=medium
+
+  * Start opens smoothly the first time after signing in, including after
+    an update. It is drawn once under the sign-in screen, which now waits
+    for that and for the taskbar to finish loading (3 seconds at most).
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:10:00 +0000
+
+wildos-shell (0.1.12) trixie; urgency=medium
+
+  * Picking an accent colour no longer flashes a darker shadow round the
+    windows, and with Blur windows in the background on, no longer makes
+    the desktop darker with every pick. Windows now fade to their new
+    colours through a Wild OS effect that mixes the old and new looks in
+    one pass, in place of KWin's Blend Changes, which laid the old look
+    over the new one so their shadows added up. The background blur also
+    keeps its own drawing while any such fade runs, rather than blurring
+    the fade's snapshot of its own work again.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 07:50:46 +0000
+
+wildos-shell (0.1.11) trixie; urgency=medium
+
+  * The taskbar can be told whether an app's right-click menu offers End
+    task (wildosrc [Taskbar] EndTask), and follows the change at once.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:44:54 +0000
+
 wildos-shell (0.1.10) trixie; urgency=medium
 
   * Three and four-finger swipes each have their own actions. The thumb

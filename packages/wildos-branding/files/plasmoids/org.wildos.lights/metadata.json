@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [{ "Email": "dev@wildos.io", "Name": "Wild OS" }],
+        "Category": "System Information",
+        "Description": "A light while any app uses the camera or microphone, and the switches that block them",
+        "Icon": "camera-web",
+        "Id": "org.wildos.lights",
+        "License": "GPL-3.0-or-later",
+        "Name": "Camera and microphone",
+        "Version": "0.1.0",
+        "Website": "https://wildos.io"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

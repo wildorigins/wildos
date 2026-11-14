@@ -85,7 +85,10 @@ case $1 in
         mkfifo -m 600 "$fifo" || exit 1
         udevadm monitor --udev --subsystem-match=usb/usb_device > "$fifo" 2>/dev/null &
         monitor=$!
-        timeout 600 grep -q -m1 '^UDEV' < "$fifo"
+        # Events start "UDEV  [": udevadm's own heading line also starts with
+        # UDEV, and matching it made this return at once, so the taskbar
+        # restarted the watch and rescanned every device each second.
+        timeout 600 grep -q -m1 '^UDEV *\[' < "$fifo"
         kill "$monitor" 2>/dev/null
         rm -f "$fifo"
         # USBGuard rules on a new device a moment after udev announces it.

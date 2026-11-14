@@ -36,6 +36,7 @@ LEVEL_FILE=/etc/wildos/protection-level
 RULES_SRC=/usr/share/wildos/steam-devices
 RULES_DST=/etc/udev/rules.d
 RULES="60-steam-input.rules 60-steam-vr.rules"
+NTSYNC=/etc/modules-load.d/wildos-ntsync.conf
 
 # Controllers plugged in now pick up the change straight away. uinput is
 # loaded here because udev only sees it once the module is in; at start-up
@@ -50,6 +51,16 @@ devices() {
             rm -f "$RULES_DST/$rule"
         fi
     done
+    # ntsync (Linux 6.14 and later) does Windows' locking in the kernel,
+    # which Proton uses for smoother frame times in games. Loaded from the
+    # next start-up on and now; left loaded on turning off, as a game may
+    # still have it open. Kernels without it skip it quietly.
+    if [ -e "$CHOICE" ]; then
+        echo ntsync > "$NTSYNC"
+        modprobe -q ntsync 2>/dev/null || true
+    else
+        rm -f "$NTSYNC"
+    fi
     if [ -e "$CHOICE" ]; then
         modprobe -q uinput 2>/dev/null || true
     elif [ -c /dev/uinput ]; then
@@ -85,13 +96,20 @@ EOF
 # Written by Wild OS Settings: Steam and 32-bit apps are on, so they get the
 # 32-bit vDSO back.
 abi.vsyscall32 = 1
+# Some games use split locks, which newer Intel processors otherwise punish
+# with a delay that shows as stutter. The delay only
+# guards against one program slowing others down, not against reading them.
+# The dash skips it on processors without split lock detection.
+-kernel.split_lock_mitigate = 0
 EOF
+    sysctl -q -w kernel.split_lock_mitigate=0 2>/dev/null || true
     devices
     ;;
 off)
     [ -e "$CHOICE" ] || [ -e "$DROPIN" ] || [ -e "$SYSCTL" ] || exit 0
     rm -f "$CHOICE" "$DROPIN" "$SYSCTL"
     sysctl -q -w abi.vsyscall32=0 2>/dev/null || true
+    sysctl -q -w kernel.split_lock_mitigate=1 2>/dev/null || true
     devices
     ;;
 devices)

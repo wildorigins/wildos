@@ -71,6 +71,8 @@ NOT_SYSTEM = [
     "/home", "/swapfile", "/swap", "/.snapshots", "/boot/*",
     "/var/lib/wildos/restore-points", "/var/lib/wildos/reset",
     "/var/log", "/var/cache", "/var/tmp",
+    # Settings > System > History: what happened stays, going back included.
+    "/var/lib/wildos/history",
     # Windows mode: its disk, firmware variables, TPM and saved memory, and
     # the VM's definition. Going back never rolls Windows back.
     "/var/lib/wildos/winmode", "/var/lib/libvirt", "/etc/libvirt",

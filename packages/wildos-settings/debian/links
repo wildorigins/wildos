@@ -1,2 +1,3 @@
 usr/libexec/wildos/kde-settings-redirect usr/bin/systemsettings
 usr/libexec/wildos/kde-settings-redirect usr/bin/kcmshell6
+usr/lib/systemd/user/wildos-advanced-session.service usr/lib/systemd/user/graphical-session.target.wants/wildos-advanced-session.service

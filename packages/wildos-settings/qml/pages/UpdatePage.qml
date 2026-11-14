@@ -227,13 +227,16 @@ PageScroll {
                     : Format.plural(Updates.updates.length, "update is", "updates are") + " ready to install";
             case "installed": return Updates.restartNeeded ? "Restart to finish updating" : "Updates installed";
             case "uptodate": return unchecked ? "Not checked for updates yet" : "You're up to date";
-            case "error": return Updates.updates.length > 0 ? "The updates were not installed" : "Wild OS could not check for updates";
+            case "error": return Updates.updates.length > 0 && !Updates.checkFailed ? "The updates were not installed" : "Wild OS could not check for updates";
             default: return Updates.available ? "Updates" : "Updates are not available";
             }
         }
         description: {
             switch (Updates.state) {
             case "checking":
+                if (Updates.clockWaiting)
+                    return (Updates.clockBehind.length > 0 ? "The clock on this computer is at least " + Updates.clockBehind + " behind. " : "")
+                        + "Wild OS is setting it through Tor, which can take a few minutes after start-up, and checks again as soon as it has.";
                 return Updates.waiting ? "Waiting for another install to finish first, such as the automatic security updates."
                                        : "This can take a minute on a slow connection.";
             case "installing":
@@ -277,9 +280,39 @@ PageScroll {
         UI.Button {
             visible: Updates.state !== "available" && Updates.state !== "installing"
             enabled: Updates.available && !page.busy
-            text: Updates.state === "checking" ? "Checking" : "Check now"
+            text: Updates.state === "checking" ? (Updates.clockWaiting ? "Waiting for the clock" : "Checking")
+                : Updates.state === "error" && Updates.checkFailed ? "Try again" : "Check now"
             onClicked: Updates.check()
         }
+
+        UI.Button {
+            visible: Updates.state === "error" && Updates.clockProblem && Pages.exists("datetime")
+            text: "Date and time"
+            onClicked: Navigator.open("datetime")
+        }
+    }
+
+    // PackageKit's error and apt's lines, for anyone helping to fix a check
+    // that failed; the card above says why in plain words.
+    UI.LinkButton {
+        id: copyDetails
+        property bool copied: false
+        Layout.leftMargin: -4
+        Layout.topMargin: -8
+        visible: Updates.state === "error" && Updates.errorDetails.length > 0
+        text: copied ? "Technical details copied" : "Copy technical details"
+        onVisibleChanged: copied = false
+        onClicked: {
+            detailsClipboard.text = Updates.errorDetails;
+            detailsClipboard.selectAll();
+            detailsClipboard.copy();
+            copied = true;
+        }
+    }
+
+    TextEdit {
+        id: detailsClipboard
+        visible: false
     }
 
     UI.ProgressBar {

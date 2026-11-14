@@ -5,3 +5,6 @@ type: "job"
 name: "wildosrecovery"
 interface: "python"
 script: "main.py"
+# A share of the progress bar to match its time: the key slot derives an
+# Argon2id key, which takes several seconds on purpose.
+weight: 2

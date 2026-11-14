@@ -1,4 +1,5 @@
 #include "panelapp.h"
+#include "secretwiper.h"
 
 #include <KDBusService>
 
@@ -27,6 +28,7 @@ int main(int argc, char *argv[])
     KDBusService service(KDBusService::Unique);
 
     PanelApp panel;
+    SecretWiper wiper;
     QObject::connect(&service, &KDBusService::activateRequested, &panel, [&panel](const QStringList &arguments, const QString &) {
         panel.handle(arguments);
     });

@@ -223,13 +223,43 @@ PlasmoidItem {
     }
 
     function canUninstall(favoriteId: string): bool {
-        return hasStore && favoriteId.length > 0 && !Helpers.isCoreApp(favoriteId);
+        if (favoriteId.length === 0 || Helpers.isCoreApp(favoriteId)) {
+            return false;
+        }
+        return isHomeApp(favoriteId) || isWindowsApp(favoriteId) || Helpers.isOwnApp(favoriteId) || hasStore;
+    }
+
+    // A Windows app in Windows mode: Windows uninstalls it, through
+    // Settings > Installed apps.
+    function isWindowsApp(favoriteId: string): bool {
+        return Helpers.storageId(favoriteId).indexOf("wildos-winmode-") === 0;
+    }
+
+    // An app that installed itself in the home folder (its own install
+    // script, an AppImage). The Store has never heard of it, so Settings
+    // removes it. Windows mode's launchers live there too; isWindowsApp
+    // covers them.
+    function isHomeApp(favoriteId: string): bool {
+        const row = appRow(favoriteId);
+        if (row < 0) {
+            return false;
+        }
+        const url = String(start.appIndex.objectAt(row).url);
+        return url.indexOf("/.local/share/applications/") >= 0 && Helpers.storageId(favoriteId).indexOf("wildos-") !== 0;
     }
 
     // Removing software is the Store's job, as on Windows, so Uninstall
-    // opens the app's page there.
+    // opens the app's page there; Wild OS's own apps and apps in the home
+    // folder or in Windows mode open their Uninstall in Settings > Installed
+    // apps.
     function uninstallApp(favoriteId: string): void {
-        Qt.openUrlExternally("appstream://" + Helpers.storageId(favoriteId));
+        if (isHomeApp(favoriteId) || isWindowsApp(favoriteId) || Helpers.isOwnApp(favoriteId)) {
+            if (!openSettingsPage("uninstall:" + Helpers.storageId(favoriteId))) {
+                settingsMissing();
+            }
+        } else {
+            Qt.openUrlExternally("appstream://" + Helpers.storageId(favoriteId));
+        }
         start.close();
     }
 
@@ -270,7 +300,7 @@ PlasmoidItem {
         const commands = [];
         const taskbar = favoriteId.endsWith(".desktop") ? taskbarApplet() : null;
         if (taskbar) {
-            const url = "applications:" + favoriteId;
+            const url = Helpers.taskbarUrl(favoriteId);
             const launchers = Array.from(taskbar.configuration.launchers);
             if (launchers.indexOf(url) >= 0) {
                 commands.push({ text: "Unpin from taskbar", icon: "menu-unpin", run: () => taskbar.configuration.launchers = launchers.filter(l => l !== url) });
@@ -307,6 +337,11 @@ PlasmoidItem {
     toolTipSubText: ""
 
     preferredRepresentation: compactRepresentation
+    // Start is built when the taskbar loads instead of on the first click,
+    // which made that first open stutter while it compiled the menu and read
+    // every icon. It resets itself each time it opens (StartMenu's
+    // onExpandedChanged), so building it early changes nothing else.
+    preloadFullRepresentation: true
     compactRepresentation: StartButton {
         launcher: start
     }

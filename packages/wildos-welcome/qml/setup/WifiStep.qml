@@ -226,6 +226,7 @@ StepPage {
                                 Layout.fillWidth: true
                                 implicitHeight: 40
                                 revealable: true
+                                UI.NoPaste {}
                                 placeholderText: "Network password"
                                 enabled: page.wifi.connectingSsid === ""
                                 onAccepted: if (connectButton.enabled) connectButton.clicked()
@@ -360,6 +361,7 @@ StepPage {
                 id: hiddenPassword
                 Layout.fillWidth: true
                 revealable: true
+                UI.NoPaste {}
                 placeholderText: "Password, if it has one"
             }
 

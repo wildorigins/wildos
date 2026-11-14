@@ -141,7 +141,10 @@ MouseArea {
             Layout.preferredWidth: 22
             Layout.preferredHeight: 18
             percent: button.quick.power ? button.quick.power.percent : 0
-            charging: button.quick.power ? button.quick.power.charging : false
+            // The bolt shows whenever the charger is in, as on Windows: a full
+            // battery, or one held at a charge limit, isn't charging but is
+            // still plugged in.
+            charging: button.quick.power ? button.quick.power.pluggedIn : false
             low: button.quick.batteryLow
         }
 

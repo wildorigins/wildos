@@ -9,7 +9,7 @@ set -u
 state=${XDG_STATE_HOME:-$HOME/.local/state}/wildos
 # Each change: its marker and its script.
 pending=""
-for change in winmode-added:taskbar-winmode.js winmode-left:taskbar-winmode-left.js updates-added:taskbar-updates.js; do
+for change in winmode-added:taskbar-winmode.js winmode-left:taskbar-winmode-left.js updates-added:taskbar-updates.js lights-added:taskbar-lights.js; do
     [ -e "$state/taskbar-${change%%:*}" ] || pending="$pending $change"
 done
 [ -n "$pending" ] || exit 0

@@ -10,6 +10,11 @@
 # - "Start-up recovery" boots the reset copy kept inside the encrypted disk,
 #   with its own kernel and initramfs from /boot/wildos-recovery. Nothing of
 #   the installed system runs.
+# - A new kernel gets one start. If that start doesn't reach the desktop,
+#   the PC starts "Wild OS (previous version)" (wildos-base's 10_wildos)
+#   from then on, until a newer kernel arrives or the new one is picked from
+#   the menu and works. wildos_kernel_ok is the last kernel that reached the
+#   desktop (recovery-boot), wildos_kernel_tried the new one given its start.
 # - On Btrfs, "Restore points" lists each restore point whose kernel is
 #   still on /boot, to start it on a layer in memory.
 set -e
@@ -67,6 +72,22 @@ echo 'fi'
 echo 'if [ "${wildos_reason}" = "reset-everything" ]; then'
 echo '	set wildos_ram="rd.live.ram=1"'
 echo 'fi'
+newest=$(for f in /boot/vmlinuz-*; do
+    if grub_file_is_not_garbage "$f"; then echo "${f#/boot/vmlinuz-}"; fi
+done | version_sort -r | head -n 2)
+if [ "$(echo "$newest" | wc -l)" = 2 ]; then
+    newest=$(echo "$newest" | sed -n 1p)
+    echo "if [ -n \"\${wildos_kernel_ok}\" ]; then"
+    echo "	if [ \"\${wildos_kernel_ok}\" != \"$newest\" ]; then"
+    echo "		if [ \"\${wildos_kernel_tried}\" = \"$newest\" ]; then"
+    echo "			set default=\"wildos-previous-$device_id\""
+    echo "		elif [ -z \"\${wildos_reason}\" ]; then"
+    echo "			set wildos_kernel_tried=\"$newest\""
+    echo "			save_env wildos_kernel_tried"
+    echo "		fi"
+    echo "	fi"
+    echo "fi"
+fi
 echo 'if [ "${wildos_tries}" = "2" ]; then'
 echo '	set wildos_tries='
 echo '	save_env wildos_tries'

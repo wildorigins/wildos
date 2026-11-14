@@ -1,3 +1,4 @@
+winmode/activation.py usr/lib/wildos/winmode/winmode
 winmode/agent.py usr/lib/wildos/winmode/winmode
 winmode/cli.py usr/lib/wildos/winmode/winmode
 winmode/config.py usr/lib/wildos/winmode/winmode

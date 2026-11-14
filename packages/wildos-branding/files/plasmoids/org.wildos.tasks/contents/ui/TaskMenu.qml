@@ -8,8 +8,9 @@
     Wild OS fork of the Plasma 6.3.6 task manager's ContextMenu.qml. The
     jump list a right click opens on an app (MenusShell.dc "Taskbar app"):
     its pinned places or recent files under small headings, the app's own
-    tasks, then the app itself in 600, pin or unpin, close and End task,
-    nearest the taskbar as on Windows 11. A Windows app adds one quiet line
+    tasks, then the app itself in 600, pin or unpin, close and, when it is
+    turned on in Settings > Personalisation > Taskbar, End task, nearest
+    the taskbar as on Windows 11. A Windows app adds one quiet line
     saying it runs in Windows mode and a way to its settings. It is the
     shared Wild OS menu in a window of its own, as the taskbar is too short
     to hold it.
@@ -24,6 +25,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.plasma.private.mpris as Mpris
+import org.wildos.shell as WildOS
 import WildOS.UI as UI
 
 UI.Menu {
@@ -207,10 +209,12 @@ UI.Menu {
                 enabled: get(atm.IsClosable) !== false
             });
 
-            // Every Windows app's window comes from the one Windows mode
-            // viewer, so ending it would close all of them at once.
-            const pids = appPids(group);
-            if (!windowsApp && pids.length > 0) {
+            // Off by default, as on Windows 11: Close window lets the app
+            // ask about unsaved work, End task does not. Every Windows app's
+            // window comes from the one Windows mode viewer, so ending it
+            // would close all of them at once.
+            const pids = WildOS.TaskbarStyle.endTask === true && !windowsApp ? appPids(group) : [];
+            if (pids.length > 0) {
                 list.push({ text: "End task", icon: "menu-task-manager", run: () => menu.endTask(pids) });
             }
         }

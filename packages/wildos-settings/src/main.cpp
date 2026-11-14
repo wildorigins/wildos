@@ -195,6 +195,10 @@ int main(int argc, char *argv[])
 
     const int code = app.exec();
     // Modules hold items from the engine; drop them before the engine goes.
+    // KcmHost keeps its own reference for modules opened later; while it
+    // held one, the engine outlived the application and tore down its
+    // images after Qt had gone, which aborted Settings as it closed.
+    KcmHost::setEngine(nullptr);
     engine.reset();
     return code;
 }

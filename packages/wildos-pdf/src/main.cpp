@@ -3,6 +3,8 @@
 // Nothing goes online.
 //
 //   wildos-pdf [file.pdf]
+//   wildos-pdf --sign file.pdf   opens with Sign chosen, for Capture's
+//                                Open in PDF to sign
 //
 // Each file opens in a PDF of its own.
 
@@ -95,6 +97,8 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addVersionOption();
     parser.addPositionalArgument(QStringLiteral("file"), QStringLiteral("A PDF to open."));
+    const QCommandLineOption sign(QStringLiteral("sign"), QStringLiteral("Open with Sign chosen."));
+    parser.addOption(sign);
     parser.process(app);
     const QString arg = parser.positionalArguments().value(0);
     const QUrl url = arg.isEmpty() ? QUrl() : QUrl::fromUserInput(arg, QDir::currentPath(), QUrl::AssumeLocalFile);
@@ -122,6 +126,9 @@ int main(int argc, char *argv[])
     QQmlComponent home(&engine);
     QQmlIncubator incubator(QQmlIncubator::Asynchronous);
     QVariantMap initial{{QStringLiteral("openError"), openError}};
+    if (parser.isSet(sign) && openError.isEmpty() && url.isValid() && !url.isEmpty()) {
+        initial.insert(QStringLiteral("startTool"), QStringLiteral("sign"));
+    }
     if (splash) {
         // Built hidden behind the splash and shown as it fades.
         initial.insert(QStringLiteral("visible"), false);

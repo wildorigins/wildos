@@ -1,0 +1,10 @@
+#!/bin/sh
+# Advanced protection's "Wi-Fi and Bluetooth switch themselves off":
+# wildos-radios-idle runs only while it is on.
+set -eu
+
+case "${1:-}" in
+    on) systemctl enable --now wildos-radios-idle.service ;;
+    off) systemctl disable --now wildos-radios-idle.service ;;
+    *) exit 2 ;;
+esac

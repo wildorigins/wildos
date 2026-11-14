@@ -4,25 +4,11 @@ import QtQuick.Layouts
 import WildOS.Settings
 import WildOS.UI as UI
 
-// Storage: how full each disk is and what the Recycle Bin is holding on to, with
-// the Recycle Bin emptied for real through ktrash6.
+// Storage: how full each disk is, and the way into Free up space.
 PageScroll {
     id: page
 
     property var volumes: System.volumes()
-    property real bin: System.binSize()
-
-    function refresh() {
-        volumes = System.volumes();
-        bin = System.binSize();
-    }
-
-    Connections {
-        target: System
-        function onBinEmptied() {
-            page.refresh();
-        }
-    }
 
     Repeater {
         model: page.volumes
@@ -101,20 +87,14 @@ PageScroll {
             Column {
                 width: parent.width
 
+                // Everything Wild OS can clear (SettingsFreeSpace.dc), the
+                // Recycle Bin included, on a page of its own.
                 UI.SettingRow {
-                    id: binRow
                     iconName: "trash"
-                    title: "Recycle Bin"
-                    description: page.bin > 0
-                        ? System.formatBytes(page.bin) + " in files you deleted. Emptying the Recycle Bin removes them for good."
-                        : "The Recycle Bin is empty."
-
-                    UI.Button {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: page.bin > 0
-                        text: "Empty Recycle Bin"
-                        onClicked: emptyDialog.open()
-                    }
+                    title: "Clean up"
+                    description: "Recycle Bin, old restore points, update files, app caches and more"
+                    chevron: true
+                    onClicked: Navigator.open("freespace")
                 }
 
                 UI.SettingRow {
@@ -137,25 +117,5 @@ PageScroll {
                 }
             }
         }
-    }
-
-    UI.Dialog {
-        id: emptyDialog
-        title: "Empty the Recycle Bin?"
-        text: System.formatBytes(page.bin) + " of deleted files will be removed for good. You cannot get them back."
-        buttons: [
-            UI.Button {
-                text: "Empty Recycle Bin"
-                kind: "primary"
-                onClicked: {
-                    emptyDialog.close();
-                    System.emptyBin();
-                }
-            },
-            UI.Button {
-                text: "Keep files"
-                onClicked: emptyDialog.close()
-            }
-        ]
     }
 }

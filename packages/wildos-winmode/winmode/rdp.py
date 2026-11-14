@@ -7,13 +7,11 @@ by wild-guest. Its first program is wild-guest's "--start", which starts
 the app and ends, because FreeRDP's /app option splits on commas and
 cannot carry a file name that has one.
 
-The client is Wild OS's own, wildos-rdp, when it is installed: native
-Wayland windows at the screen's own scale, and the app's window on screen
-with the loading W the moment the app is opened (boards 9.11 to 9.13).
-xfreerdp3, under XWayland, is the fallback, and is what "rdp_client":
-"xfreerdp3" in /etc/wildos/winmode.json, or WILDOS_RDP_CLIENT=xfreerdp3 in
-the agent's environment, asks for. Both take the same arguments the same
-way.
+The client is Wild OS's own, wildos-rdp: native Wayland windows at the
+screen's own scale, and the app's window on screen with the loading W the
+moment the app is opened (boards 9.11 to 9.13). The whole Windows desktop
+opens in it too (--desktop). It takes FreeRDP's arguments, one per line on
+standard input with the password last.
 """
 
 import base64
@@ -27,7 +25,6 @@ from gi.repository import Gio, GLib
 from . import config
 
 NATIVE_CLIENT = "/usr/libexec/wildos/wildos-rdp"
-REMOTE_CLIENT = "/usr/bin/wildos-remote"
 REMOTE_APP_BUS = ("org.wildos.RemoteApp", "/org/wildos/RemoteApp", "org.wildos.RemoteApp")
 GUEST_EXE = r"C:\Program Files\Wild OS\wild-guest.exe"
 AUTH_FAILED = ("LOGON_FAILURE", "AUTHENTICATION_FAILED", "ERRCONNECT_LOGON_FAILURE", "STATUS_LOGON_FAILURE",
@@ -137,7 +134,7 @@ def drive_arguments(drive):
     return [f"/drive:wildos,{drive}"] if drive else []
 
 
-def desktop_arguments(host, port, account, domain, drive=None):
+def desktop_arguments(host, port, account, domain, drive=None, title="Windows desktop"):
     """The whole Windows desktop in a window of its own, for Settings'
     Windows desktop button. It takes the one session over, so the app
     windows go into it until it closes."""
@@ -148,7 +145,7 @@ def desktop_arguments(host, port, account, domain, drive=None):
         "/cert:tofu",
         "/sec:nla",
         "/auth-pkg-list:!kerberos",
-        "/title:Windows desktop",
+        f"/title:{plain(title)}",
         "/dynamic-resolution",
         *drive_arguments(drive),
         "+clipboard",
@@ -176,26 +173,6 @@ def forget_certificate(host, port, config_home=None):
         return False
 
 
-def client_program(choice=None, native=NATIVE_CLIENT):
-    """The RemoteApp client to run: wildos-rdp unless it is missing or the
-    installation asks for xfreerdp3."""
-    choice = choice or os.environ.get("WILDOS_RDP_CLIENT") or config.load().get("rdp_client", "auto")
-    if choice != "xfreerdp3" and os.access(native, os.X_OK):
-        return native
-    return "xfreerdp3"
-
-
-def desktop_client(choice=None, remote=REMOTE_CLIENT):
-    """The client for the whole Windows desktop: xfreerdp3 unless the
-    installation asks for Remote ("desktop_client": "remote" in
-    /etc/wildos/winmode.json, or WILDOS_DESKTOP_CLIENT=remote) and it is
-    installed. Remote reads the same arguments from standard input."""
-    choice = choice or os.environ.get("WILDOS_DESKTOP_CLIENT") or config.load().get("desktop_client", "xfreerdp3")
-    if choice == "remote" and os.access(remote, os.X_OK):
-        return remote
-    return "xfreerdp3"
-
-
 def loading_arguments(app_id, title, icon, reason="", program=""):
     """wildos-rdp's window for the app being opened, before the connection's
     own arguments arrive on standard input. Nothing here is secret: an app
@@ -213,28 +190,26 @@ def loading_arguments(app_id, title, icon, reason="", program=""):
 
 
 class Connection:
-    """One RemoteApp client process. on_change(open) runs when it opens or
-    ends; on_auth_failed runs when Windows refused the password.
+    """One wildos-rdp process: the RemoteApp connection, or with desktop
+    the whole Windows desktop in one window. on_change(open) runs when it
+    opens or ends; on_auth_failed runs when Windows refused the password.
 
-    wildos-rdp can start before Windows is awake (spawn()), with the app's
-    window already on screen, and take the connection's arguments when they
-    are known (start()). Until then the connection does not count as open."""
+    For apps, wildos-rdp can start before Windows is awake (spawn()), with
+    the app's window already on screen, and take the connection's arguments
+    when they are known (start()). Until then the connection does not count
+    as open."""
 
     # Where wildos-rdp is; tests point it elsewhere.
     native_client = NATIVE_CLIENT
 
-    def __init__(self, on_change, on_auth_failed, log_path, program=None):
+    def __init__(self, on_change, on_auth_failed, log_path, desktop=False):
         self.proc = None
         self.on_change = on_change
         self.on_auth_failed = on_auth_failed
         self.log_path = log_path
         self.started = None
-        self.program = program
+        self.desktop = desktop
         self.waiting = False
-
-    @property
-    def native(self):
-        return (self.program or client_program(native=self.native_client)) == self.native_client
 
     @property
     def running(self):
@@ -258,11 +233,10 @@ class Connection:
 
     def spawn(self, app_id="", title="", icon="", reason="", program="", env=None):
         """Starts wildos-rdp now, the app's window up at once, the
-        connection's arguments to follow. False with xfreerdp3, or when a
+        connection's arguments to follow. False for the desktop, or when a
         client is already running."""
-        if self.running or not self.native:
+        if self.running or self.desktop:
             return False
-        self.program = self.native_client
         self.waiting = True
         self._popen([self.native_client, *loading_arguments(app_id, title, icon, reason, program), "/args-from:stdin"], env)
         return True
@@ -281,8 +255,7 @@ class Connection:
     def start(self, args, password, env=None):
         if not (self.waiting and self.running):
             self.waiting = False
-            self.program = self.program or client_program(native=self.native_client)
-            self._popen([self.program, "/args-from:stdin"], env)
+            self._popen([self.native_client, *(["--desktop"] if self.desktop else []), "/args-from:stdin"], env)
         self.waiting = False
         self.proc.stdin.write(("\n".join(args + [f"/p:{password}"]) + "\n").encode())
         self.proc.stdin.close()
@@ -295,7 +268,6 @@ class Connection:
         was_open = not self.waiting
         self.proc = None
         self.waiting = False
-        self.program = None
         if not was_open:
             return
         failed = False

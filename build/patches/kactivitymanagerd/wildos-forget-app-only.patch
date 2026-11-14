@@ -1,0 +1,55 @@
+Description: Forgetting one app's recent files keeps every other app's
+ A task manager jump list's Forget Recent Files deletes that app's history
+ with DeleteStatsForResource for every resource ("*"). The history rows are
+ filtered by the app, but the resources' mimetype and title rows were
+ deleted for every resource, and lists filtered by type, like Start's
+ recent files, then dropped every file. Now a resource's mimetype and
+ title go only once no history, score or link refers to it.
+Author: Wild OS Developers <dev@wildos.io>
+Forwarded: no
+
+--- a/src/service/plugins/sqlite/StatsPlugin.cpp
++++ b/src/service/plugins/sqlite/StatsPlugin.cpp
+@@ -540,11 +540,6 @@
+ 
+     const auto clientFilter = client == ANY_AGENT_TAG ? " 1 " : QStringLiteral(" initiatingAgent = '%1' ").arg(client);
+ 
+-    auto removeResourceInfoQuery = resourcesDatabase()->createQuery();
+-    removeResourceInfoQuery.prepare(
+-        "DELETE FROM ResourceInfo "
+-        "WHERE targettedResource LIKE :targettedResource ESCAPE '\\'");
+-
+     auto removeEventsQuery = resourcesDatabase()->createQuery();
+     removeEventsQuery.prepare(
+         "DELETE FROM ResourceEvent "
+@@ -557,14 +552,28 @@
+         "WHERE "
+         + activityFilter + " AND " + clientFilter + " AND " + "targettedResource LIKE :targettedResource ESCAPE '\\'");
+ 
+-    const auto pattern = Common::starPatternToLike(resource);
++    // A resource's mimetype and title are shared by every app and activity
++    // that used it, and lists filtered by type, like the launchers' recent
++    // files, drop a resource without them. Forgetting one app's resources
++    // (all of them, "*", from a task manager jump list) deleted them for
++    // every resource, so only the ones nothing refers to any more go now,
++    // after the app's own rows.
++    auto removeResourceInfoQuery = resourcesDatabase()->createQuery();
++    removeResourceInfoQuery.prepare(
++        "DELETE FROM ResourceInfo "
++        "WHERE targettedResource LIKE :targettedResource ESCAPE '\\' "
++        "AND NOT EXISTS (SELECT 1 FROM ResourceEvent e WHERE e.targettedResource = ResourceInfo.targettedResource) "
++        "AND NOT EXISTS (SELECT 1 FROM ResourceScoreCache c WHERE c.targettedResource = ResourceInfo.targettedResource) "
++        "AND NOT EXISTS (SELECT 1 FROM ResourceLink l WHERE l.targettedResource = ResourceInfo.targettedResource)");
+ 
+-    Utils::exec(*resourcesDatabase(), Utils::FailOnError, removeResourceInfoQuery, ":targettedResource", pattern);
++    const auto pattern = Common::starPatternToLike(resource);
+ 
+     Utils::exec(*resourcesDatabase(), Utils::FailOnError, removeEventsQuery, ":targettedResource", pattern);
+ 
+     Utils::exec(*resourcesDatabase(), Utils::FailOnError, removeScoreCachesQuery, ":targettedResource", pattern);
+ 
++    Utils::exec(*resourcesDatabase(), Utils::FailOnError, removeResourceInfoQuery, ":targettedResource", pattern);
++
+     Q_EMIT ResourceScoreDeleted(activity, client, resource);
+ }
+ 

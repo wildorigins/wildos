@@ -9,6 +9,7 @@
 #include <input.h>
 #include <plugin.h>
 
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QVariantMap>
 
@@ -48,6 +49,11 @@ public:
 
 public Q_SLOTS:
     Q_SCRIPTABLE void ShowAtPointer();
+    // A double click on a resize edge, as on Windows: top or bottom stretches
+    // the window under the pointer to the screen's height, left or right to
+    // its width, a corner fills the screen. For apps that draw their own
+    // frame with WildOS.UI (ResizeHandles); edges is Qt::Edges.
+    Q_SCRIPTABLE void MaximizeEdgeAtPointer(int edges);
 
 private:
     void takeOverShortcut();
@@ -55,9 +61,18 @@ private:
     void show(KWin::Window *window, const QPointF &position);
     QVariantMap describe(KWin::Window *window) const;
     bool ensureView();
+    bool edgeDoubleClick(KWin::PointerButtonEvent *event);
+    void maximizeForEdges(KWin::Window *window, Qt::Edges edges);
 
     std::unique_ptr<QQmlEngine> m_engine;
     std::unique_ptr<QQuickWindow> m_view;
+    // The last press in the resize margin of a window that draws its own
+    // frame, to tell a double click there.
+    QElapsedTimer m_edgeClick;
+    QPointer<KWin::Window> m_edgeWindow;
+    Qt::Edges m_edgeEdges;
+    QPointF m_edgePosition;
+    bool m_swallowLeftRelease = false;
     QPointer<KWin::Window> m_window;
     bool m_swallowRelease = false;
 };

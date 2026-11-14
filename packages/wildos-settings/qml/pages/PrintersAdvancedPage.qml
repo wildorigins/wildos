@@ -51,6 +51,16 @@ PageScroll {
 
     onSelectedChanged: prefs = selected.length > 0 ? Printers.preferences(selected) : ({})
 
+    // Printers and scanners' "It only has a Windows driver" opens this page
+    // with Navigator.request "printers-driver", straight into choosing a
+    // driver.
+    Component.onCompleted: {
+        if (Navigator.request === "printers-driver") {
+            Navigator.request = "";
+            startAdding();
+        }
+    }
+
     Timer {
         interval: 4000
         running: Printers.available && page.visible

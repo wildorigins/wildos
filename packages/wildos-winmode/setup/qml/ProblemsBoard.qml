@@ -60,6 +60,7 @@ Rectangle {
 
         ProblemCard {
             kind: "download"
+            offline: true
             received: 3.8e9
         }
     }

@@ -788,7 +788,9 @@ void FlatpakWorker::runTransaction(const QList<int> &jobs, Op op, const QStringL
             break;
         }
 
-        if (failure.isEmpty() && added > 0 && !flatpak_transaction_is_empty(transaction)) {
+        // A .flatpakref only becomes operations inside flatpak_transaction_run,
+        // so its transaction looks empty until then and must run anyway.
+        if (failure.isEmpty() && added > 0 && (op == Op::InstallRefFile || !flatpak_transaction_is_empty(transaction))) {
             g_signal_connect(transaction, "new-operation", G_CALLBACK(onNewOperation), &state);
             g_signal_connect(transaction, "ready", G_CALLBACK(onReady), &state);
             g_signal_connect(transaction, "operation-error", G_CALLBACK(onOperationError), &state);
@@ -803,13 +805,16 @@ void FlatpakWorker::runTransaction(const QList<int> &jobs, Op op, const QStringL
             if (!flatpak_transaction_run(transaction, cancellable, &error)) {
                 if (g_cancellable_is_cancelled(cancellable)) {
                     failure = QString::fromLatin1(cancelledMarker);
+                } else if (g_error_matches(error, FLATPAK_ERROR, FLATPAK_ERROR_ALREADY_INSTALLED)) {
+                    // A .flatpakref is only checked against what is installed
+                    // once it runs; its app being there already is no failure.
                 } else {
                     failure = state.error.isEmpty() ? takeError(error) : state.error;
+                    if (failure.isEmpty()) {
+                        failure = QStringLiteral("Flathub stopped part way through.");
+                    }
                 }
                 g_clear_error(&error);
-                if (failure.isEmpty()) {
-                    failure = QStringLiteral("Flathub stopped part way through.");
-                }
             }
             {
                 QMutexLocker lock(&m_runningMutex);

@@ -1,0 +1,7 @@
+[Unit]
+Description=Panic key: lock the screen, clear the clipboard and cut the network
+ConditionUser=!@system
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wildos/panic-key

@@ -1,0 +1,13 @@
+[Unit]
+Description=Note password unlocks for fingerprint sign-in
+
+[Socket]
+# The lock screen runs as the person, who can't write the root-owned note
+# fingerprint-stamp keeps; it hands the password over here instead.
+ListenStream=/run/wildos/fingerprint-stamp.socket
+SocketMode=0666
+Accept=yes
+MaxConnections=8
+
+[Install]
+WantedBy=sockets.target

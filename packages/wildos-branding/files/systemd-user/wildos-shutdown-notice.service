@@ -1,0 +1,16 @@
+[Unit]
+Description=Say which apps the last shutdown closed without saving
+# Once the start-up splash has gone: Plasma keeps a notification sent while
+# something fills the screen out of sight, in its history only.
+After=plasma-ksplash-ready.service plasma-ksplash.service
+PartOf=graphical-session.target
+ConditionUser=!@system
+ConditionPathExists=%S/wildos/closed-at-shutdown.json
+
+[Service]
+Type=oneshot
+# The taskbar's notification area, which draws the pop-ups, loads a few
+# seconds after the splash has gone; until then a notification only goes
+# to the history.
+ExecStartPre=/bin/sleep 6
+ExecStart=/usr/libexec/wildos/shutdown-guard --notice

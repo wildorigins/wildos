@@ -3,12 +3,19 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QHash>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QPointer>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSet>
+#include <QStandardPaths>
 #include <QThread>
+#include <QTimer>
 #include <QUrl>
+
+#include <KConfigGroup>
+#include <KSharedConfig>
 
 #include <cups/adminutil.h>
 #include <cups/cups.h>
@@ -64,6 +71,204 @@ QString problem(const QStringList &reasons)
     return {};
 }
 
+// One ink or toner supply, from marker-* (what CUPS and AirPrint printers
+// report) or a printer-supply entry (what IPP Everywhere requires).
+struct Marker {
+    QString name;
+    QString color;
+    QString type;
+    int level = -1;
+};
+
+bool consumable(const Marker &m)
+{
+    const QString type = m.type.toLower();
+    return m.level >= 0 && !type.contains(QLatin1String("waste")) && (type.isEmpty() || type.contains(QLatin1String("ink")) || type.contains(QLatin1String("toner")));
+}
+
+bool isBlack(const Marker &m)
+{
+    return m.color.compare(QLatin1String("#000000"), Qt::CaseInsensitive) == 0
+        || (m.color.isEmpty() && m.name.contains(QLatin1String("black"), Qt::CaseInsensitive));
+}
+
+// "Black ink 62%, colour 40%": the colours as the one that runs out first,
+// since that is the one to buy.
+QString inkSummary(const QList<Marker> &markers)
+{
+    int black = -1;
+    int colour = -1;
+    bool toner = false;
+    bool ink = false;
+    for (const Marker &m : markers) {
+        if (!consumable(m)) {
+            continue;
+        }
+        toner = toner || m.type.contains(QLatin1String("toner"), Qt::CaseInsensitive);
+        ink = ink || m.type.contains(QLatin1String("ink"), Qt::CaseInsensitive);
+        int &slot = isBlack(m) ? black : colour;
+        slot = slot < 0 ? m.level : std::min(slot, m.level);
+    }
+    const QString substance = toner && !ink ? QStringLiteral("toner") : QStringLiteral("ink");
+    QStringList parts;
+    if (black >= 0) {
+        parts << QStringLiteral("Black %1 %2%").arg(substance).arg(black);
+    }
+    if (colour >= 0) {
+        parts << (black >= 0 ? QStringLiteral("colour %1%").arg(colour) : QStringLiteral("Colour %1 %2%").arg(substance).arg(colour));
+    }
+    return parts.join(QStringLiteral(", "));
+}
+
+// Every supply by the name the printer gives it: "Black Cartridge 62%,
+// Cyan Cartridge 40%".
+QString inkDetail(const QList<Marker> &markers)
+{
+    QStringList parts;
+    for (const Marker &m : markers) {
+        if (consumable(m)) {
+            parts << QStringLiteral("%1 %2%").arg(m.name.isEmpty() ? QStringLiteral("Ink") : m.name).arg(m.level);
+        }
+    }
+    return parts.join(QStringLiteral(", "));
+}
+
+// marker-* lists kept while one printer's attributes are read.
+struct MarkerLists {
+    QStringList names;
+    QStringList colors;
+    QStringList types;
+    QList<int> levels;
+    QList<QByteArray> supplies;
+    QStringList supplyNames;
+
+    bool take(const QByteArray &key, ipp_attribute_t *attr)
+    {
+        if (key == "marker-names") {
+            names = texts(attr);
+        } else if (key == "marker-colors") {
+            colors = texts(attr);
+        } else if (key == "marker-types") {
+            types = texts(attr);
+        } else if (key == "marker-levels") {
+            levels.clear();
+            for (int i = 0; i < ippGetCount(attr); ++i) {
+                levels << ippGetInteger(attr, i);
+            }
+        } else if (key == "printer-supply") {
+            supplies.clear();
+            for (int i = 0; i < ippGetCount(attr); ++i) {
+                int length = 0;
+                const auto *data = static_cast<const char *>(ippGetOctetString(attr, i, &length));
+                supplies << QByteArray(data, data ? length : 0);
+            }
+        } else if (key == "printer-supply-description") {
+            supplyNames = texts(attr);
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    QList<Marker> markers() const
+    {
+        QList<Marker> out;
+        for (int i = 0; i < levels.size(); ++i) {
+            out << Marker{names.value(i), colors.value(i), types.value(i), levels.at(i)};
+        }
+        if (!out.isEmpty()) {
+            return out;
+        }
+        // "type=inkCartridge;maxcapacity=100;level=62;colorantname=black;"
+        for (int i = 0; i < supplies.size(); ++i) {
+            QHash<QString, QString> fields;
+            for (const QByteArray &pair : supplies.at(i).split(';')) {
+                const int eq = pair.indexOf('=');
+                if (eq > 0) {
+                    fields.insert(QString::fromLatin1(pair.left(eq)), QString::fromUtf8(pair.mid(eq + 1)));
+                }
+            }
+            const int capacity = fields.value(QStringLiteral("maxcapacity")).toInt();
+            const int level = fields.value(QStringLiteral("level"), QStringLiteral("-1")).toInt();
+            const QString colorant = fields.value(QStringLiteral("colorantname"));
+            out << Marker{supplyNames.value(i, colorant), colorant.compare(QLatin1String("black"), Qt::CaseInsensitive) == 0 ? QStringLiteral("#000000") : QString(),
+                          fields.value(QStringLiteral("type")), capacity > 0 && level >= 0 ? level * 100 / capacity : -1};
+        }
+        return out;
+    }
+};
+
+const char *const markerAttributes[] = {"marker-names", "marker-colors", "marker-types", "marker-levels", "printer-supply", "printer-supply-description"};
+
+// A driverless printer's own supply levels, for a queue CUPS has not
+// printed through yet (the backend copies them into the queue only while
+// it prints). Asked at most once a minute per printer, and never twice at
+// once, so the page's four-second refresh does not wait on a printer that
+// is off.
+QList<Marker> askPrinter(const QString &uri)
+{
+    struct Entry {
+        qint64 at = 0;
+        QList<Marker> markers;
+    };
+    static QMutex mutex;
+    static QHash<QString, Entry> cache;
+    static QSet<QString> asking;
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    {
+        QMutexLocker lock(&mutex);
+        const Entry entry = cache.value(uri);
+        if (asking.contains(uri) || (entry.at > 0 && now - entry.at < 60)) {
+            return entry.markers;
+        }
+        asking.insert(uri);
+    }
+
+    QList<Marker> markers;
+    const QByteArray raw = uri.toUtf8();
+    if (cups_dest_t *dest = cupsGetDestWithURI(nullptr, raw.constData())) {
+        char resource[1024];
+        int cancel = 0;
+        // CUPS_DEST_FLAGS_DEVICE talks to the printer, resolving a dnssd://
+        // address first, rather than to the queue.
+        if (http_t *http = cupsConnectDest(dest, CUPS_DEST_FLAGS_DEVICE, 2000, &cancel, resource, sizeof resource, nullptr, nullptr)) {
+            httpSetTimeout(http, 3.0, nullptr, nullptr);
+            const char *resolved = cupsGetOption("resolved_device_uri", dest->num_options, dest->options);
+            ipp_t *request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
+            ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", nullptr, resolved ? resolved : raw.constData());
+            ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD, "requested-attributes", int(std::size(markerAttributes)), nullptr, markerAttributes);
+            if (ipp_t *response = cupsDoRequest(http, request, resource)) {
+                MarkerLists lists;
+                for (ipp_attribute_t *attr = ippFirstAttribute(response); attr; attr = ippNextAttribute(response)) {
+                    if (const char *name = ippGetName(attr)) {
+                        lists.take(QByteArray(name), attr);
+                    }
+                }
+                markers = lists.markers();
+                ippDelete(response);
+            }
+            httpClose(http);
+        }
+        cupsFreeDests(1, dest);
+    }
+
+    // A printer that is off keeps the levels it last reported.
+    QMutexLocker lock(&mutex);
+    asking.remove(uri);
+    if (markers.isEmpty()) {
+        markers = cache.value(uri).markers;
+    }
+    cache.insert(uri, Entry{now, markers});
+    return markers;
+}
+
+// Printers that answer IPP themselves (IPP Everywhere, AirPrint, ipp-usb).
+bool speaksIpp(const QString &uri)
+{
+    return uri.startsWith(QLatin1String("ipp://")) || uri.startsWith(QLatin1String("ipps://"))
+        || (uri.startsWith(QLatin1String("dnssd://")) && uri.contains(QLatin1String("._ipp")));
+}
+
 bool cupsRunning()
 {
     http_t *http = httpConnect2(cupsServer(), ippPort(), nullptr, AF_UNSPEC, cupsEncryption(), 1, 3000, nullptr);
@@ -87,7 +292,8 @@ QVariantList readQueues()
 
     ipp_t *request = ippNewRequest(IPP_OP_CUPS_GET_PRINTERS);
     static const char *const wanted[] = {"printer-name", "printer-info", "printer-location", "printer-make-and-model", "printer-state",
-                                         "printer-state-reasons", "printer-is-accepting-jobs", "device-uri", "queued-job-count"};
+                                         "printer-state-reasons", "printer-is-accepting-jobs", "device-uri", "queued-job-count",
+                                         "printer-state-message", "marker-names", "marker-colors", "marker-types", "marker-levels"};
     ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD, "requested-attributes", int(std::size(wanted)), nullptr, wanted);
     ipp_t *response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
     if (!response) {
@@ -95,14 +301,35 @@ QVariantList readQueues()
     }
 
     QVariantMap current;
+    MarkerLists markers;
     auto finish = [&] {
         const QString name = current.value(QStringLiteral("name")).toString();
         if (!name.isEmpty()) {
+            QList<Marker> supplies = markers.markers();
+            const QString uri = current.value(QStringLiteral("uri")).toString();
+            if (supplies.isEmpty() && speaksIpp(uri)) {
+                supplies = askPrinter(uri);
+            }
+            current.insert(QStringLiteral("ink"), inkSummary(supplies));
+            current.insert(QStringLiteral("inkDetail"), inkDetail(supplies));
+            current.insert(QStringLiteral("scans"), false);
             if (current.value(QStringLiteral("info")).toString().isEmpty()) {
                 current.insert(QStringLiteral("info"), name);
             }
             const int state = current.value(QStringLiteral("stateCode")).toInt();
-            const QString trouble = problem(current.value(QStringLiteral("reasons")).toStringList());
+            QString trouble = problem(current.value(QStringLiteral("reasons")).toStringList());
+            // The usb and ipp backends wait for an unplugged or switched off
+            // printer saying so only in the message, with no reason set.
+            static const QStringList waiting = {QStringLiteral("Waiting for printer to become available"),
+                                                QStringLiteral("The printer may not exist or is unavailable"), QStringLiteral("Unable to locate printer"),
+                                                QStringLiteral("The printer is not responding")};
+            const QString message = current.value(QStringLiteral("message")).toString();
+            if (trouble.isEmpty() && current.value(QStringLiteral("stateCode")).toInt() == IPP_PSTATE_PROCESSING
+                && std::any_of(waiting.cbegin(), waiting.cend(), [&message](const QString &w) {
+                       return message.startsWith(w);
+                   })) {
+                trouble = QStringLiteral("Offline");
+            }
             QString status = state == IPP_PSTATE_PROCESSING ? QStringLiteral("Printing")
                 : state == IPP_PSTATE_STOPPED                ? QStringLiteral("Paused")
                                                              : QStringLiteral("Ready");
@@ -116,6 +343,7 @@ QVariantList readQueues()
             list << current;
         }
         current.clear();
+        markers = MarkerLists();
     };
     for (ipp_attribute_t *attr = ippFirstAttribute(response); attr; attr = ippNextAttribute(response)) {
         const char *name = ippGetName(attr);
@@ -139,12 +367,16 @@ QVariantList readQueues()
             current.insert(QStringLiteral("uri"), text(attr));
         } else if (key == "printer-state") {
             current.insert(QStringLiteral("stateCode"), ippGetInteger(attr, 0));
+        } else if (key == "printer-state-message") {
+            current.insert(QStringLiteral("message"), text(attr));
         } else if (key == "printer-state-reasons") {
             current.insert(QStringLiteral("reasons"), texts(attr));
         } else if (key == "printer-is-accepting-jobs") {
             current.insert(QStringLiteral("accepting"), ippGetBoolean(attr, 0) != 0);
         } else if (key == "queued-job-count") {
             current.insert(QStringLiteral("jobs"), ippGetInteger(attr, 0));
+        } else {
+            markers.take(key, attr);
         }
     }
     finish();
@@ -218,6 +450,7 @@ int onDest(void *data, unsigned flags, cups_dest_t *dest)
         {QStringLiteral("model"), QString::fromUtf8(cupsGetOption("printer-make-and-model", dest->num_options, dest->options))},
         {QStringLiteral("location"), QString::fromUtf8(cupsGetOption("printer-location", dest->num_options, dest->options))},
         {QStringLiteral("uri"), uri},
+        {QStringLiteral("scans"), false},
     };
     state->publish(state->found);
     return 1;
@@ -232,6 +465,22 @@ void detach(QProcess *process)
         ::setsid();
     });
     process->setStandardInputFile(QProcess::nullDevice());
+}
+
+// lpadmin's last line, with the two failures people meet most put in
+// plain words.
+QString plainReason(const QString &output)
+{
+    static const QRegularExpression unreachable(QStringLiteral("Unable to connect|not known|No route to host|Connection refused|timed out"),
+                                                QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression needsDriver(QStringLiteral("Unable to create PPD|does not support required IPP"), QRegularExpression::CaseInsensitiveOption);
+    if (unreachable.match(output).hasMatch()) {
+        return QStringLiteral("Nothing answered at that address. Check the address, and that the printer is switched on and on the same network.");
+    }
+    if (needsDriver.match(output).hasMatch()) {
+        return QStringLiteral("This printer doesn't work without a driver. Choose one in More printer settings.");
+    }
+    return output.section(QLatin1Char('\n'), -1).remove(QRegularExpression(QStringLiteral("^\\S+: ")));
 }
 
 bool refused(const QString &output)
@@ -267,6 +516,7 @@ void Printers::reload()
             }
             self->m_available = running;
             self->m_printers = queues;
+            self->markScanners();
             Q_EMIT self->changed();
         });
     });
@@ -296,6 +546,7 @@ void Printers::search()
             QMetaObject::invokeMethod(qApp, [self, generation, found] {
                 if (self && self->m_searchGeneration == generation) {
                     self->m_found = found;
+                    self->markScanners();
                     Q_EMIT self->foundChanged();
                 }
             });
@@ -323,6 +574,7 @@ void Printers::search()
     });
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
     thread->start();
+    findScanners();
 }
 
 void Printers::stopSearch()
@@ -367,7 +619,7 @@ QString Printers::queueName(const QString &name) const
 }
 
 void Printers::admin(const QString &busy, const QString &program, const QStringList &arguments, const QString &successTitle, const QString &success,
-                     const QString &failure, const std::function<void()> &then)
+                     const QString &failure, const std::function<void()> &then, const std::function<void()> &otherwise)
 {
     setBusy(busy);
     auto process = new QProcess(this);
@@ -388,7 +640,10 @@ void Printers::admin(const QString &busy, const QString &program, const QStringL
         if (!refused(output)) {
             setBusy({});
             reload();
-            Q_EMIT failed(failure, output.section(QLatin1Char('\n'), -1).remove(QRegularExpression(QStringLiteral("^\\S+: "))));
+            Q_EMIT failed(failure, plainReason(output));
+            if (otherwise) {
+                otherwise();
+            }
             return;
         }
         // CUPS wants an administrator: ask through polkit.
@@ -405,10 +660,15 @@ void Printers::admin(const QString &busy, const QString &program, const QStringL
                 if (then) {
                     then();
                 }
-            } else if (code == 126 || code == 127) {
-                Q_EMIT failed(failure, QStringLiteral("An administrator's password is needed for this."));
             } else {
-                Q_EMIT failed(failure, more.section(QLatin1Char('\n'), -1).remove(QRegularExpression(QStringLiteral("^\\S+: "))));
+                if (code == 126 || code == 127) {
+                    Q_EMIT failed(failure, QStringLiteral("An administrator's password is needed for this."));
+                } else {
+                    Q_EMIT failed(failure, plainReason(more));
+                }
+                if (otherwise) {
+                    otherwise();
+                }
             }
         });
         elevated->start(QStringLiteral("pkexec"), QStringList{program} + arguments);
@@ -438,6 +698,18 @@ void Printers::add(const QString &uri, const QString &name)
               if (first) {
                   setDefault(queue, false);
               }
+          },
+          [this, queue] {
+              // lpadmin creates the queue before it asks the printer what it
+              // can do, so a printer it can't drive would leave a queue that
+              // only ever fails.
+              auto cleanup = new QProcess(this);
+              detach(cleanup);
+              connect(cleanup, &QProcess::finished, this, [this, cleanup] {
+                  cleanup->deleteLater();
+                  reload();
+              });
+              cleanup->start(QStringLiteral("/usr/sbin/lpadmin"), {QStringLiteral("-x"), queue});
           });
 }
 
@@ -689,7 +961,8 @@ void onDevice(const char *deviceClass, const char *, const char *info, const cha
     const QString address = QString::fromUtf8(uri);
     // Bare scheme names (socket, lpd, ipp) are backends offering to be
     // typed in, not printers.
-    if (!address.contains(QLatin1Char(':')) || list->known.contains(address)) {
+    // cups-brf is CUPS's braille embosser output to a file, not a device.
+    if (!address.contains(QLatin1Char(':')) || address.startsWith(QLatin1String("cups-brf:")) || list->known.contains(address)) {
         return;
     }
     QString makeAndModel = QString::fromUtf8(model);
@@ -944,4 +1217,210 @@ void Printers::addWithDriver(const QString &uri, const QString &driver, const QS
                   setDefault(queue, false);
               }
           });
+}
+
+namespace
+{
+bool loopback(const QString &host)
+{
+    return host == QLatin1String("localhost") || host.startsWith(QLatin1String("127.")) || host == QLatin1String("::1");
+}
+
+// sane-airscan's own list of the eSCL and WSD scanners it finds, one per
+// line under [devices]:  Office printer = http://192.168.1.20:80/eSCL/, eSCL
+QVariantList parseAirscan(const QString &output)
+{
+    static const QRegularExpression line(QStringLiteral("^\\s*(.+?)\\s*=\\s*(\\S+?)\\s*,\\s*(eSCL|WSD)\\s*$"));
+    // The same scanner over eSCL and WSD, IPv4 and IPv6, and on loopback
+    // too when it is on this computer, is one entry: the address another
+    // computer would use, over eSCL, where it offers one.
+    auto rank = [](const QString &url, const QString &protocol) {
+        const QString host = QUrl(url).host();
+        return (protocol == QLatin1String("eSCL") ? 4 : 0) + (url.contains(QLatin1Char('[')) ? 0 : 2) + (loopback(host) ? 0 : 1);
+    };
+    QVariantList out;
+    QHash<QString, int> at;
+    const QStringList lines = output.split(QLatin1Char('\n'));
+    for (const QString &text : lines) {
+        const auto m = line.match(text);
+        if (!m.hasMatch()) {
+            continue;
+        }
+        const QString name = m.captured(1);
+        const QString url = m.captured(2);
+        const QString protocol = m.captured(3);
+        const QVariantMap entry{{QStringLiteral("name"), name}, {QStringLiteral("url"), url}, {QStringLiteral("protocol"), protocol}};
+        const QString key = name.toLower();
+        if (!at.contains(key)) {
+            at.insert(key, int(out.size()));
+            out << entry;
+        } else {
+            const QVariantMap kept = out.at(at.value(key)).toMap();
+            if (rank(url, protocol) > rank(kept.value(QStringLiteral("url")).toString(), kept.value(QStringLiteral("protocol")).toString())) {
+                out[at.value(key)] = entry;
+            }
+        }
+    }
+    return out;
+}
+
+// The DNS-SD instance name in a dnssd:// device address, the name a
+// printer's scanner half announces itself by too.
+QString serviceName(const QString &uri)
+{
+    if (!uri.startsWith(QLatin1String("dnssd://"))) {
+        return {};
+    }
+    const QString rest = uri.mid(8);
+    const int end = int(rest.indexOf(QLatin1String("._")));
+    return QUrl::fromPercentEncoding(rest.left(end < 0 ? rest.size() : end).toUtf8());
+}
+
+bool sameDevice(const QVariantMap &scanner, const QVariantMap &printer)
+{
+    const QString name = scanner.value(QStringLiteral("name")).toString();
+    const QString uri = printer.value(QStringLiteral("uri")).toString();
+    QString queue = printer.value(QStringLiteral("name")).toString();
+    queue.replace(QLatin1Char('_'), QLatin1Char(' '));
+    for (const QString &candidate : {serviceName(uri), printer.value(QStringLiteral("info")).toString(), queue}) {
+        if (!candidate.isEmpty() && candidate.compare(name, Qt::CaseInsensitive) == 0) {
+            return true;
+        }
+    }
+    // A printer added by its address: the same host. Every ipp-usb device
+    // is on this computer's own address, so there only the name counts.
+    const QString host = QUrl(uri).host();
+    return !host.isEmpty() && !loopback(host) && host.compare(QUrl(scanner.value(QStringLiteral("url")).toString()).host(), Qt::CaseInsensitive) == 0;
+}
+
+KConfigGroup scannerConfig()
+{
+    return KSharedConfig::openConfig(QStringLiteral("wildos-settingsrc"), KConfig::NoGlobals)->group(QStringLiteral("Scanners"));
+}
+}
+
+QStringList Printers::addedScanners() const
+{
+    return scannerConfig().readEntry("Added", QStringList());
+}
+
+QVariantList Printers::scanners() const
+{
+    QVariantList out;
+    const QStringList added = addedScanners();
+    for (const QString &name : added) {
+        QVariantMap entry{{QStringLiteral("name"), name}, {QStringLiteral("url"), QString()}, {QStringLiteral("seen"), false}};
+        for (const QVariant &s : m_networkScanners) {
+            if (s.toMap().value(QStringLiteral("name")).toString().compare(name, Qt::CaseInsensitive) == 0) {
+                entry.insert(QStringLiteral("url"), s.toMap().value(QStringLiteral("url")));
+                entry.insert(QStringLiteral("seen"), true);
+            }
+        }
+        out << entry;
+    }
+    return out;
+}
+
+bool Printers::partOfPrinter(const QVariantMap &scanner) const
+{
+    for (const QVariantList *list : {&m_printers, &m_found}) {
+        for (const QVariant &p : *list) {
+            if (sameDevice(scanner, p.toMap())) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+QVariantList Printers::foundScanners() const
+{
+    QVariantList out;
+    const QStringList added = addedScanners();
+    for (const QVariant &s : m_networkScanners) {
+        const QVariantMap scanner = s.toMap();
+        if (!added.contains(scanner.value(QStringLiteral("name")).toString(), Qt::CaseInsensitive) && !partOfPrinter(scanner)) {
+            out << scanner;
+        }
+    }
+    return out;
+}
+
+void Printers::markScanners()
+{
+    for (QVariantList *list : {&m_printers, &m_found}) {
+        for (QVariant &p : *list) {
+            QVariantMap map = p.toMap();
+            const bool scans = std::any_of(m_networkScanners.cbegin(), m_networkScanners.cend(), [&map](const QVariant &s) {
+                return sameDevice(s.toMap(), map);
+            });
+            if (map.value(QStringLiteral("scans")).toBool() != scans) {
+                map.insert(QStringLiteral("scans"), scans);
+                p = map;
+            }
+        }
+    }
+    Q_EMIT scannersChanged();
+}
+
+void Printers::findScanners()
+{
+    const QString program = QStandardPaths::findExecutable(QStringLiteral("airscan-discover"));
+    if (m_findingScanners || program.isEmpty()) {
+        return;
+    }
+    m_findingScanners = true;
+    Q_EMIT scannersChanged();
+    auto process = new QProcess(this);
+    detach(process);
+    connect(process, &QProcess::finished, this, [this, process] {
+        const QVariantList found = parseAirscan(QString::fromUtf8(process->readAllStandardOutput()));
+        process->deleteLater();
+        m_networkScanners = found;
+        m_findingScanners = false;
+        m_scannersLooked = true;
+        markScanners();
+        Q_EMIT changed();
+        Q_EMIT foundChanged();
+    });
+    // airscan-discover listens for a few seconds, then prints what it
+    // heard; a network that never answers must not leave it running.
+    QTimer::singleShot(20000, process, [process] {
+        process->kill();
+    });
+    process->start(program, {});
+}
+
+void Printers::addScanner(const QString &name)
+{
+    QStringList added = addedScanners();
+    if (!added.contains(name, Qt::CaseInsensitive)) {
+        added << name;
+        KConfigGroup group = scannerConfig();
+        group.writeEntry("Added", added);
+        group.sync();
+    }
+    Q_EMIT scannersChanged();
+    Q_EMIT done(QStringLiteral("Scanner added"), name + QStringLiteral(" is ready to use in Capture."));
+}
+
+void Printers::removeScanner(const QString &name)
+{
+    QStringList added = addedScanners();
+    added.removeIf([&name](const QString &n) {
+        return n.compare(name, Qt::CaseInsensitive) == 0;
+    });
+    KConfigGroup group = scannerConfig();
+    group.writeEntry("Added", added);
+    group.sync();
+    Q_EMIT scannersChanged();
+    Q_EMIT done(QStringLiteral("Scanner removed"), QStringLiteral("It's no longer in your list. Capture can still find it on the network."));
+}
+
+bool Printers::openCapture() const
+{
+    // Started by name, like Devices' openBackup: gtk-launch isn't in the
+    // image.
+    const QString program = QStandardPaths::findExecutable(QStringLiteral("wildos-capture"));
+    return !program.isEmpty() && QProcess::startDetached(program, {QStringLiteral("--scan")});
 }

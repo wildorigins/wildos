@@ -9,6 +9,29 @@ import WildOS.Settings
 // needing a look, not as fine.
 QtObject {
     readonly property var status: System.security
+
+    // The firewall's switch changes what the tiles say at once, not at the
+    // next check.
+    property Connections firewallSwitch: Connections {
+        target: Firewall
+        function onDone(what) {
+            if (what === "enabled") {
+                System.refreshSecurity();
+            }
+        }
+    }
+
+    // USB protection is Advanced protection's usb_locked; a failed or
+    // cancelled change refreshes too, so the switches go back to the truth.
+    property Connections advancedSwitch: Connections {
+        target: Advanced
+        function onBusyChanged() {
+            if (!Advanced.busy) {
+                System.refreshSecurity();
+            }
+        }
+    }
+
     readonly property bool live: status.live === "yes"
 
     function count(key) {

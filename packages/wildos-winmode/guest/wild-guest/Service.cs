@@ -248,6 +248,15 @@ namespace WildOS.Guest
                         Reply(id, Message("icon", "path", Json.Str(m, "path"), "icon", ico == null ? null : Convert.ToBase64String(ico)));
                     });
                     break;
+                case "uninstall":
+                    ThreadPool.QueueUserWorkItem(delegate
+                    {
+                        Dictionary<string, object> answer;
+                        try { answer = Uninstall.Run(Json.Str(m, "path"), account); }
+                        catch (Exception e) { answer = Message("error", "error", e.Message); }
+                        Reply(id, answer);
+                    });
+                    break;
                 case "theme":
                     try { Theme.Save(m); } catch (Exception e) { Log.Write("theme: " + e.Message); }
                     int sent = 0;

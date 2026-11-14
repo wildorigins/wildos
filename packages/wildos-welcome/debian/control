@@ -29,7 +29,7 @@ Depends:
  qml6-module-qtquick-effects,
  qml6-module-qtquick-window,
  qt6-svg-plugins,
- wildos-ui,
+ wildos-ui (>= 0.1.12),
  packagekit,
  udisks2,
  util-linux,

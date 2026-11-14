@@ -1,0 +1,58 @@
+Description: Each window keeps its app's taskbar button on Wayland
+ With the Qt and KDE plugins on Wayland a window's app_id comes from the
+ application's desktop file name at the moment the window is shown, and
+ LibreOffice starts with libreoffice-startcenter there. SetIcon set the
+ module's own (libreoffice-writer, libreoffice-calc...) only for a window
+ already on screen, by hiding and showing it. wildos-load-window.patch shows
+ a document's window only once the document is in it, after its icon is
+ set, so every Write and Tables window came up as libreoffice-startcenter and
+ sat on a taskbar button of its own instead of on Write's or Tables'. The
+ frame now remembers the app_id SetIcon chose and Show gives it to the
+ window when it first appears.
+Author: Wild OS Developers <dev@wildos.io>
+Forwarded: not-needed
+
+--- a/vcl/inc/qt5/QtFrame.hxx
++++ b/vcl/inc/qt5/QtFrame.hxx
+@@ -102,6 +102,9 @@
+     bool m_bFullScreenSpanAll;
+     sal_uInt32 m_nRestoreScreen;
+     QRect m_aRestoreGeometry;
++    // Wild OS: the Wayland app_id SetIcon chose, for Show to give a window
++    // that was not on screen yet.
++    QString m_sAppId;
+ 
+ #if !defined EMSCRIPTEN
+     SessionManagerInhibitor m_SessionManagerInhibitor;
+--- a/vcl/qt5/QtFrame.cxx
++++ b/vcl/qt5/QtFrame.cxx
+@@ -360,6 +360,12 @@
+     QIcon aIcon = QIcon::fromTheme(appicon);
+     m_pQWidget->window()->setWindowIcon(aIcon);
+ 
++    // Wild OS: a document's window is shown only once the document is in it,
++    // after its icon is set here, so Show gives it this app_id. Without it the
++    // window came up as libreoffice-startcenter and sat apart from its
++    // app's taskbar button.
++    m_sAppId = appicon;
++
+     if (QGuiApplication::platformName() == "wayland" && m_pQWidget->window()->isVisible())
+     {
+         // Qt currently doesn't provide API to directly set the app_id for a single
+@@ -414,7 +420,16 @@
+     SetDefaultSize();
+ 
+     QWidget* const pChild = asChild();
++    // Wild OS: Qt takes a Wayland window's app_id from the application's
++    // desktop file name when the window first shows, so lend it this frame's.
++    const bool bAppId = !m_sAppId.isEmpty() && pChild == m_pQWidget->window()
++                        && QGuiApplication::platformName() == "wayland";
++    const QString sOrigDesktopFileName = QGuiApplication::desktopFileName();
++    if (bAppId)
++        QGuiApplication::setDesktopFileName(m_sAppId);
+     pChild->setVisible(true);
++    if (bAppId)
++        QGuiApplication::setDesktopFileName(sOrigDesktopFileName);
+     pChild->raise();
+     if (!bNoActivate)
+     {

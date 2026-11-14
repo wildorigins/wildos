@@ -39,6 +39,22 @@ case "$PAM_USER" in
     ''|.|..|*/*) exit 1 ;;
 esac
 
+# Settings > Privacy and security > Advanced protection: "Fingerprint needs
+# your password sometimes" (fingerprint_hours, off unless set; Strict and
+# Maximum set it).
+# The finger is turned down after every restart until the password has
+# been typed once, and again once that many hours have passed since.
+# fingerprint-stamp notes each password sign-in in /run, which a restart
+# empties, in seconds since start-up so changing the clock moves nothing.
+hours=$(sed -n 's/^fingerprint_hours=//p' /etc/wildos/advanced-protection 2>/dev/null | tail -n 1)
+case "$hours" in ''|*[!0-9]*) hours=0 ;; esac
+if [ "$hours" -gt 0 ]; then
+    typed=$(cat "/run/wildos/fingerprint/$PAM_USER" 2>/dev/null) || exit 1
+    case "$typed" in ''|*[!0-9]*) exit 1 ;; esac
+    now=$(cut -d. -f1 /proc/uptime)
+    [ "$now" -ge "$typed" ] && [ $((now - typed)) -lt $((hours * 3600)) ] || exit 1
+fi
+
 # The lock screen runs this as the signed-in person, who can read neither
 # the prints nor the password's state; pam_fprintd after it checks for an
 # enrolled finger itself, and the account is already signed in.

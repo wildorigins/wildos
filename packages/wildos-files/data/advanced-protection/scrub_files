@@ -1,0 +1,10 @@
+#!/bin/sh
+# Advanced protection: Remove personal details from files (scrub_files).
+# Run as root by advanced-protection-apply with the new value, on or off.
+# There is nothing system-wide to change: Files reads the switch from
+# /etc/wildos/advanced-protection and shows or hides its menu entry at once.
+# This file being here is what puts the row on the Settings page.
+case "${1:-}" in
+    on|off) exit 0 ;;
+    *) echo "usage: scrub_files on|off" >&2; exit 2 ;;
+esac

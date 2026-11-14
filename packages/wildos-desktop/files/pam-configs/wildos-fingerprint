@@ -4,6 +4,7 @@ Priority: 400
 Conflicts: fprintd
 Auth-Type: Primary
 Auth:
+	[success=2 ignore=ignore abort=die auth_err=die default=ignore]	pam_wildos_fingerprint.so
 	[success=ok default=2]	pam_exec.so quiet seteuid expose_authtok /usr/libexec/wildos/fingerprint-turn
 	[success=ok default=die]	pam_fprintd.so max-tries=3 timeout=30
 	[success=end default=ignore]	pam_faillock.so authsucc

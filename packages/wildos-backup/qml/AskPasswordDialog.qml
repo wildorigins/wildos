@@ -28,6 +28,7 @@ UI.Dialog {
         Layout.fillWidth: true
         echoMode: TextInput.Password
         revealable: true
+        UI.NoPaste {}
         placeholderText: qsTr("Backup password")
         error: dialog.error.length > 0
         onAccepted: {

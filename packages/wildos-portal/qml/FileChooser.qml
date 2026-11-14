@@ -7,8 +7,8 @@ import WildOS.UI as UI
 
 // DialogSave.dc (8.1): the one Open and Save dialog every app gets. A 920
 // by 620 glass window: title bar, a 52px tool row (back, forward, up, the
-// path bar, search, New folder), places on the left, the details list,
-// then the name and type fields on a darker band and the buttons, the main
+// path bar, search, New folder, the view switch), places on the left, the
+// details list or Large icons, then the name and type fields on a darker band and the buttons, the main
 // one at the right.
 UI.AppWindow {
     id: win
@@ -248,6 +248,36 @@ UI.AppWindow {
                 enabled: win.folder.writable
                 onClicked: win.folder.newFolder()
             }
+
+            // Files' view switch: Details, or Large icons with previews.
+            Row {
+                spacing: 0
+
+                UI.IconButton {
+                    implicitWidth: 32
+                    implicitHeight: 32
+                    enabled: !win.folder.isComputer
+                    iconName: "list"
+                    iconSize: 14
+                    tip: "Details"
+                    checked: win.chooser.viewMode === "details" || win.folder.isComputer
+                    Accessible.checkable: true
+                    Accessible.checked: checked
+                    onClicked: win.chooser.viewMode = "details"
+                }
+                UI.IconButton {
+                    implicitWidth: 32
+                    implicitHeight: 32
+                    enabled: !win.folder.isComputer
+                    iconName: "grid"
+                    iconSize: 14
+                    tip: "Large icons"
+                    checked: win.chooser.viewMode === "icons" && !win.folder.isComputer
+                    Accessible.checkable: true
+                    Accessible.checked: checked
+                    onClicked: win.chooser.viewMode = "icons"
+                }
+            }
         }
 
         Rectangle {
@@ -284,6 +314,7 @@ UI.AppWindow {
                 Layout.topMargin: 6
                 Layout.bottomMargin: 6
                 folder: win.folder
+                mode: win.chooser.viewMode
                 focus: true
                 onActivated: row => win.activate(row)
                 emptyText: {

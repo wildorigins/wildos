@@ -24,7 +24,7 @@ PageScroll {
         target: Clock
         function onFailed(reason) {
             page.error = reason;
-            autoToggle.checked = Qt.binding(() => Clock.automatic);
+            autoToggle.checked = Qt.binding(() => Clock.automatic || Clock.secureTime);
         }
         function onChanged() {
             page.error = "";
@@ -60,7 +60,8 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: Clock.automatic ? (Clock.synchronised ? "Set automatically from the internet" : "Set automatically when the computer is online")
+                    text: Clock.secureTime ? (Clock.secureTimeSet ? "Set automatically through Tor" : "Being set through Tor, which can take a few minutes after start-up")
+                        : Clock.automatic ? (Clock.synchronised ? "Set automatically from the internet" : "Set automatically when the computer is online")
                         : "Set by hand"
                     color: UI.Style.inkMuted
                 }
@@ -86,15 +87,18 @@ PageScroll {
             UI.SettingRow {
                 iconName: "clock"
                 title: "Set time automatically"
-                description: Clock.canAutomatic ? "Keeps the clock right using a time server on the internet"
+                // sdwdate asks onion sites through Tor, so none of them sees
+                // this computer's address, and no time server is asked.
+                description: Clock.secureTime ? "Wild OS keeps the clock right by asking several sites through Tor, so none of them sees your address"
+                    : Clock.canAutomatic ? "Keeps the clock right using a time server on the internet"
                     : "No time service is installed, so the clock is set by hand"
-                enabled: Clock.canAutomatic
-                status: Clock.automatic ? "On" : "Off"
+                enabled: Clock.canAutomatic && !Clock.secureTime
+                status: Clock.automatic || Clock.secureTime ? "On" : "Off"
 
                 UI.Toggle {
                     id: autoToggle
                     anchors.verticalCenter: parent.verticalCenter
-                    checked: Clock.automatic
+                    checked: Clock.automatic || Clock.secureTime
                     Accessible.name: "Set time automatically"
                     onToggled: Clock.setAutomatic(checked)
                 }

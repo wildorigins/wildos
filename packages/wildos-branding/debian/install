@@ -9,6 +9,9 @@ files/plymouth/wildos/* usr/share/plymouth/themes/wildos/
 files/icons/WildOS/* usr/share/icons/WildOS/
 files/icons/WildOS-dark/* usr/share/icons/WildOS-dark/
 files/dracut/* etc/dracut.conf.d/
+files/dracut-modules/* usr/lib/dracut/modules.d/
+files/udev/* usr/lib/udev/rules.d/
+files/usbguard/40-wildos-built-in.conf etc/usbguard/rules.d/
 files/systemd/* usr/lib/systemd/system/
 files/systemd-user/* usr/lib/systemd/user/
 files/sddm.conf.d/* etc/sddm.conf.d/
@@ -16,6 +19,8 @@ files/sddm/wildos/* usr/share/sddm/themes/wildos/
 files/lockscreen-shim/LockScreen.qml usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen/
 files/kwin/tabbox/* usr/share/kwin/tabbox/
 files/kwin/effects/* usr/share/kwin/effects/
+files/kwin/scripts/* usr/share/kwin/scripts/
+files/advanced-protection.d/* usr/lib/wildos/advanced-protection.d/
 files/kvantum/WildOS/* usr/share/Kvantum/WildOS/
 files/kvantum/WildOSLight/* usr/share/Kvantum/WildOSLight/
 files/kvantum/WildOSOffice/* usr/share/Kvantum/WildOSOffice/
@@ -28,3 +33,5 @@ files/grub/45_wildos_theme.cfg etc/default/grub.d/
 files/pam-configs/* usr/share/pam-configs/
 files/sounds/wildos usr/share/sounds/
 icons/apps/fluent-ui-system-icons.txt usr/share/wildos-branding/licences/
+files/cursor/white.theme usr/share/wildos/cursor/
+files/xdg-share/taskmanagerrulesrc usr/share/wildos/xdg/

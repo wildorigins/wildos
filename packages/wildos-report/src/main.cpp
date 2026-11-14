@@ -8,6 +8,10 @@
 //   wildos-report --part files         the same
 //   wildos-report --crash USEC --app NAME
 //                                      after "<App> closed unexpectedly"
+//   wildos-report --event FILE         with an event from Settings >
+//                                      System > History attached (a JSON
+//                                      note in the runtime folder, deleted
+//                                      once read)
 //   wildos-report --save DIR [--part X] [--since SECS] [--until SECS]
 //                 [--boot -1] [--description TEXT]
 //                                      no window: the whole report, saved
@@ -174,6 +178,7 @@ int main(int argc, char *argv[])
     parser.addOption({QStringLiteral("part"), QStringLiteral("The part of Wild OS to report a problem with."), QStringLiteral("part")});
     parser.addOption({QStringLiteral("crash"), QStringLiteral("When it crashed, in microseconds since 1970."), QStringLiteral("usec")});
     parser.addOption({QStringLiteral("app"), QStringLiteral("The name of the app that crashed."), QStringLiteral("name")});
+    parser.addOption({QStringLiteral("event"), QStringLiteral("An event from History to attach."), QStringLiteral("file")});
     parser.addPositionalArgument(QStringLiteral("url"), QStringLiteral("wildos-report:<part>"));
     parser.process(app);
 
@@ -191,6 +196,11 @@ int main(int argc, char *argv[])
     Incubation incubation;
     QQmlApplicationEngine engine;
     engine.setIncubationController(&incubation);
+    // QQmlApplicationEngine only wires Qt.quit() up when it loads the window
+    // itself; this window comes through a component and an incubator. Left
+    // unwired, closing the window hid it but the app kept running, holding
+    // the D-Bus name, so every later launch went to a window nobody saw.
+    QObject::connect(&engine, &QQmlEngine::quit, &app, &QCoreApplication::quit, Qt::QueuedConnection);
 
     QObject *splash = makeSplash(&engine);
     QQmlComponent home(&engine);

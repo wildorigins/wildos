@@ -23,6 +23,7 @@ class Pool;
 
 class FlatpakBackend;
 class PackageKitBackend;
+class PackageSizes;
 struct FlatpakPlan;
 
 // Hand-picked details that AppStream does not carry: what an app replaces
@@ -209,6 +210,13 @@ public:
     // device pixels without being much larger.
     Q_INVOKABLE QString pickImage(const QVariantList &images, int width, int height) const;
     Q_INVOKABLE void installEssentials();
+    // The Wild OS section: the apps we make, in the curated file's order,
+    // and putting back every one that was removed.
+    Q_INVOKABLE QStringList wildosApps() const;
+    Q_INVOKABLE void reinstallWildOS();
+    // What a Wild OS package's app takes up, installed, or would take up
+    // once put back; -1 until dpkg and apt have said.
+    Q_INVOKABLE qint64 appSize(const QString &key) const;
     Q_INVOKABLE void updateAll();
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void openSettings(const QString &page);
@@ -283,6 +291,7 @@ private:
     void checkPartDone(bool ok);
     QString keyFor(const QString &id) const;
     Job *job(int id);
+    QStringList wildosPackages() const;
 
     static Catalog *s_instance;
 
@@ -308,6 +317,7 @@ private:
     QStringList m_essentials;
     QHash<QString, QStringList> m_featured;
     QSet<QString> m_hidden;
+    QStringList m_wildos;
 
     QHash<QString, Record> m_records;
     QHash<QString, QString> m_aliases;
@@ -328,6 +338,7 @@ private:
 
     PackageKitBackend *m_packagekit;
     FlatpakBackend *m_flatpak;
+    PackageSizes *m_sizes;
 
     bool m_checking = false;
     int m_checkParts = 0;

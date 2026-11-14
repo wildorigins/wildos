@@ -45,6 +45,16 @@ UI.Dialog {
             selectedTextColor: UI.Style.ink
             selectionColor: UI.Style.textSelection
             Accessible.name: qsTr("Backup password")
+            Keys.onPressed: event => {
+                if (passwordMenu.isMenuKey(event)) {
+                    passwordMenu.openAtCaret();
+                    event.accepted = true;
+                }
+            }
+
+            UI.TextMenu {
+                id: passwordMenu
+            }
         }
     }
 

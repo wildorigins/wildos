@@ -207,6 +207,30 @@ UI.AppWindow {
         onAccepted: Report.saveTo(selectedFile)
     }
 
+    HandoffDialog {
+        id: handoffDialog
+        stage: Report.handoff
+        zipName: Report.handoffZip
+        issueNumber: Report.postedNumber
+        watching: Report.watching
+        onShowReport: Report.showSaved()
+        onOpenAgain: Report.reopenGitHub()
+        onViewIssue: Report.viewPosted()
+        onCloseWindow: window.close()
+        onClosed: Report.endHandoff()
+
+        Connections {
+            target: Report
+            function onHandoffChanged() {
+                if (Report.handoff.length > 0 && !handoffDialog.opened) {
+                    handoffDialog.open();
+                } else if (Report.handoff.length === 0 && handoffDialog.opened) {
+                    handoffDialog.close();
+                }
+            }
+        }
+    }
+
     UI.Toast {
         id: toast
         anchors.horizontalCenter: parent.horizontalCenter

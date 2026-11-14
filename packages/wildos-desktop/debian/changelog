@@ -1,3 +1,36 @@
+wildos-desktop (0.1.18) trixie; urgency=medium
+
+  * The fingerprint keeps working after a restart again: asking for the
+    password after a restart or every so many hours is off unless you
+    switch it on in Advanced protection (Strict and Maximum switch it on).
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 16:00:00 +0000
+
+wildos-desktop (0.1.17) trixie; urgency=medium
+
+  * With Advanced protection's "Fingerprint needs your password
+    sometimes" on, as it is unless switched off, the fingerprint works
+    only once the password has been typed since the last restart, and
+    only for 48 hours after that, or the time chosen.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:56:10 +0000
+
+wildos-desktop (0.1.16) trixie; urgency=medium
+
+  * sudo asks for a password or fingerprint in one go, with no empty
+    password needed first.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 15:30:00 +0000
+
+wildos-desktop (0.1.15) trixie; urgency=medium
+
+  * Wild OS's own apps can be uninstalled one by one and put back from
+    the Store. Write and Tables are separate apps.
+  * LibreOffice's own Writer and Calc stay out of Start once Write or
+    Tables is removed.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 13:36:51 +0000
+
 wildos-desktop (0.1.14) trixie; urgency=medium
 
   * Depend on wildos-recovery: restore points, start-up recovery and

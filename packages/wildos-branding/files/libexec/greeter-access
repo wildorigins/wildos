@@ -90,13 +90,43 @@ copy_bool kaccessrc Bell VisibleBell false
 copy_bool kaccessrc ScreenReader Enabled false
 copy_bool wildosrc Accessibility OnScreenKeyboard false
 
-# The pointer, only as one of the themes installed here.
+# The account's own pointer (Settings > Accessibility > Your own) lives in
+# the home folder, which the sign-in screen cannot read. pointer-import hands
+# it across as a stream: read as the person, then checked and written again
+# picture by picture as the sddm user, so only well-formed pointer pictures
+# reach the sign-in screen. The stamp changes with each new pointer, so an
+# unchanged one is not copied again at every sign-in and sign-out.
+copy_custom_pointer() {
+    import=/usr/libexec/wildos/pointer-import
+    own="$home/.local/share/icons/WildOS-Custom"
+    target="$greeter_home/.local/share/icons/WildOS-Custom"
+    [ -x "$import" ] || return 1
+    stamp=$(as_user kreadconfig6 --file "$own/index.theme" --group "Wild OS" --key Stamp --default "" 2>/dev/null)
+    case $stamp in
+        '' | *[!0-9a-f]*) return 1 ;;
+    esac
+    have=$(as_greeter kreadconfig6 --file "$target/index.theme" --group "Wild OS" --key Stamp --default "" 2>/dev/null)
+    [ "$stamp" = "$have" ] && return 0
+    as_greeter mkdir -p "$greeter_home/.local/share/icons" || return 1
+    as_user "$import" export "$own" | as_greeter "$import" import "$target" "$stamp"
+}
+
+# The pointer, only as one of the themes installed here or the account's own.
 theme=$(read_key kcminputrc Mouse cursorTheme "")
 case $theme in
     '' | *[!A-Za-z0-9_.-]* | .*) theme= ;;
 esac
-if [ -n "$theme" ] && [ -f "/usr/share/icons/$theme/index.theme" ]; then
-    write_key kcminputrc Mouse cursorTheme --type=string "$theme"
+if [ "$theme" = WildOS-Custom ]; then
+    if copy_custom_pointer; then
+        write_key kcminputrc Mouse cursorTheme --type=string WildOS-Custom
+    else
+        write_key kcminputrc Mouse cursorTheme --type=string Breeze_Light
+    fi
+else
+    as_greeter rm -rf "$greeter_home/.local/share/icons/WildOS-Custom"
+    if [ -n "$theme" ] && [ -f "/usr/share/icons/$theme/index.theme" ]; then
+        write_key kcminputrc Mouse cursorTheme --type=string "$theme"
+    fi
 fi
 copy_int kcminputrc Mouse cursorSize 24 16 256
 

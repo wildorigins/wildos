@@ -15,7 +15,10 @@
  *  - the checks of the "Before we start" page, run by check-computer,
  *  - the disk password page's state and the recovery key, which never
  *    leaves this process except into the LUKS key slot and onto the USB
- *    stick or paper the person chooses.
+ *    stick or paper the person chooses,
+ *  - whether the licence page's box is ticked, and the licence text it
+ *    shows. The answer lives here, not in the page, so it starts unticked
+ *    on every run and stays ticked when someone comes Back to the page.
  */
 class Installer : public QObject
 {
@@ -32,6 +35,10 @@ class Installer : public QObject
     Q_PROPERTY(QVariantList checks READ checks NOTIFY checksChanged)
     Q_PROPERTY(QString alongsideBlocked READ alongsideBlocked NOTIFY checksChanged)
 
+    Q_PROPERTY(bool licenceAccepted MEMBER m_licenceAccepted NOTIFY licenceAcceptedChanged)
+    /// True until the install step: the footer keeps it up to date. While
+    /// it holds, however the installer is closed it leaves at once.
+    Q_PROPERTY(bool exitQuickly MEMBER m_exitQuickly)
     Q_PROPERTY(bool encryptionReady MEMBER m_encryptionReady NOTIFY encryptionReadyChanged)
     Q_PROPERTY(QString recoveryKey READ recoveryKey CONSTANT)
     Q_PROPERTY(bool keySaved MEMBER m_keySaved NOTIFY keySavedChanged)
@@ -59,6 +66,19 @@ public:
     /// Runs check-computer again; checksChanged when it is done.
     Q_INVOKABLE void runChecks();
 
+    /// The GPL as numbered sections for the full licence window:
+    /// [{ number, title, paragraphs }], number -1 for the title page and
+    /// preamble. The words are the file's own; only the line breaks of its
+    /// fixed-width layout are undone, so paragraphs wrap to the window.
+    Q_INVOKABLE QVariantList licenceSections() const;
+    /// Asks where to save the licence file and copies it there unchanged.
+    /// @p window is the licence window, so the file dialog opens above it.
+    /// Returns "" when saved or cancelled, else what went wrong.
+    Q_INVOKABLE QString saveLicence(QObject *window);
+    /// Closes the installer without asking: used before anything has been
+    /// chosen, when there is nothing to lose.
+    Q_INVOKABLE void quitNow();
+
     /// Calamares' reversible scrambling for secrets in global storage
     /// (KStringHandler::obscure), so they are not plain text in its logs.
     Q_INVOKABLE QString obscure(const QString &text) const;
@@ -79,6 +99,7 @@ Q_SIGNALS:
     void keyboardChanged();
     void finishedChanged();
     void checksChanged();
+    void licenceAcceptedChanged();
     void encryptionReadyChanged();
     void keySavedChanged();
     void drivesChanged();
@@ -93,6 +114,8 @@ private:
     bool m_checking = false;
     QVariantList m_checks;
     QString m_alongsideBlocked;
+    bool m_licenceAccepted = false;
+    bool m_exitQuickly = true;
     bool m_encryptionReady = false;
     QString m_recoveryKey;
     bool m_keySaved = false;

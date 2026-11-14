@@ -1,0 +1,20 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "dev@wildos.io",
+                "Name": "Wild OS"
+            }
+        ],
+        "Description": "Ctrl+Alt+End locks the screen, clears the clipboard and cuts the network",
+        "EnabledByDefault": false,
+        "Id": "org.wildos.panickey",
+        "License": "GPL-3.0-or-later",
+        "Name": "Panic key",
+        "Version": "0.1.0",
+        "Website": "https://wildos.io"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

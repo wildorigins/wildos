@@ -12,6 +12,7 @@ import org.kde.ksvg 1.0 as KSvg
 import org.kde.plasma.plasmoid 2.0
 import org.kde.kquickcontrolsaddons 2.0
 import org.kde.kirigami 2.20 as Kirigami
+import org.wildos.shell as WildOS
 
 PlasmaCore.ToolTipArea {
     id: root
@@ -47,6 +48,91 @@ PlasmaCore.ToolTipArea {
             fullRepresentation.anchors.fill = null;
             fullRepresentation.parent = appletParent;
             fullRepresentation.anchors.fill = appletParent;
+        }
+        maybeWarmUp();
+    }
+
+    // Wild OS: an applet that preloads (Start) also draws its pop-up once
+    // while the sign-in splash still covers the screen, and the splash waits
+    // for that (wildos-wait-desktop). Preloading only builds the contents;
+    // the window and every image in it were still made on the first click,
+    // which stuttered.
+    property bool warming: false
+    property bool warmedUp: false
+    property int warmFrames: 0
+
+    onPlasmoidItemChanged: maybeWarmUp()
+    Component.onCompleted: maybeWarmUp()
+    Connections {
+        target: root.plasmoidItem
+        function onFullRepresentationItemChanged() { root.maybeWarmUp(); }
+        // Opened for real during the first draw: that is now the real pop-up.
+        function onExpandedChanged() {
+            if (root.plasmoidItem.expanded && dialog.warmShown) {
+                root.finishWarmUp();
+                dialog.warmShown = false;
+                dialog.oldStatus = Plasmoid.status;
+                Plasmoid.status = PlasmaCore.Types.RequiresAttentionStatus;
+                dialog.requestActivate();
+            }
+        }
+    }
+
+    function warmUpWanted() {
+        return !!(plasmoidItem && plasmoidItem.preloadFullRepresentation
+            && (fullRepresentation || plasmoidItem.fullRepresentationItem)
+            && compactRepresentation && !warmedUp);
+    }
+    // The panel hands the contents over more than once while it lays out,
+    // so the draw waits until that has settled. The longest pause between
+    // handovers seen on software rendering is 111 ms; the start-up
+    // animation waits on this, so the quiet spell is kept just above it.
+    function maybeWarmUp() {
+        if (warmUpWanted()) {
+            warmUp.restart();
+        }
+    }
+    function finishWarmUp() {
+        warming = false;
+        warmLimit.stop();
+        WildOS.Session.desktopReady();
+    }
+    Timer {
+        id: warmUp
+        interval: 150
+        onTriggered: {
+            if (!root.warmUpWanted() || root.plasmoidItem.expanded) {
+                return;
+            }
+            root.warmedUp = true;
+            // After a plasmashell restart nothing covers the screen, so the
+            // pop-up would flash up: the first click does the work instead.
+            if (!WildOS.Session.splashShowing) {
+                return;
+            }
+            // Plasma hands the preloaded contents to the pop-up only when it
+            // opens; the first draw needs them now.
+            if (!root.fullRepresentation) {
+                root.fullRepresentation = root.plasmoidItem.fullRepresentationItem;
+            }
+            root.warmFrames = 0;
+            root.warming = true;
+            warmLimit.start();
+        }
+    }
+    Timer {
+        id: warmLimit
+        interval: 2000
+        onTriggered: root.finishWarmUp()
+    }
+    Connections {
+        target: dialog
+        enabled: root.warming
+        function onFrameSwapped() {
+            // The second frame has every image in it; the first may not.
+            if (++root.warmFrames >= 2) {
+                root.finishWarmUp();
+            }
         }
     }
 
@@ -203,14 +289,26 @@ PlasmaCore.ToolTipArea {
             : PlasmaCore.AppletPopup.AtScreenEdges | PlasmaCore.AppletPopup.AtPanelEdges
 
         hideOnWindowDeactivate: root.plasmoidItem && root.plasmoidItem.hideOnWindowDeactivate
-        visible: root.plasmoidItem && root.plasmoidItem.expanded && fullRepresentation
+        visible: root.plasmoidItem && (root.plasmoidItem.expanded || root.warming) && fullRepresentation
         visualParent: root.compactRepresentation
         backgroundHints: (Plasmoid.containmentDisplayHints & PlasmaCore.Types.ContainmentPrefersOpaqueBackground) ? PlasmaCore.AppletPopup.SolidBackground : PlasmaCore.AppletPopup.StandardBackground
         appletInterface: root.plasmoidItem
 
         property var oldStatus: PlasmaCore.Types.UnknownStatus
 
+        // Set while the unseen first draw is on screen, so its showing and
+        // hiding don't count as the pop-up opening and closing.
+        property bool warmShown: false
+
         onVisibleChanged: {
+            if (visible && root.warming) {
+                warmShown = true;
+                return;
+            }
+            if (!visible && warmShown) {
+                warmShown = false;
+                return;
+            }
             if (!visible) {
                 expandedSync.restart();
                 Plasmoid.status = oldStatus;

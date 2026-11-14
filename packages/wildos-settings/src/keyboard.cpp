@@ -9,9 +9,46 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QFile>
+#include <QLocale>
+#include <QRegularExpression>
 #include <QXmlStreamReader>
 
 #include <algorithm>
+
+namespace
+{
+// What people search for besides a layout's own name: the countries and
+// languages xkeyboard-config lists for it (Belgium, Dutch, French for
+// "Belgian"), its code, and the letter order printed on the keys.
+QString searchWords(const QString &layout, const QString &description, const QStringList &countries, const QStringList &languages)
+{
+    QStringList words{layout};
+    for (const QString &code : countries) {
+        const QLocale::Territory territory = QLocale::codeToTerritory(code);
+        if (territory != QLocale::AnyTerritory) {
+            words << QLocale::territoryToString(territory);
+        }
+    }
+    for (const QString &code : languages) {
+        const QLocale::Language language = QLocale::codeToLanguage(code, QLocale::ISO639Part2);
+        if (language != QLocale::AnyLanguage) {
+            words << QLocale::languageToString(language);
+        }
+    }
+    static const QStringList azerty{QStringLiteral("be"), QStringLiteral("fr")};
+    static const QStringList qwertz{QStringLiteral("de"), QStringLiteral("at"), QStringLiteral("ch"), QStringLiteral("cz"), QStringLiteral("sk"),
+                                    QStringLiteral("hu"), QStringLiteral("si"), QStringLiteral("hr")};
+    static const QRegularExpression otherOrder(QStringLiteral("qwerty|bepo|bépo|dvorak|colemak|workman"), QRegularExpression::CaseInsensitiveOption);
+    if (!description.contains(otherOrder)) {
+        if (azerty.contains(layout)) {
+            words << QStringLiteral("azerty");
+        } else if (qwertz.contains(layout)) {
+            words << QStringLiteral("qwertz");
+        }
+    }
+    return words.join(QLatin1Char(' ')).toLower();
+}
+}
 
 namespace
 {
@@ -130,6 +167,10 @@ void Keyboard::loadNames()
     QString layout;
     QString name;
     QString description;
+    QStringList countries;
+    QStringList languages;
+    QStringList layoutCountries;
+    QStringList layoutLanguages;
     bool inVariant = false;
     while (!xml.atEnd()) {
         xml.readNext();
@@ -148,6 +189,12 @@ void Keyboard::loadNames()
             } else if (tag == QLatin1String("configItem")) {
                 name.clear();
                 description.clear();
+                countries.clear();
+                languages.clear();
+            } else if (tag == QLatin1String("iso3166Id")) {
+                countries << xml.readElementText();
+            } else if (tag == QLatin1String("iso639Id")) {
+                languages << xml.readElementText();
             } else if (tag == QLatin1String("name")) {
                 name = xml.readElementText();
             } else if (tag == QLatin1String("description")) {
@@ -164,11 +211,22 @@ void Keyboard::loadNames()
                 continue;
             } else if (!inVariant) {
                 layout = name;
+                layoutCountries = countries;
+                layoutLanguages = languages;
                 m_names.insert(layout + QLatin1Char('|'), description);
-                m_available.append(QVariantMap{{QStringLiteral("layout"), layout}, {QStringLiteral("variant"), QString()}, {QStringLiteral("name"), description}});
+                m_available.append(QVariantMap{{QStringLiteral("layout"), layout},
+                                               {QStringLiteral("variant"), QString()},
+                                               {QStringLiteral("name"), description},
+                                               {QStringLiteral("keywords"), searchWords(layout, description, countries, languages)}});
             } else if (!layout.isEmpty()) {
+                // A variant without its own lists is for the layout's.
                 m_names.insert(layout + QLatin1Char('|') + name, description);
-                m_available.append(QVariantMap{{QStringLiteral("layout"), layout}, {QStringLiteral("variant"), name}, {QStringLiteral("name"), description}});
+                m_available.append(QVariantMap{{QStringLiteral("layout"), layout},
+                                               {QStringLiteral("variant"), name},
+                                               {QStringLiteral("name"), description},
+                                               {QStringLiteral("keywords"),
+                                                searchWords(layout, description, countries.isEmpty() ? layoutCountries : countries,
+                                                            languages.isEmpty() ? layoutLanguages : languages)}});
             }
         } else if (xml.isEndElement() && xml.name() == QLatin1String("variant")) {
             inVariant = false;

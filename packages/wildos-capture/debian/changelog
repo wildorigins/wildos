@@ -1,3 +1,20 @@
+wildos-capture (0.1.5) trixie; urgency=medium
+
+  * Text you type onto a screenshot has the right-click menu with Cut,
+    Copy, Paste and Select all.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
+wildos-capture (0.1.4) trixie; urgency=medium
+
+  * Capture scans paper: a Scan tab next to Screenshot and Record finds
+    network scanners without a driver and USB scanners, scans from the
+    glass or the feeder, straightens each page, and saves the pages as a
+    PDF or as pictures or opens them in PDF to sign.
+  * wildos-capture --scan opens straight on the Scan tab.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 17:20:00 +0000
+
 wildos-capture (0.1.3) trixie; urgency=medium
 
   * Report a problem in the Options menu opens Report a problem with Capture

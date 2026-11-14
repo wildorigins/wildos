@@ -47,6 +47,14 @@ void System::showWindowMenu() const
         windowMenuService, QStringLiteral("/WindowMenu"), windowMenuService, QStringLiteral("ShowAtPointer")));
 }
 
+void System::maximizeEdge(int edges) const
+{
+    QDBusMessage call = QDBusMessage::createMethodCall(windowMenuService, QStringLiteral("/WindowMenu"), windowMenuService,
+                                                       QStringLiteral("MaximizeEdgeAtPointer"));
+    call << edges;
+    QDBusConnection::sessionBus().asyncCall(call);
+}
+
 QString System::passwordHint(const QString &userName) const
 {
     // Asked only after a failed attempt, so a short wait is fine; the
@@ -93,4 +101,39 @@ bool System::fingerprintReader() const
                                                              QStringLiteral("net.reactivated.Fprint.Manager"), QStringLiteral("GetDefaultDevice"));
     const QDBusReply<QDBusObjectPath> device = QDBusConnection::systemBus().call(call, QDBus::Block, 3000);
     return device.isValid();
+}
+
+bool System::fingerprintAllowed(const QString &userName) const
+{
+    int hours = 0;
+    QFile store(QStringLiteral("/etc/wildos/advanced-protection"));
+    if (store.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        while (!store.atEnd()) {
+            const QByteArray line = store.readLine().trimmed();
+            if (line.startsWith("fingerprint_hours=")) {
+                bool ok = false;
+                const int value = line.mid(18).toInt(&ok);
+                if (ok) {
+                    hours = value;
+                }
+            }
+        }
+    }
+    if (hours <= 0) {
+        return true;
+    }
+    if (userName.isEmpty() || userName.contains(QLatin1Char('/')) || userName.startsWith(QLatin1Char('.'))) {
+        return false;
+    }
+    // Both in seconds since start-up, so changing the clock moves neither.
+    QFile stamp(QStringLiteral("/run/wildos/fingerprint/") + userName);
+    QFile uptime(QStringLiteral("/proc/uptime"));
+    if (!stamp.open(QIODevice::ReadOnly) || !uptime.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    bool okStamp = false;
+    bool okNow = false;
+    const qint64 typed = stamp.readAll().trimmed().toLongLong(&okStamp);
+    const qint64 now = static_cast<qint64>(uptime.readAll().split(' ').value(0).toDouble(&okNow));
+    return okStamp && okNow && now >= typed && now - typed < qint64(hours) * 3600;
 }

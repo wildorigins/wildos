@@ -1,3 +1,10 @@
+wildos-terminal (0.1.2) trixie; urgency=medium
+
+  * Pasting into a setting's box from its right-click menu is no
+    longer undone before you finish.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-terminal (0.1.1) trixie; urgency=medium
 
   * No navy left: surfaces, glass, shadows and the logo tile use the

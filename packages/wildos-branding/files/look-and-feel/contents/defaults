@@ -24,7 +24,7 @@ ShowToolTips=false
 LayoutName=org.wildos.switcher
 
 [kcminputrc][Mouse]
-cursorTheme=breeze_cursors
+cursorTheme=Breeze_Light
 
 [ksplashrc][KSplash]
 Engine=KSplashQML

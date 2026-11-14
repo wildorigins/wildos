@@ -67,8 +67,8 @@ const QStringList &commonNouns()
     return nouns;
 }
 
-// "Text document" makes "New text document"; "Writer document" keeps its
-// capital and makes "New Writer document", as Windows names new items.
+// "Text document" makes "New text document"; "Write document" keeps its
+// capital and makes "New Write document", as Windows names new items.
 QString newBase(const QString &text)
 {
     const QString first = text.section(QLatin1Char(' '), 0, 0);
@@ -159,10 +159,18 @@ QList<Template> templates()
     };
 
     if (hasService({QStringLiteral("libreoffice-writer"), QStringLiteral("org.libreoffice.LibreOffice.writer")})) {
-        builtIn(QStringLiteral("writer"), QStringLiteral("Writer document"), QStringLiteral("application/vnd.oasis.opendocument.text"), QStringLiteral(".odt"));
+        // Write and Tables save as Word and Excel files, so new ones start
+        // that way too; an empty file opens as a new document of its kind.
+        // LibreOffice's own OpenDocument templates are left out, or they
+        // would show beside these under LibreOffice's names.
+        builtIn(QStringLiteral("writer"), QStringLiteral("Write document"),
+                QStringLiteral("application/vnd.openxmlformats-officedocument.wordprocessingml.document"), QStringLiteral(".docx"));
+        installed.remove(QStringLiteral("application/vnd.oasis.opendocument.text"));
     }
     if (hasService({QStringLiteral("libreoffice-calc"), QStringLiteral("org.libreoffice.LibreOffice.calc")})) {
-        builtIn(QStringLiteral("calc"), QStringLiteral("Calc spreadsheet"), QStringLiteral("application/vnd.oasis.opendocument.spreadsheet"), QStringLiteral(".ods"));
+        builtIn(QStringLiteral("calc"), QStringLiteral("Tables spreadsheet"),
+                QStringLiteral("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), QStringLiteral(".xlsx"));
+        installed.remove(QStringLiteral("application/vnd.oasis.opendocument.spreadsheet"));
     }
     if (hasService({QStringLiteral("libreoffice-impress"), QStringLiteral("org.libreoffice.LibreOffice.impress")})) {
         builtIn(QStringLiteral("impress"), QStringLiteral("Impress presentation"), QStringLiteral("application/vnd.oasis.opendocument.presentation"), QStringLiteral(".odp"));

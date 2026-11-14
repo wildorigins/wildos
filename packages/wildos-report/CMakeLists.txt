@@ -5,12 +5,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(GNUInstallDirs)
 
-option(WILDOS_REPORT_TESTS "Build the redactor tests" OFF)
+option(WILDOS_REPORT_TESTS "Build the redactor and issue watch tests" OFF)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets DBus Concurrent Qml Quick QuickControls2)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets DBus Concurrent Network Qml Quick QuickControls2)
 find_package(KF6DBusAddons REQUIRED)
 find_package(KF6Notifications REQUIRED)
 find_package(KF6Archive REQUIRED)
+find_package(KF6WindowSystem REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -32,6 +33,7 @@ qt_add_qml_module(wildos-report
         src/report.cpp src/report.h
         src/collector.cpp src/collector.h
         src/crashnotify.cpp src/crashnotify.h
+        src/issuewatch.cpp src/issuewatch.h
         src/parts.cpp src/parts.h
         src/redactor.cpp src/redactor.h
         src/sysinfo.cpp src/sysinfo.h
@@ -39,8 +41,8 @@ qt_add_qml_module(wildos-report
 
 target_include_directories(wildos-report PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(wildos-report PRIVATE
-    Qt6::Widgets Qt6::Gui Qt6::DBus Qt6::Concurrent Qt6::Qml Qt6::Quick Qt6::QuickControls2
-    KF6::DBusAddons KF6::Notifications KF6::Archive
+    Qt6::Widgets Qt6::Gui Qt6::DBus Qt6::Concurrent Qt6::Network Qt6::Qml Qt6::Quick Qt6::QuickControls2
+    KF6::DBusAddons KF6::Notifications KF6::Archive KF6::WindowSystem
 )
 
 if(WILDOS_REPORT_TESTS)
@@ -50,6 +52,10 @@ if(WILDOS_REPORT_TESTS)
     target_include_directories(redactor-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(redactor-test PRIVATE Qt6::Core Qt6::Test)
     add_test(NAME redactor COMMAND redactor-test)
+    qt_add_executable(issuewatch-test tests/issuewatch_test.cpp src/issuewatch.cpp)
+    target_include_directories(issuewatch-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(issuewatch-test PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME issuewatch COMMAND issuewatch-test)
 endif()
 
 install(TARGETS wildos-report RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -67,10 +73,13 @@ install(FILES data/995-wildos-crash-reports.conf DESTINATION ${CMAKE_INSTALL_PRE
 install(FILES data/coredump-wildos-report.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/systemd-coredump@.service.d
     RENAME wildos-report.conf)
 install(FILES data/wildos-report-crash.path data/wildos-report-crash.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
-# KDE's crash reporter steps aside; see drkonqi-wildos-report.conf.
+# KDE's crash reporter steps aside; see drkonqi-wildos-report.conf. Its
+# socket is masked instead (debian/links): sockets.target upholds it, so a
+# condition that stops it made systemd try it again, and log a dozen lines,
+# whenever an app started.
 install(FILES data/drkonqi-wildos-report.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/drkonqi-coredump-processor@.service.d
     RENAME wildos-report.conf)
-foreach(unit drkonqi-coredump-launcher.socket drkonqi-coredump-pickup.service drkonqi-sentry-postman.path drkonqi-sentry-postman.timer
+foreach(unit drkonqi-coredump-pickup.service drkonqi-sentry-postman.path drkonqi-sentry-postman.timer
         drkonqi-sentry-postman.service)
     install(FILES data/drkonqi-wildos-report.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user/${unit}.d RENAME wildos-report.conf)
 endforeach()

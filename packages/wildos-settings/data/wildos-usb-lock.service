@@ -1,0 +1,12 @@
+[Unit]
+Description=Hold back new USB devices while the screen is locked
+Documentation=file:///usr/libexec/wildos/wildos-usb-lock
+After=usbguard.service dbus.service systemd-logind.service
+
+[Service]
+ExecStart=/usr/libexec/wildos/wildos-usb-lock
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

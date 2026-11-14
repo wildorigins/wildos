@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+# Removing Wild OS's base takes the guest session with it, so its account
+# must not stay behind without the parts that wipe it.
+if [ "$1" = remove ] && [ -x /usr/libexec/wildos/guest-account ]; then
+    /usr/libexec/wildos/guest-account off || true
+fi
+
+#DEBHELPER#

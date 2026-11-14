@@ -108,7 +108,7 @@ void SetupApp::loadPreview()
             {QStringLiteral("percent"), paused ? 15 : 46},
             {QStringLiteral("left"), QStringLiteral("About 14 minutes left")},
             {QStringLiteral("paused"), paused},
-            {QStringLiteral("problem"), paused ? QVariantMap{{QStringLiteral("kind"), QStringLiteral("download")}, {QStringLiteral("received"), 3.8e9}} : QVariantMap()},
+            {QStringLiteral("problem"), paused ? QVariantMap{{QStringLiteral("kind"), QStringLiteral("download")}, {QStringLiteral("offline"), true}, {QStringLiteral("received"), 3.8e9}} : QVariantMap()},
             {QStringLiteral("stages"), QVariantList{
                  stage(QStringLiteral("media"), QStringLiteral("Download Windows 11 from Microsoft"), QStringLiteral("6.1 GB, checked against Microsoft's signature"),
                        paused ? QStringLiteral("active") : QStringLiteral("done"), paused ? 62 : 100),
@@ -419,10 +419,18 @@ QByteArray readSmt(const char *name)
     QFile file(QStringLiteral("/sys/devices/system/cpu/smt/") + QLatin1String(name));
     return file.open(QIODevice::ReadOnly) ? file.readAll().trimmed() : QByteArray();
 }
+
+QByteArray readEtc(const char *name)
+{
+    QFile file(QStringLiteral("/etc/wildos/") + QLatin1String(name));
+    return file.open(QIODevice::ReadOnly) ? file.readAll().trimmed() : QByteArray();
+}
 }
 
-// Offered only on a processor with two threads per core, while it is off, and
-// not at Strict or Maximum protection, which keep it off.
+// Offered only on a processor with two threads per core whose second threads
+// are off and not already chosen on, and not while extra processor protection
+// (or Strict or Maximum, which include it) keeps them off. Most processors
+// run every thread by default, so this rarely shows.
 bool SetupApp::hyperThreadingAvailable() const
 {
     // The boards' made-up PC has the row.
@@ -430,15 +438,15 @@ bool SetupApp::hyperThreadingAvailable() const
         return true;
     }
     const QByteArray control = readSmt("control");
-    QFile levelFile(QStringLiteral("/etc/wildos/protection-level"));
-    const QByteArray level = levelFile.open(QIODevice::ReadOnly) ? levelFile.readAll().trimmed() : QByteArray();
+    const QByteArray level = readEtc("protection-level");
     return QFile::exists(cpuThreadsHelper) && !control.isEmpty() && control != "notsupported" && control != "notimplemented"
-        && !QFile::exists(QStringLiteral("/etc/wildos/cpu-threads")) && level != "strict" && level != "maximum";
+        && readSmt("active") != "1" && readEtc("cpu-threads") != "on" && readEtc("cpu-protection") != "extra"
+        && level != "strict" && level != "maximum";
 }
 
 bool SetupApp::hyperThreadingNeedsRestart() const
 {
-    return QFile::exists(QStringLiteral("/etc/wildos/cpu-threads")) && readSmt("active") != "1";
+    return readEtc("cpu-threads") == "on" && readSmt("active") != "1";
 }
 
 QString SetupApp::setupRequest(bool background) const

@@ -1,0 +1,21 @@
+# Newer kernel and graphics than Debian 13 ships, from Debian's own
+# backports: Linux 7.2 (faster scheduling, newer hardware, ntsync for games)
+# with the firmware it expects, and Mesa 26.1 (Intel and AMD graphics,
+# Vulkan for games). Same priority as trixie, so the newer version wins.
+# A src: name covers only 64-bit packages; the :i386 form adds the 32-bit
+# ones Steam uses, which must match their 64-bit versions.
+Package: src:linux src:linux-signed-amd64 src:linux-base src:firmware-nonfree src:mesa src:mesa:i386
+Pin: release n=trixie-backports
+Pin-Priority: 500
+
+# NVIDIA's driver in trixie and its backport won't build for Linux 7.2;
+# Debian's 550.163.01-6 has the fixes, so this one driver comes from
+# Debian's development branch (wildos-nvidia.sources). Kept to the 550
+# series: newer ones drop older cards. Nothing else comes from there.
+Package: src:nvidia-graphics-drivers src:nvidia-graphics-drivers:i386
+Pin: version 550.163.01-*
+Pin-Priority: 500
+
+Package: *
+Pin: release n=sid
+Pin-Priority: -1

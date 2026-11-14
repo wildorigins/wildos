@@ -33,6 +33,7 @@ qt_add_qml_module(wildos-portal
         src/filechooser.cpp src/filechooser.h
         src/clash.cpp src/clash.h
         src/windows.cpp src/windows.h
+        src/thumbnails.cpp src/thumbnails.h
 )
 
 target_include_directories(wildos-portal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

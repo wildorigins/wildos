@@ -269,6 +269,16 @@ Rectangle {
                     clip: true
                     onTextEdited: composer.touch()
                     KeyNavigation.tab: editor
+                    Keys.onPressed: event => {
+                        if (subjectMenu.isMenuKey(event)) {
+                            subjectMenu.openAtCaret();
+                            event.accepted = true;
+                        }
+                    }
+
+                    UI.TextMenu {
+                        id: subjectMenu
+                    }
                 }
             }
         }
@@ -380,7 +390,14 @@ Rectangle {
                         } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_U) {
                             formatter.toggleUnderline();
                             event.accepted = true;
+                        } else if (editorMenu.isMenuKey(event)) {
+                            editorMenu.openAtCaret();
+                            event.accepted = true;
                         }
+                    }
+
+                    UI.TextMenu {
+                        id: editorMenu
                     }
                 }
 

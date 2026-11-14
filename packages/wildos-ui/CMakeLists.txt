@@ -39,6 +39,8 @@ qt_add_qml_module(wildosui
         src/system.cpp src/system.h
         src/accessshortcuts.cpp src/accessshortcuts.h
         src/historyswipe.cpp src/historyswipe.h
+        src/nopaste.cpp src/nopaste.h
+        src/secretcopy.cpp src/secretcopy.h
         src/timeformat.cpp src/timeformat.h src/clockformat.h
 )
 

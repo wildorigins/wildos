@@ -6,7 +6,10 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusVariant>
+#include <QFileSystemWatcher>
 #include <QTimeZone>
+
+#include "securetime.h"
 
 #include <algorithm>
 
@@ -29,6 +32,13 @@ QString offsetText(int seconds)
 Clock::Clock(QObject *parent)
     : QObject(parent)
 {
+    readSecureTime();
+    // sdwdate's marker for having set the clock appears in this folder, so
+    // the page changes from "being set" to "set" as it happens.
+    auto watch = new QFileSystemWatcher({QStringLiteral("/run/sdwdate")}, this);
+    connect(watch, &QFileSystemWatcher::directoryChanged, this, [this] {
+        readSecureTime();
+    });
     QDBusConnection bus = QDBusConnection::systemBus();
     auto names = bus.interface();
     // timedated starts on demand, so it counts as there when it can start.
@@ -40,6 +50,17 @@ Clock::Clock(QObject *parent)
     bus.connect(service, path, QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("PropertiesChanged"), this,
                 SLOT(onPropertiesChanged(QString, QVariantMap, QStringList)));
     read();
+}
+
+void Clock::readSecureTime()
+{
+    const bool running = SecureTime::running();
+    const bool set = SecureTime::setThisBoot();
+    if (running != m_secureTime || set != m_secureTimeSet) {
+        m_secureTime = running;
+        m_secureTimeSet = set;
+        Q_EMIT changed();
+    }
 }
 
 void Clock::read()

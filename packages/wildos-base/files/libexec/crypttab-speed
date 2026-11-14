@@ -1,0 +1,49 @@
+#!/bin/sh
+# Adds the encrypted disk options that keep SSDs fast to every entry in
+# /etc/crypttab, and says "changed" when it edits the file, so the caller can
+# rebuild the start-up image, which carries its own copy.
+#
+# - discard: lets TRIM through the encryption, so the drive knows which
+#   blocks are free and its writes stay fast. Calamares clears the options
+#   of the system partition when /boot is not encrypted, which is Wild OS's
+#   layout, so installs before this had none. TRIM shows an observer of the
+#   raw disk which blocks are unused, not what is in them.
+# - no-read-workqueue, no-write-workqueue: decrypt and encrypt straight
+#   away instead of queueing the work for a kernel thread, which only adds
+#   delay on a fast drive.
+#
+#   crypttab-speed [ROOT]   ROOT defaults to /
+
+set -eu
+
+root=${1:-}
+file="$root/etc/crypttab"
+[ -f "$file" ] || exit 0
+want="discard no-read-workqueue no-write-workqueue"
+
+tmp=$(mktemp)
+awk -v want="$want" '
+    /^[[:space:]]*(#|$)/ { print; next }
+    {
+        opts = (NF >= 4) ? $4 : ""
+        if (opts == "none" || opts == "-") opts = ""
+        n = split(want, w, " ")
+        for (i = 1; i <= n; i++) {
+            if (("," opts ",") !~ ("," w[i] ",")) opts = (opts == "" ? w[i] : opts "," w[i])
+        }
+        key = (NF >= 3) ? $3 : "none"
+        line = $1 " " $2 " " key " " opts
+        if (line != $0) changed = 1
+        print line
+    }
+    END { if (changed) print "changed" > "/dev/stderr" }
+' "$file" > "$tmp" 2> "$tmp.changed"
+
+if grep -q changed "$tmp.changed"; then
+    chmod --reference="$file" "$tmp"
+    mv -f "$tmp" "$file"
+    echo changed
+else
+    rm -f "$tmp"
+fi
+rm -f "$tmp.changed"

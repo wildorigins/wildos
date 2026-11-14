@@ -1,3 +1,10 @@
+wildos-archive (0.1.3) trixie; urgency=medium
+
+  * The search box has the right-click menu with Cut, Copy, Paste and
+    Select all. The Menu key and Shift+F10 open it too.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-archive (0.1.2) trixie; urgency=medium
 
   * Opens password-protected 7z and RAR archives, hidden file names

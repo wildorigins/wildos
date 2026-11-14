@@ -1,3 +1,17 @@
+wildos-taskmanager (0.1.2) trixie; urgency=medium
+
+  * End task closes an app that has stopped responding: an app still
+    running three seconds after being asked to quit is ended, and a
+    suspended one is woken so it can quit.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:44:54 +0000
+
+wildos-taskmanager (0.1.1) trixie; urgency=medium
+
+  * Windows mode's windows are listed as Windows mode.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 13:36:51 +0000
+
 wildos-taskmanager (0.1.0) trixie; urgency=medium
 
   * Initial release.

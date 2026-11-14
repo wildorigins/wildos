@@ -1,0 +1,5 @@
+#!/bin/sh
+# Panic key. Nothing to do as root: each signed-in account follows the switch
+# through wildos-panic-key.path, which loads or unloads the Ctrl+Alt+End
+# shortcut in its own KWin ("panic-key switch").
+exit 0

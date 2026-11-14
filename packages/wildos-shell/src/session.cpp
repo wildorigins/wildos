@@ -2,13 +2,18 @@
 
 #include <KScreenDpms/Dpms>
 
+#include <QCoreApplication>
 #include <QDBusConnection>
+#include <QDBusConnectionInterface>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusServiceWatcher>
 #include <QDBusVariant>
 #include <QGuiApplication>
+#include <QSaveFile>
 #include <QScreen>
+#include <QStandardPaths>
 
 namespace
 {
@@ -17,6 +22,7 @@ const QString screenSaverPath = QStringLiteral("/ScreenSaver");
 const QString profilesService = QStringLiteral("org.freedesktop.UPower.PowerProfiles");
 const QString profilesPath = QStringLiteral("/org/freedesktop/UPower/PowerProfiles");
 const QString propertiesInterface = QStringLiteral("org.freedesktop.DBus.Properties");
+const QString splashService = QStringLiteral("org.kde.KSplash");
 }
 
 Session::Session(QObject *parent)
@@ -41,8 +47,33 @@ Session::Session(QObject *parent)
         setScreenOff(screen->name(), false);
     });
 
+    // KSplash leaves the bus as the splash closes; it never comes back in
+    // the same session.
+    auto splash = new QDBusServiceWatcher(splashService, QDBusConnection::sessionBus(), QDBusServiceWatcher::WatchForUnregistration, this);
+    connect(splash, &QDBusServiceWatcher::serviceUnregistered, this, [this] {
+        if (m_splashShowing) {
+            m_splashShowing = false;
+            Q_EMIT splashShowingChanged();
+        }
+    });
+    m_splashShowing = QDBusConnection::sessionBus().interface()->isServiceRegistered(splashService);
+
     readLocked();
     readProfile();
+}
+
+void Session::desktopReady()
+{
+    // Names this plasmashell, so a mark left by an earlier one never counts.
+    QSaveFile file(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation) + QStringLiteral("/wildos-desktop-ready"));
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(QByteArray::number(QCoreApplication::applicationPid()));
+        file.commit();
+    }
+    // The start-up animation watches for this name and opens onto the real
+    // desktop once it appears. It goes with plasmashell, so it never counts
+    // for a later one.
+    QDBusConnection::sessionBus().registerService(QStringLiteral("org.wildos.shell.DesktopReady"));
 }
 
 void Session::readLocked()

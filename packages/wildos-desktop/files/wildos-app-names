@@ -93,11 +93,19 @@ for f in /usr/share/wildos/launchers/*.desktop; do
     cp "$f" "$DST/$id.desktop.new"
     mv "$DST/$id.desktop.new" "$DST/$id.desktop"
 done
-# With Write and Tables in place, LibreOffice's own start centre stays out of
+# With Write or Tables in place, LibreOffice's own start centre stays out of
 # menus. Impress and the rest show up as themselves if installed from the Store.
-if [ -f /usr/share/wildos/launchers/libreoffice-writer.desktop ]; then
+if [ -f /usr/share/wildos/launchers/libreoffice-writer.desktop ] || [ -f /usr/share/wildos/launchers/libreoffice-calc.desktop ]; then
     hide libreoffice-startcenter
     hide libreoffice-xsltfilter
+fi
+# Write and Tables are removed one at a time. Until apt takes away the
+# LibreOffice part a removed one used, its stock launcher would show up in
+# Start as "LibreOffice Calc" in place of the app someone just removed.
+if [ -d /usr/lib/libreoffice/share/extensions/wildos-office ]; then
+    for id in libreoffice-writer libreoffice-calc; do
+        [ -f "/usr/share/wildos/launchers/$id.desktop" ] || hide "$id"
+    done
 fi
 rename org.kde.kcalc "Calculator" "Calculator"
 rename org.kde.kwrite "Text editor" "Text editor"

@@ -7,7 +7,11 @@ Item {
 
     property real size: 16
     property color color: Style.accent
-    property bool running: visible
+    // A hidden or minimised window still counts its items as visible, so a
+    // spinner in a prompt that is not on screen would keep the animation
+    // timer waking its process about 75 times a second.
+    property bool running: visible && Window.visibility !== Window.Hidden
+        && Window.visibility !== Window.Minimized
 
     implicitWidth: size
     implicitHeight: size

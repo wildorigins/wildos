@@ -36,6 +36,14 @@ PlasmaCore.Dialog {
 
     readonly property bool group: task !== null && task.model.IsGroupParent === true
     readonly property int windowCount: task === null || !task.isWindow ? 0 : group ? task.childCount : 1
+    // The glass is sized for the last count that had windows. When the
+    // button goes away under the preview (its app hides a window for a
+    // moment, or the row is rebuilt), the count drops to 0 a moment before
+    // the preview hides; sized from that, Plasma shrinks the window to its
+    // bare frame, and the next hover maps that sliver before growing it,
+    // where it can stay.
+    property int sizedCount: 1
+    onWindowCountChanged: if (windowCount > 0) sizedCount = windowCount
 
     // Titles and minimised states change while the preview is up; every
     // tile reads them again when the model says something changed.
@@ -53,7 +61,7 @@ PlasmaCore.Dialog {
     readonly property int pictureWidth: {
         const screen = tasksModel.screenGeometry;
         const room = (screen.width > 0 ? screen.width : 1920) - 32 - 2 * (glassBorder + pad);
-        const n = Math.max(1, windowCount);
+        const n = sizedCount;
         const tile = Math.floor((room + tileGap) / n - tileGap);
         return Math.max(120, Math.min(200, tile - 2 * tilePad));
     }
@@ -61,7 +69,7 @@ PlasmaCore.Dialog {
     readonly property int tileWidth: pictureWidth + 2 * tilePad
     readonly property int tileHeight: tilePad + headerHeight + 4 + pictureHeight + tilePad
 
-    readonly property real glassWidth: 2 * (glassBorder + pad) + windowCount * tileWidth + Math.max(0, windowCount - 1) * tileGap
+    readonly property real glassWidth: 2 * (glassBorder + pad) + sizedCount * tileWidth + (sizedCount - 1) * tileGap
     readonly property real glassHeight: 2 * (glassBorder + pad) + tileHeight
 
     // A notification-type window is placed exactly where it is told, never
@@ -79,8 +87,13 @@ PlasmaCore.Dialog {
         } else {
             backend.cancelHighlightWindows();
             // Closing the last window hides it too; the next hover waits
-            // again rather than opening at once.
-            shown = false;
+            // again rather than opening at once. Later, as visible is bound
+            // to shown.
+            Qt.callLater(() => {
+                if (!preview.visible) {
+                    preview.shown = false;
+                }
+            });
         }
     }
     onShownChanged: if (shown) place()
@@ -110,10 +123,18 @@ PlasmaCore.Dialog {
         y = Math.round(barTop - gap - height);
     }
 
-    // Plasma can still be sizing the window as it appears.
+    // Plasma can still be sizing the window as it appears. It only resizes
+    // when the content's size changes, so a window mapped at a stale size
+    // would keep it on every hover of a button with the same count.
     property Timer settle: Timer {
         interval: 120
-        onTriggered: preview.place()
+        onTriggered: {
+            if (Math.round(preview.width) !== Math.round(preview.glassWidth) || Math.round(preview.height) !== Math.round(preview.glassHeight)) {
+                preview.width = preview.glassWidth;
+                preview.height = preview.glassHeight;
+            }
+            preview.place();
+        }
     }
 
     function highlight(winId: string, on: bool): void {

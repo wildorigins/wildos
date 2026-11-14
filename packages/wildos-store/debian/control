@@ -18,6 +18,12 @@ Rules-Requires-Root: no
 
 Package: wildos-store
 Architecture: any
+# Where apps come from, and the only way back for one that was removed:
+# apt refuses to remove it, even from a terminal, unless told
+# --allow-remove-essential.
+Protected: yes
+# Takes over the Wild OS theme's Ganger icon from older Ganger packages.
+Replaces: ganger (<< 0.16.0~beta.2+r1)
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},

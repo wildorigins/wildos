@@ -254,11 +254,15 @@ PageScroll {
                     readonly property bool complete: /^#[0-9a-f]{6}$/.test(normalised)
                     error: activeFocus && text.length > 0 && !complete
                     onAccepted: save()
+                    // Saving puts the stored colour back in the box, which would
+                    // undo a paste from the text menu; the menu holds focus while
+                    // it is up.
                     onActiveFocusChanged: {
-                        if (!activeFocus) {
+                        if (!activeFocus && !textMenuOpen) {
                             save();
                         }
                     }
+                    onTextMenuFocusLeft: save()
                     function save(): void {
                         if (complete) {
                             Themes.setUnderglowCustom(normalised);

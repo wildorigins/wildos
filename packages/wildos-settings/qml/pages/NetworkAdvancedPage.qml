@@ -794,6 +794,7 @@ PageScroll {
             Layout.fillWidth: true
             visible: addVpnDialog.typing
             revealable: true
+            UI.NoPaste {}
         }
 
         FieldLabel {

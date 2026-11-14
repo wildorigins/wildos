@@ -1,3 +1,33 @@
+wildos-files (0.1.14) trixie; urgency=medium
+
+  * New in the right-click menu offers a Write document and a Tables
+    spreadsheet, made as Word and Excel files like everything Write and
+    Tables save, instead of LibreOffice's Writer and Calc names and formats.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 16:20:00 +0000
+
+wildos-files (0.1.13) trixie; urgency=medium
+
+  * The format window leaves "Encrypt this drive" out when
+    Password-locked USB sticks is off in Advanced protection.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:56:10 +0000
+
+wildos-files (0.1.12) trixie; urgency=medium
+
+  * The password box for an encrypted drive takes only what is typed:
+    nothing can be pasted into it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 10:30:00 +0000
+
+wildos-files (0.1.11) trixie; urgency=medium
+
+  * The address bar and renaming have the right-click menu with Cut,
+    Copy, Paste and Select all, and the preview of a text file has
+    Copy and Select all. Renaming stays open while the menu is up.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-files (0.1.10) trixie; urgency=medium
 
   * A USB stick, SD card or external drive with nothing on it, new or

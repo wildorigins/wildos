@@ -16,8 +16,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- libreoffice-writer,
- libreoffice-calc,
+ libreoffice-core,
  libreoffice-kf6,
  libreoffice-l10n-en-gb,
  fonts-crosextra-carlito,
@@ -34,8 +33,33 @@ Depends:
  qml6-module-qtquick-shapes,
  qml6-module-qtquick-templates,
  qt6-svg-plugins,
-Description: Wild OS Write and Tables
+Description: Wild OS Write and Tables, the parts both share
  Documents and spreadsheets for Wild OS. Write and Tables are LibreOffice
  Writer and Calc with Wild OS start screens, ribbons and defaults: Word and
  Excel files open with them and save back as .docx and .xlsx unless asked
- otherwise.
+ otherwise. This package holds what they share; wildos-write and
+ wildos-tables are the apps, so each can be removed on its own.
+
+Package: wildos-write
+Architecture: all
+Depends:
+ ${misc:Depends},
+ wildos-office (>= 0.1.4),
+ libreoffice-writer,
+Breaks: wildos-office (<< 0.1.4~)
+Replaces: wildos-office (<< 0.1.4~)
+Description: Wild OS Write
+ Documents for Wild OS: LibreOffice Writer with the Wild OS start screen,
+ ribbon and defaults. Word files open with it and save back as .docx.
+
+Package: wildos-tables
+Architecture: all
+Depends:
+ ${misc:Depends},
+ wildos-office (>= 0.1.4),
+ libreoffice-calc,
+Breaks: wildos-office (<< 0.1.4~)
+Replaces: wildos-office (<< 0.1.4~)
+Description: Wild OS Tables
+ Spreadsheets for Wild OS: LibreOffice Calc with the Wild OS start screen,
+ ribbon and defaults. Excel files open with it and save back as .xlsx.

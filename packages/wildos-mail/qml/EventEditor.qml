@@ -225,6 +225,16 @@ Rectangle {
                         color: title.activeFocus ? UI.Style.accent : UI.Style.borderSubtle
                     }
                     Keys.onReturnPressed: editor.save(true)
+                    Keys.onPressed: event => {
+                        if (titleMenu.isMenuKey(event)) {
+                            titleMenu.openAtCaret();
+                            event.accepted = true;
+                        }
+                    }
+
+                    UI.TextMenu {
+                        id: titleMenu
+                    }
                 }
 
                 component FormRow: RowLayout {
@@ -466,6 +476,16 @@ Rectangle {
                                 color: UI.Style.surfaceSunken
                                 border.width: 1
                                 border.color: notes.activeFocus ? UI.Style.accent : UI.Style.borderField
+                            }
+                            Keys.onPressed: event => {
+                                if (notesMenu.isMenuKey(event)) {
+                                    notesMenu.openAtCaret();
+                                    event.accepted = true;
+                                }
+                            }
+
+                            UI.TextMenu {
+                                id: notesMenu
                             }
                         }
                     }

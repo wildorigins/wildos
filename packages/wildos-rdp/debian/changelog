@@ -1,3 +1,9 @@
+wildos-rdp (0.1.16) trixie; urgency=medium
+
+  * Opens the whole Windows desktop too, so FreeRDP is no longer needed.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 13:36:51 +0000
+
 wildos-rdp (0.1.15) trixie; urgency=medium
 
   * A RemoteApp connection rides out Windows being paused: FreeRDP's TCP

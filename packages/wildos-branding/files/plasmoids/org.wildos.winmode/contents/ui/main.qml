@@ -311,7 +311,63 @@ PlasmoidItem {
     property int readCount: 0
     property int misses: 0
 
+    // With the agent up, both services are asked over D-Bus, as the
+    // command-line tool does: starting that tool every ten seconds cost
+    // about one percent of a processor core. The tool stays for PCs where
+    // the agent isn't running, since asking it over D-Bus would start it.
+    property bool asking: false
+
+    function unanswered(): void {
+        asking = false;
+        receive(JSON.stringify({ agent: null, system: null, answering: false }));
+    }
+
+    function refreshOverDBus(): void {
+        if (asking) {
+            return;
+        }
+        asking = true;
+        const agentReply = DBus.SessionBus.asyncCall({
+            service: "org.wildos.WindowsMode1",
+            path: "/org/wildos/WindowsMode1",
+            iface: "org.wildos.WindowsMode1",
+            member: "Status"
+        });
+        agentReply.finished.connect(() => {
+            if (agentReply.isError) {
+                unanswered();
+                return;
+            }
+            const hostReply = DBus.SystemBus.asyncCall({
+                service: "org.wildos.WindowsMode1",
+                path: "/org/wildos/WindowsMode1",
+                iface: "org.wildos.WindowsMode1.Host",
+                member: "Status"
+            });
+            hostReply.finished.connect(() => {
+                if (hostReply.isError) {
+                    unanswered();
+                    return;
+                }
+                let agentStatus, hostStatus;
+                try {
+                    agentStatus = JSON.parse(String(agentReply.value));
+                    hostStatus = JSON.parse(String(hostReply.value));
+                } catch (e) {
+                    unanswered();
+                    return;
+                }
+                asking = false;
+                receive(JSON.stringify({ agent: agentStatus, system: hostStatus }));
+            });
+        });
+    }
+
     function refresh(): void {
+        if (agentWatcher.registered) {
+            refreshOverDBus();
+            return;
+        }
         if (reader.current !== "") {
             return;
         }

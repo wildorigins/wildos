@@ -5,3 +5,8 @@
 # keep the usual direction, as on Windows.
 [Libinput][Defaults][Touchpad]
 NaturalScroll=true
+
+# A white pointer with a dark edge, as on Windows. Settings > Accessibility >
+# Pointer colour changes it for your account.
+[Mouse]
+cursorTheme=Breeze_Light

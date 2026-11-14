@@ -1,0 +1,14 @@
+[Unit]
+Description=Camera and microphone lights on the taskbar
+Documentation=file:///usr/libexec/wildos/camera-mic
+PartOf=graphical-session.target
+After=graphical-session.target pipewire.service
+# The sign-in screen's account has no apps.
+ConditionUser=!@system
+
+[Service]
+ExecStart=/usr/libexec/wildos/camera-mic watch
+# Its "USE" lines are how Settings > System > History learns of each use.
+SyslogIdentifier=wildos-camera-mic
+Restart=always
+RestartSec=2

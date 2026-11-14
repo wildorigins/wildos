@@ -1,0 +1,5 @@
+#!/bin/sh
+# Turns the firewall off. A path of its own so polkit can ask for the
+# password every time (org.wildos.settings.firewall-off), where every other
+# firewall change keeps the answer for a few minutes.
+exec /usr/libexec/wildos/settings-firewall enabled off

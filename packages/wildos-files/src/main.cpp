@@ -42,6 +42,8 @@ int main(int argc, char *argv[])
     parser.addOption(selectOption);
     QCommandLineOption formatOption(QStringLiteral("format"), QStringLiteral("Open the Format dialog for a removable drive, such as /dev/sdb1."), QStringLiteral("device"));
     parser.addOption(formatOption);
+    QCommandLineOption choicesOption(QStringLiteral("remove-details-choices"), QStringLiteral("Open \"Choose what is removed\" for Remove personal details."));
+    parser.addOption(choicesOption);
     // Started by D-Bus for a call such as "show this file in its folder";
     // the call itself opens the window.
     QCommandLineOption serviceOption(QStringLiteral("service"), QStringLiteral("Start without a window, waiting for D-Bus requests."));
@@ -64,7 +66,12 @@ int main(int argc, char *argv[])
         return 0;
     }
     const QString formatDevice = parser.value(formatOption);
+    const bool choices = parser.isSet(choicesOption);
     if (!preview && bus.isConnected() && bus.interface()->isServiceRegistered(serviceName)) {
+        if (choices) {
+            bus.call(QDBusMessage::createMethodCall(serviceName, objectPath, serviceName, QStringLiteral("ChooseRemovedDetails")), QDBus::Block, 5000);
+            return 0;
+        }
         auto message = formatDevice.isEmpty() ? QDBusMessage::createMethodCall(serviceName, objectPath, serviceName, QStringLiteral("Open"))
                                               : QDBusMessage::createMethodCall(serviceName, objectPath, serviceName, QStringLiteral("Format"));
         if (formatDevice.isEmpty()) {
@@ -104,7 +111,9 @@ int main(int argc, char *argv[])
         bus.registerService(QStringLiteral("org.freedesktop.FileManager1"));
     }
 
-    if (!formatDevice.isEmpty()) {
+    if (choices) {
+        files->ChooseRemovedDetails();
+    } else if (!formatDevice.isEmpty()) {
         files->Format(formatDevice);
     } else if (!service) {
         files->Open(locations);

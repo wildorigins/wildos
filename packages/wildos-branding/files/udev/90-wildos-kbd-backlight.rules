@@ -1,0 +1,2 @@
+# Keyboard lights start on, from the disk unlock prompt onwards.
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*::kbd_backlight*", RUN+="/usr/libexec/wildos/kbd-backlight-default %k"

@@ -1,3 +1,11 @@
+wildos-launch (0.2.1) trixie; urgency=medium
+
+  * A launch ends when a window opens from the process it started, even
+    when the window names itself differently from the app (LibreOffice
+    Write and Tables did, so their starting line lasted 20 seconds).
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 19:00:00 +0000
+
 wildos-launch (0.2.0) trixie; urgency=medium
 
   * No more placeholder windows: the daemon only follows each launch for

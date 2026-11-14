@@ -326,6 +326,16 @@ Item {
                         selectionColor: UI.Style.textSelection
                         font.family: "JetBrains Mono"
                         font.pixelSize: UI.Style.px(12)
+                        Keys.onPressed: event => {
+                            if (publicMenu.isMenuKey(event)) {
+                                publicMenu.openAtCaret();
+                                event.accepted = true;
+                            }
+                        }
+
+                        UI.TextMenu {
+                            id: publicMenu
+                        }
                     }
                 }
                 Row {

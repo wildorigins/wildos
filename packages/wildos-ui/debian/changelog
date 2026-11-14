@@ -1,3 +1,55 @@
+wildos-ui (0.1.14) trixie; urgency=medium
+
+  * The fingerprint keeps working after a restart again: asking for the
+    password after a restart or every so many hours is off unless you
+    switch it on in Advanced protection (Strict and Maximum switch it on).
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 16:00:00 +0000
+
+wildos-ui (0.1.13) trixie; urgency=medium
+
+  * A password shown as text and then copied goes on the clipboard
+    marked as a password, so the clipboard history leaves it out.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:56:10 +0000
+
+wildos-ui (0.1.12) trixie; urgency=medium
+
+  * NoPaste: a field with it takes only what is typed. Paste, Shift+Insert,
+    middle click and dropped text do nothing, and its right-click menu has
+    no Paste.
+  * Double-clicking the top or bottom edge of a Wild OS app's window
+    stretches it to the screen's full height, a side to its full width,
+    as on Windows. Double-click again to put it back.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:45:00 +0000
+
+wildos-ui (0.1.11) trixie; urgency=medium
+
+  * The right-click menu for text no longer ends what you were typing
+    in boxes that finish when you click away, such as renaming a file.
+    Closing the menu with Escape puts you back in the box instead of
+    nowhere, and clicking elsewhere finishes the box as before. An app
+    with its own undo, like Notes, can send Undo through the menu.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
+wildos-ui (0.1.10) trixie; urgency=medium
+
+  * Boxes that take several lines of text get the same right-click menu
+    as single line ones: Undo, Cut, Copy, Paste, Select all and Emoji.
+    The Menu key and Shift+F10 open it too.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 07:54:43 +0000
+
+wildos-ui (0.1.9) trixie; urgency=medium
+
+  * Spinners and busy bars stop animating while their window is hidden
+    or minimised, so background prompts no longer keep the processor
+    awake.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 14:40:00 +0000
+
 wildos-ui (0.1.8) trixie; urgency=medium
 
   * Two fingers swiped left or right on a touchpad go back and forward in

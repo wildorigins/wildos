@@ -1,0 +1,1678 @@
+#!/usr/bin/python3 -I
+"""What happened on this PC, for Settings > System > History.
+
+Runs as root, from wildos-history.timer every hour and from
+wildos-history.socket whenever Settings opens the page, and takes no
+requests: it only reads. It picks out the events a person would care about
+from the system journal, apt's history, the restore points' index and the
+firewall's list of blocked connections, and keeps them as plain records:
+
+    /var/lib/wildos/history/system.jsonl      what anyone on this PC may see
+    /var/lib/wildos/history/user-UID.jsonl    one account's own, readable
+                                              by that account only
+
+Each line is one event: {id, t, kind, data, tech}, tech being the few
+source lines it was made from. Settings writes the words. Events older
+than 30 days are deleted on every run, and nothing is sent anywhere.
+
+    settings-history collect      bring the records up to date
+    settings-history serve        the same for one connection on standard
+                                  input (wildos-history@.service), answering
+                                  "ok" or "error <why>"
+    settings-history lid-closed   note what decides the lid's action as it
+                                  closes (wildos-network runs it then)
+    settings-history lid-opened   note the lid opening (the same)
+    settings-history forget firewall
+                                  the firewall's Clear the list: drop
+                                  History's copies of what it blocked
+"""
+
+import fcntl
+import glob
+import hashlib
+import json
+import os
+import pwd
+import re
+import subprocess
+import sys
+import time
+
+DIR = "/var/lib/wildos/history"
+STATE = os.path.join(DIR, "state.json")
+LOCK = "/run/wildos-history.lock"
+KEEP = 30 * 24 * 3600
+# Repeats of the same thing this close together are one event.
+MERGE = 10 * 60
+
+APT_LOGS = ["/var/log/apt/history.log.1", "/var/log/apt/history.log"]
+FIREWALL_LOG = "/var/lib/wildos/firewall/blocked.log"
+RESTORE_INDEXES = ["/.snapshots/index.json", "/var/lib/wildos/restore-points/index.json"]
+
+RESTORE_LOGS = ["/var/log/wildos-restore-points.log.1", "/var/log/wildos-restore-points.log"]
+# What wildos-network writes when the lid closes: why nothing may happen
+# next, which the journal never says (lid-closed below).
+LID_SNAPSHOTS = os.path.join(DIR, "lid-snapshots.json")
+# The lid closed and nothing followed within this long: it stayed on.
+LID_WAIT = 90
+# The label restore-points gives the point Reset Wild OS makes first.
+RESET_LABEL = "Before resetting Wild OS"
+
+COREDUMP = "fc2e22bc6ee647b6b90729ab34a250b1"
+SESSION_START = "8d45620c1a4348dbb17410da57c60c66"
+SESSION_STOP = "3354939424b4456d9802ca8333ed424a"
+FLATPAK = "c7b39b1e006b464599465e105b361485"
+SLEEP_START = "6bbd95ee977941e497c48be27c254128"
+SLEEP_STOP = "8811e6df2a8e40f58a94cea26f8ebf14"
+# logind: "The system will reboot now!" with ACTION and OPERATOR, then
+# "System is rebooting." with SHUTDOWN.
+LOGIND_ASKED = "9e7066279dc8403da79ce4b1a69064b2"
+LOGIND_SHUTDOWN = "98268866d1d54a499c4e98921d93bc40"
+STARTUP_FINISHED = "b07a249cd024414a82dd00cd181378ff"
+JOURNAL_STOPPED = "d93fb3c9c24d451a97cea615ce59c00b"
+# PID 1 starting and finishing a unit, for the disk password's wait.
+UNIT_STARTING = "7d4958e842da4a758f6c1cdc7b36dcc5"
+UNIT_STARTED = "39f53479d3a045ac8e11786248231fbf"
+
+# Settings' root helpers name each change to the firewall and the
+# protection level in the journal, as "HISTORY {json}".
+CHANGE_HELPERS = ("settings-firewall", "settings-protection")
+# Free up space notes what it cleared, as "FREED {json}", from the
+# person's own run of settings-free-space.
+FREE_SPACE = "settings-free-space"
+# The camera and microphone lights note each use, as "USE {json}", from the
+# person's own session (wildos-branding's camera-mic).
+CAMERA_MIC = "wildos-camera-mic"
+
+# Where a password is typed, by PAM service.
+PAM_PLACES = {"sddm": "signin", "sddm-autologin": "signin", "login": "signin", "kde": "lock",
+              "kscreenlocker": "lock", "polkit-1": "admin", "sudo": "admin", "su": "admin", "sshd": "ssh"}
+
+JOURNAL_FIELDS = ("__REALTIME_TIMESTAMP", "MESSAGE", "MESSAGE_ID", "SYSLOG_IDENTIFIER", "_COMM", "_TRANSPORT", "_UID", "_PID", "_BOOT_ID",
+                  "COREDUMP_EXE", "COREDUMP_COMM", "COREDUMP_SIGNAL", "COREDUMP_SIGNAL_NAME", "COREDUMP_UID",
+                  "COREDUMP_UNIT", "COREDUMP_USER_UNIT", "COREDUMP_PID", "COREDUMP_CGROUP",
+                  "SESSION_ID", "USER_ID", "LEADER", "OPERATION", "REF", "REMOTE",
+                  "SLEEP", "SHUTDOWN", "ACTION", "OPERATOR", "_SYSTEMD_UNIT", "_AUDIT_TYPE_NAME", "GLIB_DOMAIN")
+
+
+def now():
+    return time.time()
+
+
+def event_id(*parts):
+    return hashlib.sha1("\x1f".join(str(p) for p in parts).encode("utf-8", "replace")).hexdigest()[:16]
+
+
+def read_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, type(default)) else default
+    except (OSError, ValueError):
+        return default
+
+
+def write_file(path, text, mode=0o644, gid=0):
+    tmp = path + ".new"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, mode)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+        os.fchown(f.fileno(), 0, gid)
+        os.fchmod(f.fileno(), mode)
+    os.replace(tmp, path)
+
+
+def is_person(uid):
+    return isinstance(uid, int) and 1000 <= uid < 60000
+
+
+def user_of(name):
+    try:
+        return pwd.getpwnam(name)
+    except (KeyError, TypeError):
+        return None
+
+
+def uid_of(name):
+    p = user_of(name)
+    return p.pw_uid if p else None
+
+
+def name_of(uid):
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except (KeyError, TypeError):
+        return ""
+
+
+def real_name(name):
+    p = user_of(name)
+    gecos = (p.pw_gecos.split(",")[0].strip() if p else "")
+    return gecos or name
+
+
+class Store:
+    """The records, loaded whole: they are a month of events at most."""
+
+    def __init__(self):
+        self.events = {}
+        self.changed = set()
+
+    def path(self, uid):
+        return os.path.join(DIR, "system.jsonl" if uid is None else "user-%d.jsonl" % uid)
+
+    def load(self):
+        for path in glob.glob(os.path.join(DIR, "*.jsonl")):
+            # The file an event is in says whose it is, so it stays there
+            # and ages out of there.
+            m = re.match(r"user-(\d+)\.jsonl$", os.path.basename(path))
+            uid = int(m.group(1)) if m else None
+            if uid is None and os.path.basename(path) != "system.jsonl":
+                continue
+            try:
+                with open(path, encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            e = json.loads(line)
+                        except ValueError:
+                            continue
+                        if not isinstance(e, dict) or not isinstance(e.get("id"), str) or not isinstance(e.get("t"), (int, float)):
+                            continue
+                        e.pop("uid", None)
+                        if uid is not None:
+                            e["uid"] = uid
+                        self.events[e["id"]] = e
+            except OSError:
+                pass
+
+    def has(self, eid):
+        return eid in self.events
+
+    def get(self, eid):
+        return self.events.get(eid)
+
+    def add(self, kind, t, data, tech, uid=None, eid=None):
+        eid = eid or event_id(kind, t, json.dumps(data, sort_keys=True))
+        if eid in self.events or t < now() - KEEP:
+            return self.events.get(eid)
+        e = {"id": eid, "t": round(t, 3), "kind": kind, "data": data, "tech": tech[-12:]}
+        if uid is not None:
+            e["uid"] = uid
+        self.events[eid] = e
+        self.changed.add(uid)
+        return e
+
+    def remove(self, eid):
+        e = self.events.pop(eid, None)
+        if e:
+            self.changed.add(e.get("uid"))
+
+    def touch(self, e):
+        self.changed.add(e.get("uid"))
+
+    def latest(self, kind, match, within=MERGE, at=None):
+        """The newest event of this kind that match() accepts and whose last
+        moment is within `within` seconds of `at`."""
+        best = None
+        for e in self.events.values():
+            if e["kind"] != kind or not match(e):
+                continue
+            last = e["data"].get("last", e["t"])
+            if at is not None and not (0 <= at - last <= within):
+                continue
+            if best is None or e["t"] > best["t"]:
+                best = e
+        return best
+
+    def prune(self):
+        oldest = now() - KEEP
+        for eid, e in list(self.events.items()):
+            if e.get("t", 0) < oldest:
+                del self.events[eid]
+                self.changed.add(e.get("uid"))
+
+    def save(self):
+        os.makedirs(DIR, mode=0o755, exist_ok=True)
+        os.chmod(DIR, 0o755)
+        by_uid = {}
+        for e in self.events.values():
+            by_uid.setdefault(e.get("uid"), []).append(e)
+        # Every file that exists is written again when it lost events, so a
+        # file whose events all aged out goes too.
+        for path in glob.glob(os.path.join(DIR, "user-*.jsonl")):
+            m = re.match(r"user-(\d+)\.jsonl$", os.path.basename(path))
+            if m and int(m.group(1)) not in by_uid:
+                self.changed.add(int(m.group(1)))
+        for uid in self.changed:
+            events = sorted(by_uid.get(uid, []), key=lambda e: e["t"])
+            path = self.path(uid)
+            if uid is not None and not events:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+                continue
+            text = "".join(json.dumps(e, sort_keys=True, ensure_ascii=False) + "\n" for e in events)
+            if uid is None:
+                write_file(path, text, 0o644)
+            else:
+                try:
+                    gid = pwd.getpwuid(uid).pw_gid
+                except KeyError:
+                    # The account is gone, and its history with it.
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        pass
+                    continue
+                write_file(path, text, 0o640, gid)
+
+
+def tech_line(t, source, text):
+    return [round(t, 3), source[:40], text[:300]]
+
+
+# ------------------------------------------------------------ app names
+
+def desktop_dirs(uid=None):
+    dirs = ["/usr/share/applications", "/usr/local/share/applications",
+            "/var/lib/flatpak/exports/share/applications"]
+    if uid is not None:
+        try:
+            home = pwd.getpwuid(uid).pw_dir
+            dirs += [os.path.join(home, ".local/share/applications"),
+                     os.path.join(home, ".local/share/flatpak/exports/share/applications")]
+        except KeyError:
+            pass
+    return dirs
+
+
+def read_desktop(path):
+    name, program, hidden, entry = "", "", False, False
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.rstrip("\n")
+                if line.startswith("["):
+                    entry = line.strip() == "[Desktop Entry]"
+                elif entry and line.startswith("Name="):
+                    name = line[5:].strip()
+                elif entry and line.startswith("Exec="):
+                    program = os.path.basename(line[5:].strip().split(" ")[0])
+                elif entry and line.strip() == "NoDisplay=true":
+                    hidden = True
+    except OSError:
+        pass
+    return name, program, hidden
+
+
+def app_for_program(program, comm, uid=None):
+    """The name people know a program by, from its Start menu entry."""
+    if program == "plasmashell" or comm == "plasmashell":
+        return "The desktop"
+    if program == "kwin_wayland":
+        return "The window manager"
+    for d in desktop_dirs(uid):
+        for path in sorted(glob.glob(os.path.join(d, "*.desktop"))):
+            name, exe, hidden = read_desktop(path)
+            if name and exe and not hidden and exe in (program, comm):
+                return name
+    return ""
+
+
+def app_for_flatpak(appid, uid=None):
+    for d in desktop_dirs(uid):
+        name, _, _ = read_desktop(os.path.join(d, appid + ".desktop"))
+        if name:
+            return name
+    return catalogue_name(appid, uid)
+
+
+def catalogue_name(appid, uid=None):
+    """An app's name from the catalogue Flatpak keeps of each remote, for
+    an app removed before History looked at it."""
+    roots = ["/var/lib/flatpak/appstream"]
+    if uid is not None:
+        try:
+            roots.append(os.path.join(pwd.getpwuid(uid).pw_dir, ".local/share/flatpak/appstream"))
+        except KeyError:
+            pass
+    needle = "<id>%s</id>" % appid
+    for root in roots:
+        for path in glob.glob(os.path.join(root, "*", "*", "active", "appstream.xml")):
+            try:
+                with open(path, encoding="utf-8", errors="replace") as f:
+                    text = f.read()
+            except OSError:
+                continue
+            at = text.find(needle)
+            if at < 0:
+                continue
+            m = re.search(r"<name>([^<]{1,80})</name>", text[at:at + 20000])
+            if m:
+                return m.group(1).strip().replace("&amp;", "&")
+    return ""
+
+
+def app_for_package(package):
+    """A package's own Start menu entry, while it is installed."""
+    try:
+        out = subprocess.run(["dpkg-query", "-L", package], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    for path in out.splitlines():
+        if path.startswith("/usr/share/applications/") and path.endswith(".desktop"):
+            name, _, hidden = read_desktop(path)
+            if name and not hidden:
+                return name
+    return ""
+
+
+def flatpak_cgroup_app(cgroup):
+    m = re.search(r"app-flatpak-([A-Za-z0-9_.-]+?)-\d+\.scope", cgroup or "")
+    return m.group(1) if m else ""
+
+
+# ------------------------------------------------------------ the journal
+
+def journal_entries(state):
+    """New entries since the last run, or the last 30 days the first time."""
+    args = ["journalctl", "--no-pager", "-q", "-o", "json", "--output-fields=" + ",".join(JOURNAL_FIELDS)]
+    cursor = state.get("cursor")
+    if cursor:
+        args.append("--after-cursor=" + cursor)
+    else:
+        args.append("--since=@%d" % int(now() - KEEP))
+    args += ["MESSAGE_ID=" + COREDUMP, "MESSAGE_ID=" + SESSION_START, "MESSAGE_ID=" + SESSION_STOP,
+             "MESSAGE_ID=" + FLATPAK, "MESSAGE_ID=" + SLEEP_START, "MESSAGE_ID=" + SLEEP_STOP,
+             "+", "_COMM=udisksd", "+", "_TRANSPORT=kernel", "+", "_COMM=systemd-logind", "+", "_COMM=fprintd", "+", "_COMM=ksmserver",
+             "+", "_AUDIT_TYPE_NAME=USER_AUTH", "+", "_SYSTEMD_UNIT=wildos-winmoded.service", "+",
+             "SYSLOG_IDENTIFIER=sddm-helper", "SYSLOG_IDENTIFIER=kscreenlocker_greet",
+             "SYSLOG_IDENTIFIER=polkit-agent-helper-1", "SYSLOG_IDENTIFIER=sshd", "SYSLOG_IDENTIFIER=sshd-session",
+             "SYSLOG_IDENTIFIER=sudo", "SYSLOG_IDENTIFIER=login", "SYSLOG_IDENTIFIER=su"]
+    args += [x for name in CHANGE_HELPERS + (FREE_SPACE, CAMERA_MIC) for x in ("+", "SYSLOG_IDENTIFIER=" + name)]
+    env = dict(os.environ, LC_ALL="C.UTF-8", SYSTEMD_COLORS="0")
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    for line in p.stdout:
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        msg = e.get("MESSAGE")
+        # journalctl gives a message that isn't valid UTF-8 as a list of bytes.
+        if isinstance(msg, list):
+            e["MESSAGE"] = bytes(b for b in msg if isinstance(b, int) and 0 <= b < 256).decode("utf-8", "replace")
+        elif not isinstance(msg, str):
+            e["MESSAGE"] = ""
+        yield e
+        # Moved on entry by entry, so a run cut short never counts a wrong
+        # password or a blocked connection twice.
+        if e.get("__CURSOR"):
+            state["cursor"] = e["__CURSOR"]
+    err = p.stderr.read().decode("utf-8", "replace").strip()
+    code = p.wait()
+    if code != 0:
+        raise RuntimeError(err or "journalctl stopped with %d" % code)
+
+
+def num(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+class Journal:
+    def __init__(self, store, state):
+        self.store = store
+        self.state = state
+        # Sessions this collector reported a sign-in for: id -> {user, uid}.
+        self.sessions = state.setdefault("sessions", {})
+        # Disks the kernel called removable: name -> time it said so.
+        self.removable = state.setdefault("removable", {})
+        # PAM sessions opened, by the process that opened them, which logind
+        # then names as the session's leader: pid -> (time, service, who
+        # said so, where from).
+        self.opened = {}
+        # Lid closes not yet followed by sleep or a shutdown: [{t, boot}].
+        self.lids = state.setdefault("lids", [])
+        # The latest lid, power key and logind request, for why the PC
+        # slept or shut down.
+        self.recent = state.setdefault("recent", {})
+        # The sleep event still waiting for its wake-up.
+        self.sleeping = state.get("sleeping")
+        # fprintd's last verify: who it was for, and when a finger matched,
+        # so the sign-in or unlock it led to says so.
+        self.fp = state.setdefault("fp", {})
+        # Lid switches wildos-network noted, not yet fed in: on some laptops
+        # logind never logs the lid while KDE holds it.
+        done = state.get("lid_switch_done", now() - KEEP)
+        self.switches = sorted(x for x in lid_switches(done + 0.001, now()) if x[0] > done)
+
+    def run(self):
+        for e in journal_entries(self.state):
+            t = (num(e.get("__REALTIME_TIMESTAMP")) or 0) / 1e6
+            if t < now() - KEEP:
+                continue
+            mid = e.get("MESSAGE_ID", "")
+            comm = e.get("_COMM", "")
+            while self.switches and self.switches[0][0] <= t:
+                self.lid_switch(*self.switches.pop(0), e.get("_BOOT_ID", ""))
+            # Within one start-up the monotonic clock never jumps, as the
+            # wall clock does when the time is set.
+            self.boot = e.get("_BOOT_ID", "")
+            self.mono = (num(e.get("__MONOTONIC_TIMESTAMP")) or 0) / 1e6
+            try:
+                if mid == COREDUMP:
+                    self.crash(t, e)
+                elif mid == SESSION_START:
+                    self.session_start(t, e)
+                elif mid == SESSION_STOP:
+                    self.session_stop(t, e)
+                elif mid == FLATPAK:
+                    self.flatpak(t, e)
+                elif mid in (SLEEP_START, SLEEP_STOP):
+                    self.sleep(t, e, mid == SLEEP_START)
+                elif comm == "systemd-logind":
+                    self.logind(t, e)
+                elif comm == "fprintd":
+                    self.fprint(t, e)
+                elif comm == "ksmserver":
+                    # KDE began signing out to shut down or restart.
+                    if "is shutting down" in e["MESSAGE"]:
+                        for lid in self.lids:
+                            if 0 <= t - lid["t"] <= LID_WAIT:
+                                lid.setdefault("ksm", t)
+                elif e.get("_AUDIT_TYPE_NAME") == "USER_AUTH":
+                    self.audit_auth(t, e)
+                elif e.get("_SYSTEMD_UNIT") == "wildos-winmoded.service":
+                    self.winmode(t, e)
+                elif e.get("SYSLOG_IDENTIFIER") in CHANGE_HELPERS:
+                    self.change(t, e)
+                elif e.get("SYSLOG_IDENTIFIER") == FREE_SPACE:
+                    self.freed(t, e)
+                elif e.get("SYSLOG_IDENTIFIER") == CAMERA_MIC:
+                    self.device_use(t, e)
+                elif comm == "udisksd":
+                    self.udisks(t, e)
+                elif e.get("_TRANSPORT") == "kernel":
+                    self.kernel(t, e)
+                else:
+                    self.pam(t, e)
+            except (KeyError, ValueError, TypeError, AttributeError):
+                # One odd entry never stops the rest.
+                continue
+        for switch in self.switches:
+            self.lid_switch(*switch, "")
+        self.settle_lids()
+        self.state["sleeping"] = self.sleeping
+        # Removable disks are only looked up for a few days, and a session
+        # whose end was never logged (a power cut) is forgotten with its
+        # sign-in.
+        for name, at in list(self.removable.items()):
+            if at < now() - 7 * 24 * 3600:
+                del self.removable[name]
+        for sid, s in list(self.sessions.items()):
+            if s.get("t", 0) < now() - KEEP:
+                del self.sessions[sid]
+
+    def crash(self, t, e):
+        uid = num(e.get("COREDUMP_UID"))
+        exe = e.get("COREDUMP_EXE", "")
+        comm = e.get("COREDUMP_COMM", "")
+        program = os.path.basename(exe) or comm
+        signal = e.get("COREDUMP_SIGNAL_NAME", "") or ("signal %s" % e.get("COREDUMP_SIGNAL", "?"))
+        pid = e.get("COREDUMP_PID", "")
+        tech = [tech_line(t, program or comm or "program", "stopped, signal %s (%s)" % (e.get("COREDUMP_SIGNAL", "?"), signal))]
+        if exe:
+            tech.append(tech_line(t, "program", "%s, process %s" % (exe, pid)))
+        unit = e.get("COREDUMP_USER_UNIT") or e.get("COREDUMP_UNIT") or ""
+        # An app's own unit name is a long random string that says nothing;
+        # a service's names the service.
+        if unit and not is_person(uid):
+            tech.append(tech_line(t, "unit", unit))
+        tech.append(tech_line(t, "coredump", "recorded, no memory kept, not sent"))
+        eid = event_id("crash", e.get("COREDUMP_PID"), t)
+        if is_person(uid):
+            app = app_for_flatpak(flatpak_cgroup_app(e.get("COREDUMP_CGROUP")), uid) if "app-flatpak-" in (e.get("COREDUMP_CGROUP") or "") else ""
+            app = app or app_for_program(program, comm, uid)
+            self.store.add("crash", t, {"app": app, "program": program, "signal": signal}, tech, uid, eid)
+        else:
+            self.store.add("service-crash", t, {"program": program, "unit": unit, "signal": signal}, tech, None, eid)
+
+    def pam(self, t, e):
+        msg = e["MESSAGE"]
+        ident = e.get("SYSLOG_IDENTIFIER", "")
+        pid = e.get("_PID", "")
+        m = re.match(r"pam_unix\(([\w.-]+):session\): session opened for user ([\w.-]+)", msg)
+        if m:
+            earlier = self.opened.get(pid)
+            self.opened[pid] = (t, m.group(1), ident, earlier[3] if earlier else "", {"b": self.boot, "m": self.mono})
+            return
+        m = re.match(r"Accepted \S+ for ([\w.-]+) from (\S+)", msg)
+        if m and ident.startswith("sshd"):
+            self.opened[pid] = (t, "sshd", ident, m.group(2), {"b": self.boot, "m": self.mono})
+            return
+        place, user, source = "", "", ""
+        m = re.match(r"pam_unix\(([\w.-]+):auth\): authentication failure;.*?\buser=([\w.-]+)", msg)
+        if m:
+            place, user = PAM_PLACES.get(m.group(1), "admin"), m.group(2)
+            # sshd says it again in its own words, with where from.
+            if place == "ssh":
+                return
+        m = m or re.match(r"Failed password for (?:invalid user )?([\w.-]+) from (\S+)", msg)
+        if m and not place:
+            place, user, source = "ssh", m.group(1), m.group(2)
+        if not place or not user:
+            return
+        # A finger unlocks the lock screen while its password half gives up
+        # in the same second, logging a failure nobody typed.
+        if place == "lock" and self.fp.get("user") == user and 0 <= self.since(self.fp.get("last")) <= 3:
+            return
+        uid = uid_of(user)
+        owner = uid if is_person(uid) else None
+        tech = tech_line(t, ident or "pam", msg)
+        e2 = self.store.latest("password", lambda x: x["data"].get("user") == user and x["data"].get("place") == place, at=t)
+        if e2 is not None:
+            e2["data"]["count"] = e2["data"].get("count", 1) + 1
+            e2["data"]["last"] = round(t, 3)
+            e2["tech"] = (e2["tech"] + [tech])[-12:]
+            self.store.touch(e2)
+            return
+        data = {"user": user, "name": real_name(user), "place": place, "count": 1, "last": round(t, 3)}
+        if source:
+            data["from"] = source
+        self.store.add("password", t, data, [tech], owner)
+
+    def session_start(self, t, e):
+        user = e.get("USER_ID", "")
+        sid = e.get("SESSION_ID", "")
+        uid = uid_of(user)
+        # Only sessions someone signed in to: the sign-in screen's own and
+        # each account's background service manager (opened through
+        # "systemd-user", whose PAM lines aren't read) are left out.
+        opened = self.opened.pop(e.get("LEADER", ""), None)
+        if not is_person(uid) or not sid or not opened or not 0 <= self.since(opened[4]) <= 60:
+            return
+        service = opened[1]
+        if service == "systemd-user":
+            return
+        how = "screen" if service.startswith("sddm") else "ssh" if service == "sshd" else "console" if service == "login" else "other"
+        data = {"user": user, "name": real_name(user), "how": how}
+        if how == "ssh" and opened[3]:
+            data["from"] = opened[3]
+        tech = [tech_line(opened[0], opened[2] or "pam", "session opened through %s" % service),
+                tech_line(t, "systemd-logind", e.get("MESSAGE", ""))]
+        # A finger that matched for this account just before.
+        match = self.take_match(user, t, 30) if how == "screen" else None
+        if match:
+            data["finger"] = True
+            tech.insert(0, tech_line(match["t"], "fprintd", "verify-match for %s" % user))
+        added = self.store.add("signin", t, data, tech, uid, event_id("signin", sid, t))
+        if added is not None:
+            self.sessions[self.session_key(e)] = {"user": user, "uid": uid, "t": t}
+
+    @staticmethod
+    def session_key(e):
+        # logind numbers sessions afresh at each start-up.
+        return "%s:%s" % (e.get("_BOOT_ID", ""), e.get("SESSION_ID", ""))
+
+    def session_stop(self, t, e):
+        sid = e.get("SESSION_ID", "")
+        s = self.sessions.pop(self.session_key(e), None)
+        if not s:
+            return
+        tech = [tech_line(t, "systemd-logind", e.get("MESSAGE", ""))]
+        self.store.add("signout", t, {"user": s["user"], "name": real_name(s["user"]), "since": s.get("t")}, tech, s["uid"],
+                       event_id("signout", sid, t))
+
+    # ------------------------------------------------ fingerprints
+
+    def fprint(self, t, e):
+        """fprintd's own debug lines (its drop-in turns on just its domain):
+        whose prints it loaded, and each verify's result."""
+        msg = e["MESSAGE"]
+        m = re.search(r"discover_prints\(\) for user '([\w.-]+)'", msg)
+        if m:
+            self.fp["user"] = m.group(1)
+            return
+        user = self.fp.get("user", "")
+        if not user or "verify_cb: result" not in msg:
+            return
+        uid = uid_of(user)
+        owner = uid if is_person(uid) else None
+        if "verify-match" in msg:
+            self.fp["last"] = {"b": self.boot, "m": self.mono}
+            claimed = self.fp.get("claimed") or {}
+            used = claimed.get("user") == user and abs(self.since(claimed)) <= 30
+            self.fp.setdefault("matches", []).append({"t": t, "b": self.boot, "m": self.mono, "user": user, "used": used})
+        elif "verify-no-match" in msg:
+            tech = tech_line(t, "fprintd", "verify-no-match for %s" % user)
+            e2 = self.store.latest("finger-unknown", lambda x: x["data"].get("user") == user, at=t)
+            if e2 is not None:
+                e2["data"]["count"] = e2["data"].get("count", 1) + 1
+                e2["data"]["last"] = round(t, 3)
+                e2["tech"] = (e2["tech"] + [tech])[-12:]
+                self.store.touch(e2)
+            else:
+                self.store.add("finger-unknown", t, {"user": user, "name": real_name(user), "count": 1, "last": round(t, 3)},
+                               [tech], owner, event_id("finger-unknown", user, t))
+
+    def since(self, rec):
+        """Seconds from rec (a {b, m} stamp) to the entry at hand."""
+        if not rec or rec.get("b") != self.boot:
+            return 1e9
+        return self.mono - rec.get("m", 0)
+
+    def take_match(self, user, t, within):
+        """The latest unused finger match for the account, if recent."""
+        for m in reversed(self.fp.get("matches", [])):
+            if m["user"] == user and (not m.get("used") or m.pop("signin", False)) and 0 <= self.since(m) <= within:
+                m["used"] = True
+                return m
+        return None
+
+    def audit_auth(self, t, e):
+        """PAM's own record of each sign-in screen, sudo and administrator
+        prompt check: which modules let the person in."""
+        msg = e["MESSAGE"]
+        if "res=success" not in msg:
+            return
+        grantors = re.search(r"grantors=(\S+)", msg)
+        acct = re.search(r'acct="([^"]+)"', msg)
+        exe = re.search(r'exe="([^"]+)"', msg)
+        # pam_fprintd for the sign-in screen and administrator prompts;
+        # sudo in a terminal takes the finger through pam_wildos_fingerprint.
+        if not grantors or not re.search(r"pam_fprintd|pam_wildos_fingerprint", grantors.group(1)) or not acct:
+            return
+        user = acct.group(1)
+        program = os.path.basename(exe.group(1)) if exe else ""
+        if program.startswith("sddm"):
+            # The sign-in event that follows says so (session_start); a
+            # sign-in that never got as far as a session is not an unlock.
+            for m in self.fp.get("matches", []):
+                if m["user"] == user and abs(self.since(m)) <= 30 and not m.get("used"):
+                    m["used"] = True
+                    m["signin"] = True
+            return
+        # The prompt and its PAM helper can each ask the reader, so every
+        # match around this approval belongs to it, not to the lock screen.
+        for m in self.fp.get("matches", []):
+            if m["user"] == user and abs(self.since(m)) <= 30:
+                m["used"] = True
+        self.fp["claimed"] = {"user": user, "b": self.boot, "m": self.mono}
+        uid = uid_of(user)
+        tech = [tech_line(t, program or "pam", "approved by %s for %s" % (grantors.group(1), user))]
+        e2 = self.store.latest("admin-finger", lambda x: x["data"].get("user") == user, at=t)
+        if e2 is not None:
+            e2["data"]["count"] = e2["data"].get("count", 1) + 1
+            e2["data"]["last"] = round(t, 3)
+            e2["tech"] = (e2["tech"] + tech)[-12:]
+            self.store.touch(e2)
+            return
+        self.store.add("admin-finger", t, {"user": user, "name": real_name(user), "by": "sudo" if program == "sudo" else "app",
+                                           "count": 1, "last": round(t, 3)},
+                       tech, uid if is_person(uid) else None, event_id("admin-finger", user, t))
+
+    def settle_fingers(self):
+        """A finger match nothing else claimed within half a minute was the
+        lock screen's: kscreenlocker can't write PAM's audit record."""
+        keep = []
+        for m in self.fp.get("matches", []):
+            if m.get("used"):
+                continue
+            if now() - m["t"] < 30:
+                keep.append(m)
+                continue
+            uid = uid_of(m["user"])
+            self.store.add("unlock", m["t"], {"user": m["user"], "name": real_name(m["user"]), "finger": True},
+                           [tech_line(m["t"], "fprintd", "verify-match for %s" % m["user"]),
+                            tech_line(m["t"], "kscreenlocker", "unlocked")],
+                           uid if is_person(uid) else None, event_id("unlock", m["user"], m["t"]))
+        self.fp["matches"] = keep[-20:]
+
+    # ------------------------------------------------ lid, power and sleep
+
+    def logind(self, t, e):
+        msg = e["MESSAGE"]
+        mid = e.get("MESSAGE_ID", "")
+        boot = e.get("_BOOT_ID", "")
+        if msg == "Lid closed.":
+            self.lid_switch(t, True, boot)
+        elif msg == "Lid opened.":
+            self.lid_switch(t, False, boot)
+        elif msg.startswith("Power key pressed"):
+            self.recent["power"] = t
+        elif mid == LOGIND_ASKED:
+            self.recent["ask"] = {"t": t, "action": e.get("ACTION", ""), "operator": e.get("OPERATOR", "")}
+        elif mid == LOGIND_SHUTDOWN:
+            self.lid_acted(t, "shutdown")
+
+    def lid_switch(self, t, closed, boot):
+        """The lid closed or opened, from logind or from UPower through
+        wildos-network; the two seeing the same switch, within a second or
+        so of each other, count once."""
+        if closed:
+            if abs(t - (self.recent.get("lid") or 0)) <= 5:
+                return
+            self.lids.append({"t": t, "boot": boot})
+            self.recent["lid"] = t
+        else:
+            if abs(t - (self.recent.get("lid_open") or 0)) <= 5:
+                return
+            self.recent["lid_open"] = t
+            for lid in self.lids:
+                lid.setdefault("opened", t)
+        self.state["lid_switch_done"] = max(self.state.get("lid_switch_done", 0), t)
+
+    def lid_acted(self, t, what):
+        """Sleep or a shutdown followed a closed lid: it did what it should."""
+        for lid in list(self.lids):
+            if 0 <= t - lid["t"] <= LID_WAIT:
+                self.lids.remove(lid)
+
+    def why(self, t, action):
+        """What started a sleep or a shutdown at t: the lid, the power
+        button, a person's request (the Start menu, or being left idle) or
+        the system."""
+        r = self.recent
+        lid = r.get("lid") or 0
+        closed = lid > (r.get("lid_open") or 0)
+        ask = r.get("ask") or {}
+        asked = 0 <= t - ask.get("t", 0) <= 120
+        if closed and 0 <= t - lid <= LID_WAIT:
+            return "lid"
+        if 0 <= t - (r.get("power") or 0) <= LID_WAIT:
+            return "power"
+        if asked:
+            return "person" if is_person(uid_of(ask.get("operator", ""))) else "system"
+        # logind acts on a closed lid by itself once nobody's desktop is
+        # in the way, which can be long after it closed (at sign-out).
+        if closed:
+            return "lid"
+        return ""
+
+    def sleep(self, t, e, start):
+        kind = e.get("SLEEP", "") or "suspend"
+        boot = e.get("_BOOT_ID", "")
+        if start:
+            reason = self.why(t, "sleep")
+            self.lid_acted(t, "sleep")
+            ask = self.recent.get("ask") or {}
+            data = {"kind": kind, "reason": reason}
+            if reason == "person":
+                data["user"] = real_name(ask.get("operator", ""))
+            added = self.store.add("sleep", t, data, [tech_line(t, "systemd-sleep", e["MESSAGE"])], None,
+                                   event_id("sleep", boot, t))
+            self.sleeping = added["id"] if added else None
+            return
+        ev = self.store.get(self.sleeping) if self.sleeping else None
+        self.sleeping = None
+        if ev is None:
+            return
+        ev["data"]["woke"] = round(t, 3)
+        ev["data"]["slept"] = round(t - ev["t"])
+        ev["tech"] = (ev["tech"] + [tech_line(t, "systemd-sleep", e["MESSAGE"])])[-12:]
+        self.store.touch(ev)
+
+    def settle_lids(self):
+        snapshots = read_json(LID_SNAPSHOTS, [])
+        keep = []
+        for lid in self.lids:
+            if now() - lid["t"] < LID_WAIT:
+                keep.append(lid)
+                continue
+            # logind and UPower both saw this one, in different runs.
+            if any(e["kind"] == "lid-on" and abs(e["t"] - lid["t"]) <= 5 for e in self.store.events.values()):
+                continue
+            snap = next((s for s in snapshots if abs(s.get("t", 0) - lid["t"]) <= 20 and s.get("event", "close") == "close"), {})
+            data = lid_reason(snap)
+            # KDE started the shutdown, and it never finished: an app held
+            # it up, usually by asking about unsaved work.
+            if lid.get("ksm") and data.get("reason") == "not-done":
+                data["reason"] = "held-up"
+            if lid.get("opened"):
+                data["opened"] = round(lid["opened"], 3)
+            tech = [tech_line(lid["t"], "systemd-logind", "Lid closed.")]
+            for line in snap.get("lines", []):
+                tech.append(tech_line(lid["t"], "lid", line))
+            if lid.get("ksm"):
+                tech.append(tech_line(lid["ksm"], "ksmserver", "shutting down (signing out first)"))
+            if lid.get("opened"):
+                tech.append(tech_line(lid["opened"], "systemd-logind", "Lid opened."))
+            self.store.add("lid-on", lid["t"], data, tech, None, event_id("lid-on", lid.get("boot"), lid["t"]))
+        self.lids[:] = keep
+        self.settle_fingers()
+
+    # ------------------------------------------------ Windows mode, settings
+
+    def winmode(self, t, e):
+        m = re.match(r"(start|resume|restart) failed: (.*)", e["MESSAGE"])
+        if m:
+            self.store.add("winmode-failed", t, {"action": m.group(1)},
+                           [tech_line(t, "winmoded", e["MESSAGE"])], None, event_id("winmode", t, m.group(1)))
+
+    def change(self, t, e):
+        msg = e["MESSAGE"]
+        if not msg.startswith("HISTORY "):
+            return
+        data = json.loads(msg[8:])
+        if not isinstance(data, dict) or not isinstance(data.get("what"), str):
+            return
+        by = num(data.pop("by", None))
+        if is_person(by):
+            data["user"] = real_name(name_of(by))
+        self.store.add("setting", t, data, [tech_line(t, e.get("SYSLOG_IDENTIFIER", ""), msg[8:])], None,
+                       event_id("setting", t, msg))
+
+    def freed(self, t, e):
+        msg = e["MESSAGE"]
+        if not msg.startswith("FREED "):
+            return
+        data = json.loads(msg[6:])
+        items = data.get("items") if isinstance(data, dict) else None
+        if not isinstance(items, dict):
+            return
+        # Whose space was freed is the journal's own record of who wrote
+        # the line, never what the line says.
+        uid = num(e.get("_UID"))
+        if not is_person(uid):
+            return
+        clean = {"auto": data.get("auto") is True, "bytes": max(0, num(data.get("bytes")) or 0),
+                 "items": {k: num(v) or 0 for k, v in items.items() if isinstance(k, str)}}
+        self.store.add("space-freed", t, clean, [tech_line(t, FREE_SPACE, msg[6:])], uid,
+                       event_id("space-freed", t, msg))
+
+    def device_use(self, t, e):
+        """One app's use of the camera or microphone: noted as it starts,
+        and its end filled in as it ends."""
+        msg = e["MESSAGE"]
+        if not msg.startswith("USE "):
+            return
+        data = json.loads(msg[4:])
+        if not isinstance(data, dict) or data.get("device") not in ("camera", "microphone"):
+            return
+        # Whose it is is the journal's own record of who wrote the line;
+        # an account can only ever add to its own history.
+        uid = num(e.get("_UID"))
+        if not is_person(uid):
+            return
+        key = str(data.get("key", ""))[:32]
+        start = data.get("start")
+        if not key or not isinstance(start, (int, float)):
+            return
+        end = data.get("end")
+        eid = event_id("device-use", uid, key)
+        tech = [tech_line(t, CAMERA_MIC, msg[4:])]
+        existing = self.store.get(eid)
+        if existing is None:
+            self.store.add("device-use", float(start), {"device": data["device"], "app": str(data.get("app", ""))[:80],
+                                                        "id": str(data.get("id", ""))[:120], "how": str(data.get("how", ""))[:16],
+                                                        "end": round(end, 3) if isinstance(end, (int, float)) else None},
+                           tech, uid, eid)
+        elif isinstance(end, (int, float)):
+            existing["data"]["end"] = round(end, 3)
+            existing["tech"] = (existing["tech"] + tech)[-12:]
+            self.store.touch(existing)
+
+    def flatpak(self, t, e):
+        op = e.get("OPERATION", "")
+        ref = e.get("REF", "")
+        parts = ref.split("/")
+        if len(parts) < 2 or parts[0] != "app":
+            return
+        appid = parts[1]
+        uid = num(e.get("_UID"))
+        owner = uid if is_person(uid) else None
+        tech = [tech_line(t, "flatpak", e.get("MESSAGE", "") or "%s %s" % (op, ref))]
+        if e.get("REMOTE"):
+            tech.append(tech_line(t, "remote", e["REMOTE"]))
+        if op == "deploy install":
+            name = app_for_flatpak(appid, uid) or self.known_name(appid)
+            self.store.add("app-installed", t, {"app": name, "id": appid, "via": "flatpak", "remote": e.get("REMOTE", "")},
+                           tech, owner, event_id("flatpak", t, op, ref))
+        elif op == "uninstall":
+            self.store.add("app-removed", t, {"app": self.known_name(appid), "id": appid, "via": "flatpak"},
+                           tech, owner, event_id("flatpak", t, op, ref))
+        elif op == "deploy update":
+            name = app_for_flatpak(appid, uid) or self.known_name(appid)
+            e2 = self.store.latest("apps-updated", lambda x: x.get("uid") == owner, at=t)
+            if e2 is not None:
+                if appid not in e2["data"]["ids"]:
+                    e2["data"]["ids"].append(appid)
+                    e2["data"]["apps"].append(name)
+                e2["data"]["last"] = round(t, 3)
+                e2["tech"] = (e2["tech"] + tech)[-12:]
+                self.store.touch(e2)
+            else:
+                self.store.add("apps-updated", t, {"apps": [name], "ids": [appid], "last": round(t, 3)}, tech, owner,
+                               event_id("flatpak-update", t, ref))
+
+    def known_name(self, appid):
+        """The name an app had when it was installed, once it is gone."""
+        for e in sorted(self.store.events.values(), key=lambda x: -x["t"]):
+            if e["data"].get("id") == appid and e["data"].get("app"):
+                return e["data"]["app"]
+        return ""
+
+    def kernel(self, t, e):
+        msg = e["MESSAGE"]
+        m = re.search(r"\[(sd[a-z]+)\] Attached SCSI removable disk", msg)
+        if m:
+            self.removable[m.group(1)] = t
+            return
+        m = re.match(r"Out of memory: Killed process (\d+) \(([^)]*)\).*?UID:(\d+)", msg)
+        if m:
+            uid = int(m.group(3))
+            comm = m.group(2)
+            owner = uid if is_person(uid) else None
+            app = app_for_program(comm, comm, uid) if owner is not None else ""
+            self.store.add("oom", t, {"app": app, "program": comm}, [tech_line(t, "kernel", msg)], owner,
+                           event_id("oom", m.group(1), t))
+            return
+        m = (re.search(r"I/O error, dev ([\w-]+), sector", msg) or re.search(r"Buffer I/O error on dev ([\w-]+)", msg)
+             or re.search(r"(?:EXT4-fs|BTRFS) (?:error|critical|warning).*?\(device (\w[\w-]*)\)", msg))
+        if m:
+            self.disk_error(t, m.group(1), msg)
+
+    def disk_error(self, t, device, msg):
+        """Errors reading or writing a disk, one event per disk per hour:
+        a failing disk logs hundreds."""
+        tech = tech_line(t, "kernel", msg)
+        e2 = self.store.latest("disk-error", lambda x: x["data"].get("device") == device, within=3600, at=t)
+        if e2 is not None:
+            e2["data"]["count"] = e2["data"].get("count", 1) + 1
+            e2["data"]["last"] = round(t, 3)
+            if len(e2["tech"]) < 12:
+                e2["tech"].append(tech)
+            self.store.touch(e2)
+            return
+        self.store.add("disk-error", t, {"device": device, "disk": disk_kind(device, self.removable), "count": 1, "last": round(t, 3)},
+                       [tech], None, event_id("disk-error", device, t))
+
+    def drive_kind(self, device):
+        base = re.sub(r"\d+$", "", os.path.basename(device))
+        if base in self.removable:
+            return "usb"
+        try:
+            if "/usb" in os.path.realpath("/sys/class/block/" + base):
+                return "usb"
+        except OSError:
+            pass
+        return "drive"
+
+    def udisks(self, t, e):
+        msg = e["MESSAGE"]
+        m = re.match(r"Mounted (/dev/\S+) at (.+?) on behalf of uid (\d+)", msg)
+        if m:
+            device, mount, uid = m.group(1), m.group(2), int(m.group(3))
+            if not mount.startswith("/media/"):
+                return
+            kind = self.drive_kind(device)
+            self.store.add("drive-in", t, {"label": os.path.basename(mount), "kind": kind},
+                           [tech_line(t, "udisksd", msg)], uid if is_person(uid) else None, event_id("mount", device, t))
+            return
+        m = re.match(r"Cleaning up mount point (.+?) \(device (\S+) (?:no longer exists|is not mounted)", msg)
+        if m:
+            mount = m.group(1)
+            # Right after start-up this is udisks tidying up after a PC
+            # that went off with the drive mounted; not a drive pulled out.
+            if "no longer exists" not in msg or (num(e.get("__MONOTONIC_TIMESTAMP")) or 0) < 120e6:
+                return
+            parts = mount.split("/")
+            uid = uid_of(parts[2]) if len(parts) > 3 and parts[1] == "media" else None
+            # The mount line named the device; the clean-up only its number.
+            label = os.path.basename(mount)
+            mounted = self.store.latest("drive-in", lambda x: x["data"].get("label") == label, within=30 * 24 * 3600, at=t)
+            kind = mounted["data"].get("kind", "drive") if mounted else "drive"
+            self.store.add("drive-yanked", t, {"label": label, "kind": kind}, [tech_line(t, "udisksd", msg)],
+                           uid if is_person(uid) else None, event_id("yank", mount, t))
+
+
+# ------------------------------------------------------------ disks
+
+def run_out(args, timeout=10):
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+                              env=dict(os.environ, LC_ALL="C.UTF-8")).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def disk_kind(device, removable):
+    """system (the disk Wild OS runs from), usb or other, for the words."""
+    base = os.path.basename(device)
+    # A device-mapper device (the encrypted system, LVM) or a partition:
+    # the disks under it.
+    under = run_out(["lsblk", "-nrso", "NAME,TYPE", "/dev/" + base]).split()
+    disks = [n for n, kind in zip(under[::2], under[1::2]) if kind == "disk"] or [re.sub(r"p?\d+$", "", base)]
+    root = run_out(["findmnt", "-nvo", "SOURCE", "/"]).strip()
+    root_disks = []
+    if root:
+        tree = run_out(["lsblk", "-nrso", "NAME,TYPE", root]).split()
+        root_disks = [n for n, kind in zip(tree[::2], tree[1::2]) if kind == "disk"]
+    if any(d in root_disks for d in disks):
+        return "system"
+    if any(d in removable for d in disks):
+        return "usb"
+    for d in disks:
+        try:
+            if "/usb" in os.path.realpath("/sys/class/block/" + d):
+                return "usb"
+        except OSError:
+            pass
+    return "other"
+
+
+# ------------------------------------------------------------ the lid
+
+POWERDEVIL_ACTIONS = {0: "nothing", 1: "sleep", 2: "hibernate", 8: "shutdown", 16: "ask", 32: "lock", 64: "screen-off",
+                      128: "screen-off"}
+
+
+def ini_value(path, group, key):
+    """One key of a KDE config file, or None."""
+    section = None
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("["):
+                    section = line
+                elif section == group and line.startswith(key + "="):
+                    return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return None
+
+
+def bus_property(name, path, iface, prop):
+    out = run_out(["busctl", "--json=short", "get-property", name, path, iface, prop])
+    try:
+        return json.loads(out).get("data")
+    except ValueError:
+        return None
+
+
+def lid_snapshot():
+    """Everything that decides what closing the lid does, as it is right
+    now: whose desktop is on screen, battery or mains, what Power and
+    battery > More power settings says, other screens, and inhibitor locks.
+    Nothing here goes in the journal by itself."""
+    snap = {"t": round(now(), 3), "event": "close"}
+    seat = bus_property("org.freedesktop.login1", "/org/freedesktop/login1/seat/seat0", "org.freedesktop.login1.Seat", "ActiveSession")
+    user = ""
+    if isinstance(seat, list) and seat and seat[0]:
+        user = (bus_property("org.freedesktop.login1", seat[1], "org.freedesktop.login1.Session", "Name") or "")
+    p = user_of(user) if user else None
+    snap["user"] = user if p and is_person(p.pw_uid) else ""
+    snap["battery"] = bool(bus_property("org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"))
+    profile = "Battery" if snap["battery"] else "AC"
+    if snap["user"]:
+        rc = os.path.join(p.pw_dir, ".config/powerdevilrc")
+        group = "[%s][SuspendAndShutdown]" % profile
+        action = num(ini_value(rc, group, "LidAction"))
+        can_sleep = (run_out(["busctl", "call", "org.freedesktop.login1", "/org/freedesktop/login1",
+                              "org.freedesktop.login1.Manager", "CanSuspend"]).strip() == 's "yes"')
+        snap["action"] = POWERDEVIL_ACTIONS.get(action if action is not None else (1 if can_sleep else 64), "other")
+        snap["with_screen"] = (ini_value(rc, group, "InhibitLidActionWhenExternalMonitorPresent") or "true") == "false"
+    snap["profile"] = profile
+    # Screens other than a laptop's own panel.
+    screens = 0
+    for status in glob.glob("/sys/class/drm/card*-*/status"):
+        name = os.path.basename(os.path.dirname(status)).split("-", 1)[1]
+        try:
+            with open(status) as f:
+                connected = f.read().strip() == "connected"
+        except OSError:
+            connected = False
+        if connected and not re.match(r"(eDP|LVDS|DSI)", name):
+            screens += 1
+    snap["screens"] = screens
+    for prop in ("HandleLidSwitch", "HandleLidSwitchExternalPower", "HandleLidSwitchDocked", "Docked"):
+        snap[prop] = bus_property("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", prop)
+    blocks = []
+    out = run_out(["busctl", "--json=short", "call", "org.freedesktop.login1", "/org/freedesktop/login1",
+                   "org.freedesktop.login1.Manager", "ListInhibitors"])
+    try:
+        rows = json.loads(out).get("data", [[]])[0]
+    except (ValueError, IndexError, AttributeError):
+        rows = []
+    for what, who, why, mode, uid, pid in rows:
+        if mode != "block" or not re.search(r"handle-lid-switch|sleep|shutdown", what):
+            continue
+        # KDE's own lock is how KDE takes over the lid; not a reason.
+        if who == "PowerDevil":
+            snap["kde"] = True
+            continue
+        try:
+            with open("/proc/%d/comm" % pid) as f:
+                comm = f.read().strip()
+        except OSError:
+            comm = ""
+        blocks.append({"who": who, "why": why, "what": what, "comm": comm, "uid": uid})
+    snap["blocks"] = blocks
+    lines = ["%s, %s power, %d other screen%s" % (("desktop of " + snap["user"]) if snap["user"] else "sign-in screen",
+                                                  "battery" if snap["battery"] else "mains", screens, "" if screens == 1 else "s")]
+    if snap.get("action"):
+        lines.append("More power settings: %s; even with another screen: %s" % (snap["action"], "yes" if snap.get("with_screen") else "no"))
+    for b in blocks:
+        lines.append("inhibitor %s (%s): %s, %s" % (b["who"], b["comm"], b["what"], b["why"]))
+    snap["lines"] = lines
+    return snap
+
+
+def lid_closed():
+    """Run by wildos-network as the lid closes."""
+    os.makedirs(DIR, mode=0o755, exist_ok=True)
+    snap = lid_snapshot()
+    lock = open(LID_SNAPSHOTS + ".lock", "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    snaps = [s for s in read_json(LID_SNAPSHOTS, []) if isinstance(s, dict) and s.get("t", 0) > now() - KEEP]
+    snaps.append(snap)
+    write_file(LID_SNAPSHOTS, json.dumps(snaps[-100:]), 0o600)
+
+
+def lid_opened():
+    """Run by wildos-network as the lid opens."""
+    os.makedirs(DIR, mode=0o755, exist_ok=True)
+    lock = open(LID_SNAPSHOTS + ".lock", "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    snaps = [s for s in read_json(LID_SNAPSHOTS, []) if isinstance(s, dict) and s.get("t", 0) > now() - KEEP]
+    snaps.append({"t": round(now(), 3), "event": "open"})
+    write_file(LID_SNAPSHOTS, json.dumps(snaps[-100:]), 0o600)
+
+
+def lid_switches(since, until):
+    """Lid closes and opens wildos-network saw through UPower, which reads
+    the switch itself: [(t, closed)]."""
+    out = []
+    for snap in read_json(LID_SNAPSHOTS, []):
+        if isinstance(snap, dict) and since <= snap.get("t", 0) <= until:
+            out.append((snap["t"], snap.get("event", "close") == "close"))
+    return out
+
+
+def lid_reason(snap):
+    """Why closing the lid did nothing, from what was true as it closed."""
+    if not snap:
+        return {"reason": "unknown"}
+    apps = [b for b in snap.get("blocks", []) if not b["who"] in ("ModemManager", "NetworkManager", "UPower")]
+    if apps:
+        return {"reason": "app", "apps": sorted({b["who"] for b in apps}), "profile": snap.get("profile")}
+    if snap.get("user") and snap.get("kde"):
+        action = snap.get("action", "")
+        if action in ("nothing", "lock", "screen-off", "ask"):
+            return {"reason": "setting", "action": action, "profile": snap.get("profile")}
+        if snap.get("screens", 0) > 0 and not snap.get("with_screen"):
+            return {"reason": "screen", "action": action, "screens": snap["screens"], "profile": snap.get("profile")}
+        return {"reason": "not-done", "action": action, "profile": snap.get("profile")}
+    handle = snap.get("HandleLidSwitchExternalPower") if not snap.get("battery") else snap.get("HandleLidSwitch")
+    if snap.get("Docked") and snap.get("HandleLidSwitchDocked") == "ignore":
+        return {"reason": "screen", "profile": snap.get("profile")}
+    if handle == "ignore":
+        return {"reason": "signin-setting", "profile": snap.get("profile")}
+    return {"reason": "unknown", "profile": snap.get("profile")}
+
+
+# ------------------------------------------------------------ start-up and shutdown
+
+def journal_json(args):
+    out = run_out(["journalctl", "--no-pager", "-q", "-o", "json"] + args, timeout=60)
+    entries = []
+    for line in out.splitlines():
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(e.get("MESSAGE"), list):
+            e["MESSAGE"] = bytes(b for b in e["MESSAGE"] if isinstance(b, int) and 0 <= b < 256).decode("utf-8", "replace")
+        elif not isinstance(e.get("MESSAGE"), str):
+            e["MESSAGE"] = ""
+        e["t"] = (num(e.get("__REALTIME_TIMESTAMP")) or 0) / 1e6
+        entries.append(e)
+    return entries
+
+
+ENDING_RULES = 2
+
+
+def collect_boots(store, state):
+    """Each start-up (how long it took), and how each one ended: shut down
+    or restarted (by what), or not properly at all."""
+    out = run_out(["journalctl", "--list-boots", "--no-pager", "-o", "json"], timeout=30)
+    try:
+        boots = json.loads(out)
+    except ValueError:
+        raise RuntimeError("journalctl --list-boots: " + out[:200])
+    boots = [b for b in boots if isinstance(b, dict) and b.get("boot_id")]
+    boots.sort(key=lambda b: b.get("first_entry", 0))
+    done = state.setdefault("boots", {})
+    current = boots[-1]["boot_id"] if boots else ""
+    previous = None
+    for b in boots:
+        bid = b["boot_id"]
+        first = b.get("first_entry", 0) / 1e6
+        last = b.get("last_entry", 0) / 1e6
+        mark = done.setdefault(bid, {})
+        if last < now() - KEEP:
+            previous = b
+            continue
+        if not mark.get("start"):
+            startup(store, bid, first, previous)
+            mark["start"] = True
+        # A start-up's end is judged again when the rules change: version 2
+        # stopped calling a shutdown whose journal was cut short "not shut
+        # down properly".
+        if bid != current and mark.get("end") != ENDING_RULES:
+            store.remove(event_id("unclean", bid))
+            store.remove(event_id("ending", bid))
+            ending(store, bid, last)
+            mark["end"] = ENDING_RULES
+        previous = b
+    # Boots older than the history kept are forgotten.
+    alive = {b["boot_id"] for b in boots if b.get("last_entry", 0) / 1e6 >= now() - KEEP}
+    for bid in list(done):
+        if bid not in alive:
+            del done[bid]
+
+
+def startup(store, bid, first, previous):
+    entries = journal_json(["-b", bid, "_PID=1", "--until=@%d" % int(first + 900)])
+    finished = next((e for e in entries if e.get("MESSAGE_ID") == STARTUP_FINISHED), None)
+    # The time the disk password screen sat waiting is not start-up time.
+    # Measured on the monotonic clock: the wall clock can jump before the
+    # time is set.
+    wait = 0.0
+    starting = {}
+    for e in entries:
+        msg = e["MESSAGE"]
+        if "systemd-cryptsetup@" not in msg:
+            continue
+        mono = (num(e.get("__MONOTONIC_TIMESTAMP")) or 0) / 1e6
+        if msg.startswith("Starting systemd-cryptsetup@"):
+            starting[msg.split(" ")[1]] = mono
+        elif msg.startswith("Finished systemd-cryptsetup@"):
+            begun = starting.pop(msg.split(" ")[1], None)
+            if begun is not None:
+                wait += max(0.0, mono - begun)
+    t = finished["t"] if finished else first
+    data = {}
+    tech = [tech_line(first, "kernel", "start-up began")]
+    if finished:
+        total = sum((num(finished.get(k)) or 0) for k in ("FIRMWARE_USEC", "LOADER_USEC", "KERNEL_USEC", "INITRD_USEC", "USERSPACE_USEC")) / 1e6
+        data["seconds"] = round(max(0.0, total - wait))
+        if wait >= 1:
+            data["waited"] = round(wait)
+        tech.append(tech_line(t, "systemd", finished["MESSAGE"]))
+        if wait >= 1:
+            tech.append(tech_line(t, "systemd", "of which %.0f s waiting for the disk password" % wait))
+    store.add("startup", t, data, tech, None, event_id("startup", bid))
+
+
+def ending(store, bid, last):
+    """How a start-up that is over ended."""
+    tail = journal_json(["-b", bid, "-n", "1"])
+    clean = bool(tail) and tail[-1].get("MESSAGE_ID") == JOURNAL_STOPPED
+    since = "--since=@%d" % int(last - 1800)
+    lines = journal_json(["-b", bid, since, "_COMM=systemd-logind", "+", "_COMM=unattended-upgr", "+", "_COMM=upowerd",
+                          "+", "SYSLOG_IDENTIFIER=systemd-sleep"])
+    lid = power = battery = updates = None
+    lid_open = None
+    ask = shut = None
+    asleep = None
+    for e in lines:
+        msg = e["MESSAGE"]
+        if msg == "Lid closed.":
+            lid = e["t"]
+        elif msg == "Lid opened.":
+            lid_open = e["t"]
+        elif msg.startswith("Power key pressed"):
+            power = e["t"]
+        elif e.get("MESSAGE_ID") == LOGIND_ASKED:
+            ask = e
+        elif e.get("MESSAGE_ID") == LOGIND_SHUTDOWN:
+            shut = e
+        elif e.get("_COMM") == "upowerd" and "critical" in msg.lower():
+            battery = e["t"]
+        elif e.get("_COMM") == "unattended-upgr" and "reboot" in msg.lower():
+            updates = e["t"]
+        elif e.get("SYSLOG_IDENTIFIER") == "systemd-sleep":
+            if msg.startswith("Performing sleep operation"):
+                asleep = e["t"]
+            elif msg.startswith("System returned from sleep"):
+                asleep = None
+    for when, closed in lid_switches(last - 1800, last + 1):
+        if closed and (lid is None or when > lid):
+            lid = when
+        elif not closed and (lid_open is None or when > lid_open):
+            lid_open = when
+    lid_down = lid if lid and not (lid_open and lid_open > lid) else None
+    # The journal can stop before it writes "Journal stopped": on some PCs
+    # the last lines are the file systems being unmounted. A shutdown that
+    # logind started and that ends within two minutes was a shutdown, not
+    # a power cut or a hang.
+    if not clean and shut and 0 <= last - shut["t"] <= 120:
+        clean = True
+    if not clean:
+        data = {"last": round(last, 3)}
+        if lid_down:
+            data["lid"] = round(lid_down, 3)
+        if asleep:
+            data["asleep"] = round(asleep, 3)
+        # Programs' own last words; the kernel's audit records say nothing
+        # a person can use.
+        tech = [tech_line(e["t"], e.get("SYSLOG_IDENTIFIER") or e.get("_COMM") or "journal", e["MESSAGE"])
+                for e in journal_json(["-b", bid, "-n", "4", "_TRANSPORT=journal", "_TRANSPORT=syslog", "_TRANSPORT=stdout"])]
+        tech.append(tech_line(last, "journal", "nothing more was recorded; there was no shutdown"))
+        # Shown at the next start, when it came to light.
+        store.add("unclean", last, data, tech, None, event_id("unclean", bid))
+        return
+    t = shut["t"] if shut else last
+    kind = "restart" if ((shut or {}).get("SHUTDOWN") == "reboot" or (ask or {}).get("ACTION") == "reboot") else "shutdown"
+    if lid_down and 0 <= t - lid_down <= 300:
+        cause = "lid"
+    elif power and 0 <= t - power <= 120:
+        cause = "power"
+    elif battery and 0 <= t - battery <= 300:
+        cause = "battery"
+    elif updates and 0 <= t - updates <= 1800:
+        cause = "updates"
+    elif ask and is_person(uid_of(ask.get("OPERATOR", ""))):
+        cause = "person"
+    elif ask or shut:
+        cause = "system"
+    else:
+        cause = ""
+    data = {"cause": cause}
+    if cause == "person":
+        data["user"] = real_name(ask.get("OPERATOR", ""))
+    tech = []
+    for e in (ask, shut):
+        if e:
+            tech.append(tech_line(e["t"], "systemd-logind", e["MESSAGE"] + (" (asked by %s)" % e["OPERATOR"] if e.get("OPERATOR") else "")))
+    tech.append(tech_line(last, "systemd-journald", "Journal stopped"))
+    store.add(kind, t, data, tech, None, event_id("ending", bid))
+
+
+# ------------------------------------------------------------ apt
+
+def apt_entries():
+    entries = []
+    for path in APT_LOGS:
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        for block in re.split(r"\n\s*\n", text):
+            fields = {}
+            for line in block.strip().splitlines():
+                key, sep, value = line.partition(": ")
+                if sep:
+                    fields[key.strip()] = value.strip()
+            if "Start-Date" in fields:
+                entries.append(fields)
+    return entries
+
+
+def apt_time(value):
+    try:
+        return time.mktime(time.strptime(re.sub(r"\s+", " ", value), "%Y-%m-%d %H:%M:%S"))
+    except (TypeError, ValueError):
+        return None
+
+
+def apt_packages(value):
+    # "name:arch (old, new), other:arch (version, automatic)"
+    out = []
+    for m in re.finditer(r"([^\s,(]+?)(?::[a-z0-9]+)? \(([^)]*)\)", value or ""):
+        out.append((m.group(1), "automatic" in m.group(2)))
+    return out
+
+
+def collect_apt(store):
+    restore = [e for e in store.events.values() if e["kind"] == "restore-point"]
+    for f in apt_entries():
+        t = apt_time(f.get("Start-Date"))
+        if t is None or t < now() - KEEP:
+            continue
+        eid = event_id("apt", f.get("Start-Date"), f.get("Commandline", ""))
+        if store.has(eid):
+            continue
+        end = apt_time(f.get("End-Date"))
+        if end is None and t > now() - 3600:
+            # Still going: picked up when it ends.
+            continue
+        cmd = f.get("Commandline", "")
+        installed = [p for p, auto in apt_packages(f.get("Install"))]
+        chosen = [p for p, auto in apt_packages(f.get("Install")) if not auto]
+        upgraded = [p for p, _ in apt_packages(f.get("Upgrade"))] + [p for p, _ in apt_packages(f.get("Downgrade"))]
+        removed = [p for p, _ in apt_packages(f.get("Remove"))] + [p for p, _ in apt_packages(f.get("Purge"))]
+        error = f.get("Error", "")
+        by = f.get("Requested-By", "")
+        tech = [tech_line(t, "apt", "started: " + (cmd or "an update"))]
+        if by:
+            tech.append(tech_line(t, "apt", "asked for by " + by))
+        for label, items in (("installed", installed), ("updated", upgraded), ("removed", removed)):
+            if items:
+                tech.append(tech_line(t, "apt", "%s %d: %s" % (label, len(items), ", ".join(items[:12]) + (" and more" if len(items) > 12 else ""))))
+        if error:
+            tech.append(tech_line(end or t, "apt", "error: " + error))
+        if end:
+            tech.append(tech_line(end, "apt", "finished"))
+        role = re.search(r"role='?([\w-]+)", cmd)
+        role = role.group(1) if role else ""
+        auto = "unattended-upgrade" in cmd
+        is_update = auto or role in ("update-packages", "upgrade-system") or re.search(r"\b(upgrade|full-upgrade|dist-upgrade)\b", cmd) is not None
+        # apt's hook makes the point once apt has started, so it can be
+        # stamped a little after Start-Date.
+        saved = any(r["data"].get("kind") != "manual" and -10 * 60 <= t - r["t"] <= 15 * 60 for r in restore)
+        if is_update:
+            count = len(upgraded) + len(chosen)
+            if error:
+                store.add("update-failed", t, {"count": count, "auto": auto}, tech, None, eid)
+            elif count or installed or removed:
+                store.add("updates", t, {"count": count or len(installed), "auto": auto, "restore": saved,
+                                         "packages": (upgraded + chosen)[:50]}, tech, None, eid)
+        elif role in ("install-packages", "install-files") and chosen:
+            names = [app_for_package(p) for p in chosen]
+            app = next((n for n in names if n), "")
+            if error:
+                store.add("install-failed", t, {"app": app, "packages": chosen[:20]}, tech, None, eid)
+            else:
+                store.add("app-installed", t, {"app": app, "id": chosen[0], "packages": chosen[:20], "via": "deb"}, tech, None, eid)
+        elif role == "remove-packages" and removed:
+            app = next((x["data"].get("app") for x in sorted(store.events.values(), key=lambda x: -x["t"])
+                        if x["kind"] == "app-installed" and x["data"].get("id") in removed and x["data"].get("app")), "")
+            store.add("app-removed", t, {"app": app, "id": removed[0], "packages": removed[:20], "via": "deb"}, tech, None, eid)
+        elif installed or removed or upgraded:
+            if error:
+                store.add("install-failed", t, {"app": "", "packages": (chosen or removed)[:20]}, tech, None, eid)
+            else:
+                store.add("programs", t, {"installed": len(chosen), "removed": len(removed), "updated": len(upgraded),
+                                          "packages": (chosen + removed)[:20]}, tech, None, eid)
+
+
+# ------------------------------------------------------------ restore points
+
+def collect_restore(store):
+    for path in RESTORE_INDEXES:
+        index = read_json(path, {})
+        for p in index.get("points", []) if isinstance(index.get("points"), list) else []:
+            if not isinstance(p, dict):
+                continue
+            t = p.get("time")
+            if isinstance(t, str):
+                try:
+                    t = time.mktime(time.strptime(t[:19], "%Y-%m-%dT%H:%M:%S"))
+                except ValueError:
+                    t = None
+            if not isinstance(t, (int, float)):
+                continue
+            tech = [tech_line(t, "restore-points", "made restore point %s (%s)" % (p.get("id"), p.get("kind", "")))]
+            if p.get("label"):
+                tech.append(tech_line(t, "restore-points", "label: %s" % p["label"]))
+            store.add("restore-point", t, {"label": p.get("label") or "", "summary": p.get("summary") or "",
+                                           "kind": p.get("kind") or "", "point": p.get("id")}, tech, None,
+                      event_id("restore", path, p.get("id"), t))
+            # Reset Wild OS makes this point first, from start-up recovery.
+            if p.get("label") == RESET_LABEL:
+                store.add("reset", t, {"point": p.get("id")}, tech, None, event_id("reset", path, p.get("id"), t))
+    labels = {}
+    for path in RESTORE_INDEXES:
+        for p in read_json(path, {}).get("points", []) or []:
+            if isinstance(p, dict):
+                labels[str(p.get("id"))] = p.get("label") or ""
+    # restore-points' own log says when the PC went back.
+    for path in RESTORE_LOGS:
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                lines = f.read().splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            m = re.match(r"(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) (start-up recovery went back|went back|going back) to restore point (\d+)", line)
+            if not m:
+                continue
+            t = time.mktime(time.strptime(m.group(1), "%Y-%m-%d %H:%M:%S"))
+            how = {"going back": "staged", "went back": "done", "start-up recovery went back": "recovery"}[m.group(2)]
+            store.add("went-back", t, {"how": how, "point": m.group(3), "label": labels.get(m.group(3), "")},
+                      [tech_line(t, "restore-points", line[20:])], None, event_id("went-back", line))
+
+
+# ------------------------------------------------------------ firewall
+
+def collect_firewall(store, state):
+    done = state.get("firewall", 0)
+    newest = done
+    # The open event per sender, so a burst of thousands stays quick.
+    open_events = {}
+    try:
+        f = open(FIREWALL_LOG, encoding="utf-8", errors="replace")
+    except OSError:
+        return
+    with f:
+        for line in f:
+            try:
+                b = json.loads(line)
+                t = float(b["t"])
+            except (ValueError, KeyError, TypeError):
+                continue
+            if t <= done or t < now() - KEEP:
+                continue
+            newest = max(newest, t)
+            source = str(b.get("src", ""))
+            port = num(b.get("port")) or 0
+            proto = str(b.get("proto", "tcp"))
+            tech = tech_line(t, "firewall", "turned away %s port %d from %s" % (proto, port, source))
+            if source not in open_events:
+                open_events[source] = store.latest("firewall", lambda x: x["data"].get("source") == source,
+                                                   within=KEEP, at=t)
+            e = open_events[source]
+            if e is not None and not 0 <= t - e["data"].get("last", e["t"]) <= MERGE:
+                e = None
+            if e is not None:
+                d = e["data"]
+                d["count"] = d.get("count", 1) + 1
+                d["last"] = round(t, 3)
+                key = "%s/%d" % (proto, port)
+                if key not in d["ports"]:
+                    d["ports"].append(key)
+                e["tech"] = (e["tech"] + [tech])[-12:]
+                store.touch(e)
+                continue
+            open_events[source] = store.add("firewall", t, {"source": source, "kind": b.get("kind", "other"), "device": b.get("device", ""),
+                                      "port": port, "proto": proto, "ports": ["%s/%d" % (proto, port)], "count": 1,
+                                      "last": round(t, 3)}, [tech], None, event_id("firewall", source, t))
+    state["firewall"] = newest
+
+
+# ------------------------------------------------------------ the run
+
+def collect():
+    os.makedirs(DIR, mode=0o755, exist_ok=True)
+    lock = open(LOCK, "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    state = read_json(STATE, {})
+    store = Store()
+    store.load()
+    store.prune()
+    # Settings shows the name of what failed, in words; the error itself
+    # goes to the system log.
+    problems = []
+    for name, step in (("the restore points", lambda: collect_restore(store)),
+                       ("the system log", lambda: Journal(store, state).run()),
+                       ("the record of start-ups", lambda: collect_boots(store, state)),
+                       ("the list of updates", lambda: collect_apt(store)),
+                       ("the firewall's list", lambda: collect_firewall(store, state))):
+        try:
+            step()
+        except (OSError, RuntimeError, ValueError, KeyError, TypeError) as e:
+            problems.append(name)
+            print("%s: %s" % (name, str(e).splitlines()[0] if str(e) else e.__class__.__name__), file=sys.stderr)
+    store.save()
+    write_file(STATE, json.dumps(state, sort_keys=True), 0o600)
+    # Settings tells people when the record could not be brought up to date.
+    status = {"t": round(now(), 3), "ok": not problems, "problems": problems}
+    write_file(os.path.join(DIR, "status.json"), json.dumps(status), 0o644)
+    return problems
+
+
+def forget_firewall():
+    """The firewall's Clear the list: History's copies go too, so clearing
+    means cleared. Blocks from before now are never read again."""
+    os.makedirs(DIR, mode=0o755, exist_ok=True)
+    lock = open(LOCK, "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    state = read_json(STATE, {})
+    store = Store()
+    store.load()
+    for eid, e in list(store.events.items()):
+        if e["kind"] == "firewall":
+            del store.events[eid]
+            store.changed.add(e.get("uid"))
+    state["firewall"] = now()
+    store.save()
+    write_file(STATE, json.dumps(state, sort_keys=True), 0o600)
+
+
+def main():
+    what = sys.argv[1] if len(sys.argv) > 1 else ""
+    if what == "collect":
+        problems = collect()
+        for p in problems:
+            print(p, file=sys.stderr)
+        sys.exit(1 if problems else 0)
+    if what == "lid-closed":
+        lid_closed()
+        return
+    if what == "lid-opened":
+        lid_opened()
+        return
+    if what == "forget" and sys.argv[2:] == ["firewall"]:
+        forget_firewall()
+        return
+    if what == "serve":
+        try:
+            # Settings asks each time History is opened; a run that has
+            # only just finished is answer enough.
+            status = read_json(os.path.join(DIR, "status.json"), {})
+            fresh = status.get("ok") and 0 <= now() - status.get("t", 0) < 5
+            problems = [] if fresh else collect()
+            reply = "ok\n" if not problems else "error %s\n" % "; ".join(problems)[:500]
+        except Exception as e:  # noqa: BLE001 - the caller must always get an answer
+            print(str(e), file=sys.stderr)
+            reply = "error the list couldn't be brought up to date\n"
+        try:
+            sys.stdout.write(reply)
+            sys.stdout.flush()
+        except OSError:
+            pass
+        return
+    print(__doc__.strip(), file=sys.stderr)
+    sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()

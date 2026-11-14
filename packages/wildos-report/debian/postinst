@@ -1,9 +1,14 @@
 #!/bin/sh
 set -e
 
-# Crashes reach systemd-coredump from now on, not at the next start-up.
 if [ "$1" = configure ] && [ -d /run/systemd/system ]; then
+    # Crashes reach systemd-coredump from now on, not at the next start-up.
     systemctl restart systemd-sysctl.service >/dev/null 2>&1 || true
+    # Signed-in accounts see the masked DrKonqi socket now rather than at
+    # their next sign-in; until then their session keeps trying to start it.
+    for user in $(loginctl list-users --no-legend 2>/dev/null | awk '{print $2}'); do
+        timeout 10 systemctl --user --machine="$user@" daemon-reload >/dev/null 2>&1 || true
+    done
 fi
 
 #DEBHELPER#

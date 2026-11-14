@@ -66,6 +66,16 @@ static constexpr Strength s_strengths[] = {
 
 static const QString s_configGroup = QStringLiteral("Effect-wildos_blurinactive");
 
+// KWin's fade between the old and new look of every window when the colours
+// or the accent change. Wild OS turns it off for its own (crossfade), which
+// sits before this effect; this keeps the blur right if KWin's is turned
+// back on. KWin's sits after this effect, so for its length a window drawn
+// through the rest of the chain comes back as its snapshot from before,
+// which this effect had already blurred and dimmed. Blurring that again,
+// and keeping it once the fade was over, darkened the desktop a little more
+// with every accent picked.
+static const QString s_crossFade = QStringLiteral("blendchanges");
+
 // A blurred window's outline fades as it blurs. The outline reaches past
 // the window, further than a repaint of a window without a shadow covers.
 static void repaintWithOutline(EffectWindow *w)
@@ -252,6 +262,16 @@ void BlurInactiveEffect::forget(EffectWindow *w)
 
 void BlurInactiveEffect::prePaintScreen(ScreenPrePaintData &data, std::chrono::milliseconds presentTime)
 {
+    const bool crossFading = effects->isEffectActive(s_crossFade);
+    if (m_crossFading && !crossFading) {
+        // The windows are drawn afresh in their new colours.
+        for (auto &[w, state] : m_windows) {
+            state->dirty = true;
+            w->addRepaintFull();
+        }
+    }
+    m_crossFading = crossFading;
+
     bool moving = false;
     for (const auto &[w, state] : m_windows) {
         moving = moving || state->progress != state->target;
@@ -402,9 +422,12 @@ bool BlurInactiveEffect::render(EffectWindow *w, State &state)
         }
         state.textureScale = scale;
         state.dirty = true;
+        state.drawn = false;
     }
 
-    if (state.dirty && !w->isDeleted()) {
+    // While colours cross fade, a window keeps the blur it had: what the
+    // chain would draw now is the fade's snapshot, made of this blur.
+    if (state.dirty && !w->isDeleted() && !(m_crossFading && state.drawn)) {
         RenderTarget renderTarget(state.framebuffers[0].get());
         RenderViewport viewport(logical, scale, renderTarget);
         GLFramebuffer::pushFramebuffer(state.framebuffers[0].get());
@@ -419,6 +442,7 @@ bool BlurInactiveEffect::render(EffectWindow *w, State &state)
         GLFramebuffer::popFramebuffer();
         blur(state);
         state.dirty = false;
+        state.drawn = true;
     }
     return true;
 }

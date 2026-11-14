@@ -30,6 +30,8 @@ public:
     // Puts a pin back on the clipboard, for one that is no longer in the
     // history after a restart.
     Q_INVOKABLE void restore(const QString &key);
+    // Every pin and its picture gone from disk (the panic key).
+    Q_INVOKABLE void clear();
 
 Q_SIGNALS:
     void changed();

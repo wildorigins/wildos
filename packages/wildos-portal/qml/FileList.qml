@@ -10,10 +10,16 @@ import WildOS.UI as UI
 // 20px icon, the name in 13px and the rest in 12px muted. Click selects
 // (Ctrl and Shift add when several may be opened), double click opens a
 // folder or chooses the file, and typing jumps to a name.
+//
+// Large icons, the other view, lays the same items out as Files' Large
+// icons tiles (140 by 150, a 96px icon or a preview of the picture) so
+// photos can be told apart by what is in them.
 FocusScope {
     id: list
 
     required property var folder
+    property string mode: "details"
+    readonly property bool icons: mode === "icons" && !folder.isComputer
     property bool showSize: true
     property int renameRow: -1
     property string typed: ""
@@ -25,11 +31,26 @@ FocusScope {
     property string emptyActionName: ""
 
     function startRename(row) {
-        view.positionViewAtIndex(row, ListView.Contain);
+        show(row);
         renameRow = row;
     }
 
+    function show(row) {
+        if (icons) {
+            grid.positionViewAtIndex(row, GridView.Contain);
+        } else {
+            view.positionViewAtIndex(row, ListView.Contain);
+        }
+    }
+
+    function columns() {
+        return icons ? Math.max(1, Math.floor(grid.width / grid.cellWidth)) : 1;
+    }
+
     function pageRows() {
+        if (icons) {
+            return Math.max(1, Math.floor(grid.height / grid.cellHeight)) * columns();
+        }
         return Math.max(1, Math.floor(view.height / 36) - 1);
     }
 
@@ -38,8 +59,12 @@ FocusScope {
         const mods = event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier);
         const cur = f.currentIndex;
         if (event.key === Qt.Key_Down) {
-            f.moveCurrent(cur + 1, mods);
+            f.moveCurrent(cur < 0 ? 0 : Math.min(f.count - 1, cur + columns()), mods);
         } else if (event.key === Qt.Key_Up) {
+            f.moveCurrent(Math.max(0, cur - columns()), mods);
+        } else if (event.key === Qt.Key_Right && icons) {
+            f.moveCurrent(cur + 1, mods);
+        } else if (event.key === Qt.Key_Left && icons) {
             f.moveCurrent(Math.max(0, cur - 1), mods);
         } else if (event.key === Qt.Key_Home) {
             f.moveCurrent(0, mods);
@@ -80,15 +105,23 @@ FocusScope {
         target: list.folder
         function onCurrentIndexChanged() {
             if (list.folder.currentIndex >= 0) {
-                view.positionViewAtIndex(list.folder.currentIndex, ListView.Contain);
+                list.show(list.folder.currentIndex);
             }
         }
         function onUrlChanged() {
             list.renameRow = -1;
             view.positionViewAtBeginning();
+            grid.positionViewAtBeginning();
         }
         function onFolderMade(row) {
             list.startRename(row);
+        }
+    }
+
+    onIconsChanged: {
+        renameRow = -1;
+        if (folder.currentIndex >= 0) {
+            Qt.callLater(show, folder.currentIndex);
         }
     }
 
@@ -97,6 +130,7 @@ FocusScope {
         x: 0
         width: parent.width
         height: 30
+        visible: !list.icons
 
         component HeaderCell: Item {
             id: cell
@@ -163,8 +197,9 @@ FocusScope {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        visible: !list.icons
         clip: true
-        model: list.folder
+        model: list.icons ? null : list.folder
         boundsBehavior: Flickable.StopAtBounds
         reuseItems: true
         activeFocusOnTab: false
@@ -249,7 +284,9 @@ FocusScope {
                                 list.forceActiveFocus();
                             }
                             onAccepted: commit()
-                            onActiveFocusChanged: if (!activeFocus) commit()
+                            // The text menu holds focus while it is open; the rename is not over.
+                            onActiveFocusChanged: if (!activeFocus && !textMenuOpen) commit()
+                            onTextMenuFocusLeft: commit()
                             Keys.onEscapePressed: {
                                 finished = true;
                                 list.renameRow = -1;
@@ -310,10 +347,166 @@ FocusScope {
         }
     }
 
+    GridView {
+        id: grid
+        anchors.fill: parent
+        anchors.topMargin: 6
+        visible: list.icons
+        clip: true
+        // 8px between tiles, as in Files, so a selected tile's highlight
+        // keeps clear of its neighbours.
+        cellWidth: 148
+        cellHeight: 158
+        model: list.icons ? list.folder : null
+        boundsBehavior: Flickable.StopAtBounds
+        reuseItems: true
+        activeFocusOnTab: false
+        bottomMargin: 6
+        ScrollBar.vertical: UI.ScrollBar {}
+        Accessible.role: Accessible.List
+        Accessible.name: list.folder.title
+
+        delegate: Item {
+            id: tile
+
+            required property int index
+            required property string name
+            required property string iconName
+            required property url url
+            required property bool isDir
+            required property bool selected
+            required property bool hidden
+            required property bool preview
+            required property var stamp
+
+            width: 140
+            height: 150
+            Accessible.role: Accessible.ListItem
+            Accessible.name: name
+            Accessible.selected: selected
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 8
+                color: tile.selected ? UI.Style.accentSelected : tileMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                border.width: 1
+                border.color: tile.selected ? UI.Style.accentBorderStrong
+                    : list.activeFocus && list.folder.currentIndex === tile.index ? UI.Style.accentBorderStrong : "transparent"
+            }
+
+            Column {
+                anchors.centerIn: parent
+                width: parent.width - 8
+                spacing: 6
+
+                Item {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 96
+                    height: 96
+                    opacity: tile.hidden ? 0.5 : 1
+
+                    UI.ThemeIcon {
+                        anchors.fill: parent
+                        visible: thumb.status !== Image.Ready
+                        name: tile.iconName
+                        fallback: tile.isDir ? "folder" : "text-x-generic"
+                    }
+
+                    Image {
+                        id: thumb
+                        anchors.fill: parent
+                        visible: status === Image.Ready
+                        asynchronous: true
+                        cache: true
+                        fillMode: Image.PreserveAspectFit
+                        sourceSize: Qt.size(192, 192)
+                        source: tile.preview ? "image://thumb/" + tile.stamp + "/" + encodeURIComponent(tile.url.toString()) : ""
+                        smooth: true
+                        mipmap: true
+                    }
+                }
+
+                UI.Label {
+                    visible: list.renameRow !== tile.index
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
+                    elide: Text.ElideRight
+                    size: 12
+                    lineHeight: 1.1
+                    text: tile.name
+                    opacity: tile.hidden ? 0.6 : 1
+                }
+
+                Loader {
+                    width: parent.width
+                    active: list.renameRow === tile.index
+                    visible: active
+                    sourceComponent: UI.TextField {
+                        height: 28
+                        implicitHeight: 28
+                        text: tile.name
+                        escapeClears: false
+                        Component.onCompleted: {
+                            forceActiveFocus();
+                            selectAll();
+                        }
+                        property bool finished: false
+                        function commit() {
+                            if (finished) {
+                                return;
+                            }
+                            finished = true;
+                            list.folder.renameItem(tile.index, text);
+                            list.renameRow = -1;
+                            list.forceActiveFocus();
+                        }
+                        onAccepted: commit()
+                        // The text menu holds focus while it is open; the rename is not over.
+                        onActiveFocusChanged: if (!activeFocus && !textMenuOpen) commit()
+                        onTextMenuFocusLeft: commit()
+                        Keys.onEscapePressed: {
+                            finished = true;
+                            list.renameRow = -1;
+                            list.forceActiveFocus();
+                        }
+                    }
+                }
+            }
+
+            MouseArea {
+                id: tileMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.LeftButton
+                enabled: list.renameRow !== tile.index
+                onPressed: mouse => {
+                    list.forceActiveFocus();
+                    list.folder.select(tile.index, mouse.modifiers);
+                }
+                onDoubleClicked: list.activated(tile.index)
+            }
+        }
+
+        // Clicking between or below the tiles clears the selection.
+        MouseArea {
+            parent: grid.contentItem
+            z: -1
+            width: Math.max(grid.width, grid.contentWidth)
+            height: Math.max(grid.height, grid.contentHeight)
+            onPressed: {
+                list.forceActiveFocus();
+                list.folder.clearSelection();
+            }
+        }
+    }
+
+
     ColumnLayout {
-        anchors.centerIn: view
+        anchors.centerIn: list.icons ? grid : view
         width: Math.min(view.width - 40, 360)
-        visible: list.emptyText.length > 0 && view.count === 0
+        visible: list.emptyText.length > 0 && list.folder.count === 0
         spacing: 12
 
         UI.Label {

@@ -1,3 +1,73 @@
+wildos-base (0.1.9) trixie; urgency=medium
+
+  * The guest session from Settings > Privacy and security > Advanced
+    protection: a Guest account on the sign-in screen with no password,
+    a fresh empty Home in memory each time, and everything the guest
+    left on the PC wiped when they sign out. The guest can't open other
+    accounts' files, ask for an administrator's password, use Windows
+    mode, share folders or install anything for the whole PC. Turning it
+    off removes the account.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:56:10 +0000
+
+wildos-base (0.1.8) trixie; urgency=medium
+
+  * Wild OS calls this release 0.1 Beta 2, and its support and problem
+    report links go to the right place on GitHub.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:53:57 +0000
+
+wildos-base (0.1.7) trixie; urgency=medium
+
+  * At Standard protection the kernel no longer forces Meltdown protection
+    on processors that do not have the flaw, which made opening, copying
+    and saving many files slower. Processors with the flaw still get it,
+    and Extra processor protection, Strict and Maximum still force it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:17:55 +0000
+
+wildos-base (0.1.6) trixie; urgency=medium
+
+  * On a PC that also starts Windows (the installer wrote its start-up
+    menu entry), the hardware clock is kept in local time as Windows keeps
+    it, so the clock no longer starts hours off after using Windows and
+    Windows' clock is no longer put off by Wild OS. Done once, at the next
+    start-up.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:45:00 +0000
+
+wildos-base (0.1.5) trixie; urgency=medium
+
+  * Linux 7.2 and Mesa 26.1: newer kernel and graphics, for speed, newer
+    hardware and games. The previous kernel stays in the start-up menu.
+  * NVIDIA's driver gets the version that builds for Linux 7.2.
+  * "Wild OS (previous version)" in the start-up menu starts the last
+    kernel that reached the desktop.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 22:47:33 +0000
+
+wildos-base (0.1.4) trixie; urgency=medium
+
+  * Snappier under load: the kernel puts what you are using ahead of
+    background work sooner.
+  * When memory runs out, the app using the most is closed straight away
+    instead of the whole computer freezing.
+  * Encrypted SSDs stay fast: TRIM now reaches the drive, and disk
+    encryption works without an extra queue.
+  * The start-up image unpacks faster.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 17:15:00 +0000
+
+wildos-base (0.1.3) trixie; urgency=medium
+
+  * Faster on most processors: every processor thread runs where the
+    processor is safe for it, and protections for flaws the processor
+    doesn't have are no longer forced on. Extra processor protection in
+    Settings, and Strict and Maximum, keep the full set. Takes effect
+    after a restart.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 16:30:00 +0000
+
 wildos-base (0.1.2) trixie; urgency=medium
 
   * A Btrfs system starts from its @ subvolume, and the safe graphics

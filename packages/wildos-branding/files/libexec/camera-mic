@@ -1,0 +1,733 @@
+#!/usr/bin/python3 -I
+"""The camera and microphone lights on the taskbar.
+
+Runs in each person's session (wildos-camera-mic.service) and watches the
+devices themselves, not the permission prompts, so every app is caught,
+sandboxed or not:
+
+  - PipeWire: every capture stream linked to a microphone (an Audio/Source
+    node) or a camera (a V4L2 or libcamera Video/Source node). Flatpak apps,
+    browsers on the portal and anything using PulseAudio or ALSA's default
+    device all come through here.
+  - The device files: an app that opens /dev/video* or an ALSA capture
+    device (/dev/snd/pcmC*D*c) itself, bypassing PipeWire. inotify says when
+    one is opened or closed, and the open files under /proc say by whom.
+    Only this account's own processes can be seen.
+
+The tray reads $XDG_RUNTIME_DIR/wildos-camera-mic.json, which says for each
+device which apps are using it and since when, whether it is switched off
+for every app, and which app used it last. Each use goes to the journal as
+"USE {json}" when it starts and again when it ends, for Settings > System >
+History (settings-history).
+
+    camera-mic watch          the service
+    camera-mic wait VERSION   prints the state once its version is not
+                              VERSION (straight away if it already isn't)
+    camera-mic stop KEY       cuts the access of the use with this key
+
+Switching a device off for every app is camera-mic-block's job (root,
+through pkexec); this only follows the switches it leaves in /etc/wildos.
+"""
+
+import ctypes
+import hashlib
+import json
+import os
+import re
+import select
+import signal
+import subprocess
+import sys
+import time
+
+RUNTIME = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+STATE_NAME = "wildos-camera-mic.json"
+STATE = os.path.join(RUNTIME, STATE_NAME)
+HOME_STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "wildos")
+MEMORY = os.path.join(HOME_STATE, "camera-mic.json")
+
+FLAGS_DIR = "/etc/wildos"
+BLOCKED = {"microphone": os.path.join(FLAGS_DIR, "microphone-off"), "camera": os.path.join(FLAGS_DIR, "camera-off")}
+# Maximum protection (settings-protection) keeps the camera's driver out.
+MAXIMUM_CAMERA = "/etc/modprobe.d/60-wildos-protection-camera.conf"
+BLOCK_HELPER = "/usr/libexec/wildos/camera-mic-block"
+
+# PipeWire's own processes open the devices for the streams counted above;
+# they are never the app.
+PLUMBING = {"pipewire", "wireplumber", "pipewire-pulse", "pw-dump"}
+WINDOWS_APPS = ("wildos-rdp",)
+DEVICES = ("microphone", "camera")
+
+IN_CLOSE_WRITE = 0x08
+IN_CLOSE_NOWRITE = 0x10
+IN_OPEN = 0x20
+IN_MOVED_FROM = 0x40
+IN_MOVED_TO = 0x80
+IN_CREATE = 0x100
+IN_DELETE = 0x200
+IN_Q_OVERFLOW = 0x4000
+IN_IGNORED = 0x8000
+IN_NONBLOCK = 0o4000
+IN_CLOEXEC = 0o2000000
+
+libc = ctypes.CDLL(None, use_errno=True)
+
+
+class Inotify:
+    def __init__(self):
+        self.fd = libc.inotify_init1(IN_NONBLOCK | IN_CLOEXEC)
+        if self.fd < 0:
+            raise OSError(ctypes.get_errno(), "inotify_init1")
+        self.paths = {}
+
+    def add(self, path, mask):
+        wd = libc.inotify_add_watch(self.fd, os.fsencode(path), mask)
+        if wd >= 0:
+            self.paths[wd] = path
+        return wd
+
+    def read(self):
+        """[(path, mask, name)] for what has happened since the last read."""
+        out = []
+        while True:
+            try:
+                data = os.read(self.fd, 65536)
+            except BlockingIOError:
+                return out
+            if not data:
+                return out
+            at = 0
+            while at + 16 <= len(data):
+                wd = int.from_bytes(data[at:at + 4], "little", signed=True)
+                mask = int.from_bytes(data[at + 4:at + 8], "little")
+                size = int.from_bytes(data[at + 12:at + 16], "little")
+                name = data[at + 16:at + 16 + size].split(b"\0", 1)[0].decode("utf-8", "replace")
+                at += 16 + size
+                if mask & IN_IGNORED:
+                    self.paths.pop(wd, None)
+                    continue
+                out.append((self.paths.get(wd, ""), mask, name))
+
+
+def read_text(path, limit=65536):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return f.read(limit)
+    except OSError:
+        return ""
+
+
+def write_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = "%s.%d" % (path, os.getpid())
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, sort_keys=True)
+    os.replace(tmp, path)
+
+
+def read_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+# ------------------------------------------------------------ who is it
+
+class Apps:
+    """Names and icons from the Start menu entries, looked up by desktop id,
+    Flatpak id or program."""
+
+    def __init__(self):
+        self.cache = {}
+        self.loaded = 0
+
+    def dirs(self):
+        data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+        dirs = [os.path.join(data_home, "applications"),
+                os.path.join(data_home, "flatpak/exports/share/applications"),
+                "/var/lib/flatpak/exports/share/applications"]
+        for d in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":"):
+            if d:
+                dirs.append(os.path.join(d, "applications"))
+        return dirs
+
+    def load(self):
+        # Apps come and go; a minute old is fresh enough for a name.
+        if time.monotonic() - self.loaded < 60:
+            return
+        self.loaded = time.monotonic()
+        entries = {}
+        for d in reversed(self.dirs()):
+            try:
+                names = os.listdir(d)
+            except OSError:
+                continue
+            for n in names:
+                if n.endswith(".desktop"):
+                    entry = self.parse(os.path.join(d, n))
+                    if entry:
+                        entries[n[:-8]] = entry
+        self.cache = entries
+
+    @staticmethod
+    def parse(path):
+        name = icon = exe = ""
+        hidden = False
+        group = ""
+        for line in read_text(path).splitlines():
+            line = line.strip()
+            if line.startswith("["):
+                group = line
+                continue
+            if group != "[Desktop Entry]" or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            if key == "Name" and not name:
+                name = value
+            elif key == "Icon" and not icon:
+                icon = value
+            elif key == "Exec" and not exe:
+                words = [w for w in value.split() if "=" not in w or w.startswith("/")]
+                exe = os.path.basename(words[0]) if words else ""
+            elif key in ("NoDisplay", "Hidden") and value.lower() == "true":
+                hidden = True
+        return {"name": name, "icon": icon, "exe": exe, "hidden": hidden} if name else None
+
+    def by_id(self, desktop_id):
+        self.load()
+        e = self.cache.get(desktop_id)
+        return {"app": e["name"], "icon": e["icon"] or desktop_id, "id": desktop_id} if e else None
+
+    def by_program(self, *programs):
+        self.load()
+        wanted = {p for p in programs if p}
+        for did, e in sorted(self.cache.items()):
+            if not e["hidden"] and e["exe"] in wanted:
+                return {"app": e["name"], "icon": e["icon"] or did, "id": did}
+        return None
+
+
+def unescape_unit(name):
+    return re.sub(r"\\x([0-9a-fA-F]{2})", lambda m: chr(int(m.group(1), 16)), name)
+
+
+def cgroup_app(pid):
+    """(flatpak id, desktop id) from the unit the session started the app in."""
+    for line in read_text("/proc/%d/cgroup" % pid).splitlines():
+        unit = line.rsplit("/", 1)[-1]
+        m = re.match(r"app-flatpak-(.+)-\d+\.scope$", unit)
+        if m:
+            return unescape_unit(m.group(1)), ""
+        m = re.match(r"app-(?:[a-zA-Z0-9]+-)??(.+?)(?:@[^.]*\.service|-[0-9a-zA-Z]+\.scope)$", unit)
+        if m:
+            return "", unescape_unit(m.group(1))
+    return "", ""
+
+
+def who(pid, apps, props=None):
+    """{app, icon, id} for a process, by the most trustworthy name known."""
+    props = props or {}
+    try:
+        exe = os.path.basename(os.readlink("/proc/%d/exe" % pid))
+    except OSError:
+        exe = ""
+    comm = read_text("/proc/%d/comm" % pid, 64).strip()
+    if exe in WINDOWS_APPS or exe.startswith("qemu-system"):
+        return {"app": "Windows apps", "icon": "wildos-windows-app", "id": "windows"}
+    flatpak, desktop = cgroup_app(pid) if pid > 0 else ("", "")
+    flatpak = props.get("pipewire.access.portal.app_id") or flatpak
+    if flatpak:
+        return apps.by_id(flatpak) or {"app": props.get("application.name") or flatpak, "icon": flatpak, "id": flatpak}
+    if desktop:
+        # Some launchers put their own name first (app-gnome-ID-N.scope).
+        for candidate in (desktop, desktop.split("-", 1)[-1]):
+            found = apps.by_id(candidate)
+            if found:
+                return found
+    found = apps.by_program(exe, comm, props.get("application.process.binary", ""))
+    if found:
+        return found
+    name = props.get("application.name") or comm or exe or "An app"
+    return {"app": name, "icon": props.get("application.icon-name") or "", "id": "program:" + (exe or name)}
+
+
+# ------------------------------------------------------------ PipeWire
+
+class Graph:
+    """The PipeWire objects pw-dump reports, kept up to date from its
+    monitor output."""
+
+    def __init__(self):
+        self.objects = {}
+        self.proc = None
+        self.buffer = ""
+        self.decoder = json.JSONDecoder()
+        self.restart_at = 0
+
+    def start(self):
+        self.objects = {}
+        self.buffer = ""
+        try:
+            self.proc = subprocess.Popen(["pw-dump", "--monitor", "--no-colors"], stdout=subprocess.PIPE,
+                                         stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+            os.set_blocking(self.proc.stdout.fileno(), False)
+        except OSError:
+            self.proc = None
+            self.restart_at = time.monotonic() + 10
+
+    def fd(self):
+        return self.proc.stdout.fileno() if self.proc else None
+
+    def feed(self):
+        """Reads what pw-dump wrote; False once it has gone."""
+        try:
+            chunk = os.read(self.proc.stdout.fileno(), 1 << 20)
+        except BlockingIOError:
+            return True
+        if not chunk:
+            self.proc.wait()
+            self.proc = None
+            self.objects = {}
+            # PipeWire restarting takes pw-dump with it.
+            self.restart_at = time.monotonic() + 2
+            return False
+        self.buffer += chunk.decode("utf-8", "replace")
+        while True:
+            text = self.buffer.lstrip()
+            if not text:
+                self.buffer = ""
+                break
+            try:
+                batch, end = self.decoder.raw_decode(text)
+            except ValueError:
+                self.buffer = text
+                break
+            self.buffer = text[end:]
+            for o in batch if isinstance(batch, list) else []:
+                if not isinstance(o, dict) or "id" not in o:
+                    continue
+                if o.get("info") is None:
+                    self.objects.pop(o["id"], None)
+                else:
+                    self.objects[o["id"]] = o
+        return True
+
+    def of_type(self, kind):
+        return [o for o in self.objects.values() if o.get("type") == "PipeWire:Interface:" + kind]
+
+    @staticmethod
+    def props(o):
+        return (o.get("info") or {}).get("props") or {}
+
+    def uses(self, running=True):
+        """[(device, stream node, client props, source node)] for every app
+        stream reading a microphone or camera now, or with running=False,
+        linked to one whether or not it is reading yet."""
+        nodes = {n["id"]: n for n in self.of_type("Node")}
+        clients = {c["id"]: self.props(c) for c in self.of_type("Client")}
+        out = []
+        seen = set()
+        for link in self.of_type("Link"):
+            info = link.get("info") or {}
+            source = nodes.get(info.get("output-node-id"))
+            stream = nodes.get(info.get("input-node-id"))
+            if not source or not stream or info.get("state") == "error":
+                continue
+            device = source_kind(self.props(source))
+            sp = self.props(stream)
+            if not device or not str(sp.get("media.class", "")).startswith("Stream/Input/"):
+                continue
+            if sp.get("stream.monitor") in (True, "true"):
+                continue
+            if running and (stream.get("info") or {}).get("state") != "running":
+                continue
+            client = clients.get(sp.get("client.id"), {})
+            if (device, stream["id"]) in seen:
+                continue
+            seen.add((device, stream["id"]))
+            out.append((device, stream, client, source))
+        return out
+
+    def sources(self, device):
+        return [n for n in self.of_type("Node") if source_kind(self.props(n)) == device]
+
+
+def source_kind(p):
+    media = str(p.get("media.class", ""))
+    if media.startswith("Audio/Source"):
+        return "microphone"
+    if media == "Video/Source" and (p.get("device.api") in ("v4l2", "libcamera")
+                                    or str(p.get("node.name", "")).startswith(("v4l2_input", "libcamera_input"))):
+        return "camera"
+    return ""
+
+
+def node_muted(node):
+    for p in ((node.get("info") or {}).get("params") or {}).get("Props") or []:
+        if isinstance(p, dict) and "mute" in p:
+            return p["mute"] is True
+    return False
+
+
+# Commands the service starts and does not wait for: (process, when).
+running = []
+
+
+def spawn(*args):
+    """Starts a PipeWire command without waiting for it, so a slow answer
+    never holds up the light. Finished ones are reaped, and one still going
+    after ten seconds is stopped."""
+    now = time.monotonic()
+    for entry in running[:]:
+        proc, at = entry
+        if proc.poll() is not None:
+            running.remove(entry)
+        elif now - at > 10:
+            proc.kill()
+    try:
+        running.append((subprocess.Popen(list(args), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                         stderr=subprocess.DEVNULL), now))
+    except OSError:
+        pass
+
+
+def pw(*args):
+    try:
+        return subprocess.run(list(args), capture_output=True, text=True, timeout=10).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+# ------------------------------------------------------------ device files
+
+def device_nodes():
+    """{path: device} for the cameras and capture devices there are now."""
+    out = {}
+    try:
+        for n in os.listdir("/dev"):
+            if re.match(r"video\d+$", n):
+                out["/dev/" + n] = "camera"
+    except OSError:
+        pass
+    try:
+        for n in os.listdir("/dev/snd"):
+            if re.match(r"pcmC\d+D\d+c$", n):
+                out["/dev/snd/" + n] = "microphone"
+    except OSError:
+        pass
+    return out
+
+
+def raw_users(nodes):
+    """{pid: set(paths)} for this account's processes holding a camera or
+    capture device open themselves."""
+    out = {}
+    me = os.getuid()
+    for entry in os.scandir("/proc"):
+        if not entry.name.isdigit():
+            continue
+        pid = int(entry.name)
+        try:
+            if entry.stat().st_uid != me:
+                continue
+            fds = os.listdir("/proc/%d/fd" % pid)
+        except OSError:
+            continue
+        found = set()
+        for fd in fds:
+            try:
+                target = os.readlink("/proc/%d/fd/%s" % (pid, fd))
+            except OSError:
+                continue
+            if target in nodes:
+                found.add(target)
+        if found and read_text("/proc/%d/comm" % pid, 64).strip() not in PLUMBING:
+            out[pid] = found
+    return out
+
+
+# ------------------------------------------------------------ the service
+
+def uvc(path):
+    try:
+        return os.path.basename(os.readlink("/sys/class/video4linux/%s/device/driver" % os.path.basename(path))) == "uvcvideo"
+    except OSError:
+        return False
+
+
+def stoppable(use):
+    """A stream PipeWire carries can be ended. A device an app holds open
+    itself can only be taken away by unplugging it in software, which the
+    kernel allows for USB cameras (uvcvideo); for a capture device ALSA
+    gives no way to take back an open one short of closing the app."""
+    if use.get("raw"):
+        return use["device"] == "camera" and all(uvc(p) for p in use.get("paths", []))
+    return bool(use.get("nodes"))
+
+
+def blocked_state():
+    out = {d: os.path.exists(BLOCKED[d]) for d in DEVICES}
+    maximum = os.path.exists(MAXIMUM_CAMERA)
+    return out, maximum
+
+
+class Watcher:
+    def __init__(self):
+        self.apps = Apps()
+        self.graph = Graph()
+        self.notify = Inotify()
+        self.nodes = {}
+        self.raw = {}
+        # key -> use: {device, app, icon, id, since, nodes, pids, key}
+        self.active = {}
+        memory = read_json(MEMORY)
+        self.last = memory.get("last") if isinstance(memory.get("last"), dict) else {}
+        self.version = int(time.time() * 1000)
+        # When a device file was last opened or closed, so the open files
+        # are read once the burst has settled.
+        self.dirty_at = time.monotonic()
+        self.proc_at = 0
+        self.memory_at = 0
+        # Microphones muted here while switched off, by node name (ids change
+        # when PipeWire restarts), so switching back on unmutes only those,
+        # even after this service restarts.
+        self.muted = set(memory.get("muted") or [])
+        self.mute_at = {}
+        self.saved_muted = set(self.muted)
+        # Streams already told to go: id -> when, so a stream PipeWire has
+        # yet to report gone is not destroyed again on every change.
+        self.destroyed = {}
+        # A use left open by a session that ended without saying so ends
+        # when it was last seen.
+        for use in (memory.get("open") or {}).values():
+            if isinstance(use, dict) and use.get("key"):
+                self.history(use, use.get("seen") or use.get("since"))
+
+    def watch_devices(self):
+        current = device_nodes()
+        for path in current:
+            if path not in self.nodes:
+                self.notify.add(path, IN_OPEN | IN_CLOSE_WRITE | IN_CLOSE_NOWRITE)
+        self.nodes = current
+
+    def run(self):
+        signal.signal(signal.SIGTERM, lambda *_: self.stop())
+        signal.signal(signal.SIGINT, lambda *_: self.stop())
+        self.notify.add("/dev", IN_CREATE | IN_DELETE)
+        self.notify.add("/dev/snd", IN_CREATE | IN_DELETE)
+        self.watch_flags()
+        self.watch_devices()
+        self.graph.start()
+        self.blocked, self.maximum = blocked_state()
+        self.update()
+        while True:
+            fds = [self.notify.fd] + ([self.graph.fd()] if self.graph.proc else [])
+            timeout = 0.3 if self.dirty_at else 30
+            ready, _, _ = select.select(fds, [], [], timeout)
+            changed = False
+            if self.notify.fd in ready:
+                for path, mask, _ in self.notify.read():
+                    if path in (FLAGS_DIR, "/etc", "/etc/modprobe.d"):
+                        self.watch_flags()
+                        changed = True
+                        continue
+                    if path in ("/dev", "/dev/snd"):
+                        self.watch_devices()
+                    self.dirty_at = self.dirty_at or time.monotonic()
+            if self.graph.proc and self.graph.fd() in ready:
+                self.graph.feed()
+                changed = True
+            if not self.graph.proc and time.monotonic() >= self.graph.restart_at:
+                self.graph.start()
+            # The open files are read a moment after a device is opened or
+            # closed (a burst of them is one read, but a steady stream of
+            # them never puts it off for more than a second), and every
+            # half minute in case an event was missed.
+            quiet = not ready or time.monotonic() - self.dirty_at > 1
+            if (self.dirty_at and quiet) or time.monotonic() - self.proc_at > 30:
+                self.raw = raw_users(self.nodes)
+                self.proc_at = time.monotonic()
+                self.dirty_at = 0
+                changed = True
+            if changed:
+                self.update()
+
+    def watch_flags(self):
+        if os.path.isdir(FLAGS_DIR):
+            self.notify.add(FLAGS_DIR, IN_CREATE | IN_DELETE | IN_MOVED_TO | IN_MOVED_FROM)
+        else:
+            self.notify.add("/etc", IN_CREATE | IN_MOVED_TO)
+        self.notify.add("/etc/modprobe.d", IN_CREATE | IN_DELETE | IN_MOVED_TO | IN_MOVED_FROM)
+
+    def enforce(self):
+        """While a device is off for every app, no stream gets to read it,
+        and microphones stay muted, so even PipeWire's open device is
+        silent until it lets go of it."""
+        now = time.monotonic()
+        self.destroyed = {k: v for k, v in self.destroyed.items() if now - v < 5}
+        for device, stream, _, _ in self.graph.uses(running=False):
+            if (self.blocked.get(device) or (device == "camera" and self.maximum)) and stream["id"] not in self.destroyed:
+                self.destroyed[stream["id"]] = now
+                spawn("pw-cli", "destroy", str(stream["id"]))
+        if self.blocked.get("microphone"):
+            # Muted again if anything unmutes it while it is off.
+            for node in self.graph.sources("microphone"):
+                name = str(Graph.props(node).get("node.name", node["id"]))
+                if not node_muted(node) and now - self.mute_at.get(name, -60) > 30:
+                    self.mute_at[name] = now
+                    self.muted.add(name)
+                    spawn("wpctl", "set-mute", str(node["id"]), "1")
+        elif self.muted and self.graph.objects:
+            for node in self.graph.sources("microphone"):
+                if str(Graph.props(node).get("node.name", node["id"])) in self.muted:
+                    spawn("wpctl", "set-mute", str(node["id"]), "0")
+            self.muted = set()
+
+    def update(self):
+        self.blocked, self.maximum = blocked_state()
+        self.enforce()
+        now = time.time()
+        found = {}
+        for device, stream, client, _ in self.graph.uses():
+            if self.blocked.get(device):
+                continue
+            sp = Graph.props(stream)
+            try:
+                pid = int(client.get("pipewire.sec.pid") or sp.get("application.process.id") or 0)
+            except (TypeError, ValueError):
+                pid = 0
+            # PipeWire's own streams (a filter between a microphone and an
+            # app) are not an app; the app on the far side is counted.
+            if pid and read_text("/proc/%d/comm" % pid, 64).strip() in PLUMBING:
+                continue
+            props = dict(client)
+            props.update({k: v for k, v in sp.items() if k.startswith(("application.", "pipewire.access"))})
+            app = who(pid, self.apps, props)
+            use = found.setdefault((device, app["id"]), dict(app, device=device, nodes=[], pids=[], raw=False))
+            use["nodes"].append(stream["id"])
+            if pid:
+                use["pids"].append(pid)
+        for pid, paths in self.raw.items():
+            app = who(pid, self.apps)
+            for path in paths:
+                device = self.nodes.get(path)
+                if not device:
+                    continue
+                use = found.setdefault((device, app["id"]), dict(app, device=device, nodes=[], pids=[], raw=False))
+                use["raw"] = True
+                use.setdefault("paths", []).append(path)
+                if pid not in use["pids"]:
+                    use["pids"].append(pid)
+        by_slot = {(u["device"], u["id"]): u for u in self.active.values()}
+        active = {}
+        for slot, use in found.items():
+            old = by_slot.get(slot)
+            use["since"] = old["since"] if old else round(now, 3)
+            use["key"] = old["key"] if old else hashlib.sha1(("%s|%s|%s" % (slot[0], slot[1], use["since"])).encode()).hexdigest()[:16]
+            use["seen"] = round(now, 3)
+            active[use["key"]] = use
+            if not old:
+                self.history(use, None)
+        for key, use in self.active.items():
+            if key not in active:
+                self.history(use, now)
+                self.last[use["device"]] = {"app": use["app"], "t": round(now, 3)}
+        self.active = active
+        self.publish()
+
+    def history(self, use, end):
+        record = {"device": use["device"], "app": use["app"], "id": use["id"], "start": use["since"], "key": use["key"],
+                  "how": "device" if use.get("raw") and not use.get("nodes") else "pipewire"}
+        if end is not None:
+            record["end"] = round(end, 3)
+        print("USE " + json.dumps(record, sort_keys=True), flush=True)
+
+    def publish(self):
+        devices = {}
+        for d in DEVICES:
+            uses = sorted((u for u in self.active.values() if u["device"] == d), key=lambda u: u["since"])
+            devices[d] = {
+                "uses": [{"key": u["key"], "app": u["app"], "icon": u["icon"], "since": u["since"], "device": d,
+                          "stoppable": stoppable(u),
+                          "nodes": u["nodes"], "raw": u["raw"]} for u in uses],
+                "blocked": bool(self.blocked.get(d)) or (d == "camera" and self.maximum),
+                "maximum": d == "camera" and self.maximum,
+                "last": self.last.get(d),
+            }
+        state = {"devices": devices}
+        previous = read_json(STATE)
+        previous.pop("version", None)
+        if previous != state:
+            self.version += 1
+            state["version"] = self.version
+            write_json(STATE, state)
+        if previous != state or (self.active and time.monotonic() - self.memory_at > 60) or self.muted != self.saved_muted:
+            self.saved_muted = set(self.muted)
+            self.memory_at = time.monotonic()
+            write_json(MEMORY, {"last": self.last, "open": self.active, "muted": sorted(self.muted)})
+
+    def stop(self):
+        now = time.time()
+        for use in self.active.values():
+            self.history(use, now)
+            self.last[use["device"]] = {"app": use["app"], "t": round(now, 3)}
+        self.active = {}
+        try:
+            write_json(MEMORY, {"last": self.last, "open": {}, "muted": sorted(self.muted)})
+            os.unlink(STATE)
+        except OSError:
+            pass
+        if self.graph.proc:
+            self.graph.proc.terminate()
+        sys.exit(0)
+
+
+# ------------------------------------------------------------ the commands
+
+def wait(version):
+    notify = Inotify()
+    notify.add(RUNTIME, IN_MOVED_TO | IN_CREATE | IN_DELETE)
+    deadline = time.monotonic() + 600
+    while True:
+        state = read_json(STATE)
+        if str(state.get("version", "")) != version or time.monotonic() > deadline:
+            print(json.dumps(state))
+            return
+        select.select([notify.fd], [], [], max(1, deadline - time.monotonic()))
+        notify.read()
+
+
+def stop(key):
+    use = None
+    for d in read_json(STATE).get("devices", {}).values():
+        for u in d.get("uses", []):
+            if u.get("key") == key:
+                use = u
+    if not use:
+        return 1
+    ok = True
+    for node in use.get("nodes") or []:
+        ok = pw("pw-cli", "destroy", str(int(node))) and ok
+    if use.get("raw") and use.get("device") == "camera":
+        ok = pw("pkexec", BLOCK_HELPER, "release", "camera") and ok
+    return 0 if ok else 1
+
+
+def main():
+    what = sys.argv[1] if len(sys.argv) > 1 else ""
+    if what == "watch":
+        Watcher().run()
+    elif what == "wait" and len(sys.argv) == 3:
+        wait(sys.argv[2])
+    elif what == "stop" and len(sys.argv) == 3 and re.match(r"^[0-9a-f]{16}$", sys.argv[2]):
+        sys.exit(stop(sys.argv[2]))
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()

@@ -223,7 +223,20 @@ FocusScope {
             address.finish();
             address.view.focusContent();
         }
-        onActiveFocusChanged: if (!activeFocus) address.finish()
+        Keys.onPressed: event => {
+            if (addressMenu.isMenuKey(event)) {
+                addressMenu.openAtCaret();
+                event.accepted = true;
+            }
+        }
+        // The text menu holds focus while it is open; the address is still
+        // being typed.
+        onActiveFocusChanged: if (!activeFocus && !addressMenu.opened) address.finish()
+
+        UI.TextMenu {
+            id: addressMenu
+            onFocusLeft: address.finish()
+        }
     }
 
     CrumbButton {

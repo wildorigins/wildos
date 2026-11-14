@@ -11,3 +11,12 @@ override_dh_auto_configure:
 # every account on install.
 override_dh_installsystemduser:
 	dh_installsystemduser --no-enable
+
+# Wi-Fi and Bluetooth switching themselves off is off until chosen in
+# Advanced protection, whose hook enables the service; every other system
+# unit is on from install.
+override_dh_installsystemd:
+	dh_installsystemd --no-enable --no-start wildos-radios-idle.service
+	dh_installsystemd wildos-protection.service wildos-network.service wildos-usb-lock.service \
+		wildos-history.socket wildos-history@.service wildos-history.service wildos-history.timer \
+		wildos-devices.socket wildos-devices@.service

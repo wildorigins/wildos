@@ -9,6 +9,8 @@ Build-Depends:
  qt6-declarative-dev,
  libkf6kcmutils-dev,
  libkf6config-dev,
+ libkf6archive-dev,
+ qt6-svg-dev,
  libkf6coreaddons-dev,
  libkf6service-dev,
  libkf6i18n-dev,
@@ -31,10 +33,21 @@ Rules-Requires-Root: no
 
 Package: wildos-settings
 Architecture: any
+# Where apps are uninstalled and everything else is set: apt refuses to
+# remove it, even from a terminal, unless told --allow-remove-essential.
+Protected: yes
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
+# 40_wildos.cfg reads the processor choices settings-cpu-threads writes.
+ wildos-base (>= 0.1.3),
  nftables,
+ iproute2,
+ python3,
+# Free up space asks libflatpak itself which runtimes are unused
+# (settings-free-space), the same list flatpak uninstall --unused offers.
+ python3-gi,
+ gir1.2-flatpak-1.0,
  network-manager,
  network-manager-openvpn,
  systemd-resolved,
@@ -59,7 +72,7 @@ Depends:
  libkscreen-bin,
  wildos-branding,
  steam-devices,
- wildos-ui (>= 0.1.3),
+ wildos-ui (>= 0.1.12),
  kio6,
  packagekit,
  pkexec,
@@ -118,3 +131,8 @@ Description: Wild OS Settings
  service gives each new network Quad9's encrypted DNS (DNS over TLS through
  systemd-resolved) and runs the VPN kill switch with nftables; Wi-Fi uses a
  private hardware address for each network by default.
+ .
+ The firewall is one nftables table that settings-firewall builds from the
+ protection level and the choices on the Firewall page, loaded again by
+ wildos-network as networks come and go. File sharing, Remote Desktop and
+ SSH install Samba, KRdp or OpenSSH the first time they are switched on.

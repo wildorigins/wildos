@@ -4,7 +4,7 @@ set -e
 # Takes fingerprint sign-in out of common-auth while its PAM profile and
 # fingerprint-turn are still on disk.
 if [ "$1" = "remove" ] && command -v pam-auth-update >/dev/null; then
-    pam-auth-update --package --remove wildos-fingerprint
+    pam-auth-update --package --remove wildos-fingerprint wildos-fingerprint-stamp
 fi
 
 #DEBHELPER#

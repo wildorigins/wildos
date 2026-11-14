@@ -1,0 +1,11 @@
+#!/bin/sh
+# Advanced protection's Encrypted DNS. wildos-network reads dns, dns_strict
+# and dns_provider from the store as it changes and moves each network
+# over; this only makes sure it is running to see it.
+set -eu
+
+case "${1:-}" in
+    on | off | quad9 | mullvad | cloudflare) ;;
+    *) exit 2 ;;
+esac
+systemctl start wildos-network.service >/dev/null 2>&1 || true

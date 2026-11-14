@@ -28,6 +28,13 @@ Item {
     property bool keptWindows: false
     // [{ stage, from, to }] in overall progress (0 to 1), from execModuleWeights.
     property var spans: []
+    // When the progress last moved, and seconds since then. Some steps
+    // report nothing while they work (making the encrypted partition, the
+    // reset copy), and on some computers they take minutes: the page then
+    // says it is still working rather than sitting on one number.
+    property double movedAt: 0
+    property int stillFor: 0
+    readonly property bool waiting: stillFor >= 20
 
     // The five stages, and the modules (settings.conf exec) in each.
     readonly property var stages: [
@@ -89,6 +96,8 @@ Item {
 
     function onActivate() {
         startedAt = Date.now();
+        movedAt = startedAt;
+        stillFor = 0;
         encrypted = Global.value("wildosEncrypt") !== false;
         var plan = Global.value("wildosPlan") || {};
         keptWindows = plan.mode === "alongside" && plan.other === "Windows";
@@ -101,12 +110,32 @@ Item {
         function onProgress(percent, prettyName) {
             if (show.spans.length === 0)
                 show.buildSpans();
+            if (percent > show.progress) {
+                show.movedAt = Date.now();
+                show.stillFor = 0;
+            }
             show.progress = Math.max(show.progress, percent);
             // After the first few per cent the pace is steady enough to go by.
             var elapsed = (Date.now() - show.startedAt) / 1000;
             if (show.startedAt > 0 && percent >= 0.05 && elapsed >= 30)
                 show.minutesLeft = Math.round(elapsed * (1 - percent) / percent / 60);
         }
+    }
+
+    Timer {
+        interval: 1000
+        repeat: true
+        running: show.activatedInCalamares && show.startedAt > 0 && show.progress < 1
+        onTriggered: show.stillFor = Math.round((Date.now() - show.movedAt) / 1000)
+    }
+
+    function stillText() {
+        var minutes = Math.floor(show.stillFor / 60);
+        var why = qsTr("Some computers take a few minutes here.");
+        if (minutes < 1)
+            return qsTr("Still working on this step.") + " " + why;
+        return (minutes === 1 ? qsTr("Still working on this step, 1 minute so far.")
+                              : qsTr("Still working on this step, %1 minutes so far.").arg(minutes)) + " " + why;
     }
 
     ColumnLayout {
@@ -189,15 +218,35 @@ Item {
                     Accessible.name: qsTr("Installation progress")
 
                     Rectangle {
+                        id: fill
                         width: parent.width * Math.min(1, show.progress)
                         height: parent.height
                         radius: 4
                         color: UI.Style.accent
                         Behavior on width { NumberAnimation { duration: 400 } }
+
+                        // A step that reports nothing still shows it is at work.
+                        SequentialAnimation on opacity {
+                            running: show.waiting
+                            loops: Animation.Infinite
+                            onRunningChanged: if (!running) fill.opacity = 1
+                            NumberAnimation { to: 0.45; duration: 900; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 1; duration: 900; easing.type: Easing.InOutSine }
+                        }
                     }
                 }
                 Text {
                     text: Math.round(show.progress * 100) + "%"
+                    color: UI.Style.inkMuted
+                    font.family: UI.Style.fontFamily
+                    font.letterSpacing: UI.Style.tracking(12)
+                    font.pixelSize: 12
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: show.waiting
+                    text: show.stillText()
+                    wrapMode: Text.WordWrap
                     color: UI.Style.inkMuted
                     font.family: UI.Style.fontFamily
                     font.letterSpacing: UI.Style.tracking(12)

@@ -29,7 +29,7 @@ Depends:
  qml6-module-qtquick-window,
  wildos-fonts,
  wildos-branding,
- wildos-ui (>= 0.1.6),
+ wildos-ui (>= 0.1.12),
 Description: Wild OS installer
  Calamares configuration, branding and helper scripts that install Wild OS
  from the live session to disk, with full disk encryption and a recovery

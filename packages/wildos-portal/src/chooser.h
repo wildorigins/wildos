@@ -31,6 +31,8 @@ class Chooser : public QObject
     Q_PROPERTY(QString initialName READ initialName CONSTANT)
     Q_PROPERTY(QString nameLabel READ nameLabel CONSTANT)
     Q_PROPERTY(QString typeLabel READ typeLabel CONSTANT)
+    // "details" or "icons" (Large icons), remembered per kind of file.
+    Q_PROPERTY(QString viewMode READ viewMode WRITE setViewMode NOTIFY viewModeChanged)
 
 public:
     enum Mode { Open, Save, SaveFiles, Folder };
@@ -64,6 +66,8 @@ public:
     QString initialName() const { return m_initialName; }
     QString nameLabel() const;
     QString typeLabel() const;
+    QString viewMode() const { return m_viewMode; }
+    void setViewMode(const QString &mode);
 
     // What the name field holds once a file is picked in the list.
     Q_INVOKABLE QString nameForSelection() const;
@@ -91,6 +95,7 @@ public:
 Q_SIGNALS:
     void currentFilterChanged();
     void choicesChanged();
+    void viewModeChanged();
 
 private:
     QString suffixFor(int filter) const;
@@ -108,6 +113,7 @@ private:
     QHash<QString, QString> m_chosen;
     QString m_initialName;
     QString m_purpose;
+    QString m_viewMode;
     QList<QUrl> m_pending;
     bool m_done = false;
 };

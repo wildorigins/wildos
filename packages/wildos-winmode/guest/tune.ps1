@@ -17,7 +17,9 @@
 
 param([switch]$Install)
 
-$version = '2'
+$version = '3'
+# The capabilities and features list below, which takes a while to check.
+$featuresVersion = '2'
 $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 $dir = 'C:\Program Files\Wild OS'
@@ -95,7 +97,14 @@ Set-Policy 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' 'BackgroundModeEnabled' 0
 # and Windows 11 then allows only Windows Hello for it, so every sign-in
 # from Wild OS stops at "The username or password is incorrect". Office and
 # the Store can still sign in to a Microsoft account for themselves.
-Set-Policy 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' 'NoConnectedUser' 1
+# While Windows mode activates Windows with a licence on a Microsoft account
+# (Settings, issue 56), the policy is off for a second account made only for
+# that, and the host puts it back and removes the marker afterwards. A
+# marker older than a day was left behind and doesn't count.
+$activation = Get-Item "$stateDir\activation.json" -ErrorAction SilentlyContinue
+if (-not $activation -or $activation.LastWriteTime -lt (Get-Date).AddDays(-1)) {
+    Set-Policy 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' 'NoConnectedUser' 1
+}
 Set-Policy 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device' 'DevicePasswordLessBuildVersion' 0
 # With 3.5 GB or more Windows gives every service its own process. Grouped
 # as on smaller PCs they share one: 71 svchost processes became 38 and
@@ -197,8 +206,8 @@ $build = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
 $buildId = "$($build.CurrentBuild).$($build.UBR)"
 
 # Listing capabilities and features takes a while, so only for a new
-# version of this script or a new Windows build.
-if ($state.features -ne "$version/$buildId") {
+# list ($featuresVersion) or a new Windows build.
+if ($state.features -ne "$featuresVersion/$buildId") {
     foreach ($c in Get-WindowsCapability -Online -ErrorAction SilentlyContinue | Where-Object State -eq 'Installed') {
         foreach ($want in 'App.StepsRecorder', 'Hello.Face', 'MathRecognizer', 'Media.WindowsMediaPlayer', 'Microsoft.Windows.WordPad',
                           'Microsoft.Wallpapers.Extended', 'OneCoreUAP.OneSync', 'Microsoft.Windows.PowerShell.ISE', 'App.Support.QuickAssist') {
@@ -215,7 +224,7 @@ if ($state.features -ne "$version/$buildId") {
             $changes.Add("feature $f")
         }
     }
-    $state.features = "$version/$buildId"
+    $state.features = "$featuresVersion/$buildId"
 }
 
 # Each update keeps the components it replaced. Cleared once per build, at

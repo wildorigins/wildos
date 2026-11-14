@@ -57,6 +57,8 @@ private:
         qreal progress = 0;
         qreal target = 0;
         bool dirty = true;
+        // Whether textures hold a drawing of the window yet.
+        bool drawn = false;
         qreal textureScale = 1;
         // Level 0 is the window as drawn, each further level half the size
         // of the one before; after blurring, level 1 holds the result.
@@ -87,6 +89,7 @@ private:
     qreal m_dim = 0.14;
     qreal m_duration = 250;
     std::chrono::milliseconds m_lastPresent = std::chrono::milliseconds::zero();
+    bool m_crossFading = false;
 
     bool m_shadersFailed = false;
     std::unique_ptr<GLShader> m_downsample;

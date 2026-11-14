@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+# Up to 0.1.3 this package was Write and Tables together. They are now
+# wildos-write and wildos-tables, so each can be removed on its own, and an
+# update brings in neither by itself. A PC updating from before the split
+# gets both a minute after dpkg has finished, or at the next start if that
+# fails.
+if [ "$1" = configure ] && [ -n "${2:-}" ] && dpkg --compare-versions "$2" lt 0.1.4~; then
+    mkdir -p /var/lib/wildos
+    touch /var/lib/wildos/office-split
+    if [ -d /run/systemd/system ]; then
+        systemd-run --quiet --on-active=60 --unit=wildos-office-split-soon \
+            systemctl start --no-block wildos-office-split.service || true
+    fi
+fi
+#DEBHELPER#
+exit 0

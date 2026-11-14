@@ -1,0 +1,9 @@
+[Unit]
+Description=Finish shutdowns the lid or power button started
+# Not part of the graphical session: it has to outlive the sign-out that
+# every shutdown starts with. The sign-in screen's account has no apps.
+ConditionUser=!@system
+
+[Service]
+ExecStart=/usr/libexec/wildos/shutdown-guard
+Restart=on-failure

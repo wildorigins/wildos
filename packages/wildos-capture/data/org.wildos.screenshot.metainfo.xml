@@ -16,6 +16,11 @@
       pen, highlighter, arrow, box, text, blur and crop. It saves to
       Pictures, in Screenshots. Nothing is sent anywhere.
     </p>
+    <p>
+      The Scan tab scans paper from a network or USB scanner, from the glass
+      or the feeder, and saves the pages as a PDF or as pictures, or opens
+      them in PDF to sign.
+    </p>
   </description>
   <launchable type="desktop-id">org.wildos.screenshot.desktop</launchable>
   <icon type="stock">wildos-capture</icon>

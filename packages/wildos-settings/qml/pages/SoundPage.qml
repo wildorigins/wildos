@@ -257,7 +257,7 @@ PageScroll {
 
     // Windows mode's apps all play through its one FreeRDP connection,
     // whose PulseAudio backend names itself "freerdp" (rdpsnd_pulse.c) and
-    // runs as xfreerdp3 (wildos-winmode rdp.py), so they are one stream and
+    // runs as wildos-rdp (wildos-winmode rdp.py), so they are one stream and
     // one row.
     function isWindows(stream) {
         const p = props(stream);

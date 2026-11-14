@@ -36,6 +36,11 @@ Item {
     // PAM profile). Whose finger is enrolled can't be seen from here, so the
     // hint follows the reader alone.
     property bool fingerprintReader: false
+    // Advanced protection can ask for the password once after a restart
+    // and again after some hours; until then the finger is turned down, so
+    // it isn't offered.
+    readonly property bool fingerprintNow: fingerprintReader && UI.System.fingerprintAllowed !== undefined
+        && UI.System.fingerprintAllowed(hasUserList ? currentUserName : usernamePill.text.trim())
     property bool triedFingerprint: false
 
     // Values for the chosen user, read through a Repeater because SDDM's
@@ -44,6 +49,9 @@ Item {
     property string currentRealName: ""
     property string currentIcon: ""
     property bool currentNeedsPassword: true
+    // The guest session's account (Advanced protection > Guest session),
+    // made without a password; only it is called guest and has none.
+    property bool currentIsGuest: false
     property string currentSessionName: ""
 
     function signIn() {
@@ -57,7 +65,7 @@ Item {
         failureMessage = "";
         infoMessage = "";
         busy = true;
-        triedFingerprint = fingerprintReader && passwordPill.text.length === 0;
+        triedFingerprint = fingerprintNow && passwordPill.text.length === 0;
         sddm.login(user, passwordPill.text, sessionIndex);
     }
 
@@ -118,12 +126,19 @@ Item {
             required property string icon
             required property bool needsPassword
             readonly property bool chosen: index === root.userIndex
+            readonly property bool guest: name === "guest" && !needsPassword
             visible: false
             onChosenChanged: sync()
             Component.onCompleted: {
                 const list = root.users.slice();
-                list[index] = { name: name, realName: realName };
+                list[index] = { name: name, realName: realName, guest: guest };
                 root.users = list;
+                // The screen opens on the PC's own people, even after a
+                // guest was the last to sign in.
+                if (chosen && guest && userModel.count > 1) {
+                    root.userIndex = index === 0 ? 1 : 0;
+                    return;
+                }
                 sync();
             }
             function sync() {
@@ -133,6 +148,7 @@ Item {
                 root.currentRealName = realName.length > 0 ? realName : name;
                 root.currentIcon = icon;
                 root.currentNeedsPassword = needsPassword;
+                root.currentIsGuest = guest;
             }
         }
     }
@@ -320,7 +336,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width
                 spacing: 6
-                visible: failureNotice.shown || hintNotice.shown || capsNotice.shown || infoNotice.shown || fingerprintNotice.shown
+                visible: failureNotice.shown || hintNotice.shown || capsNotice.shown || infoNotice.shown || fingerprintNotice.shown || guestNotice.shown
 
                 Notice {
                     id: failureNotice
@@ -340,9 +356,15 @@ Item {
                 }
                 Notice {
                     id: fingerprintNotice
-                    shown: root.fingerprintReader && passwordPill.visible && !root.busy && passwordPill.text.length === 0
+                    shown: root.fingerprintNow && passwordPill.visible && !root.busy && passwordPill.text.length === 0
                         && root.failureMessage.length === 0 && root.infoMessage.length === 0
                     text: "Or press Enter and touch the fingerprint reader"
+                    muted: true
+                }
+                Notice {
+                    id: guestNotice
+                    shown: root.hasUserList && root.currentIsGuest && root.failureMessage.length === 0
+                    text: "A clean desktop, wiped when you sign out."
                     muted: true
                 }
                 Notice {
@@ -381,7 +403,7 @@ Item {
                     value: root.currentRealName
                     choices: root.users.map((user, index) => ({
                         text: user.realName.length > 0 ? user.realName : user.name,
-                        detail: user.realName.length > 0 && user.realName !== user.name ? user.name : "",
+                        detail: user.guest ? "Wiped when they sign out" : user.realName.length > 0 && user.realName !== user.name ? user.name : "",
                         checked: index === root.userIndex,
                         run: () => {
                             root.userIndex = index;

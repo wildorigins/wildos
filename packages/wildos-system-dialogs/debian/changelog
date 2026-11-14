@@ -1,3 +1,42 @@
+wildos-system-dialogs (0.1.15) trixie; urgency=medium
+
+  * The fingerprint keeps working after a restart again: asking for the
+    password after a restart or every so many hours is off unless you
+    switch it on in Advanced protection (Strict and Maximum switch it on).
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 16:00:00 +0000
+
+wildos-system-dialogs (0.1.14) trixie; urgency=medium
+
+  * Notes each password sign-in and unlock, so the fingerprint can ask
+    for the password again after a restart and after the hours chosen in
+    Advanced protection.
+  * The password prompt for turning the camera or microphone back on for
+    every app says so, under the name Camera and microphone.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:56:10 +0000
+
+wildos-system-dialogs (0.1.13) trixie; urgency=medium
+
+  * The password box in the permission prompt takes only what is typed:
+    nothing can be pasted into it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:45:00 +0000
+
+wildos-system-dialogs (0.1.12) trixie; urgency=medium
+
+  * The details in a permission request can be copied from a right-
+    click menu.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
+wildos-system-dialogs (0.1.11) trixie; urgency=medium
+
+  * sudo in a terminal takes your password or your fingerprint from the
+    same prompt, whichever comes first.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 15:30:00 +0000
+
 wildos-system-dialogs (0.1.10) trixie; urgency=medium
 
   * Opening a 32-bit program, such as Steam, while 32-bit apps are off

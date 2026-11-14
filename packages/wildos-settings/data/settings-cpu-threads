@@ -1,53 +1,67 @@
 #!/bin/sh
-# Turns hyper-threading on or off from the next start-up: "Use every processor
-# thread" in Settings > System > Power and battery, also offered by Windows
-# mode setup. Runs as root through pkexec (org.wildos.settings.cpu-threads),
-# and from settings-protection, which turns it off at Strict and Maximum.
+# Processor thread and flaw protection choices, applied from the next
+# start-up by /etc/default/grub.d/40_wildos.cfg (wildos-base). Runs as root
+# through pkexec (org.wildos.settings.cpu-threads).
 #
-# Wild OS ships with it off. Kicksecure's boot options (nosmt=force, ",nosmt"
-# on several CPU flaw mitigations, and l1tf=full,force) keep the second thread
-# of every core offline, so a program can't read what another one leaves in a
-# core they share. Turning it on keeps every mitigation and only lets those
-# threads run: ",nosmt" and "nosmt=force" go, and l1tf drops to "flush", which
-# still clears the cache each time a virtual machine runs. The kernel decides
-# this at boot, so it takes a restart.
+#   on | off        "Use every processor thread" in Settings > System > Power
+#                   and battery, also offered by Windows mode setup. Until it
+#                   is touched, the kernel runs every thread except on
+#                   processors it lists as unsafe for sharing a core.
+#   protect on|off  "Extra processor protection" in Settings > Privacy and
+#                   security: Kicksecure's full set of processor flaw
+#                   protections, forced on whether or not the processor
+#                   needs them, with the second thread of every core off.
 #
-#   on | off   save the choice and rebuild the boot menu
+# Strict and Maximum protection always get the full set; 40_wildos.cfg
+# reads the level itself.
 
 set -eu
 
-CHOICE=/etc/wildos/cpu-threads
-DROPIN=/etc/default/grub.d/41_wildos_cpu_threads.cfg
+THREADS=/etc/wildos/cpu-threads
+PROTECT=/etc/wildos/cpu-protection
 LEVEL_FILE=/etc/wildos/protection-level
 
-case "${1:-}" in
-on)
-    # Strict and Maximum keep every CPU flaw protection on; Settings greys the
-    # switch out there, and this refuses in case anything else asks.
+strict_level() {
     case "$(cat "$LEVEL_FILE" 2>/dev/null || true)" in
-    strict | maximum)
-        echo "Strict and Maximum protection keep hyper-threading off." >&2
-        exit 3
-        ;;
+    strict | maximum) return 0 ;;
     esac
+    return 1
+}
+
+case "${1:-}:${2:-}" in
+on:)
+    # Settings greys the switch out at Strict, Maximum and with extra
+    # protection on; this refuses in case anything else asks.
+    if strict_level || [ "$(cat "$PROTECT" 2>/dev/null || true)" = extra ]; then
+        echo "Extra processor protection keeps hyper-threading off." >&2
+        exit 3
+    fi
     mkdir -p /etc/wildos
-    echo on > "$CHOICE"
-    # Sorts after 40_cpu_mitigations.cfg, so it edits what that file added.
-    cat > "$DROPIN" <<'EOF'
-# Written by Wild OS Settings: hyper-threading is on. Every CPU flaw mitigation
-# stays; only the options that keep the second thread of each core offline go.
-GRUB_CMDLINE_LINUX="$(printf '%s' "$GRUB_CMDLINE_LINUX" | sed -e 's/ nosmt=force//g' -e 's/,nosmt//g' -e 's/l1tf=full,force/l1tf=flush/g')"
-EOF
+    echo on > "$THREADS"
     ;;
-off)
-    [ -e "$CHOICE" ] || [ -e "$DROPIN" ] || exit 0
-    rm -f "$CHOICE" "$DROPIN"
+off:)
+    mkdir -p /etc/wildos
+    echo off > "$THREADS"
+    ;;
+protect:on)
+    mkdir -p /etc/wildos
+    echo extra > "$PROTECT"
+    ;;
+protect:off)
+    if strict_level; then
+        echo "Strict and Maximum protection keep extra processor protection on." >&2
+        exit 3
+    fi
+    rm -f "$PROTECT"
     ;;
 *)
-    echo "usage: $0 on|off" >&2
+    echo "usage: $0 on|off|protect on|protect off" >&2
     exit 2
     ;;
 esac
+
+# The old drop-in from before 40_wildos.cfg read the choice itself.
+rm -f /etc/default/grub.d/41_wildos_cpu_threads.cfg
 
 if command -v update-grub >/dev/null 2>&1; then
     update-grub >/dev/null 2>&1

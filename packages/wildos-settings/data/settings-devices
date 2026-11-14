@@ -1,0 +1,234 @@
+#!/usr/bin/python3 -I
+"""The two things Settings > System > Devices can't read as you.
+
+Runs as root, once for each connection to wildos-devices.socket, and takes
+no requests: it writes one JSON object and exits.
+
+    firmware   kernel lines from this start-up saying a device's firmware
+               could not be loaded, with the device each is about. Drivers
+               often try several versions and settle on one they find, so
+               a line here alone doesn't mean anything is broken; Settings
+               only calls a device short of firmware when it also isn't
+               working.
+    disks      each internal drive's own health check, from smartctl:
+               passed or failed, and the few figures that explain it. No
+               serial numbers.
+    unbound    each PCI device and USB interface with no driver: the kernel
+               modules that would drive it (modprobe -R) and whether one is
+               switched off, by security-misc on purpose or blacklisted by
+               someone, with the file that does it.
+
+Only reads. The kernel log, the drives' health logs and the kernel's module
+list (/usr/lib/modules is root's alone on Wild OS) all need root, which is
+why Settings doesn't do this itself.
+"""
+
+import fnmatch
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+
+FIRMWARE_WORDS = re.compile(r"firmware", re.I)
+FAILED_WORDS = re.compile(r"fail|not found|no suitable|missing|unable|error|couldn't|could not|cannot", re.I)
+# "iwlwifi 0000:00:14.3: Direct firmware load for iwlwifi-so-a0-gf-a0-89.ucode failed with error -2"
+FILE_IN_LINE = re.compile(r"(?:load(?:ing)?(?: firmware)?|firmware:? failed to load|request(?:ing)? firmware)\s+(?:for\s+)?[\"']?([\w./+-]+\.(?:bin|ucode|fw|sbin|ri|pnvm|ddc|tlv|hcd|dat|img|zst|xz))", re.I)
+PREFIX = re.compile(r"^(\S+) (\S+): ")
+
+
+def run(args, timeout=10):
+    try:
+        out = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=timeout)
+        return out.stdout.decode("utf-8", "replace")
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def firmware():
+    found = []
+    seen = set()
+    text = run(["journalctl", "-k", "-b", "-o", "json", "--no-pager", "-q"], timeout=20)
+    for line in text.splitlines():
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        message = entry.get("MESSAGE")
+        if not isinstance(message, str) or not FIRMWARE_WORDS.search(message) or not FAILED_WORDS.search(message):
+            continue
+        # The device the line is about: journald's own field when the
+        # driver logged through dev_err(), else the "driver address:"
+        # prefix most drivers print.
+        device = entry.get("_KERNEL_DEVICE", "")
+        if device.startswith("+"):
+            device = device[1:]
+        else:
+            device = ""
+        driver = ""
+        prefix = PREFIX.match(message)
+        if prefix:
+            driver = prefix.group(1)
+            if not device and re.match(r"^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$", prefix.group(2)):
+                device = "pci:" + prefix.group(2)
+            elif not device and re.match(r"^\d+-[\d.]+(:\d+\.\d+)?$", prefix.group(2)):
+                device = "usb:" + prefix.group(2)
+        name = FILE_IN_LINE.search(message)
+        key = (device, message)
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append({"device": device, "driver": driver, "file": name.group(1) if name else "", "message": message[:300]})
+    return found[-50:]
+
+
+def internal_disks():
+    disks = []
+    for path in sorted(glob.glob("/sys/block/*")):
+        name = os.path.basename(path)
+        if re.match(r"^(loop|ram|zram|dm-|md|sr|fd|nbd)", name):
+            continue
+        try:
+            with open(os.path.join(path, "removable")) as f:
+                if f.read().strip() == "1":
+                    continue
+        except OSError:
+            continue
+        # USB drives are someone's stick or backup disk, not the PC's own.
+        if "/usb" in os.path.realpath(os.path.join(path, "device")):
+            continue
+        disks.append(name)
+    return disks
+
+
+def number(value):
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def health(name):
+    out = run(["smartctl", "-j", "-H", "-A", "/dev/" + name])
+    try:
+        data = json.loads(out)
+    except ValueError:
+        return {"reported": False}
+    status = data.get("smart_status")
+    if not isinstance(status, dict) or "passed" not in status:
+        return {"reported": False}
+    result = {"reported": True, "passed": bool(status.get("passed"))}
+    temperature = data.get("temperature", {})
+    if isinstance(temperature, dict) and number(temperature.get("current")) is not None:
+        result["temperature"] = temperature["current"]
+    hours = data.get("power_on_time", {})
+    if isinstance(hours, dict) and number(hours.get("hours")) is not None:
+        result["hours"] = hours["hours"]
+    nvme = data.get("nvme_smart_health_information_log")
+    if isinstance(nvme, dict):
+        for key, field in (("percentUsed", "percentage_used"), ("spare", "available_spare"),
+                           ("spareThreshold", "available_spare_threshold"), ("mediaErrors", "media_errors"),
+                           ("criticalWarning", "critical_warning")):
+            if number(nvme.get(field)) is not None:
+                result[key] = nvme[field]
+    table = data.get("ata_smart_attributes", {}).get("table", [])
+    for attribute in table if isinstance(table, list) else []:
+        raw = attribute.get("raw", {}).get("value") if isinstance(attribute.get("raw"), dict) else None
+        if number(raw) is None:
+            continue
+        if attribute.get("id") == 5:
+            result["reallocated"] = raw
+        elif attribute.get("id") == 197:
+            result["pending"] = raw
+        elif attribute.get("id") == 198:
+            result["uncorrectable"] = raw
+    return result
+
+
+def module_rules():
+    files = {}
+    for folder in ("/usr/lib/modprobe.d", "/lib/modprobe.d", "/run/modprobe.d", "/etc/modprobe.d"):
+        for path in glob.glob(os.path.join(folder, "*.conf")):
+            files[os.path.basename(path)] = path
+    security, blacklisted = {}, {}
+    for path in files.values():
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                lines = f.read().splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            words = line.split()
+            if len(words) < 2:
+                continue
+            module = words[1].replace("-", "_")
+            if words[0] == "blacklist":
+                (security if "security-misc" in os.path.basename(path) else blacklisted)[module] = path
+            elif words[0] == "install" and len(words) >= 3:
+                if "security-misc" in words[2]:
+                    security[module] = path
+                elif words[2].endswith("/false") or words[2].endswith("/true"):
+                    blacklisted[module] = path
+    return security, blacklisted
+
+
+def builtin_aliases():
+    # Drivers built into the kernel aren't in modules.alias, so modprobe -R
+    # doesn't name them; their aliases are in modules.builtin.modinfo.
+    aliases = []
+    try:
+        with open("/lib/modules/%s/modules.builtin.modinfo" % os.uname().release, "rb") as f:
+            items = f.read().split(b"\0")
+    except OSError:
+        return aliases
+    for item in items:
+        text = item.decode("utf-8", "replace")
+        if ".alias=" in text:
+            module, pattern = text.split(".alias=", 1)
+            aliases.append((module.replace("-", "_"), pattern))
+    return aliases
+
+
+def unbound():
+    security, blacklisted = module_rules()
+    builtin = None
+    out = {}
+    for path in glob.glob("/sys/bus/pci/devices/*") + glob.glob("/sys/bus/usb/devices/*:*"):
+        if os.path.exists(os.path.join(path, "driver")):
+            continue
+        try:
+            with open(os.path.join(path, "modalias")) as f:
+                alias = f.read().strip()
+        except OSError:
+            continue
+        # Bridges and other plumbing inside the PC; Settings doesn't list them.
+        if alias.startswith("pci:") and re.search(r"bc06sc", alias):
+            continue
+        modules = []
+        for line in run(["modprobe", "-R", alias], timeout=5).splitlines():
+            name = line.strip().replace("-", "_")
+            if name and name not in modules:
+                modules.append(name)
+        if not modules:
+            if builtin is None:
+                builtin = builtin_aliases()
+            for module, pattern in builtin:
+                if module not in modules and fnmatch.fnmatchcase(alias, pattern):
+                    modules.append(module)
+        entry = {"modules": modules}
+        for name in modules:
+            if name in blacklisted:
+                entry["blacklisted"] = name
+                entry["file"] = blacklisted[name]
+            elif name in security:
+                entry["security"] = name
+        out[os.path.realpath(path)] = entry
+    return out
+
+
+def main():
+    answer = {"firmware": firmware(), "disks": {name: health(name) for name in internal_disks()}, "unbound": unbound()}
+    sys.stdout.write(json.dumps(answer) + "\n")
+    sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    main()

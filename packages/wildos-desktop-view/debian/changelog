@@ -1,3 +1,18 @@
+wildos-desktop-view (0.1.8) trixie; urgency=medium
+
+  * New in the right-click menu offers a Write document and a Tables
+    spreadsheet, made as Word and Excel files like everything Write and
+    Tables save, instead of LibreOffice's Writer and Calc names and formats.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 16:20:00 +0000
+
+wildos-desktop-view (0.1.7) trixie; urgency=medium
+
+  * Renaming on the desktop has the right-click menu with Cut, Copy,
+    Paste and Select all. The rename stays open while the menu is up.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-desktop-view (0.1.6) trixie; urgency=medium
 
   * Renaming an icon works like Explorer: the arrow keys move within the

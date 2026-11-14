@@ -1,0 +1,219 @@
+#!/bin/sh
+# The store behind Settings > Privacy and security > Advanced protection.
+# Runs as root through pkexec (org.wildos.settings.policy, action
+# org.wildos.settings.advanced), and from settings-protection when the
+# protection level changes. Takes only the requests below.
+#
+#   set KEY VALUE   The person's own choice. KEY goes on the chosen list,
+#                   so no protection level changes it again.
+#   reset           Every key back to what the protection level in use
+#                   gives it (the board defaults at Standard), and the
+#                   chosen list emptied.
+#   level LEVEL     standard, strict or maximum: every key nobody chose by
+#                   hand takes that level's value.
+#   get             Every key and its value now, one KEY=VALUE per line.
+#                   Needs no privileges: the store is world-readable.
+#
+# /etc/wildos/advanced-protection holds KEY=VALUE lines; a missing key
+# means its default. /etc/wildos/advanced-protection.chosen lists the keys
+# set by hand. After a change, advanced-protection-apply runs each changed
+# key's hook in /usr/lib/wildos/advanced-protection.d.
+
+set -eu
+
+STORE=/etc/wildos/advanced-protection
+CHOSEN=/etc/wildos/advanced-protection.chosen
+LEVEL_FILE=/etc/wildos/protection-level
+APPLY=/usr/libexec/wildos/advanced-protection-apply
+LOCK=/run/wildos/advanced-protection.lock
+
+KEYS="usb_locked quiet_lock fingerprint_hours restart_locked_hours restart_locked_force radios_idle_off dns dns_strict dns_provider vpn_only clipboard_forget presenting scrub_files usb_encrypt guest safebox panic_key"
+
+# What each value may be.
+allowed() {
+    case "$1" in
+        fingerprint_hours) echo "0 4 8 12 24 48 72" ;;
+        restart_locked_hours) echo "0 4 8 12 18 24 48" ;;
+        dns_provider) echo "quad9 mullvad cloudflare" ;;
+        *) echo "on off" ;;
+    esac
+}
+
+# The board defaults (Standard), then what Strict and Maximum tighten. A
+# level only ever switches something on or shortens a time; the VPN switch
+# needs a VPN set up, the guest session and panic key change how the PC is
+# used and closing open apps anyway can lose work, so no level touches
+# those. dns_strict has no row of its own: Maximum makes the Encrypted DNS
+# switch's encryption strict, unless the person switched it off.
+level_value() {
+    level=$1
+    key=$2
+    case "$level:$key" in
+        maximum:fingerprint_hours) echo 12; return ;;
+        strict:fingerprint_hours) echo 24; return ;;
+        maximum:restart_locked_hours | strict:restart_locked_hours) echo 18; return ;;
+        maximum:radios_idle_off) echo on; return ;;
+        maximum:dns_strict) echo on; return ;;
+    esac
+    case "$key" in
+        usb_locked | quiet_lock | dns | clipboard_forget | presenting | scrub_files | usb_encrypt | safebox) echo on ;;
+        fingerprint_hours) echo 0 ;;
+        restart_locked_hours) echo 0 ;;
+        dns_provider) echo quad9 ;;
+        *) echo off ;;
+    esac
+}
+
+saved_level() {
+    level=$(cat "$LEVEL_FILE" 2>/dev/null || true)
+    case "$level" in strict | maximum) echo "$level" ;; *) echo standard ;; esac
+}
+
+known_key() {
+    for k in $KEYS; do
+        [ "$k" = "$1" ] && return 0
+    done
+    return 1
+}
+
+valid_value() {
+    for v in $(allowed "$1"); do
+        [ "$v" = "$2" ] && return 0
+    done
+    return 1
+}
+
+stored() {
+    sed -n "s/^$1=//p" "$STORE" 2>/dev/null | tail -n 1
+}
+
+# The value in effect: the stored one if it is still a valid choice, else
+# the board default, as every reader of the store takes it.
+current() {
+    value=$(stored "$1")
+    if [ -n "$value" ] && valid_value "$1" "$value"; then
+        echo "$value"
+    else
+        level_value standard "$1"
+    fi
+}
+
+is_chosen() {
+    grep -qx "$1" "$CHOSEN" 2>/dev/null
+}
+
+# Values for every key, with the given key replaced, written in one go so
+# a reader never sees half a file.
+write_store() {
+    mkdir -p "$(dirname "$STORE")"
+    tmp=$(mktemp "$STORE.XXXXXX")
+    {
+        echo "# Settings > Privacy and security > Advanced protection. Written by"
+        echo "# /usr/libexec/wildos/settings-advanced; change it from Settings."
+        for k in $KEYS; do
+            v=$(eval "printf '%s' \"\${new_$k:-}\"")
+            [ -n "$v" ] || v=$(current "$k")
+            echo "$k=$v"
+        done
+    } > "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$STORE"
+}
+
+write_chosen() {
+    tmp=$(mktemp "$CHOSEN.XXXXXX")
+    cat > "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$CHOSEN"
+}
+
+# Hooks run after the store is written, one key at a time, so each sees
+# the new value; a hook that fails leaves the others to run.
+apply_keys() {
+    for k in "$@"; do
+        "$APPLY" "$k" || true
+    done
+}
+
+# Moves every key that differs from the target values (target_<key>) to
+# them and runs the hooks of those that changed, or of every key with
+# "all", which also puts back what was changed outside the store.
+move_to_targets() {
+    changed=""
+    every=${1:-}
+    for k in $KEYS; do
+        want=$(eval "printf '%s' \"\${target_$k:-}\"")
+        [ -n "$want" ] || continue
+        if [ "$(current "$k")" != "$want" ] || [ "$(stored "$k")" != "$want" ]; then
+            eval "new_$k=\$want"
+            [ "$(current "$k")" = "$want" ] || changed="$changed $k"
+        fi
+    done
+    [ "$every" = all ] && changed=$KEYS
+    write_store
+    # shellcheck disable=SC2086
+    apply_keys $changed
+}
+
+run() {
+    case "${1:-}" in
+        get)
+            for k in $KEYS; do
+                echo "$k=$(current "$k")"
+            done
+            ;;
+        set)
+            [ $# -eq 3 ] || usage
+            known_key "$2" || usage
+            valid_value "$2" "$3" || usage
+            eval "new_$2=\$3"
+            write_store
+            {
+                grep -vx "$2" "$CHOSEN" 2>/dev/null || true
+                echo "$2"
+            } | grep -E '^[a-z_]+$' | sort -u | write_chosen
+            # Run even when nothing changed: setting a key is also how
+            # its hook is asked to put things right again.
+            apply_keys "$2"
+            ;;
+        reset)
+            [ $# -eq 1 ] || usage
+            level=$(saved_level)
+            for k in $KEYS; do
+                eval "target_$k=\$(level_value \"\$level\" \"\$k\")"
+            done
+            : | write_chosen
+            move_to_targets all
+            ;;
+        level)
+            [ $# -eq 2 ] || usage
+            case "$2" in standard | strict | maximum) ;; *) usage ;; esac
+            for k in $KEYS; do
+                is_chosen "$k" && continue
+                eval "target_$k=\$(level_value \"\$2\" \"\$k\")"
+            done
+            move_to_targets
+            ;;
+        *)
+            usage
+            ;;
+    esac
+}
+
+usage() {
+    echo "usage: settings-advanced set KEY VALUE | reset | level standard|strict|maximum | get" >&2
+    exit 2
+}
+
+if [ "${1:-}" = get ]; then
+    run "$@"
+    exit 0
+fi
+
+[ "$(id -u)" -eq 0 ] || { echo "settings-advanced: needs root" >&2; exit 1; }
+
+# Settings and settings-protection can both write at once.
+mkdir -p "$(dirname "$LOCK")"
+exec 9> "$LOCK"
+flock 9
+run "$@"

@@ -69,7 +69,12 @@ void setOnScreenKeyboard(bool on, QObject *context, const std::function<void()> 
 
 // The pointer colours Settings offers, as { id, name, colour, theme }.
 QVariantList pointerColours();
+// "custom" while the pointer is the account's own (customPointerTheme).
 QString pointerColour();
+// The account's own pointer, made by pointer-import from a Windows pointer
+// or a picture, in ~/.local/share/icons/WildOS-Custom.
+QString customPointerTheme();
+QString customPointerDir();
 int pointerSize();
 QList<int> pointerSizes();
 void setPointer(const QString &colourId, int size);

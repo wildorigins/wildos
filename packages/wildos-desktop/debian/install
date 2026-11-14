@@ -2,6 +2,7 @@ files/10-wildos.conf etc/sddm.conf.d/
 files/pam-kde etc/pam.d/
 files/pam-kde-fingerprint etc/pam.d/
 files/pam-configs/wildos-fingerprint usr/share/pam-configs/
+files/pam-configs/wildos-fingerprint-stamp usr/share/pam-configs/
 files/fingerprint-turn usr/libexec/wildos/
 files/wildos-app-names usr/libexec/wildos/
 files/wildos-strings usr/libexec/wildos/

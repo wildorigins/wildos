@@ -1,0 +1,524 @@
+#!/usr/bin/python3 -I
+"""Saves a copy of a file without the personal details it carries.
+
+    remove-details [--location] [--device] [--authors] FILE...
+
+Each FILE gets a copy beside it named "NAME (no details).EXT"; the original
+is never changed. One JSON line per file goes to stdout:
+{"file", "copy", "error"}, with error empty on success. Files runs this for
+the "Remove personal details" menu entry, with the choices the person made
+in "Choose what is removed".
+
+Photos and MP4/MOV videos go through exiftool, PDFs through exiftool and
+then qpdf (exiftool alone appends its change and keeps the old details
+recoverable in the file; qpdf writes the file out again without the old
+revision). MP3, FLAC and Ogg audio go through mutagen. Word, Excel,
+PowerPoint and OpenDocument files are ZIP archives of XML, edited here, and
+the pictures inside them go through exiftool too. Every copy is read back
+and checked before it is kept.
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+
+EXIFTOOL = "/usr/bin/exiftool"
+QPDF = "/usr/bin/qpdf"
+
+PHOTO = {"jpg", "jpeg", "jpe", "png", "heic", "heif", "avif", "webp", "tif", "tiff", "gif", "dng"}
+MOVIE = {"mp4", "m4v", "mov", "3gp", "3g2", "m4a"}
+AUDIO = {"mp3", "flac", "ogg", "oga", "opus"}
+OOXML = {"docx", "docm", "dotx", "dotm", "xlsx", "xlsm", "xltx", "xltm", "pptx", "pptm", "potx", "potm", "ppsx", "ppsm"}
+ODF = {"odt", "ott", "ods", "ots", "odp", "otp", "odg", "otg"}
+PDF = {"pdf"}
+
+# exiftool arguments for each choice. Tag names are scoped to their group
+# where the same name means something else elsewhere: PDF "Creator" is the
+# program that made the file, XMP dc:creator is the person.
+EXIF_ARGS = {
+    "location": [
+        "-gps:all=", "-gps*=", "-location*=", "-city=", "-state=", "-province-state=",
+        "-country*=", "-sub-location=", "-sublocation=", "-contentlocation*=",
+        "-xmp-drone-dji:all=",
+    ],
+    "device": [
+        "-make=", "-model=", "-*serial*=", "-lens*=", "-software=", "-hostcomputer=",
+        "-makernotes:all=", "-uniquecameramodel=", "-localizedcameramodel=",
+        "-xmp-xmp:creatortool=", "-xmp-xmpmm:history=", "-xmp-aux:all=", "-android*=",
+        "-quicktime:encoder=", "-firmware*=", "-imageuniqueid=", "-png:source=",
+        "-pdf:creator=", "-pdf:producer=", "-xmp-pdf:producer=",
+    ],
+    "authors": [
+        "-artist=", "-author=", "-xpauthor=", "-ownername=", "-cameraownername=",
+        "-copyright=", "-copyrightnotice=", "-rights=", "-by-line=", "-by-linetitle=",
+        "-writer-editor=", "-credit=", "-contact=", "-xmp-dc:creator=", "-xmp-dc:contributor=",
+        "-xmp-photoshop:authorsposition=", "-xmp-photoshop:captionwriter=",
+        "-xmp-iptccore:creator*=", "-xmp-xmprights:owner=", "-xmp-plus:all=",
+        "-xmp-xmpdm:artist=", "-xmp-xmpdm:composer=", "-xmp-xmpdm:engineer=", "-xmp-xmpdm:director=",
+        "-quicktime:albumartist=", "-quicktime:composer=", "-quicktime:director=",
+        "-quicktime:producer=", "-quicktime:performer=", "-quicktime:encodedby=",
+        "-lastmodifiedby=", "-pdf:company=", "-pdf:manager=",
+    ],
+}
+
+# What must not be left after the copy is written, by tag name as exiftool
+# reports it with -G0:1. Groups exiftool computes itself are not in the file.
+CHECK = {
+    "location": re.compile(r"^(GPS|Location|City$|State$|Province|Country|Sub-?[Ll]ocation|ContentLocation)"),
+    "device": re.compile(r"^(Make|Model|.*Serial.*|Lens.*|Software|HostComputer|UniqueCameraModel|"
+                         r"LocalizedCameraModel|CreatorTool|History.*|Android.*|Encoder|Firmware.*|ImageUniqueID)$"),
+    "authors": re.compile(r"^(Artist|Author|XPAuthor|OwnerName|CameraOwnerName|Copyright|CopyrightNotice|Rights|"
+                          r"By-line|By-lineTitle|Writer-Editor|Credit|Contact|Contributor|AuthorsPosition|"
+                          r"CaptionWriter|Creator(Address|City|Country|PostalCode|Region|WorkEmail|WorkTelephone|WorkURL|ContactInfo).*|"
+                          r"Owner|AlbumArtist|Composer|Director|Performer|EncodedBy|LastModifiedBy|Engineer|Company|Manager)$"),
+}
+CHECK_GROUP_SKIP = re.compile(r"^(File|System|Composite|ExifTool):")
+
+
+class Refused(Exception):
+    """A plain sentence for the person, shown as it is."""
+
+
+def copy_name(path):
+    folder, name = os.path.split(path)
+    stem, dot, ext = name.rpartition(".")
+    if not dot or not stem:
+        stem, ext = name, ""
+    suffix = "." + ext if ext else ""
+    # Numbered the way Files numbers any name that is taken.
+    candidate = os.path.join(folder, f"{stem} (no details){suffix}")
+    n = 2
+    while os.path.lexists(candidate):
+        candidate = os.path.join(folder, f"{stem} (no details) ({n}){suffix}")
+        n += 1
+    return candidate
+
+
+def run(args, what):
+    try:
+        done = subprocess.run(args, capture_output=True, text=True, timeout=600)
+    except FileNotFoundError:
+        raise Refused(f"Wild OS is missing {what}, which this needs.")
+    except subprocess.TimeoutExpired:
+        raise Refused("This file took too long to clean.")
+    return done
+
+
+def exif_clean(src, dest, choices, kind):
+    args = [EXIFTOOL, "-q", "-q", "-m", "-P", "-o", dest]
+    for choice in choices:
+        args += EXIF_ARGS[choice]
+    args.append(src)
+    done = run(args, "exiftool")
+    if done.returncode != 0 or not os.path.exists(dest):
+        message = done.stderr.strip()
+        if "encrypt" in message.lower() or "password" in message.lower():
+            raise Refused("This file is password protected, so its details can't be changed.")
+        raise Refused(f"The details in this {kind} couldn't be changed. It may be damaged.")
+
+
+def exif_left(path, choices):
+    done = run([EXIFTOOL, "-j", "-G0:1", "-a", "-s", "-m", path], "exiftool")
+    if done.returncode != 0:
+        return []
+    try:
+        tags = json.loads(done.stdout)[0]
+    except (ValueError, IndexError):
+        return []
+    left = []
+    for key, value in tags.items():
+        group, _, name = key.rpartition(":")
+        if CHECK_GROUP_SKIP.match(key) or value in ("", None):
+            continue
+        family0 = group.split(":")[0]
+        for choice in choices:
+            if CHECK[choice].match(name) or (choice == "device" and family0 == "MakerNotes"):
+                left.append(choice)
+    return sorted(set(left))
+
+
+def clean_photo(src, dest, choices):
+    exif_clean(src, dest, choices, "picture")
+    return exif_left(dest, choices)
+
+
+def clean_movie(src, dest, choices):
+    exif_clean(src, dest, choices, "video")
+    return exif_left(dest, choices)
+
+
+# PDF comments name their writer in /T; exiftool does not reach them. Form
+# fields also have /T, as their name, and are left alone.
+def pdf_comment_authors(pdf):
+    done = run([QPDF, "--json=2", "--json-key=qpdf", "--json-stream-data=none", pdf], "qpdf")
+    if done.returncode not in (0, 3):
+        raise Refused("This PDF couldn't be read. It may be damaged.")
+    try:
+        objects = json.loads(done.stdout)["qpdf"][1]
+    except (ValueError, KeyError, IndexError):
+        raise Refused("This PDF couldn't be read. It may be damaged.")
+    changed = {}
+    for key, obj in objects.items():
+        value = obj.get("value") if isinstance(obj, dict) else None
+        if not isinstance(value, dict) or "/T" not in value or value["/T"] == "u:Author":
+            continue
+        annot = value.get("/Type") == "/Annot" or ("/Subtype" in value and "/Rect" in value)
+        if annot and value.get("/Subtype") != "/Widget" and "/FT" not in value:
+            value = dict(value)
+            value["/T"] = "u:Author"
+            changed[key] = {"value": value}
+    return changed
+
+
+def clean_pdf(src, dest, choices):
+    work = tempfile.mkdtemp(prefix="remove-details-")
+    try:
+        step = os.path.join(work, "a.pdf")
+        exif_clean(src, step, choices, "PDF")
+        args = [QPDF, "--object-streams=preserve", "--remove-unreferenced-resources=no"]
+        if "authors" in choices:
+            changed = pdf_comment_authors(step)
+            if changed:
+                update = os.path.join(work, "update.json")
+                with open(update, "w") as f:
+                    json.dump({"qpdf": [{"jsonversion": 2, "pushedinheritedpageresources": False, "calledgetallpages": False, "maxobjectid": 0}, changed]}, f)
+                args.append(f"--update-from-json={update}")
+        # Writing the file out again keeps only the newest revision, so the
+        # details exiftool replaced are no longer anywhere in it.
+        done = run(args + [step, dest], "qpdf")
+        if done.returncode not in (0, 3) or not os.path.exists(dest):
+            raise Refused("This PDF couldn't be written again. It may be damaged.")
+        left = exif_left(dest, choices)
+        if "authors" in choices and pdf_comment_authors(dest):
+            left.append("authors")
+        return left
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+# ID3 frames and Vorbis comment fields for each choice.
+ID3_FRAMES = {
+    "location": [],
+    "device": ["TSSE"],
+    "authors": ["TPE1", "TPE2", "TPE3", "TPE4", "TCOM", "TEXT", "TOLY", "TOPE", "TENC", "TOWN", "TCOP", "TIPL", "TMCL", "IPLS", "WOAR"],
+}
+ID3_TXXX = {
+    "location": re.compile(r"^(location|gps.*|city|country)$", re.I),
+    "device": re.compile(r"^(encoder.*|software|device|make|model)$", re.I),
+    "authors": re.compile(r"^(artists?|album ?artist|author|composer|lyricist|performer|conductor|arranger|"
+                          r"engineer|producer|mixer|copyright|owner|encoded ?by|contact)$", re.I),
+}
+VORBIS = {
+    "location": re.compile(r"^(LOCATION|GPS.*|CITY|COUNTRY)$"),
+    "device": re.compile(r"^(ENCODER.*|SOFTWARE|DEVICE|MAKE|MODEL)$"),
+    "authors": re.compile(r"^(ARTISTS?|ALBUMARTIST|ALBUM ARTIST|AUTHOR|COMPOSER|LYRICIST|PERFORMER|CONDUCTOR|"
+                          r"ARRANGER|ENGINEER|PRODUCER|MIXER|COPYRIGHT|OWNER|ENCODEDBY|ENCODED-BY|CONTACT|ORGANIZATION)$"),
+}
+
+
+def clean_audio(src, dest, choices):
+    try:
+        import mutagen
+        from mutagen.id3 import ID3, ID3NoHeaderError
+    except ImportError:
+        raise Refused("Wild OS is missing mutagen, which this needs.")
+    shutil.copyfile(src, dest)
+    ext = dest.rsplit(".", 1)[-1].lower()
+    try:
+        if ext == "mp3":
+            try:
+                tags = ID3(dest)
+            except ID3NoHeaderError:
+                tags = None
+            if tags is not None:
+                for key in list(tags.keys()):
+                    frame = key.split(":")[0]
+                    for choice in choices:
+                        if frame in ID3_FRAMES[choice] or (frame == "TXXX" and ID3_TXXX[choice].match(tags[key].desc or "")):
+                            del tags[key]
+                            break
+                # ID3v1 at the end of the file has its own artist field;
+                # v1=0 drops it (the v2 tag above keeps the title).
+                tags.save(dest, v1=0)
+            return _audio_left(dest, choices)
+        audio = mutagen.File(dest)
+        if audio is None or audio.tags is None:
+            return []
+        for key in list(audio.tags.keys()):
+            upper = key.upper()
+            if any(VORBIS[c].match(upper) for c in choices):
+                del audio.tags[key]
+        # Vorbis comments open with the encoder's name, which can't be left
+        # out, only emptied.
+        if "device" in choices and getattr(audio.tags, "vendor", ""):
+            audio.tags.vendor = ""
+        audio.save()
+        return _audio_left(dest, choices)
+    except mutagen.MutagenError:
+        os.unlink(dest)
+        raise Refused("The details in this audio file couldn't be changed. It may be damaged.")
+
+
+def _has_id3v1(path):
+    with open(path, "rb") as f:
+        f.seek(0, os.SEEK_END)
+        if f.tell() < 128:
+            return False
+        f.seek(-128, os.SEEK_END)
+        return f.read(3) == b"TAG"
+
+
+def _audio_left(path, choices):
+    import mutagen
+    left = set()
+    audio = mutagen.File(path)
+    if audio is None or audio.tags is None:
+        return []
+    for key in audio.tags.keys():
+        if path.lower().endswith(".mp3"):
+            frame = key.split(":")[0]
+            desc = getattr(audio.tags[key], "desc", "") or ""
+            for c in choices:
+                if frame in ID3_FRAMES[c] or (frame == "TXXX" and ID3_TXXX[c].match(desc)):
+                    left.add(c)
+        else:
+            for c in choices:
+                if VORBIS[c].match(key.upper()):
+                    left.add(c)
+    if "device" in choices and getattr(audio.tags, "vendor", ""):
+        left.add("device")
+    if path.lower().endswith(".mp3") and "authors" in choices and _has_id3v1(path):
+        left.add("authors")
+    return sorted(left)
+
+
+# Office documents. Elements are matched with any namespace prefix, as the
+# prefix is the writer's choice; the files are edited as text so every other
+# byte, prefixes and markup compatibility declarations included, stays as it
+# was. Names that the format requires are replaced with "Author", as Word's
+# own Document Inspector does; optional ones are removed.
+def _drop_elements(xml, names):
+    for name in names:
+        xml = re.sub(rf"<((?:[\w.-]+:)?{name})(?:\s[^>]*)?/>", "", xml)
+        xml = re.sub(rf"<((?:[\w.-]+:)?{name})(?:\s[^>]*)?>.*?</\1\s*>", "", xml, flags=re.S)
+    return xml
+
+
+def _set_text(xml, names, text):
+    for name in names:
+        xml = re.sub(rf"(<((?:[\w.-]+:)?{name})(?:\s[^>]*)?>).*?(</\2\s*>)", rf"\g<1>{text}\g<3>", xml, flags=re.S)
+    return xml
+
+
+def _set_attrs(xml, names, text):
+    for name in names:
+        xml = re.sub(rf'(\s(?:[\w.-]+:)?{name}=)("[^"]*"|\'[^\']*\')', rf'\g<1>"{text}"', xml)
+    return xml
+
+
+def _ooxml_part(name, xml, choices):
+    if "authors" in choices:
+        if name == "docProps/core.xml":
+            xml = _drop_elements(xml, ["creator", "lastModifiedBy"])
+        elif name == "docProps/app.xml":
+            xml = _drop_elements(xml, ["Company", "Manager"])
+        elif name.endswith("people.xml"):
+            xml = _set_attrs(xml, ["author"], "Author")
+            xml = _drop_elements(xml, ["presenceInfo"])
+        elif re.match(r"xl/persons/.*\.xml$", name):
+            xml = _set_attrs(xml, ["displayName"], "Author")
+            xml = _set_attrs(xml, ["userId"], "")
+            xml = _set_attrs(xml, ["providerId"], "None")
+        elif re.match(r"xl/comments\d*\.xml$", name):
+            xml = _set_text(xml, ["author"], "Author")
+        elif name in ("ppt/commentAuthors.xml", "ppt/authors.xml"):
+            xml = _set_attrs(xml, ["name"], "Author")
+            xml = _set_attrs(xml, ["initials"], "A")
+            xml = _set_attrs(xml, ["userId"], "")
+            xml = _set_attrs(xml, ["providerId"], "None")
+        elif re.match(r"(word|xl|ppt)/.*\.xml$", name):
+            # Tracked changes and comments carry w:author and w:initials.
+            xml = _set_attrs(xml, ["author"], "Author")
+            xml = _set_attrs(xml, ["initials"], "A")
+    if "device" in choices and name == "docProps/app.xml":
+        xml = _drop_elements(xml, ["Application", "AppVersion"])
+    return xml
+
+
+def _odf_part(name, xml, choices):
+    if "authors" in choices:
+        if name == "meta.xml":
+            xml = _drop_elements(xml, ["initial-creator", "creator", "printed-by"])
+        elif name in ("content.xml", "styles.xml"):
+            # Comments and tracked changes name their writer in dc:creator.
+            xml = _set_text(xml, ["creator"], "Author")
+            xml = _set_text(xml, ["creator-initials"], "A")
+            xml = _set_attrs(xml, ["sender-initials"], "A")
+    if "device" in choices:
+        if name == "meta.xml":
+            xml = _drop_elements(xml, ["generator"])
+        elif name == "settings.xml":
+            xml = re.sub(r'(<(?:[\w.-]+:)?config-item\s[^>]*name="(?:PrinterName|PrinterSetup|PrinterPaperFromSetup)"[^>]*>).*?(</(?:[\w.-]+:)?config-item>)',
+                         r"\g<1>\g<2>", xml, flags=re.S)
+    return xml
+
+
+def _office_left(names_xml, choices, odf):
+    left = set()
+    for name, xml in names_xml.items():
+        if odf:
+            if "authors" in choices:
+                if name == "meta.xml" and re.search(r"<(?:[\w.-]+:)?(initial-creator|creator|printed-by)\b", xml):
+                    left.add("authors")
+                if name in ("content.xml", "styles.xml") and re.search(r"<((?:[\w.-]+:)?creator)(?:\s[^>]*)?>(?!Author</)[^<]+</\1", xml):
+                    left.add("authors")
+            if "device" in choices and name == "meta.xml" and re.search(r"<(?:[\w.-]+:)?generator\b", xml):
+                left.add("device")
+        else:
+            if "authors" in choices:
+                if name == "docProps/core.xml" and re.search(r"<(?:[\w.-]+:)?(creator|lastModifiedBy)\b", xml):
+                    left.add("authors")
+                if re.match(r"(word|xl|ppt)/.*\.xml$", name) and re.search(r'\s(?:[\w.-]+:)?author="(?!Author")[^"]+"', xml):
+                    left.add("authors")
+            if "device" in choices and name == "docProps/app.xml" and re.search(r"<(?:[\w.-]+:)?(Application|AppVersion)\b", xml):
+                left.add("device")
+    return left
+
+
+MEDIA = re.compile(r"^(word/media|xl/media|ppt/media|docProps|Pictures|Thumbnails)/[^/]+\.(jpe?g|png|tiff?|heic|webp|gif)$", re.I)
+
+
+def clean_office(src, dest, choices, odf):
+    if not zipfile.is_zipfile(src):
+        raise Refused("This document is password protected or isn't in a format Wild OS can change.")
+    work = tempfile.mkdtemp(prefix="remove-details-")
+    left = set()
+    checked = {}
+    try:
+        with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dest, "w") as zout:
+            infos = zin.infolist()
+            # OpenDocument needs its mimetype entry first and stored as it is.
+            infos.sort(key=lambda i: 0 if i.filename == "mimetype" else 1)
+            for info in infos:
+                data = zin.read(info.filename)
+                if info.filename.endswith(".xml") or info.filename.endswith(".rels"):
+                    try:
+                        text = data.decode("utf-8")
+                    except UnicodeDecodeError:
+                        text = None
+                    if text is not None:
+                        new = _odf_part(info.filename, text, choices) if odf else _ooxml_part(info.filename, text, choices)
+                        checked[info.filename] = new
+                        data = new.encode("utf-8")
+                elif MEDIA.match(info.filename) and ("location" in choices or "device" in choices or "authors" in choices):
+                    ext = info.filename.rsplit(".", 1)[-1]
+                    a = os.path.join(work, "in." + ext)
+                    b = os.path.join(work, "out." + ext)
+                    with open(a, "wb") as f:
+                        f.write(data)
+                    if os.path.exists(b):
+                        os.unlink(b)
+                    exif_clean(a, b, choices, "document's pictures")
+                    left.update(exif_left(b, choices))
+                    with open(b, "rb") as f:
+                        data = f.read()
+                out = zipfile.ZipInfo(info.filename, date_time=info.date_time)
+                out.compress_type = info.compress_type
+                out.external_attr = info.external_attr
+                out.create_system = info.create_system
+                zout.writestr(out, data)
+        left.update(_office_left(checked, choices, odf))
+        return sorted(left)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def kind_of(path):
+    ext = path.rsplit(".", 1)[-1].lower() if "." in os.path.basename(path) else ""
+    for kind, exts in (("photo", PHOTO), ("movie", MOVIE), ("audio", AUDIO), ("pdf", PDF), ("ooxml", OOXML), ("odf", ODF)):
+        if ext in exts:
+            return kind
+    return None
+
+
+NAMES = {"location": "location", "device": "device details", "authors": "author names"}
+
+
+def clean(path, choices):
+    if not os.path.isfile(path):
+        raise Refused("This file is no longer there.")
+    kind = kind_of(path)
+    if kind is None:
+        raise Refused("Wild OS can't remove details from this kind of file.")
+    dest = copy_name(path)
+    folder = os.path.dirname(dest) or "."
+    if not os.access(folder, os.W_OK):
+        raise Refused("A copy can't be saved in this folder. Copy the file somewhere in Home and try again.")
+    # Written under a hidden name first, so a half-written copy never shows
+    # under the final one.
+    fd, temp = tempfile.mkstemp(prefix=".no-details-", suffix=os.path.splitext(dest)[1], dir=folder)
+    os.close(fd)
+    os.unlink(temp)
+    try:
+        if kind == "photo":
+            left = clean_photo(path, temp, choices)
+        elif kind == "movie":
+            left = clean_movie(path, temp, choices)
+        elif kind == "audio":
+            left = clean_audio(path, temp, choices)
+        elif kind == "pdf":
+            left = clean_pdf(path, temp, choices)
+        else:
+            left = clean_office(path, temp, choices, kind == "odf")
+        if left:
+            raise Refused("Some " + " and ".join(NAMES[c] for c in left) + " couldn't be removed, so no copy was kept.")
+        os.chmod(temp, os.stat(path).st_mode & 0o777)
+        # A name taken meanwhile is not overwritten.
+        os.link(temp, dest)
+        os.unlink(temp)
+        return dest
+    except BaseException:
+        if os.path.lexists(temp):
+            os.unlink(temp)
+        raise
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Save copies of files without personal details.")
+    parser.add_argument("--location", action="store_true")
+    parser.add_argument("--device", action="store_true")
+    parser.add_argument("--authors", action="store_true")
+    parser.add_argument("--can", action="store_true", help="only say, for each file, whether it is a kind this can clean")
+    parser.add_argument("files", nargs="+")
+    args = parser.parse_args()
+    if args.can:
+        for path in args.files:
+            print(json.dumps({"file": path, "can": kind_of(path) is not None}))
+        return 0
+    choices = [c for c in ("location", "device", "authors") if getattr(args, c)]
+    if not choices:
+        print("Choose at least one kind of detail to remove.", file=sys.stderr)
+        return 2
+    failed = 0
+    for path in args.files:
+        result = {"file": path, "copy": "", "error": ""}
+        try:
+            result["copy"] = clean(os.path.abspath(path), choices)
+        except Refused as e:
+            result["error"] = str(e)
+            failed += 1
+        except OSError:
+            result["error"] = "A copy couldn't be saved here. The drive may be full or read-only."
+            failed += 1
+        print(json.dumps(result), flush=True)
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

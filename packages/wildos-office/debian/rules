@@ -5,3 +5,18 @@
 
 override_dh_auto_configure:
 	dh_auto_configure -- -Wno-dev -DCMAKE_BUILD_TYPE=Release
+
+# Everything goes in wildos-office, the shared part, except the two
+# launchers: each is its app's own package, so Write and Tables can be
+# removed one at a time.
+L = usr/share/wildos/launchers
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/wildos-office
+	mkdir -p debian/wildos-write/$(L) debian/wildos-tables/$(L)
+	mv debian/wildos-office/$(L)/libreoffice-writer.desktop debian/wildos-write/$(L)/
+	mv debian/wildos-office/$(L)/libreoffice-calc.desktop debian/wildos-tables/$(L)/
+	rmdir debian/wildos-office/$(L)
+
+# Started by postinst once dpkg has finished, never during the install.
+override_dh_installsystemd:
+	dh_installsystemd --name=wildos-office-split --no-start

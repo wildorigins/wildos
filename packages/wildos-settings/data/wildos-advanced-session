@@ -1,0 +1,202 @@
+#!/usr/bin/python3 -I
+"""The parts of Advanced protection that belong to each person's session.
+
+Presenting mode (presenting in /etc/wildos/advanced-protection) is the
+notification server's own "do not disturb while sharing or mirroring the
+screen", which Settings > System > Notifications also switches. When the
+store's value changes (from Advanced protection, a protection level or
+Reset to defaults), each session is moved to it; a change made since on
+the Notifications page stays until the store changes again.
+
+Restart when left locked (restart_locked_hours, 0 for off): once the screen
+has been locked for the whole of that time, the PC restarts, so the disk is
+fully encrypted again and only the disk password opens it. It goes through
+Plasma's own restart, which asks every app to close first. By default an
+app holding work it hasn't saved keeps the restart from happening and it
+is tried again an hour later. With restart_locked_force on, the person's
+choice, whatever is still open two minutes after that is closed by
+restarting through logind, with the inhibitors this session's own apps
+hold overridden (logind lets a person's restart pass their own apps'
+inhibitors; one held by the system, such as an update being installed,
+still holds it, and it is tried again an hour later). Never while the PC
+runs on its battery below 20 per cent. The time counts from the lock, and
+includes time asleep.
+"""
+
+import os
+import subprocess
+import sys
+import time
+
+from gi.repository import Gio, GLib
+
+STORE_DIR = "/etc/wildos"
+STORE = os.path.join(STORE_DIR, "advanced-protection")
+STATE_DIR = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "wildos")
+APPLIED = os.path.join(STATE_DIR, "advanced-presenting")
+
+CHECK = 60
+RETRY = 3600
+# How long Plasma's restart gets to close every app before a forced one.
+GRACE = 120
+LOW_BATTERY = 20
+
+UPOWER = "org.freedesktop.UPower"
+
+
+def log(*args):
+    print(*args, flush=True)
+
+
+def store():
+    values = {"presenting": "on", "restart_locked_hours": "0", "restart_locked_force": "off"}
+    try:
+        with open(STORE) as f:
+            for line in f:
+                key, sep, value = line.strip().partition("=")
+                if sep and key in values:
+                    values[key] = value
+    except OSError:
+        pass
+    return values
+
+
+def since_start():
+    """Seconds since start-up, counting sleep, which the clock can't move."""
+    return time.clock_gettime(time.CLOCK_BOOTTIME)
+
+
+class Session:
+    def __init__(self):
+        self.session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        self.system = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        self.values = store()
+        self.locked_since = None
+        self.next_try = 0
+
+        self.monitor = Gio.File.new_for_path(STORE_DIR).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
+        self.monitor.connect("changed", self._store_changed)
+        self.presenting()
+
+        self.session.signal_subscribe("org.freedesktop.ScreenSaver", "org.freedesktop.ScreenSaver", "ActiveChanged",
+                                      "/ScreenSaver", None, Gio.DBusSignalFlags.NONE, self._lock_changed, None)
+        self._locked(self._screen_locked())
+        GLib.timeout_add_seconds(CHECK, self._tick)
+
+    def _store_changed(self, monitor, file, other, event):
+        names = {f.get_basename() for f in (file, other) if f is not None}
+        if "advanced-protection" in names:
+            self.values = store()
+            self.presenting()
+
+    def presenting(self):
+        want = self.values["presenting"]
+        if want not in ("on", "off"):
+            return
+        try:
+            with open(APPLIED) as f:
+                if f.read().strip() == want:
+                    return
+            first = False
+        except OSError:
+            first = True
+        # The first time, whatever the person already chose on the
+        # Notifications page stays: only later changes to the store move it.
+        if not first:
+            value = "true" if want == "on" else "false"
+            for key in ("WhenScreenSharing", "WhenScreensMirrored"):
+                try:
+                    subprocess.run(["kwriteconfig6", "--file", "plasmanotifyrc", "--group", "DoNotDisturb", "--key", key,
+                                    "--type", "bool", "--notify", value], check=True, timeout=10)
+                except (OSError, subprocess.SubprocessError) as e:
+                    log("could not set presenting mode:", e)
+                    return
+            log("presenting mode", want)
+        os.makedirs(STATE_DIR, exist_ok=True)
+        with open(APPLIED + ".new", "w") as f:
+            f.write(want + "\n")
+        os.replace(APPLIED + ".new", APPLIED)
+
+    def _screen_locked(self):
+        try:
+            reply = self.session.call_sync("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver",
+                                           "GetActive", None, GLib.VariantType("(b)"), Gio.DBusCallFlags.NONE, 3000, None)
+            return reply.unpack()[0]
+        except GLib.Error:
+            return False
+
+    def _lock_changed(self, conn, sender, path, iface, signal, params, data):
+        self._locked(params.unpack()[0])
+
+    def _locked(self, locked):
+        if locked and self.locked_since is None:
+            self.locked_since = since_start()
+            self.next_try = 0
+        elif not locked:
+            self.locked_since = None
+
+    def _battery_low(self):
+        try:
+            on_battery = self.system.call_sync(UPOWER, "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "Get",
+                                               GLib.Variant("(ss)", (UPOWER, "OnBattery")), GLib.VariantType("(v)"),
+                                               Gio.DBusCallFlags.NONE, 3000, None).unpack()[0]
+            if not on_battery:
+                return False
+            percent = self.system.call_sync(UPOWER, "/org/freedesktop/UPower/devices/DisplayDevice",
+                                            "org.freedesktop.DBus.Properties", "Get",
+                                            GLib.Variant("(ss)", (UPOWER + ".Device", "Percentage")), GLib.VariantType("(v)"),
+                                            Gio.DBusCallFlags.NONE, 3000, None).unpack()[0]
+            return percent < LOW_BATTERY
+        except GLib.Error:
+            return False
+
+    def _tick(self):
+        try:
+            hours = int(self.values["restart_locked_hours"])
+        except ValueError:
+            hours = 0
+        if hours <= 0 or self.locked_since is None:
+            return True
+        now = since_start()
+        if now - self.locked_since < hours * 3600 or now < self.next_try:
+            return True
+        if self._battery_low():
+            return True
+        # Still locked right now, not just as last heard.
+        if not self._screen_locked():
+            self.locked_since = None
+            return True
+        self.next_try = now + RETRY
+        log("locked for %d hours: restarting, once every app has closed" % hours)
+        self.session.call("org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown", "logoutAndReboot", None, None,
+                          Gio.DBusCallFlags.NONE, -1, None, None, None)
+        if self.values["restart_locked_force"] == "on":
+            GLib.timeout_add_seconds(GRACE, self._force)
+        return True
+
+    def _force(self):
+        """Still here after the grace period: Plasma's restart was held up
+        by an app, or refused."""
+        if self.values["restart_locked_force"] != "on" or self.locked_since is None:
+            return False
+        if self._battery_low() or not self._screen_locked():
+            return False
+        log("an app kept the restart from happening: restarting anyway")
+        try:
+            subprocess.run(["systemctl", "reboot", "--check-inhibitors=no"], check=True, timeout=30)
+        except (OSError, subprocess.SubprocessError) as e:
+            log("could not restart:", e)
+        return False
+
+
+def main():
+    if len(sys.argv) > 1:
+        print("usage: wildos-advanced-session", file=sys.stderr)
+        return 2
+    Session()
+    GLib.MainLoop().run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

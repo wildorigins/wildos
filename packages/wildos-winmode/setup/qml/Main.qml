@@ -18,6 +18,9 @@ UI.AppWindow {
     property string page: "check"
     property string problem
     property string startError
+    // The setup page has seen a setup under way, so the service saying
+    // there is none means Start over has finished.
+    property bool following: false
 
     readonly property int step: page === "check" ? 1 : page === "options" ? 2 : page === "setup" ? 3 : 4
 
@@ -56,11 +59,26 @@ UI.AppWindow {
             } else if (s === "ready" && window.page === "check") {
                 window.page = "ready";
             }
+            if (window.page === "setup" && (s === "setup" || s === "failed")) {
+                window.following = true;
+            } else if (window.page === "setup" && window.following && (s === "none" || s === "")) {
+                // Start over removed what setup had made: begin again from
+                // the checks, which run afresh.
+                window.following = false;
+                window.problem = "";
+                window.startError = "";
+                window.page = "check";
+                Setup.recheck();
+                return;
+            }
             const kind = (Setup.status.problem || {}).kind || "";
             if (s === "failed" && window.page === "setup") {
                 window.problem = "failed";
             } else if ((kind === "download" || kind === "space") && window.page === "setup") {
                 window.problem = kind;
+            } else if ((window.problem === "download" || window.problem === "space") && kind !== window.problem) {
+                // Back online, or the space was freed: setup has carried on.
+                window.problem = "";
             }
         }
     }
@@ -145,6 +163,7 @@ UI.AppWindow {
             solid: true
             kind: window.problem
             received: (Setup.status.problem || {}).received || 0
+            offline: (Setup.status.problem || {}).offline === true
             failure: window.startError.length > 0 ? window.startError : ((Setup.status.problem || {}).text || "")
             detail: window.startError.length > 0 ? "" : ((Setup.status.problem || {}).detail || "")
             onDismissed: problemPopup.close()

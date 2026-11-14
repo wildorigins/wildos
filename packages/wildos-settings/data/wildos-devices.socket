@@ -1,0 +1,13 @@
+[Unit]
+Description=Settings > System > Devices: firmware and drive health
+
+[Socket]
+# Anyone signed in may ask. The answer holds which devices lacked firmware
+# at start-up and each internal drive's health, nothing personal.
+ListenStream=/run/wildos-devices.sock
+SocketMode=0666
+Accept=yes
+MaxConnections=4
+
+[Install]
+WantedBy=sockets.target

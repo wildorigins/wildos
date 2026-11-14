@@ -3,8 +3,8 @@ import QtQuick.Window
 import WildOS.UI as UI
 
 // Everything Capture shows: the frozen overlay on every screen, the
-// countdown for a delayed capture, the bar while recording, and the editor
-// and Share windows.
+// countdown for a delayed capture, the bar while recording, the editor,
+// the Share window and the Scan tab's window.
 QtObject {
     id: root
 
@@ -21,7 +21,25 @@ QtObject {
         Connections {
             target: CaptureApp
             function onEditRequested(source, key, path, saved) {
-                root.openEditor(source, key, path, saved);
+                root.openEditor(source, key, path, saved, false);
+            }
+            function onScanPageEditRequested(source, path) {
+                root.openEditor(source, "", path, true, true);
+            }
+            function onScanRequested() {
+                if (!root.scanWindow) {
+                    root.scanWindow = scanComponent.createObject(root);
+                }
+                const w = root.scanWindow;
+                // On Wayland a window is never told it was minimised, and
+                // can't bring itself back by asking; shown afresh, it comes
+                // back to the front.
+                if (!w.active) {
+                    w.hide();
+                    w.show();
+                }
+                w.raise();
+                w.requestActivate();
             }
             function onShareRequested(file) {
                 const window = shareWindow.createObject(root, { file: file });
@@ -32,14 +50,15 @@ QtObject {
     ]
 
     property var opening: []
+    property var scanWindow: null
 
     // The editor is built a little at a time behind the splash (SplashDaily.dc
     // in Capture's colours), which only comes up if that takes more than a
     // third of a second, so a quick open never flashes.
-    function openEditor(source: url, key: string, path: string, saved: bool): void {
+    function openEditor(source: url, key: string, path: string, saved: bool, scanPage: bool): void {
         const name = path.substring(path.lastIndexOf("/") + 1);
         const splash = splashComponent.createObject(root, { status: qsTr("Opening %1").arg(name) });
-        const incubator = editorComponent.incubateObject(root, { source: source, key: key, path: path, saved: saved, visible: false }, Qt.Asynchronous);
+        const incubator = editorComponent.incubateObject(root, { source: source, key: key, path: path, saved: saved, scanPage: scanPage, visible: false }, Qt.Asynchronous);
         // Held until the window is made, so the incubator is not collected
         // half way.
         root.opening = root.opening.concat([incubator]);
@@ -88,8 +107,23 @@ QtObject {
 
     property Component editorComponent: Component {
         Editor {
+            onWrote: path => {
+                if (scanPage) {
+                    CaptureApp.scanner.markedUp(path);
+                }
+            }
             onDone: {
                 CaptureApp.editorClosed(key);
+                destroy(1000);
+            }
+        }
+    }
+
+    property Component scanComponent: Component {
+        ScanWindow {
+            onDone: {
+                CaptureApp.scanClosed();
+                root.scanWindow = null;
                 destroy(1000);
             }
         }

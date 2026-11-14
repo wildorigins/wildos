@@ -1,24 +1,31 @@
 #include "updates.h"
+#include "securetime.h"
 
 #include <algorithm>
+#include <ctime>
 
 #include <KService>
 
+#include <NetworkManagerQt/Manager>
 #include <PackageKit/Daemon>
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusVariant>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QFileSystemWatcher>
 #include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMetaEnum>
 #include <QNetworkAccessManager>
 #include <QNetworkProxy>
 #include <QNetworkReply>
@@ -40,6 +47,22 @@ namespace
 // updates of a big batch can take a quarter of an hour.
 constexpr qint64 lockPatienceMs = 30 * 60 * 1000;
 constexpr int lockRetryMs = 15 * 1000;
+
+// A check that fails because the connection is not ready yet tries again,
+// first after a few seconds and then less often, for about three minutes
+// before it says why. Tor alone can take that long after start-up.
+constexpr qint64 quietRetryMs = 3 * 60 * 1000;
+constexpr int firstRetryMs = 5 * 1000;
+constexpr int longestRetryMs = 60 * 1000;
+// In the first minutes after start-up any failure is treated so: the
+// network, Tor and the clock (sdwdate may move it) are all still settling.
+constexpr qint64 settlingSeconds = 5 * 60;
+// A clock that sdwdate has yet to set is waited for this long at most,
+// looking every few seconds whether it has. Its first run after start-up
+// took four minutes on the PC this was seen on, with two onion sites
+// timing out.
+constexpr qint64 clockWaitMs = 15 * 60 * 1000;
+constexpr int clockPollMs = 2000;
 
 // Where Settings remembers, until the PC restarts, that an update asked for
 // a restart: the runtime folder is emptied at every boot.
@@ -140,12 +163,10 @@ bool needsRestart(const QStringList &packageIds)
     return false;
 }
 
-// The servers Wild OS's own updates come from. Any other source was added
-// by the person or by an app's installer (Steam, Chrome, VS Code).
-QStringList ownHosts()
+QStringList hostsIn(const QString &path)
 {
-    QStringList hosts{QStringLiteral("deb.wildos.io")};
-    QFile sources(QStringLiteral("/etc/apt/sources.list.d/wildos.sources"));
+    QStringList hosts;
+    QFile sources(path);
     if (sources.open(QIODevice::ReadOnly)) {
         static const QRegularExpression uri(QStringLiteral("https?://([^/\\s]+)"));
         auto it = uri.globalMatch(QString::fromUtf8(sources.readAll()));
@@ -159,6 +180,248 @@ QStringList ownHosts()
     return hosts;
 }
 
+// The servers Wild OS's own packages come from.
+QStringList wildosHosts()
+{
+    QStringList hosts{QStringLiteral("deb.wildos.io")};
+    for (const QString &host : hostsIn(QStringLiteral("/etc/apt/sources.list.d/wildos.sources"))) {
+        if (!hosts.contains(host)) {
+            hosts << host;
+        }
+    }
+    return hosts;
+}
+
+// Every server the system itself updates from: Wild OS's, and Debian's and
+// Kicksecure's, which Kicksecure lists in debian.sources and the image in
+// sources.list, mostly through Tor. Any other source was added by the
+// person or by an app's installer (Steam, Chrome, VS Code).
+QStringList ownHosts()
+{
+    QStringList hosts = wildosHosts();
+    hosts << QStringLiteral("deb.debian.org") << QStringLiteral("security.debian.org") << QStringLiteral("fasttrack.debian.net")
+          << QStringLiteral("deb.kicksecure.com");
+    for (const QString &path : {QStringLiteral("/etc/apt/sources.list.d/debian.sources"), QStringLiteral("/etc/apt/sources.list")}) {
+        for (const QString &host : hostsIn(path)) {
+            if (!hosts.contains(host)) {
+                hosts << host;
+            }
+        }
+    }
+    return hosts;
+}
+
+// apt's lines that name a source, without its notices about sources that
+// are fine, such as one without 32-bit packages on a PC with 32-bit support
+// turned on.
+QStringList sourceLines(const QString &details)
+{
+    QStringList lines;
+    const QStringList all = details.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (const QString &line : all) {
+        if (!line.contains(QLatin1String("Skipping acquire")) && !line.contains(QLatin1String("support architecture"))) {
+            lines << line;
+        }
+    }
+    return lines;
+}
+
+bool aboutSigning(const QString &line)
+{
+    static const QStringList words = {
+        QStringLiteral("signature"), QStringLiteral("not signed"), QStringLiteral("NO_PUBKEY"),   QStringLiteral("EXPKEYSIG"),
+        QStringLiteral("Signing key"), QStringLiteral("OpenPGP"),  QStringLiteral("not valid yet"), QStringLiteral("is expired"),
+    };
+    return std::any_of(words.cbegin(), words.cend(), [&line](const QString &word) {
+        return line.contains(word, Qt::CaseInsensitive);
+    });
+}
+
+// A signature from after the time the clock shows. Right after start-up
+// sdwdate can set the clock back a minute or two, and a source signed in
+// that gap (Wild OS's, right after a release) fails until the clock passes
+// the signing time again. Seen as sqv's "created after the --not-after
+// date" and "Not live until <time>"; the second is also what a clock hours
+// behind gives (a PC whose hardware clock kept local time for Windows).
+bool signedLater(const QString &line)
+{
+    return line.contains(QLatin1String("not-after")) || line.contains(QLatin1String("created after"))
+        || line.contains(QLatin1String("not valid yet"), Qt::CaseInsensitive) || line.contains(QLatin1String("not live until"), Qt::CaseInsensitive);
+}
+
+bool clockProblemIn(const QString &details)
+{
+    const QStringList lines = sourceLines(details);
+    return std::any_of(lines.cbegin(), lines.cend(), signedLater);
+}
+
+// apt reaches Debian through Tor's SOCKS port; a Tor that is not running
+// or has not finished connecting fails every one of those sources.
+bool throughTor(const QString &line)
+{
+    return line.contains(QLatin1String("tor+http")) || line.contains(QLatin1String(":9050"));
+}
+
+bool offline()
+{
+    switch (NetworkManager::status()) {
+    case NetworkManager::Asleep:
+    case NetworkManager::Disconnected:
+    case NetworkManager::Disconnecting:
+    case NetworkManager::ConnectedLinkLocal:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Since start-up finished, not since the kernel started: the wait at the
+// disk password comes before Tor, sdwdate and the network even start.
+qint64 secondsSinceStart()
+{
+    auto get = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.systemd1"), QStringLiteral("/org/freedesktop/systemd1"),
+                                              QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
+    get << QStringLiteral("org.freedesktop.systemd1.Manager") << QStringLiteral("FinishTimestampMonotonic");
+    const QDBusMessage reply = QDBusConnection::systemBus().call(get, QDBus::Block, 3000);
+    const qulonglong finished = reply.type() == QDBusMessage::ReplyMessage ? reply.arguments().value(0).value<QDBusVariant>().variant().toULongLong() : 0;
+    timespec now{};
+    if (finished > 0 && clock_gettime(CLOCK_MONOTONIC, &now) == 0) {
+        const qint64 nowUs = qint64(now.tv_sec) * 1000000 + now.tv_nsec / 1000;
+        return std::max<qint64>(0, (nowUs - qint64(finished)) / 1000000);
+    }
+    QFile uptime(QStringLiteral("/proc/uptime"));
+    if (!uptime.open(QIODevice::ReadOnly)) {
+        return -1;
+    }
+    return qint64(uptime.readAll().split(' ').value(0).toDouble());
+}
+
+// The check result Settings shares with the taskbar's Updates icon
+// (/usr/libexec/wildos/update-status), which reads and writes the same
+// files: "checking" names the process running a check (its pid, then its
+// name, then "clock N" while it waits for sdwdate to set a clock at least N
+// seconds behind), "failed" holds the last failed check (when the lists had
+// last been refreshed as it failed, the reasons one per line, an empty line,
+// then PackageKit's and apt's details). The failure stands until a refresh is
+// newer than that, which holds however the clock moves: right after
+// start-up sdwdate may set it back. In the runtime folder, so a failure is
+// forgotten at the next start-up.
+QString sharedDir()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation) + QStringLiteral("/wildos-updates");
+}
+
+QString checkingFile()
+{
+    return sharedDir() + QStringLiteral("/checking");
+}
+
+QString failedFile()
+{
+    return sharedDir() + QStringLiteral("/failed");
+}
+
+// When the list was last refreshed by a check from Settings or the
+// taskbar's icon, including one PackageKit does not record because it only
+// missed sources added by other software.
+QString checkedFile()
+{
+    QString state = qEnvironmentVariable("XDG_STATE_HOME");
+    if (state.isEmpty()) {
+        state = QDir::homePath() + QStringLiteral("/.local/state");
+    }
+    return state + QStringLiteral("/wildos/updates-checked");
+}
+
+QString processName(qint64 pid)
+{
+    QFile comm(pid > 0 ? QStringLiteral("/proc/%1/comm").arg(pid) : QStringLiteral("/proc/self/comm"));
+    return comm.open(QIODevice::ReadOnly) ? QString::fromUtf8(comm.readAll()).trimmed() : QString();
+}
+
+QStringList fileLines(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+}
+
+void writeLines(const QString &path, const QStringList &lines)
+{
+    QDir().mkpath(QFileInfo(path).path());
+    QSaveFile file(path);
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write((lines.join(QLatin1Char('\n')) + QLatin1Char('\n')).toUtf8());
+        file.commit();
+    }
+}
+
+// Another process running a check now: the taskbar's icon. One that quit
+// or crashed no longer counts.
+bool otherChecking()
+{
+    const QStringList lines = fileLines(checkingFile());
+    const qint64 pid = lines.value(0).toLongLong();
+    return pid > 0 && pid != QCoreApplication::applicationPid() && !lines.value(1).isEmpty() && processName(pid) == lines.value(1);
+}
+
+// While a check waits for sdwdate to set the clock, its checking file has a
+// third line, "clock" and how many seconds behind the clock was at least.
+QStringList checkingLines(qint64 clockBehind)
+{
+    QStringList lines{QString::number(QCoreApplication::applicationPid()), processName(0)};
+    if (clockBehind > 0) {
+        lines << QStringLiteral("clock %1").arg(clockBehind);
+    }
+    return lines;
+}
+
+qint64 sharedClockWait()
+{
+    const QString line = fileLines(checkingFile()).value(2);
+    return line.startsWith(QLatin1String("clock ")) ? line.mid(6).toLongLong() : 0;
+}
+
+struct SharedFailure {
+    qint64 refreshedBefore = 0;
+    QStringList reasons;
+    QString details;
+};
+
+SharedFailure sharedFailure()
+{
+    SharedFailure failure;
+    const QStringList lines = fileLines(failedFile());
+    failure.refreshedBefore = lines.value(0).toLongLong();
+    int i = 1;
+    for (; i < lines.size() && !lines.at(i).isEmpty(); ++i) {
+        failure.reasons << lines.at(i);
+    }
+    failure.details = lines.mid(i + 1).join(QLatin1Char('\n')).trimmed();
+    return failure;
+}
+
+qint64 mtimeOf(const QString &path)
+{
+    const QFileInfo info(path);
+    return info.exists() ? info.lastModified().toSecsSinceEpoch() : 0;
+}
+
+// The last refresh by anyone, as the taskbar's icon reads it: apt's daily
+// one leaves its stamp and the lists' times, a check from Settings or the
+// icon leaves the checked file.
+qint64 lastRefreshOnDisk()
+{
+    qint64 at = std::max(mtimeOf(QStringLiteral("/var/lib/apt/periodic/update-success-stamp")), fileLines(checkedFile()).value(0).toLongLong());
+    const QFileInfoList lists = QDir(QStringLiteral("/var/lib/apt/lists")).entryInfoList({QStringLiteral("*Release")}, QDir::Files);
+    for (const QFileInfo &list : lists) {
+        at = std::max(at, list.lastModified().toSecsSinceEpoch());
+    }
+    return at;
+}
+
 // The sources a refresh could not use, read from apt's messages, which
 // PackageKit passes on as the error's details: each host, and whether it
 // failed on its signature rather than on the connection. apt checks every
@@ -166,26 +429,15 @@ QStringList ownHosts()
 QList<QPair<QString, bool>> failedSources(const QString &details)
 {
     static const QRegularExpression address(QStringLiteral("(?:tor\\+)?https?://([^/\\s'\"]+)"));
-    static const QStringList signing = {
-        QStringLiteral("signature"), QStringLiteral("not signed"), QStringLiteral("NO_PUBKEY"),
-        QStringLiteral("EXPKEYSIG"), QStringLiteral("Signing key"), QStringLiteral("OpenPGP"),
-    };
     QList<QPair<QString, bool>> failed;
-    const QStringList lines = details.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    const QStringList lines = sourceLines(details);
     for (const QString &line : lines) {
-        // apt's notices name sources that are fine, such as one without
-        // 32-bit packages on a PC with 32-bit support turned on.
-        if (line.contains(QLatin1String("Skipping acquire")) || line.contains(QLatin1String("support architecture"))) {
-            continue;
-        }
         const auto match = address.match(line);
         if (!match.hasMatch()) {
             continue;
         }
         const QString host = match.captured(1).toLower();
-        const bool key = std::any_of(signing.cbegin(), signing.cend(), [&line](const QString &word) {
-            return line.contains(word, Qt::CaseInsensitive);
-        });
+        const bool key = aboutSigning(line);
         auto existing = std::find_if(failed.begin(), failed.end(), [&host](const auto &entry) {
             return entry.first == host;
         });
@@ -234,6 +486,15 @@ Updates::Updates(QObject *parent)
         readNotes(cache.readAll());
     }
     if (available()) {
+        // A check started or finished on the taskbar's Updates icon shows
+        // here at once, and one that stopped without a word (the icon's
+        // shell restarted) is noticed within seconds.
+        QDir().mkpath(sharedDir());
+        m_sharedWatch = new QFileSystemWatcher({sharedDir()}, this);
+        connect(m_sharedWatch, &QFileSystemWatcher::directoryChanged, this, &Updates::applyShared);
+        m_followTimer = new QTimer(this);
+        m_followTimer->setInterval(3000);
+        connect(m_followTimer, &QTimer::timeout, this, &Updates::applyShared);
         readLastChecked();
         listUpdates();
         loadHistory();
@@ -251,6 +512,11 @@ bool Updates::available() const
         || bus->activatableServiceNames().value().contains(QStringLiteral("org.freedesktop.PackageKit"));
 }
 
+QString Updates::clockBehind() const
+{
+    return m_clockBehind >= 60 ? SecureTime::durationText(m_clockBehind) : QString();
+}
+
 int Updates::securityCount() const
 {
     int count = 0;
@@ -262,10 +528,15 @@ int Updates::securityCount() const
     return count;
 }
 
-void Updates::setState(const QString &state, const QString &error)
+void Updates::setState(const QString &state, const QString &error, bool checkFailed)
 {
     m_state = state;
     m_error = error;
+    m_checkFailed = checkFailed;
+    if (!checkFailed) {
+        m_errorDetails.clear();
+    }
+    m_clockProblem = checkFailed && state == QLatin1String("error") && clockProblemIn(m_errorDetails);
     Q_EMIT stateChanged();
 }
 
@@ -281,6 +552,13 @@ void Updates::readLastChecked()
         } else {
             m_lastChecked = {};
         }
+        // The same time the taskbar's icon shows, which also counts apt's
+        // daily refresh and checks PackageKit did not record.
+        const qint64 onDisk = lastRefreshOnDisk();
+        if (onDisk > 0 && (!m_lastChecked.isValid() || onDisk > m_lastChecked.toSecsSinceEpoch())) {
+            m_lastChecked = QDateTime::fromSecsSinceEpoch(onDisk);
+        }
+        applyShared();
         Q_EMIT lastCheckedChanged();
     });
 }
@@ -358,9 +636,87 @@ void Updates::check()
     if (m_state == QLatin1String("checking") || m_state == QLatin1String("installing")) {
         return;
     }
+    // One check at a time: when the taskbar's icon is already checking,
+    // its result is this one's too.
+    if (otherChecking()) {
+        applyShared();
+        return;
+    }
     m_lockWait.invalidate();
+    m_quietRetry.invalidate();
+    m_clockWait.invalidate();
+    m_retryDelayMs = firstRetryMs;
+    startOwnCheck();
     setState(QStringLiteral("checking"));
     refreshForCheck();
+}
+
+void Updates::startOwnCheck()
+{
+    m_ownCheck = true;
+    m_following = false;
+    if (m_followTimer) {
+        m_followTimer->stop();
+    }
+    writeLines(checkingFile(), checkingLines(0));
+}
+
+// The result goes where the taskbar's icon reads it before the check is
+// marked as done, so it never shows the state from before the check.
+void Updates::finishOwnCheck(const QStringList &reasons, const QString &details)
+{
+    if (reasons.isEmpty()) {
+        QFile::remove(failedFile());
+    } else {
+        writeLines(failedFile(), QStringList{QString::number(lastRefreshOnDisk())} + reasons + QStringList{QString()} + details.split(QLatin1Char('\n')));
+    }
+    QFile::remove(checkingFile());
+    m_ownCheck = false;
+}
+
+// Shows what the taskbar's icon found: its check while it runs, then its
+// result, so Settings and the icon always say the same thing. Settings'
+// own check and installs are left alone.
+void Updates::applyShared()
+{
+    if (m_ownCheck || m_state == QLatin1String("installing")) {
+        return;
+    }
+    if (otherChecking()) {
+        m_following = true;
+        if (m_state != QLatin1String("checking")) {
+            m_skipped.clear();
+            setState(QStringLiteral("checking"));
+        }
+        setClockBehind(sharedClockWait());
+        if (m_followTimer) {
+            m_followTimer->start();
+        }
+        return;
+    }
+    if (m_followTimer) {
+        m_followTimer->stop();
+    }
+    setClockBehind(0);
+    const bool followed = m_following;
+    m_following = false;
+    if (m_state == QLatin1String("installed")) {
+        return;
+    }
+    const SharedFailure failure = sharedFailure();
+    // Nothing has refreshed the lists since the check failed.
+    if (!failure.reasons.isEmpty() && lastRefreshOnDisk() <= failure.refreshedBefore) {
+        const QString reason = failure.reasons.join(QLatin1Char('\n'));
+        if (m_state != QLatin1String("error") || !m_checkFailed || m_error != reason) {
+            m_errorDetails = failure.details;
+            setState(QStringLiteral("error"), reason, true);
+        }
+        return;
+    }
+    if (followed || (m_state == QLatin1String("error") && m_checkFailed)) {
+        readLastChecked();
+        listUpdates();
+    }
 }
 
 // A source someone else added (Steam's, with a signing key Debian no
@@ -389,6 +745,13 @@ void Updates::refreshForCheck()
     // Someone asked to check: fetch the lists again even if they are recent.
     m_skipped.clear();
     m_partialRefresh = false;
+    m_checkErrored = false;
+    // With no connection at all a refresh waits minutes on Tor before it
+    // fails, so it is not started.
+    if (offline()) {
+        checkFailedWith(Transaction::ErrorNoNetwork, QString());
+        return;
+    }
     Transaction *refresh = Daemon::refreshCache(true);
     watchProgress(refresh);
     connect(refresh, &Transaction::errorCode, this, [this](Transaction::Error error, const QString &details) {
@@ -399,7 +762,9 @@ void Updates::refreshForCheck()
             m_partialRefresh = true;
             return;
         }
-        setState(QStringLiteral("error"), errorText(error, false));
+        m_checkErrored = true;
+        m_checkError = error;
+        m_checkDetails = details;
     });
     connect(refresh, &Transaction::finished, this, [this](Transaction::Exit status, uint) {
         if (m_lockBlocked) {
@@ -411,21 +776,229 @@ void Updates::refreshForCheck()
         setWaiting(false);
         // PackageKit records only a refresh with no failures, so a partial
         // one is timed here.
-        if (m_partialRefresh && m_state != QLatin1String("error")) {
+        if (m_partialRefresh && !m_checkErrored) {
             m_lastChecked = QDateTime::currentDateTime();
             Q_EMIT lastCheckedChanged();
             status = Transaction::ExitSuccess;
         } else {
             readLastChecked();
         }
-        if (status == Transaction::ExitSuccess) {
+        if (status == Transaction::ExitSuccess && !m_checkErrored) {
+            writeLines(checkedFile(), {QString::number(QDateTime::currentSecsSinceEpoch())});
+            finishOwnCheck();
             listUpdates();
             fetchNotes();
-        } else if (m_state != QLatin1String("error")) {
-            setState(QStringLiteral("error"), status == Transaction::ExitCancelled ? QStringLiteral("The check was cancelled.")
-                                                                                    : QStringLiteral("Wild OS could not check for updates."));
+        } else if (status == Transaction::ExitCancelled) {
+            finishOwnCheck({QStringLiteral("The check was cancelled.")});
+            setState(QStringLiteral("error"), QStringLiteral("The check was cancelled."), true);
+        } else {
+            checkFailedWith(m_checkErrored ? m_checkError : Transaction::ErrorUnknown, m_checkErrored ? m_checkDetails : QString());
         }
     });
+}
+
+void Updates::checkFailedWith(Transaction::Error error, const QString &details)
+{
+    const char *name = QMetaEnum::fromType<Transaction::Error>().valueToKey(error);
+    const QString code = QStringLiteral("PackageKit %1 (%2)").arg(name ? QString::fromLatin1(name) : QStringLiteral("Error"), QString::number(int(error)));
+    // In the journal too, since PackageKit's own lines only say "failed".
+    qWarning().noquote() << "Update check failed:" << code << details.trimmed();
+    if (retryQuietly(error, details)) {
+        return;
+    }
+    m_errorDetails = details.trimmed().isEmpty() ? code : code + QLatin1Char('\n') + details.trimmed();
+    const QString reason = whyCheckFailed(error, details);
+    finishOwnCheck(reason.split(QLatin1Char('\n')), m_errorDetails);
+    setState(QStringLiteral("error"), reason, true);
+}
+
+// Whether a failed check is worth trying again by itself: in the first
+// minutes after start-up, or when the connection, Tor or the clock was not
+// ready (the taskbar's icon decides the same in update-status), a
+// minute later usually works, as it did on the PC this was seen on. A
+// refusal, a full disk or a bad signature after that will not change.
+bool Updates::retryQuietly(Transaction::Error error, const QString &details)
+{
+    if (error == Transaction::ErrorNotAuthorized || error == Transaction::ErrorTransactionCancelled || error == Transaction::ErrorNoSpaceOnDevice
+        || error == Transaction::ErrorCannotGetLock || error == Transaction::ErrorLockRequired) {
+        return false;
+    }
+    const QStringList lines = sourceLines(details);
+    const bool settling = secondsSinceStart() >= 0 && secondsSinceStart() < settlingSeconds;
+    // No connection at all long after start-up is said at once: waiting
+    // will not bring one.
+    if (offline() && !settling) {
+        return false;
+    }
+    // apt's lines for a signature from the future include one that only
+    // says verification failed, so one line naming the time is enough, and
+    // PackageKit may still call it a signing error.
+    const bool clockBehind = std::any_of(lines.cbegin(), lines.cend(), signedLater);
+    // A clock hours behind stays so until sdwdate sets it through Tor, so
+    // the check waits for that rather than for a fixed time.
+    if (clockBehind && SecureTime::settingNow()) {
+        if (!m_clockWait.isValid()) {
+            m_clockWait.start();
+        }
+        if (m_clockWait.elapsed() < clockWaitMs) {
+            waitForClock(SecureTime::secondsBehind(details));
+            return true;
+        }
+    }
+    const bool signing = !clockBehind
+        && (error == Transaction::ErrorGpgFailure || error == Transaction::ErrorBadGpgSignature || error == Transaction::ErrorMissingGpgSignature
+            || error == Transaction::ErrorCannotUpdateRepoUnsigned || std::any_of(lines.cbegin(), lines.cend(), aboutSigning));
+    const bool connection = error == Transaction::ErrorNoNetwork || error == Transaction::ErrorNoCache || error == Transaction::ErrorRepoNotAvailable
+        || error == Transaction::ErrorCannotFetchSources || error == Transaction::ErrorPackageDownloadFailed
+        || error == Transaction::ErrorNoMoreMirrorsToTry || std::any_of(lines.cbegin(), lines.cend(), throughTor) || offline() || clockBehind;
+    if (!settling && (signing || !connection)) {
+        return false;
+    }
+    if (!m_quietRetry.isValid()) {
+        m_quietRetry.start();
+    }
+    if (m_quietRetry.elapsed() + m_retryDelayMs > quietRetryMs) {
+        return false;
+    }
+    QTimer::singleShot(m_retryDelayMs, this, [this] {
+        if (m_state == QLatin1String("checking")) {
+            refreshForCheck();
+        }
+    });
+    m_retryDelayMs = std::min(m_retryDelayMs * 2, longestRetryMs);
+    return true;
+}
+
+void Updates::setClockBehind(qint64 seconds)
+{
+    if (m_clockBehind == seconds) {
+        return;
+    }
+    m_clockBehind = seconds;
+    Q_EMIT progressChanged();
+}
+
+void Updates::waitForClock(qint64 behind)
+{
+    // At least a second, so the page says it is waiting even when every
+    // signing time named has just passed.
+    setClockBehind(std::max<qint64>(behind, 1));
+    writeLines(checkingFile(), checkingLines(m_clockBehind));
+    if (!m_clockTimer) {
+        m_clockTimer = new QTimer(this);
+        m_clockTimer->setInterval(clockPollMs);
+        connect(m_clockTimer, &QTimer::timeout, this, [this] {
+            if (m_state == QLatin1String("checking") && SecureTime::settingNow() && m_clockWait.elapsed() < clockWaitMs) {
+                return;
+            }
+            m_clockTimer->stop();
+            setClockBehind(0);
+            if (m_state != QLatin1String("checking")) {
+                return;
+            }
+            writeLines(checkingFile(), checkingLines(0));
+            // The usual quiet retries start over: sdwdate's first setting
+            // can leave the clock a moment before a source signed just now.
+            m_quietRetry.invalidate();
+            m_retryDelayMs = firstRetryMs;
+            refreshForCheck();
+        });
+    }
+    m_clockTimer->start();
+}
+
+// Why a check failed, one line for each likely cause, from PackageKit's
+// error and the sources apt named.
+QString Updates::whyCheckFailed(Transaction::Error error, const QString &details)
+{
+    switch (error) {
+    case Transaction::ErrorNotAuthorized:
+        return errorText(error, false);
+    case Transaction::ErrorCannotGetLock:
+    case Transaction::ErrorLockRequired:
+        return QStringLiteral("Another install is still running, such as the automatic security updates. Try again when it has finished.");
+    case Transaction::ErrorNoSpaceOnDevice:
+        return QStringLiteral("There is not enough free space to check for updates.");
+    default:
+        break;
+    }
+    if (offline() || error == Transaction::ErrorNoNetwork) {
+        return QStringLiteral("This computer is not connected to the internet.");
+    }
+    static const QRegularExpression address(QStringLiteral("(?:tor\\+)?https?://([^/\\s'\"]+)"));
+    // A clock far behind fails every source, so it is the one reason given.
+    const qint64 behind = clockProblemIn(details) ? SecureTime::secondsBehind(details) : 0;
+    if (behind >= 60) {
+        const QString clock = QStringLiteral("The clock on this computer is at least %1 behind, so the updates look as if they were signed in the future.")
+                                  .arg(SecureTime::durationText(behind));
+        return clock + QLatin1Char('\n')
+            + (SecureTime::settingNow()
+                   ? QStringLiteral("Wild OS sets the clock through Tor after start-up and has not managed to yet. Set the date and time in Settings > Date and time, then try again.")
+                   : QStringLiteral("Set the date and time in Settings > Date and time, then try again."));
+    }
+    const QStringList wildos = wildosHosts();
+    const QStringList own = ownHosts();
+    bool wildosDown = false;
+    bool debianDown = false;
+    bool torDown = false;
+    bool signing = error == Transaction::ErrorGpgFailure || error == Transaction::ErrorBadGpgSignature
+        || error == Transaction::ErrorMissingGpgSignature || error == Transaction::ErrorCannotUpdateRepoUnsigned;
+    const QStringList lines = sourceLines(details);
+    // Every server reached directly failing to resolve is no internet at
+    // all, though NetworkManager still has a connection (a router with no
+    // line behind it).
+    QSet<QString> unresolved;
+    bool failedOtherwise = false;
+    for (const QString &line : lines) {
+        const auto match = address.match(line);
+        if (!match.hasMatch() || throughTor(line)) {
+            continue;
+        }
+        if (line.contains(QLatin1String("Temporary failure resolving")) || line.contains(QLatin1String("Could not resolve"))) {
+            unresolved.insert(match.captured(1).toLower());
+        } else {
+            failedOtherwise = true;
+        }
+    }
+    if (unresolved.size() >= 2 && !failedOtherwise) {
+        return QStringLiteral("This computer is not connected to the internet.");
+    }
+    for (const QString &line : lines) {
+        const auto match = address.match(line);
+        const QString host = match.hasMatch() ? match.captured(1).toLower() : QString();
+        if (aboutSigning(line)) {
+            signing = signing || host.isEmpty() || own.contains(host);
+        } else if (throughTor(line)) {
+            torDown = true;
+        } else if (wildos.contains(host)) {
+            wildosDown = true;
+        } else if (own.contains(host)) {
+            debianDown = true;
+        }
+    }
+    QStringList reasons;
+    if (wildosDown) {
+        reasons << QStringLiteral("Wild OS's update server could not be reached.");
+    }
+    if (torDown) {
+        // Long after start-up, waiting for Tor is no longer the likely fix.
+        const qint64 up = secondsSinceStart();
+        reasons << (up >= 0 && up < 2 * settlingSeconds
+                        ? QStringLiteral("Debian's updates could not be reached through Tor. Tor can take a few minutes to connect after start-up.")
+                        : QStringLiteral("Debian's updates could not be reached through Tor."));
+    } else if (debianDown) {
+        reasons << QStringLiteral("Debian's update servers could not be reached.");
+    }
+    if (signing) {
+        reasons << QStringLiteral("The updates' signatures could not be checked. This happens when the date and time on this computer are wrong.");
+    }
+    if (reasons.isEmpty()) {
+        reasons << (error == Transaction::ErrorNoCache || error == Transaction::ErrorRepoNotAvailable || error == Transaction::ErrorCannotFetchSources
+                            || error == Transaction::ErrorPackageDownloadFailed
+                        ? QStringLiteral("The update servers could not be reached. Check your internet connection.")
+                        : QStringLiteral("Something went wrong while checking. Try again in a few minutes."));
+    }
+    return reasons.join(QLatin1Char('\n'));
 }
 
 void Updates::listUpdates()
@@ -507,6 +1080,9 @@ void Updates::readUpdates(bool quiet)
             }
         }
         setState(m_updates.isEmpty() ? QStringLiteral("uptodate") : QStringLiteral("available"));
+        // A failed check from the taskbar's icon still stands over the list
+        // read at start-up.
+        applyShared();
     });
 }
 

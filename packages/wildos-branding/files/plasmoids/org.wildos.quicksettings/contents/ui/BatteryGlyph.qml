@@ -3,7 +3,7 @@ import QtQuick.Shapes
 import WildOS.UI as UI
 
 // The design's battery: a 21 by 12 body with a nub, filled to the charge
-// level. Charging swaps the fill for a bolt, and a nearly empty battery that
+// level. Being plugged in swaps the fill for a bolt, and a nearly empty battery that
 // is not plugged in fills in the warning colour.
 Item {
     id: glyph

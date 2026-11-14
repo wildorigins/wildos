@@ -1,3 +1,49 @@
+wildos-installer (0.1.11) trixie; urgency=medium
+
+  * The keyboard search finds layouts by country, language and key order
+    too: Belgium or AZERTY find Belgian.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 12:20:00 +0000
+
+wildos-installer (0.1.10) trixie; urgency=medium
+
+  * The disk password and account password boxes take only what is typed:
+    nothing can be pasted into them.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:45:00 +0000
+
+wildos-installer (0.1.9) trixie; urgency=medium
+
+  * Encrypted installs get TRIM and the faster encryption settings.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 17:15:00 +0000
+
+wildos-installer (0.1.8) trixie; urgency=medium
+
+  * Closing the installer before the install starts no longer ends on a
+    crash report.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 17:00:00 +0000
+
+wildos-installer (0.1.7) trixie; urgency=medium
+
+  * The first step is a licence page: Wild OS is free software under the
+    GNU GPL with no warranty, its makers are not liable, and the box must
+    be ticked to go on. The full licence opens at sections 15 and 16 and
+    can be saved. Quit leaves the PC untouched.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 12:00:00 +0000
+
+wildos-installer (0.1.6) trixie; urgency=medium
+
+  * The install page says when a step is still working and for how long,
+    with the bar gently pulsing, instead of sitting on one number. The
+    bar's shares follow the time each step takes.
+  * The install keeps its own log in /var/log/wildos-install.log, readable
+    only by the administrator.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 11:00:00 +0000
+
 wildos-installer (0.1.5) trixie; urgency=medium
 
   * Remove everything no longer asks to remove a USB stick or mentions a trial.

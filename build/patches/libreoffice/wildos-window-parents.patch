@@ -1,0 +1,193 @@
+Description: Dialogs that belong to no window yet sit on their app's taskbar pin, and Open and Save dialogs attach to their window
+ Document Recovery, and the dialog that saves documents when LibreOffice
+ crashes, come up before any document window, so they kept LibreOffice's
+ own icon and, on Wayland, the libreoffice-startcenter app_id: a plain
+ taskbar button of their own. They now take the icon of the app whose
+ documents they save or recover (Writer's when none is known), which with
+ wildos-window-app-id.patch also gives them that app's app_id.
+ .
+ The Qt file picker asked the desktop portal for its Open and Save dialog
+ with no parent window, so the dialog had a taskbar button of its own and
+ the document stayed usable behind it. It now names the window the way
+ Qt's own portal dialogs do, through Qt's private platform services: on
+ Wayland an xdg-foreign handle. The window LibreOffice names for a picker
+ can be a hidden one there (window ids mean nothing on Wayland), so the
+ active window stands in for it.
+Author: Wild OS Developers <dev@wildos.io>
+Forwarded: not-needed
+
+--- a/svx/source/dialog/docrecovery.cxx
++++ b/svx/source/dialog/docrecovery.cxx
+@@ -26,6 +26,9 @@
+ #include <comphelper/sequenceashashmap.hxx>
+ #include <comphelper/string.hxx>
+ #include <svtools/imagemgr.hxx>
++#include <toolkit/helper/vclunohelper.hxx>
++#include <unotools/moduleoptions.hxx>
++#include <vcl/syswin.hxx>
+ #include <sfx2/filedlghelper.hxx>
+ #include <tools/urlobj.hxx>
+ #include <utility>
+@@ -52,6 +55,33 @@
+ #define COLUMN_STATUSIMAGE 1
+ #define COLUMN_STATUSTEXT 2
+ 
++namespace
++{
++// Wild OS: these dialogs come up before any document window, so they had
++// LibreOffice's own icon and, on Wayland, its app_id: a plain taskbar button
++// of their own. Give them the icon of the app whose documents they save or
++// recover (Writer's when none is known), which also puts them on that app's
++// taskbar button.
++void lcl_wildosAppIcon(weld::Dialog& rDialog, const TURLList& rURLs)
++{
++    SvtModuleOptions::EFactory eFactory = SvtModuleOptions::EFactory::WRITER;
++    for (const TURLInfo& rInfo : rURLs)
++    {
++        const SvtModuleOptions::EFactory eDoc
++            = SvtModuleOptions::ClassifyFactoryByServiceName(rInfo.Module);
++        if (eDoc != SvtModuleOptions::EFactory::UNKNOWN_FACTORY)
++        {
++            eFactory = eDoc;
++            break;
++        }
++    }
++    VclPtr<vcl::Window> pWindow = VCLUnoHelper::GetWindow(rDialog.GetXWindow());
++    if (pWindow && pWindow->IsSystemWindow())
++        static_cast<SystemWindow*>(pWindow.get())
++            ->SetIcon(static_cast<sal_uInt16>(SvtModuleOptions().GetFactoryIcon(eFactory)));
++}
++}
++
+ RecoveryCore::RecoveryCore(css::uno::Reference< css::uno::XComponentContext > xContext,
+                                  bool                                            bUsedForSaving)
+     : m_xContext        (std::move( xContext    ))
+@@ -593,6 +623,8 @@
+     {
+         m_xFileListLB->append(u""_ustr, rInfo.DisplayName, rInfo.StandardImageId);
+     }
++
++    lcl_wildosAppIcon(*m_xDialog, rURLs);
+ }
+ 
+ SaveDialog::~SaveDialog()
+@@ -727,6 +759,8 @@
+     // mark first item
+     if (m_xFileListLB->n_children())
+         m_xFileListLB->set_cursor(0);
++
++    lcl_wildosAppIcon(*m_xDialog, rURLList);
+ }
+ 
+ RecoveryDialog::~RecoveryDialog()
+--- a/vcl/Library_vclplug_qt6.mk
++++ b/vcl/Library_vclplug_qt6.mk
+@@ -39,6 +39,17 @@
+ # Wild OS: the file picker talks to the desktop portal.
+ $(eval $(call gb_Library_add_libs,vclplug_qt6,-lQt6DBus))
+ 
++# Wild OS: and names its parent window there the way Qt's own portal dialogs
++# do, through Qt's private platform services.
++wildos_qt_gui := $(lastword $(wildcard /usr/include/*/qt6/QtGui/6.*))
++wildos_qt_core := $(subst /QtGui/,/QtCore/,$(wildos_qt_gui))
++$(eval $(call gb_Library_add_cxxflags,vclplug_qt6,\
++    -isystem $(dir $(wildos_qt_core)) -isystem $(wildos_qt_core) -isystem $(wildos_qt_core)/QtCore \
++    -isystem $(dir $(wildos_qt_gui)) -isystem $(wildos_qt_gui) -isystem $(wildos_qt_gui)/QtGui \
++    -isystem $(lastword $(wildcard /usr/lib/*/qt6/mkspecs/linux-g++)) \
++    -DWILDOS_QT_PRIVATE \
++))
++
+ $(eval $(call gb_Library_use_libraries,vclplug_qt6,\
+     tl \
+     utl \
+--- a/vcl/qt5/QtFilePicker.cxx
++++ b/vcl/qt5/QtFilePicker.cxx
+@@ -74,6 +74,11 @@
+ #include <QtDBus/QDBusMessage>
+ #include <QtDBus/QDBusMetaType>
+ #include <QtDBus/QDBusObjectPath>
++#ifdef WILDOS_QT_PRIVATE
++#include <QtGui/private/qgenericunixservices_p.h>
++#include <QtGui/private/qguiapplication_p.h>
++#include <QtGui/qpa/qplatformintegration.h>
++#endif
+ 
+ #include <unx/geninst.h>
+ #include <fpicker/strings.hrc>
+@@ -323,6 +328,47 @@
+ }
+ }
+ 
++namespace
++{
++// The window a file dialog belongs to: the one LibreOffice named, else the
++// active one.
++QWidget* lcl_transientParent(QWidget* pParentWidget)
++{
++    if (pParentWidget)
++        return pParentWidget;
++    vcl::Window* pWindow = ::Application::GetActiveTopWindow();
++    if (!pWindow)
++        return nullptr;
++    QtFrame* pFrame = dynamic_cast<QtFrame*>(pWindow->ImplGetFrame());
++    assert(pFrame);
++    return pFrame ? pFrame->asChild() : nullptr;
++}
++
++// Wild OS: the portal's name for the window a dialog belongs to ("wayland:"
++// and an xdg-foreign handle, or "x11:" and its id), so the dialog opens
++// attached to it, in front of it and without a taskbar button of its own.
++// On Wayland the window LibreOffice names can be a hidden one (window ids
++// mean nothing there), so then the active window. Empty without either.
++QString lcl_portalParent(QWidget* pParent)
++{
++#ifdef WILDOS_QT_PRIVATE
++    auto aShown = [](QWidget* pWidget) -> QWindow* {
++        QWindow* pWindow = pWidget ? pWidget->window()->windowHandle() : nullptr;
++        return pWindow && pWindow->isVisible() ? pWindow : nullptr;
++    };
++    QWindow* pWindow = aShown(pParent);
++    if (!pWindow)
++        pWindow = aShown(lcl_transientParent(nullptr));
++    auto pServices = dynamic_cast<QGenericUnixServices*>(
++        QGuiApplicationPrivate::platformIntegration()->services());
++    return pWindow && pServices ? pServices->portalWindowIdentifier(pWindow) : QString();
++#else
++    (void)pParent;
++    return QString();
++#endif
++}
++}
++
+ bool QtFilePicker::execPortal(int& rResult)
+ {
+     using namespace wildosportal;
+@@ -417,7 +463,7 @@
+         sDesktop, QStringLiteral("/org/freedesktop/portal/desktop"),
+         QStringLiteral("org.freedesktop.portal.FileChooser"),
+         bSave ? QStringLiteral("SaveFile") : QStringLiteral("OpenFile"));
+-    aCall << QString() << m_pFileDialog->windowTitle() << aOptions;
++    aCall << lcl_portalParent(m_pParentWidget) << m_pFileDialog->windowTitle() << aOptions;
+     const QDBusMessage aReply = aBus.call(aCall);
+     if (aReply.type() != QDBusMessage::ReplyMessage || aReply.arguments().isEmpty())
+     {
+@@ -507,18 +553,7 @@
+ 
+ void QtFilePicker::prepareExecute()
+ {
+-    QWidget* pTransientParent = m_pParentWidget;
+-    if (!pTransientParent)
+-    {
+-        vcl::Window* pWindow = ::Application::GetActiveTopWindow();
+-        if (pWindow)
+-        {
+-            QtFrame* pFrame = dynamic_cast<QtFrame*>(pWindow->ImplGetFrame());
+-            assert(pFrame);
+-            if (pFrame)
+-                pTransientParent = pFrame->asChild();
+-        }
+-    }
++    QWidget* pTransientParent = lcl_transientParent(m_pParentWidget);
+ 
+     if (!m_aNamedFilterList.isEmpty())
+         m_pFileDialog->setNameFilters(m_aNamedFilterList);

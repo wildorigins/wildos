@@ -7,6 +7,7 @@
 #include <KCoreDirLister>
 #include <KIO/MkdirJob>
 #include <KIO/CopyJob>
+#include <KIO/PreviewJob>
 #include <KSharedConfig>
 #include <QDir>
 #include <QFileInfo>
@@ -17,6 +18,39 @@
 
 namespace
 {
+// Whether KIO can draw a picture of this type for Large icons, as Files
+// decides it.
+bool previewable(const QMimeType &mime)
+{
+    static const QStringList supported = KIO::PreviewJob::supportedMimeTypes();
+    static QSet<QString> exact;
+    static QStringList wildcards;
+    if (exact.isEmpty()) {
+        for (const QString &type : supported) {
+            if (type.endsWith(QStringLiteral("/*"))) {
+                wildcards.append(type.left(type.size() - 1));
+            } else {
+                exact.insert(type);
+            }
+        }
+    }
+    if (exact.contains(mime.name())) {
+        return true;
+    }
+    for (const QString &prefix : std::as_const(wildcards)) {
+        if (mime.name().startsWith(prefix)) {
+            return true;
+        }
+    }
+    const auto parents = mime.allAncestors();
+    for (const QString &parent : parents) {
+        if (exact.contains(parent)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool isUnder(const QString &path, const QString &root)
 {
     return path == root || path.startsWith(root.endsWith(QLatin1Char('/')) ? root : root + QLatin1Char('/'));
@@ -173,6 +207,10 @@ QVariant DirModel::data(const QModelIndex &index, int role) const
         return e.selected;
     case HiddenRole:
         return e.hidden;
+    case PreviewRole:
+        return e.preview;
+    case StampRole:
+        return e.dateKey;
     }
     return {};
 }
@@ -190,6 +228,8 @@ QHash<int, QByteArray> DirModel::roleNames() const
         {SizeRole, "size"},
         {SelectedRole, "selected"},
         {HiddenRole, "hidden"},
+        {PreviewRole, "preview"},
+        {StampRole, "stamp"},
     };
 }
 
@@ -471,6 +511,7 @@ DirModel::Entry DirModel::makeEntry(const KFileItem &item) const
     if (!e.isDir) {
         e.sizeKey = qint64(item.size());
         e.size = Format::size(e.sizeKey);
+        e.preview = item.isLocalFile() && e.sizeKey < 100LL * 1024 * 1024 && previewable(item.currentMimeType());
     }
     return e;
 }

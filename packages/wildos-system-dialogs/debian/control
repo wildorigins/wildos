@@ -12,6 +12,7 @@ Build-Depends:
  libkf6windowsystem-dev,
  liblayershellqtinterface-dev,
  libpolkit-qt6-1-dev,
+ libpam0g-dev,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -20,7 +21,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui,
+ wildos-ui (>= 0.1.12),
  polkitd,
  kwin-common,
  dpkg,

@@ -1,0 +1,13 @@
+[Unit]
+Description=Bring Settings > System > History up to date when it opens
+
+[Socket]
+# Anyone signed in may ask; the answer is only "ok", and the records stay
+# where each account can read its own.
+ListenStream=/run/wildos-history.sock
+SocketMode=0666
+Accept=yes
+MaxConnections=4
+
+[Install]
+WantedBy=sockets.target

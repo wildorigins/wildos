@@ -14,6 +14,9 @@ PageScroll {
     readonly property var status: WindowsMode.status
     readonly property var licence: status.licence || ({})
     readonly property var options: status.options || ({})
+    // Activating with a licence on a Microsoft account, from the agent:
+    // state is starting, open, ending or "".
+    readonly property var activation: status.activation || ({ state: "" })
     readonly property bool ready: WindowsMode.state === "ready"
     readonly property string vm: status.vm || ""
     property string message
@@ -133,7 +136,9 @@ PageScroll {
                     if (page.licence.source === "none") {
                         return edition + ", not activated";
                     }
-                    const how = page.licence.source === "key" ? "your product key ending " + (page.licence.keyEnd || "") : "this PC's built-in licence";
+                    const how = page.licence.source === "key" ? "your product key ending " + (page.licence.keyEnd || "")
+                              : page.licence.source === "account" ? "the licence on your Microsoft account"
+                              : "this PC's built-in licence";
                     return edition + (page.licence.activated === true ? ", activated with " : ", to be activated with ") + how;
                 }
 
@@ -147,6 +152,21 @@ PageScroll {
                     anchors.verticalCenter: parent.verticalCenter
                     text: page.licence.source === "none" ? "Add a key" : "Change key"
                     onClicked: keyDialog.open()
+                }
+            }
+
+            UI.ListRow {
+                minHeight: 54
+                visible: page.licence.activated !== true || page.activation.state !== ""
+                title: "Use a licence on my Microsoft account"
+                description: page.activation.state !== ""
+                    ? "Under way in the Activate Windows window."
+                    : "For Windows 11 Pro activated on another PC with your Microsoft account. Microsoft may let you move it here."
+
+                UI.Button {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: page.activation.state !== "" ? "Show steps" : "Start"
+                    onClicked: accountDialog.open()
                 }
             }
 
@@ -201,7 +221,7 @@ PageScroll {
                 visible: Processor.threadsAvailable
                 title: "Use every processor thread"
                 description: Processor.everyThreadLocked
-                    ? "Off at Strict and Maximum protection."
+                    ? "Off while extra processor protection is on."
                     : "Faster Windows apps and games. Set in Power and battery."
                 status: Processor.everyThread && !Processor.everyThreadLocked ? "On" : "Off"
 
@@ -580,6 +600,185 @@ PageScroll {
                     keyDialog.keyProblem = "";
                     WindowsMode.setProductKey(keyField.text);
                 }
+            }
+        ]
+    }
+
+    // Activating with a Microsoft account (wildos-winmode, activation.py):
+    // what happens before it starts, the steps while the Activate Windows
+    // window is open, and how it went. The agent keeps the state, so closing
+    // Settings part way and coming back shows the steps again.
+    UI.Dialog {
+        id: accountDialog
+        size: "large"
+        title: "Use a licence on my Microsoft account"
+        closePolicy: phase === "intro" || phase === "result" ? T.Popup.CloseOnEscape : T.Popup.NoAutoClose
+
+        // Set once Start is pressed, so the result shows instead of the
+        // introduction when the activation ends.
+        property bool started
+        property string problem
+        property string secret
+        readonly property string phase: page.activation.state === "starting" ? "starting"
+            : page.activation.state === "open" ? "open"
+            : page.activation.state === "ending" ? "ending"
+            : started && page.activation.result ? "result" : "intro"
+        readonly property var outcome: page.activation.result || ({})
+
+        text: {
+            switch (phase) {
+            case "starting":
+                return "Starting Windows and adding the account for activating. This can take a minute or two, and Windows takes a moment more to sign in to a new account the first time.";
+            case "open":
+                return "The Activate Windows window is signed in to an account made just for this. In it:";
+            case "ending":
+                return "Signing out of the account for activating and removing it.";
+            case "result":
+                if (outcome.already) {
+                    return "Windows is already activated, so there's nothing to move.";
+                }
+                if (outcome.activated) {
+                    return "Windows is activated. The activation belongs to Windows mode's virtual PC, so it stays now the account for activating is removed."
+                        + (outcome.message ? " " + outcome.message : "");
+                }
+                return "Windows isn't activated. "
+                    + (outcome.message ? outcome.message : "The account for activating is removed.")
+                    + " You can try again, add a product key, or activate by phone: open the Windows desktop from Troubleshooting and run slui 4.";
+            default:
+                return "Windows mode adds a second Windows account just for this and opens the Windows desktop signed in to it, where you sign in to your Microsoft account and use Microsoft's activation troubleshooter. Afterwards Windows mode removes the account. Your own Windows account isn't changed, and Windows apps you have open leave the screen until it's done.";
+            }
+        }
+
+        onOpened: {
+            problem = "";
+            started = page.activation.state !== "";
+            secret = phase === "open" ? WindowsMode.activationPassword() : "";
+        }
+        onClosed: secret = ""
+        onPhaseChanged: secret = phase === "open" ? WindowsMode.activationPassword() : ""
+
+        Connections {
+            target: WindowsMode
+            function onAccountActivationDone(answer) {
+                accountDialog.problem = answer;
+            }
+        }
+
+        UI.Label {
+            Layout.fillWidth: true
+            visible: accountDialog.phase === "intro"
+            text: "The activation belongs to this virtual PC, so it stays after the account is removed. Microsoft only moves some licences: one that came from a free upgrade of a PC's original Windows often won't move to different hardware. If yours doesn't, a product key or activating by phone are the other ways."
+            size: 14
+            color: UI.Style.inkStatus
+            lineHeight: 1.55
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+        }
+
+        Repeater {
+            model: accountDialog.phase === "open" ? [
+                "1. Open Settings, then Accounts, then Your info, and choose Sign in with a Microsoft account instead. When Windows asks for this account's current password, paste this one:",
+                "2. Then in Settings, open System, then Activation. Choose Troubleshoot, and when it has finished, I recently changed hardware on this device.",
+                "3. Pick this device from the list and choose Activate. If Windows asks you to set up a PIN, it goes with the account."
+            ] : []
+
+            ColumnLayout {
+                required property string modelData
+                required property int index
+                Layout.fillWidth: true
+                spacing: 8
+
+                UI.Label {
+                    Layout.fillWidth: true
+                    text: modelData
+                    size: 14
+                    lineHeight: 1.4
+                    wrapMode: Text.Wrap
+                    elide: Text.ElideNone
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: index === 0 && accountDialog.secret.length > 0
+                    spacing: 8
+
+                    UI.TextField {
+                        Layout.fillWidth: true
+                        text: accountDialog.secret
+                        readOnly: true
+                        selectByMouse: true
+                        font.family: "monospace"
+                        Accessible.name: "Password of the account for activating"
+                    }
+
+                    UI.Button {
+                        text: "Copy"
+                        onClicked: WindowsMode.copySecret(accountDialog.secret)
+                    }
+                }
+            }
+        }
+
+        UI.Label {
+            Layout.fillWidth: true
+            visible: accountDialog.phase === "open"
+            text: "Windows mode checks every few seconds and finishes by itself once Windows says it's activated. Done or Cancel removes the account straight away."
+            size: 13
+            color: UI.Style.inkMuted
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+        }
+
+        UI.Label {
+            Layout.fillWidth: true
+            visible: text.length > 0 && accountDialog.phase !== "result"
+            text: accountDialog.problem
+            size: 13
+            color: UI.Style.warning
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+            Accessible.role: Accessible.AlertMessage
+        }
+
+        buttons: [
+            UI.Button {
+                visible: accountDialog.phase === "intro"
+                text: "Cancel"
+                onClicked: accountDialog.close()
+            },
+            UI.Button {
+                visible: accountDialog.phase === "intro"
+                kind: "primary"
+                text: "Open the Windows desktop"
+                onClicked: {
+                    accountDialog.problem = "";
+                    accountDialog.started = true;
+                    WindowsMode.activateWithAccount();
+                }
+            },
+            UI.Button {
+                visible: accountDialog.phase === "open"
+                text: "Cancel"
+                onClicked: WindowsMode.endAccountActivation()
+            },
+            UI.Button {
+                visible: accountDialog.phase === "open"
+                kind: "primary"
+                text: "Done"
+                onClicked: WindowsMode.endAccountActivation()
+            },
+            UI.Button {
+                visible: accountDialog.phase === "starting" || accountDialog.phase === "ending"
+                kind: "primary"
+                text: accountDialog.phase === "starting" ? "Starting" : "Removing the account"
+                busy: true
+                enabled: false
+            },
+            UI.Button {
+                visible: accountDialog.phase === "result"
+                kind: "primary"
+                text: "Close"
+                onClicked: accountDialog.close()
             }
         ]
     }

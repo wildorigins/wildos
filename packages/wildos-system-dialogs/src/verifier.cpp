@@ -558,6 +558,9 @@ const QHash<QString, Wording> &wordings()
 
         {QStringLiteral("org.wildos.appbridge.enable-32bit"), {"Wants to install Windows app support.", "Windows apps", "wildos-windows-app"}},
         {QStringLiteral("org.wildos.usb.allow-device"), {"Wants to allow a USB device Wild OS blocked, until you unplug it."}},
+        {QStringLiteral("org.wildos.camera-mic.block"), {"Wants to turn off the camera or microphone for every app.", "Camera and microphone", "camera-web"}},
+        {QStringLiteral("org.wildos.camera-mic.unblock"), {"Wants to turn the camera or microphone back on for every app.", "Camera and microphone", "camera-web"}},
+        {QStringLiteral("org.wildos.camera-mic.release"), {"Wants to stop an app using the camera.", "Camera and microphone", "camera-web"}},
         {QStringLiteral("org.wildos.update-checks"), {"Wants to change how this computer checks for updates.", "Updates", "wildos-updates"}},
         {QStringLiteral("org.wildos.settings.update-policy"), {"Wants to change how Wild OS installs updates.", "Updates", "wildos-updates"}},
         {QStringLiteral("org.wildos.settings.users"), {"Wants to change who can use this computer."}},
@@ -577,6 +580,7 @@ QString programPurpose(const QString &program)
         {QStringLiteral("/usr/libexec/wildos/settings-locale"), QStringLiteral("Wants to set up a new language on this computer.")},
         {QStringLiteral("/usr/libexec/wildos/settings-update-policy"), QStringLiteral("Wants to change how Wild OS installs updates.")},
         {QStringLiteral("/usr/libexec/wildos/usb-allow"), QStringLiteral("Wants to allow a USB device Wild OS blocked, until you unplug it.")},
+        {QStringLiteral("/usr/libexec/wildos/camera-mic-block"), QStringLiteral("Wants to turn the camera or microphone on or off for every app.")},
         {QStringLiteral("/usr/libexec/wildos/update-checks"), QStringLiteral("Wants to change how this computer checks for updates.")},
         {QStringLiteral("/usr/libexec/wildos/appbridge-enable-32bit"), QStringLiteral("Wants to install Windows app support.")},
     };

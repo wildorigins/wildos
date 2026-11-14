@@ -200,6 +200,7 @@ private:
     const Item *find(const QString &key) const;
     QList<qint64> treeOf(const QList<qint64> &pids) const;
     QString signal(const QList<qint64> &pids, int signal);
+    QString end(const QList<qint64> &pids);
 
     KSysGuard::ProcessDataModel *m_source = nullptr;
     KSysGuard::ProcessController *m_controller = nullptr;

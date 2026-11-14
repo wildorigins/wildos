@@ -72,6 +72,7 @@ CaptureApp::CaptureApp(QObject *parent)
     , m_grabber(new Grabber(this))
     , m_recorder(new Recorder(this))
     , m_sharer(new Sharer(this))
+    , m_scanner(new Scanner(this))
 {
     const KConfigGroup config = settings();
     m_delay = config.readEntry("Delay", 0);
@@ -128,7 +129,7 @@ CaptureApp::CaptureApp(QObject *parent)
     m_idleTimer.setSingleShot(true);
     m_idleTimer.setInterval(800);
     connect(&m_idleTimer, &QTimer::timeout, this, [this] {
-        if (m_selecting || m_countdown > 0 || m_recorder->recording() || m_openWindows > 0) {
+        if (m_selecting || m_countdown > 0 || m_recorder->recording() || m_openWindows > 0 || m_scanner->scanning() || m_scanner->busy()) {
             return;
         }
         for (const auto &notification : std::as_const(m_notifications)) {
@@ -235,6 +236,13 @@ void CaptureApp::handle(const QStringList &arguments)
         openEditorFor(QUrl::fromUserInput(arguments.at(edit + 1), QDir::currentPath(), QUrl::AssumeLocalFile));
         return;
     }
+    if (arguments.contains(QStringLiteral("--scan"))) {
+        if (m_selecting) {
+            cancel();
+        }
+        openScan();
+        return;
+    }
     if (m_recorder->recording()) {
         // The shortcut again while recording ends the recording, as Stop
         // does.
@@ -326,6 +334,11 @@ void CaptureApp::cancel()
     Q_EMIT countdownChanged();
     m_selecting = false;
     Q_EMIT selectingChanged();
+    // Back to the Scan window the toolbar was opened from.
+    if (m_fromScan && m_scanOpen) {
+        Q_EMIT scanRequested();
+    }
+    m_fromScan = false;
     quitWhenIdle();
 }
 
@@ -334,6 +347,7 @@ void CaptureApp::cancel()
 // the picture. Without one it happens at once.
 void CaptureApp::after(std::function<void()> action)
 {
+    m_fromScan = false;
     m_selecting = false;
     Q_EMIT selectingChanged();
     if (m_delay <= 0) {
@@ -645,6 +659,48 @@ void CaptureApp::editorClosed(const QString &key)
         m_frozen->release(key);
     }
     windowClosed();
+}
+
+void CaptureApp::openScan()
+{
+    m_fromScan = false;
+    if (!m_scanOpen) {
+        m_scanOpen = true;
+        ++m_openWindows;
+    }
+    Q_EMIT scanRequested();
+}
+
+void CaptureApp::scanClosed()
+{
+    if (m_scanOpen) {
+        m_scanOpen = false;
+        windowClosed();
+    }
+}
+
+void CaptureApp::startCapture(bool record)
+{
+    if (m_selecting || m_countdown > 0 || m_recorder->recording()) {
+        return;
+    }
+    m_returnPath.clear();
+    m_fromScan = true;
+    setRecordMode(record && canRecord());
+    // The Scan window is minimised first; this gives KWin time to take it
+    // off the screen before the screen is frozen.
+    QTimer::singleShot(400, this, [this] {
+        freeze();
+    });
+}
+
+void CaptureApp::markUpScanPage(const QString &path)
+{
+    if (path.isEmpty()) {
+        return;
+    }
+    ++m_openWindows;
+    Q_EMIT scanPageEditRequested(QUrl::fromLocalFile(path), path);
 }
 
 void CaptureApp::windowClosed()

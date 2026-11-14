@@ -1,0 +1,229 @@
+#!/usr/bin/python3 -I
+"""Advanced protection's "Ignore new USB devices while locked".
+
+With USB protection on (USBGuard), memory sticks, keyboards, mice, webcams
+and audio devices normally work as soon as they are plugged in, and
+anything else waits to be allowed from the shield on the taskbar. While the
+screen of the signed-in person is locked, this holds back every device
+plugged in, of any kind: USBGuard's InsertedDevicePolicy goes to block for
+as long as the lock lasts.
+
+Devices already connected keep working throughout. One that drops off and
+comes back by itself while the PC is locked (a keyboard's receiver waking
+up with the PC, a hub resetting) is let back in when it matches a device
+that was there when the screen locked: same id, serial number, name and
+port.
+
+At sign-in the policy goes back to what it was, and each device that
+arrived during the lock is reconnected on its port, so USBGuard decides on
+it as if it had just been plugged in: a memory stick then works, and
+anything else waits to be allowed, with the taskbar asking about it now
+that someone is there (security-notify waits for the unlock).
+
+Does nothing while usb_locked is off in /etc/wildos/advanced-protection
+or USBGuard is not running.
+"""
+
+import os
+import re
+import subprocess
+import sys
+
+from gi.repository import Gio, GLib
+
+STORE = "/etc/wildos/advanced-protection"
+USBGUARD_CONF = "/etc/usbguard/usbguard-daemon.conf"
+LOGIN1 = "org.freedesktop.login1"
+POLL = 2
+
+# "12: block id 046d:c52b serial "..." name "..." hash ... via-port "1-2" ..."
+DEVICE = re.compile(r'^(\d+): (allow|block|reject) (.*)$')
+
+
+def log(*args):
+    print(*args, flush=True)
+
+
+def store_on():
+    value = "on"
+    try:
+        with open(STORE) as f:
+            for line in f:
+                if line.startswith("usb_locked="):
+                    value = line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return value != "off"
+
+
+def usbguard(*args):
+    try:
+        out = subprocess.run(["usbguard", *args], capture_output=True, text=True, timeout=15)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log("usbguard", " ".join(args), "failed:", e)
+        return None
+    if out.returncode != 0:
+        return None
+    return out.stdout
+
+
+def field(rule, name):
+    m = re.search(r'\b%s "((?:[^"\\]|\\.)*)"' % name, rule) or re.search(r'\b%s (\S+)' % name, rule)
+    return m.group(1) if m else ""
+
+
+def identity(rule):
+    return (field(rule, "id"), field(rule, "serial"), field(rule, "name"), field(rule, "via-port"))
+
+
+def devices():
+    out = usbguard("list-devices")
+    if out is None:
+        return None
+    found = []
+    for line in out.splitlines():
+        m = DEVICE.match(line.strip())
+        if m:
+            found.append((m.group(1), m.group(2), m.group(3)))
+    return found
+
+
+def configured_policy():
+    try:
+        with open(USBGUARD_CONF) as f:
+            for line in f:
+                if line.startswith("InsertedDevicePolicy="):
+                    return line.split("=", 1)[1].strip() or "apply-policy"
+    except OSError:
+        pass
+    return "apply-policy"
+
+
+def reconnect(port):
+    """Disconnects and reconnects the device on PORT without touching it,
+    so the kernel announces it again and USBGuard decides afresh."""
+    if not re.fullmatch(r"\d+-\d+(\.\d+)*", port):
+        return
+    # The port's own folder: the device's goes away once it is disconnected.
+    switch = os.path.realpath("/sys/bus/usb/devices/%s/port" % port) + "/disable"
+    try:
+        with open(switch, "w") as f:
+            f.write("1")
+        GLib.timeout_add(500, lambda: (write_quietly(switch, "0"), False)[1])
+    except OSError as e:
+        log("could not reconnect", port, e)
+
+
+def write_quietly(path, text):
+    try:
+        with open(path, "w") as f:
+            f.write(text)
+    except OSError as e:
+        log("could not write", path, e)
+
+
+class Watcher:
+    def __init__(self):
+        self.bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        self.locked = False
+        self.known = set()
+        self.arrived = set()
+        self.restore = None
+        self.timer = 0
+        self.bus.signal_subscribe(LOGIN1, "org.freedesktop.DBus.Properties", "PropertiesChanged", None, None,
+                                  Gio.DBusSignalFlags.NONE, self._changed, None)
+        self._check()
+
+    def _changed(self, conn, sender, path, iface, signal, params, data):
+        name, changed, _ = params.unpack()
+        if "LockedHint" in changed or "ActiveSession" in changed or "Active" in changed:
+            self._check()
+
+    def _get(self, path, iface, prop):
+        try:
+            reply = self.bus.call_sync(LOGIN1, path, "org.freedesktop.DBus.Properties", "Get",
+                                       GLib.Variant("(ss)", (iface, prop)), GLib.VariantType("(v)"),
+                                       Gio.DBusCallFlags.NONE, 3000, None)
+            return reply.unpack()[0]
+        except GLib.Error:
+            return None
+
+    def _screen_locked(self):
+        """The person at seat0 has their screen locked. The sign-in screen
+        is not a lock: someone may need a keyboard to sign in."""
+        active = self._get("/org/freedesktop/login1/seat/seat0", "org.freedesktop.login1.Seat", "ActiveSession")
+        if not active or not active[1] or active[1] == "/":
+            return False
+        session = active[1]
+        if self._get(session, "org.freedesktop.login1.Session", "Class") != "user":
+            return False
+        return bool(self._get(session, "org.freedesktop.login1.Session", "LockedHint"))
+
+    def _check(self):
+        locked = self._screen_locked() and store_on()
+        if locked and not self.locked:
+            self._lock()
+        elif not locked and self.locked:
+            self._unlock()
+
+    def _lock(self):
+        present = devices()
+        if present is None:
+            return
+        self.known = {identity(rule) for num, target, rule in present if target == "allow"}
+        self.arrived = set()
+        current = (usbguard("get-parameter", "InsertedDevicePolicy") or "").strip()
+        self.restore = current if current and current != "block" else configured_policy()
+        if usbguard("set-parameter", "InsertedDevicePolicy", "block") is None:
+            log("USBGuard did not take the lock policy")
+            return
+        self.locked = True
+        # USBGuard says nothing over IPC that would wake this, so the
+        # devices are looked at every couple of seconds, only while locked.
+        self.timer = GLib.timeout_add_seconds(POLL, self._tick)
+        log("screen locked: new USB devices are held back")
+
+    def _unlock(self):
+        self.locked = False
+        if self.timer:
+            GLib.source_remove(self.timer)
+            self.timer = 0
+        usbguard("set-parameter", "InsertedDevicePolicy", self.restore or configured_policy())
+        log("signed in again: USB devices follow the usual policy")
+        for num, target, rule in devices() or []:
+            port = field(rule, "via-port")
+            if target != "allow" and port in self.arrived:
+                reconnect(port)
+        self.arrived = set()
+
+    def _tick(self):
+        for num, target, rule in devices() or []:
+            if target == "allow":
+                continue
+            if identity(rule) in self.known:
+                usbguard("allow-device", num)
+            else:
+                self.arrived.add(field(rule, "via-port"))
+        return True
+
+
+def main():
+    if len(sys.argv) > 1:
+        print("usage: wildos-usb-lock", file=sys.stderr)
+        return 2
+    watcher = Watcher()
+    loop = GLib.MainLoop()
+
+    def stop(*_):
+        if watcher.locked:
+            watcher._unlock()
+        loop.quit()
+        return False
+
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, 15, stop)
+    loop.run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

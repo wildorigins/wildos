@@ -1,3 +1,12 @@
+wildos-notes (0.1.2) trixie; urgency=medium
+
+  * The title and the note have the right-click menu with Undo, Cut,
+    Copy, Paste and Select all. Undo from the menu steps back just as
+    Ctrl+Z does. The empty search box stays open while its menu is up,
+    so you can paste into it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-notes (0.1.1) trixie; urgency=medium
 
   * Report a problem in a note's More menu opens Report a problem with Notes

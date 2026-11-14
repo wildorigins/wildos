@@ -82,7 +82,7 @@ Item {
     }
 
     SequentialAnimation {
-        running: !starting.reducedMotion
+        running: starting.visible && !starting.reducedMotion
         loops: Animation.Infinite
         ParallelAnimation {
             NumberAnimation { target: mark; property: "width"; from: Style.markWidth; to: Style.startingWidth; duration: Style.startingCycle * 0.6; easing.type: Easing.InOutSine }

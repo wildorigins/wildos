@@ -2,12 +2,31 @@
 fails is tried again, a second failure clears what it made and goes back a
 stage, and two more failures stop with the problem shown as before."""
 
+import contextlib
 import os
 import shutil
 import tempfile
+import threading
+import time
 import unittest
 
 from winmode import setup
+
+
+@contextlib.contextmanager
+def online_as(answers):
+    """setup.online() answering from a list (the last answer repeats), with
+    the offline wait looking again at once."""
+    answers = list(answers)
+    saved = setup.online, setup.OFFLINE_POLL
+
+    def online():
+        return answers.pop(0) if len(answers) > 1 else answers[0]
+    setup.online, setup.OFFLINE_POLL = online, 0.01
+    try:
+        yield
+    finally:
+        setup.online, setup.OFFLINE_POLL = saved
 
 
 class Svc:
@@ -162,11 +181,67 @@ class Flow(unittest.TestCase):
 
     def test_downloads_still_pause(self):
         def media():
-            raise setup.Problem("download", "The internet connection dropped.")
+            raise setup.Problem("download", "Microsoft didn't allow the download from here.")
         self.s.step_media = media
-        self.s.work()
+        with online_as([True]):
+            self.s.work()
         self.assertTrue(self.s.rec["paused"])
+        self.assertEqual(self.s.rec["problem"], {"kind": "download", "text": "Microsoft didn't allow the download from here."})
         self.assertIsNone(self.s.rec.get("recovery"))
+
+    def test_offline_waits_and_carries_on_by_itself(self):
+        tries = {"media": 1}
+        problems = []
+        save = self.s.save
+
+        def watch(**changes):
+            save(**changes)
+            if "problem" in changes:
+                problems.append(changes["problem"])
+        self.s.save = watch
+
+        def media():
+            self.ran.append("media")
+            if tries["media"]:
+                tries["media"] -= 1
+                raise setup.Problem("download", "Windows mode couldn't download the parts it runs on.")
+            self.s.stage_done("media")
+        self.s.step_media = media
+        # Offline when the step fails and for two looks after, then back.
+        with online_as([False, False, False, True]):
+            self.s.work()
+        self.assertEqual(self.ran[:2], ["media", "media"])
+        self.assertEqual(self.s.rec["stage"], "done")
+        self.assertFalse(self.s.rec.get("paused"))
+        self.assertIsNone(self.s.rec.get("problem"))
+        offline = [p for p in problems if p and p.get("offline")]
+        self.assertEqual(len(offline), 1)
+        self.assertEqual(offline[0]["text"], setup.OFFLINE_TEXT)
+
+    def test_start_over_while_offline_stops_the_wait(self):
+        def media():
+            raise setup.Problem("download", "The download stopped.")
+        self.s.step_media = media
+        self.s.svc.refresh = lambda: None
+        with online_as([False] * 1000):
+            worker = threading.Thread(target=self.s.work)
+            self.s.thread = worker
+            worker.start()
+            deadline = time.monotonic() + 5
+            while not (self.s.rec.get("problem") or {}).get("offline") and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(self.s.rec["problem"]["offline"])
+            self.s.stop.set()
+            self.s.resume_event.set()
+            worker.join(5)
+        self.assertFalse(worker.is_alive())
+
+    def test_nothing_is_written_once_start_over_cleared_the_record(self):
+        self.s.stop.set()
+        self.s.svc.state.pop("setup")
+        self.s.save(download={"received": 1})
+        self.s.set_stage("media", "active", 50)
+        self.assertNotIn("setup", self.s.svc.state)
 
     def test_missing_result_of_an_earlier_stage_is_redone(self):
         gone = {"once": True}

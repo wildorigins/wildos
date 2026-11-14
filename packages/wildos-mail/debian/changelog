@@ -1,3 +1,13 @@
+wildos-mail (0.2.5) trixie; urgency=medium
+
+  * Every text box in Mail has the right-click menu with Cut, Copy,
+    Paste and Select all: the subject, the message and the recipients,
+    signatures, event and contact notes, and task titles, steps and
+    notes. The Menu key and Shift+F10 open it too. Opening it in an
+    account's name boxes no longer saves and closes the box early.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:54:22 +0000
+
 wildos-mail (0.2.4) trixie; urgency=medium
 
   * Report a problem on the Help tab opens Report a problem with Mail chosen,

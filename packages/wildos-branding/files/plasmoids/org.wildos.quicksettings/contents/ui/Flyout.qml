@@ -617,7 +617,7 @@ FocusScope {
                 Layout.preferredWidth: 22
                 Layout.preferredHeight: 18
                 percent: flyout.power ? flyout.power.percent : 0
-                charging: flyout.power ? flyout.power.charging : false
+                charging: flyout.power ? flyout.power.pluggedIn : false
                 low: flyout.quick.batteryLow
             }
 

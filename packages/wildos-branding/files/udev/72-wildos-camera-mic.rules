@@ -1,0 +1,11 @@
+# The switches in the taskbar's camera and microphone panel
+# (/usr/libexec/wildos/camera-mic-block). While one is off, its devices
+# belong to root alone: no group, so the audio and video groups every
+# account is in give nothing, and no uaccess, so logind gives the person at
+# the screen no access list either. Before 73-seat-late.rules, which is
+# where uaccess is applied.
+
+SUBSYSTEM=="sound", KERNEL=="pcmC[0-9]*D[0-9]*c", TEST=="/etc/wildos/microphone-off", TAG-="uaccess", GROUP="root", MODE="0600"
+
+SUBSYSTEM=="video4linux", TEST=="/etc/wildos/camera-off", TAG-="uaccess", GROUP="root", MODE="0600"
+SUBSYSTEM=="media", TEST=="/etc/wildos/camera-off", TAG-="uaccess", GROUP="root", MODE="0600"

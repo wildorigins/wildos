@@ -294,6 +294,11 @@ Window {
                     UI.SearchField { implicitWidth: 170; text: "blue"; previewFocus: true }
                     UI.SearchField { implicitWidth: 200; pill: true; placeholderText: "Search apps" }
                 }
+                States {
+                    label: "Several lines"
+                    UI.TextArea { implicitWidth: 240; placeholderText: "What went wrong?" }
+                    UI.TextArea { implicitWidth: 240; text: "Right click for Cut, Copy and Paste"; previewFocus: true }
+                }
             }
 
             Section {

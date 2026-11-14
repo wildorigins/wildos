@@ -207,7 +207,11 @@ void Recovery::reset(const QString &how)
 
 void Recovery::openBackup()
 {
-    QProcess::startDetached(QStringLiteral("gtk-launch"), {backupDesktop});
+    // By name, as Devices does: gtk-launch isn't in the image.
+    const QString program = QStandardPaths::findExecutable(QStringLiteral("wildos-backup"));
+    if (!program.isEmpty()) {
+        QProcess::startDetached(program, {});
+    }
 }
 
 void Recovery::restart()

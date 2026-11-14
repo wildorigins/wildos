@@ -2,6 +2,12 @@
 set -e
 
 if [ "$1" = "configure" ]; then
+    # 0.1.52 to 0.1.60 shipped the taskbar's app rules as a conffile at the
+    # path diverted from Plasma, and an upgrade that kept the old conffiles
+    # left the new copy as .dpkg-dist with no rules file at all. It is a link
+    # now (debian/links), so the leftover goes.
+    rm -f /etc/xdg/taskmanagerrulesrc.dpkg-dist /etc/xdg/taskmanagerrulesrc.dpkg-new
+
     # Select the Wild OS boot screen with Plymouth's own tool: the initramfs
     # helper only honours a theme set this way, and silently fell back to
     # Debian's when the line was edited in by hand. The initramfs itself is
@@ -26,6 +32,30 @@ if [ "$1" = "configure" ]; then
         dracut --regenerate-all --force >/dev/null 2>&1 ||             echo "wildos-branding: could not rebuild the initramfs; the new boot screen shows after the next kernel update" >&2
     fi
 
+    # Before 0.1.42 keyboard lights always started off, and systemd-backlight
+    # saved that at every shut down as if someone had chosen it, so from now
+    # on it would keep turning them off after the unlock prompt. A light that
+    # is off now and was saved off (or never saved) comes on once, and the
+    # next shut down saves that. One saved on and off now was turned off in
+    # this session, so it is left alone.
+    if [ -n "$2" ] && dpkg --compare-versions "$2" lt 0.1.42 \
+        && [ -d /run/systemd/system ] && [ ! -d /run/initramfs/live ]; then
+        for led in /sys/class/leds/*::kbd_backlight*; do
+            [ -e "$led/brightness" ] || continue
+            name=${led##*/}
+            saved=0
+            for f in /var/lib/systemd/backlight/*:leds:"$name" /var/lib/systemd/backlight/leds:"$name"; do
+                [ -f "$f" ] && read -r saved < "$f" || true
+            done
+            [ "$saved" = 0 ] || continue
+            /usr/libexec/wildos/kbd-backlight-default "$name" || true
+            read -r level < "$led/brightness" || continue
+            for f in /var/lib/systemd/backlight/*:leds:"$name" /var/lib/systemd/backlight/leds:"$name"; do
+                [ -f "$f" ] && echo "$level" > "$f" || true
+            done
+        done
+    fi
+
     # USBGuard blocks new devices by switching each USB controller's
     # authorized_default to 0, and by default leaves it there when it stops.
     # Turning USB protection off in Settings stops the service, so without
@@ -44,6 +74,10 @@ if [ "$1" = "configure" ]; then
     if [ -d /run/systemd/system ] && ! systemctl is-active --quiet usbguard.service; then
         /usr/libexec/wildos/usb-release || true
     fi
+    # The rule for built-in devices applies now, not at the next restart.
+    if [ -d /run/systemd/system ] && systemctl is-active --quiet usbguard.service; then
+        systemctl try-restart usbguard.service || true
+    fi
 
     # The sign-in screen picks up the last person's accessibility choices
     # through a PAM session step (see /usr/libexec/wildos/greeter-access);
@@ -56,6 +90,30 @@ if [ "$1" = "configure" ]; then
     # The image has no grub.cfg (the installer makes one).
     if [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null; then
         update-grub || echo "wildos-branding: update-grub failed; the start-up menu's look changes on its next successful run" >&2
+    fi
+fi
+
+if [ "$1" = "configure" ]; then
+    # The white pointer for everything that doesn't read KDE's own setting:
+    # GTK and X11 apps, and anything started before the desktop. Debian's
+    # only candidate is Adwaita's black pointer at priority 90; a choice
+    # made by hand with update-alternatives is left alone.
+    update-alternatives --install /usr/share/icons/default/index.theme x-cursor-theme /usr/share/wildos/cursor/white.theme 100
+
+    # The shutdown guard starts with each session. People signed in while
+    # this is installed get it (or its new version) now, so the next lid
+    # shutdown is covered without signing out first.
+    if [ -d /run/systemd/system ]; then
+        for dir in /run/user/*; do
+            uid=${dir##*/}
+            [ "$uid" -ge 1000 ] 2>/dev/null || continue
+            user=$(id -nu "$uid" 2>/dev/null) || continue
+            systemctl --user -M "$user@" daemon-reload >/dev/null 2>&1 || true
+            systemctl --user -M "$user@" restart wildos-shutdown-guard.service >/dev/null 2>&1 || true
+            # The camera and microphone lights, likewise, without waiting
+            # for the next sign-in.
+            systemctl --user -M "$user@" restart wildos-camera-mic.service >/dev/null 2>&1 || true
+        done
     fi
 fi
 

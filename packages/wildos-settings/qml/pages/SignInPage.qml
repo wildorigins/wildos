@@ -464,6 +464,7 @@ PageScroll {
 
         UI.TextField {
             id: walletPasswordField
+            UI.NoPaste {}
             Layout.fillWidth: true
             placeholderText: "Your account password"
             revealable: true
@@ -473,6 +474,7 @@ PageScroll {
 
         UI.TextField {
             id: walletOtherField
+            UI.NoPaste {}
             Layout.fillWidth: true
             visible: walletDialog.needsOther
             placeholderText: "The password your saved passwords use"
@@ -533,6 +535,7 @@ PageScroll {
 
         UI.TextField {
             id: autoPasswordField
+            UI.NoPaste {}
             Layout.fillWidth: true
             placeholderText: "Your password"
             revealable: true
@@ -607,6 +610,7 @@ PageScroll {
 
         UI.TextField {
             id: currentField
+            UI.NoPaste {}
             Layout.fillWidth: true
             placeholderText: "Current password"
             revealable: true
@@ -616,6 +620,7 @@ PageScroll {
 
         UI.TextField {
             id: newField
+            UI.NoPaste {}
             Layout.fillWidth: true
             Layout.topMargin: 6
             placeholderText: "New password"
@@ -634,6 +639,7 @@ PageScroll {
 
         UI.TextField {
             id: confirmField
+            UI.NoPaste {}
             Layout.fillWidth: true
             placeholderText: "Confirm the new password"
             revealable: true

@@ -1,0 +1,6 @@
+# Recent files are kept for 3 months, not KDE's default of forever: enough
+# for Start and Files to offer what you worked on lately, without keeping a
+# record of every file ever opened. Settings > Privacy and security >
+# Activity history changes it for your account.
+[Plugin-org.kde.ActivityManager.Resources.Scoring]
+keep-history-for=3

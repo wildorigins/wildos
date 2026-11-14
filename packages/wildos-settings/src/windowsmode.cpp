@@ -153,6 +153,39 @@ QString WindowsMode::openDesktop()
     return call(QStringLiteral("OpenDesktop"));
 }
 
+void WindowsMode::activateWithAccount()
+{
+    // Windows may start from off first, then the account is made.
+    callAsync(QStringLiteral("ActivateWithAccount"), 900000, &WindowsMode::accountActivationDone);
+}
+
+void WindowsMode::endAccountActivation()
+{
+    // Signing the account out and deleting its profile takes a minute.
+    callAsync(QStringLiteral("EndActivation"), 480000, &WindowsMode::accountActivationDone);
+}
+
+QString WindowsMode::activationPassword()
+{
+    return m_service ? call(QStringLiteral("ActivationPassword")) : QString();
+}
+
+void WindowsMode::callAsync(const QString &method, int timeoutMs, void (WindowsMode::*done)(const QString &))
+{
+    if (!m_service) {
+        Q_EMIT(this->*done)(QStringLiteral("Windows mode isn't installed on this PC."));
+        return;
+    }
+    m_service->setTimeout(timeoutMs);
+    auto *watcher = new QDBusPendingCallWatcher(m_service->asyncCall(method), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, done] {
+        watcher->deleteLater();
+        const QDBusPendingReply<QString> reply = *watcher;
+        Q_EMIT(this->*done)(reply.isError() ? QStringLiteral("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
+        refresh();
+    });
+}
+
 QString WindowsMode::repair()
 {
     return call(QStringLiteral("Repair"), {}, 180000);

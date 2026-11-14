@@ -105,6 +105,18 @@ void Pins::unpin(const QString &key)
     }
 }
 
+void Pins::clear()
+{
+    for (const QVariant &value : std::as_const(m_items)) {
+        const QString image = QUrl(value.toMap().value(QStringLiteral("image")).toString()).toLocalFile();
+        if (!image.isEmpty()) {
+            QFile::remove(image);
+        }
+    }
+    m_items.clear();
+    save();
+}
+
 void Pins::restore(const QString &key)
 {
     for (const QVariant &value : std::as_const(m_items)) {

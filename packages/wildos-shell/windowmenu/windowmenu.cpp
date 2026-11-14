@@ -16,6 +16,8 @@
 
 #include <QAction>
 #include <QDBusConnection>
+#include <QGuiApplication>
+#include <QStyleHints>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQuickWindow>
@@ -70,6 +72,9 @@ void WindowMenu::takeOverShortcut()
 
 bool WindowMenu::pointerButton(KWin::PointerButtonEvent *event)
 {
+    if (event->button == Qt::LeftButton) {
+        return edgeDoubleClick(event);
+    }
     if (event->button != Qt::RightButton) {
         return false;
     }
@@ -104,6 +109,82 @@ void WindowMenu::ShowAtPointer()
         window = KWin::workspace()->activeWindow();
     }
     show(window, at);
+}
+
+void WindowMenu::MaximizeEdgeAtPointer(int edges)
+{
+    KWin::Window *window = KWin::input()->findToplevel(KWin::input()->globalPointer());
+    if (!window || window->isInternal()) {
+        window = KWin::workspace()->activeWindow();
+    }
+    maximizeForEdges(window, Qt::Edges(edges));
+}
+
+void WindowMenu::maximizeForEdges(KWin::Window *window, Qt::Edges edges)
+{
+    if (!window || !window->isMaximizable() || !edges) {
+        return;
+    }
+    const bool vertical = edges & (Qt::TopEdge | Qt::BottomEdge);
+    const bool horizontal = edges & (Qt::LeftEdge | Qt::RightEdge);
+    // KWin's own operations, so a second double click puts the window back,
+    // as it does on a frame KWin draws.
+    KWin::workspace()->performWindowOperation(window,
+                                              vertical && horizontal ? KWin::Options::MaximizeOp
+                                                  : vertical         ? KWin::Options::VMaximizeOp
+                                                                     : KWin::Options::HMaximizeOp);
+}
+
+// KWin handles a double click on the edge of a frame it draws. An app that
+// draws its own (Brave, GTK apps) keeps its resize margin just outside the
+// window it shows and starts the resize itself, so KWin never sees the
+// double click; it is caught here instead.
+bool WindowMenu::edgeDoubleClick(KWin::PointerButtonEvent *event)
+{
+    if (event->state == KWin::PointerButtonState::Released) {
+        const bool swallow = m_swallowLeftRelease;
+        m_swallowLeftRelease = false;
+        return swallow;
+    }
+    const QPointF at = event->position;
+    KWin::Window *window = KWin::input()->findToplevel(at);
+    if (!window || window->isInternal() || window->isDecorated() || !window->isMaximizable()) {
+        m_edgeClick.invalidate();
+        return false;
+    }
+    const QRectF frame = window->frameGeometry();
+    constexpr qreal margin = 12;
+    Qt::Edges edges;
+    if (at.y() < frame.top() && at.y() >= frame.top() - margin) {
+        edges |= Qt::TopEdge;
+    } else if (at.y() >= frame.bottom() && at.y() < frame.bottom() + margin) {
+        edges |= Qt::BottomEdge;
+    }
+    if (at.x() < frame.left() && at.x() >= frame.left() - margin) {
+        edges |= Qt::LeftEdge;
+    } else if (at.x() >= frame.right() && at.x() < frame.right() + margin) {
+        edges |= Qt::RightEdge;
+    }
+    const bool inBand = edges && !frame.contains(at)
+        && at.y() >= frame.top() - margin && at.y() < frame.bottom() + margin
+        && at.x() >= frame.left() - margin && at.x() < frame.right() + margin;
+    if (!inBand) {
+        m_edgeClick.invalidate();
+        return false;
+    }
+    const bool second = m_edgeClick.isValid() && m_edgeClick.elapsed() <= QGuiApplication::styleHints()->mouseDoubleClickInterval()
+        && m_edgeWindow == window && m_edgeEdges == edges && (at - m_edgePosition).manhattanLength() < 10;
+    if (!second) {
+        m_edgeClick.start();
+        m_edgeWindow = window;
+        m_edgeEdges = edges;
+        m_edgePosition = at;
+        return false;
+    }
+    m_edgeClick.invalidate();
+    m_swallowLeftRelease = true;
+    maximizeForEdges(window, edges);
+    return true;
 }
 
 void WindowMenu::showForActive()

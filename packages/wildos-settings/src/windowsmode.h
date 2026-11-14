@@ -51,6 +51,16 @@ public:
     Q_INVOKABLE bool keyShapeValid(const QString &key) const;
     Q_INVOKABLE QString checkUpdates();
     Q_INVOKABLE QString openDesktop();
+    // Activating with a licence on the person's Microsoft account: Windows
+    // mode adds a second Windows account just for it and opens the Windows
+    // desktop signed in to it. status.activation follows it (state:
+    // starting, open, ending or "", result: {activated, message}). Both
+    // answer with accountActivationDone: "" or why not.
+    Q_INVOKABLE void activateWithAccount();
+    Q_INVOKABLE void endAccountActivation();
+    // That account's password, which Windows asks for once while it becomes
+    // a Microsoft account. "" when there is no such account.
+    Q_INVOKABLE QString activationPassword();
     Q_INVOKABLE QString repair();
     // The Windows account's password, for when Windows itself asks for it
     // (activation, an installer that wants an administrator). "" when it
@@ -74,6 +84,7 @@ Q_SIGNALS:
     void statusChanged();
     void activatingChanged();
     void productKeyDone(const QString &result);
+    void accountActivationDone(const QString &result);
     void powerActionChanged();
     void powerDone(const QString &result);
     void removingChanged();
@@ -84,6 +95,7 @@ private Q_SLOTS:
 
 private:
     QString call(const QString &method, const QVariantList &args = {}, int timeoutMs = 25000);
+    void callAsync(const QString &method, int timeoutMs, void (WindowsMode::*done)(const QString &));
 
     QDBusInterface *m_service = nullptr;
     QVariantMap m_status;

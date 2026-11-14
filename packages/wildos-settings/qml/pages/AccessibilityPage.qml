@@ -1,4 +1,6 @@
 import QtQuick
+import QtCore
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Templates as T
 import WildOS.Settings
@@ -152,6 +154,38 @@ PageScroll {
                                         name: modelData.name
                                         selected: Accessibility.pointerColour === modelData.id
                                         onClicked: Accessibility.setPointerColour(modelData.id)
+                                    }
+                                }
+
+                                // A pointer of your own, as Windows lets you
+                                // browse for one: a plus until there is one,
+                                // then its picture.
+                                UI.Swatch {
+                                    colour: UI.Style.surfaceSunken
+                                    name: "Your own"
+                                    selected: Accessibility.pointerColour === "custom"
+                                    enabled: !Accessibility.pointerBusy
+                                    onClicked: Accessibility.customPointer ? ownPointerDialog.open() : pointerFile.open()
+
+                                    contentItem: Item {
+                                        Image {
+                                            anchors.centerIn: parent
+                                            width: 16
+                                            height: 16
+                                            visible: Accessibility.customPointer
+                                            source: Accessibility.customPointerPreview
+                                            sourceSize: Qt.size(32, 32)
+                                            fillMode: Image.PreserveAspectFit
+                                            cache: false
+                                        }
+
+                                        UI.Icon {
+                                            anchors.centerIn: parent
+                                            visible: !Accessibility.customPointer
+                                            name: "plus"
+                                            size: 12
+                                            color: UI.Style.iconMuted
+                                        }
                                     }
                                 }
                             }
@@ -423,6 +457,170 @@ PageScroll {
                     }
                 }
             }
+        }
+    }
+
+    FileDialog {
+        id: pointerFile
+        title: "Choose a pointer"
+        nameFilters: ["Pointers and pictures (*.cur *.ani *.zip *.inf *.png *.svg)", "Windows pointers (*.cur *.ani)",
+            "Windows pointer packs (*.zip *.inf)", "Pictures (*.png *.svg)"]
+        currentFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+        onAccepted: {
+            if (/\.(png|svg)$/i.test(selectedFile.toString())) {
+                hotspotDialog.choose(selectedFile);
+            } else {
+                Accessibility.addPointer(selectedFile);
+            }
+        }
+    }
+
+    UI.Dialog {
+        id: ownPointerDialog
+        title: "Your own pointer"
+        text: (Accessibility.customPointerSource.length > 0 ? "Made from " + Accessibility.customPointerSource + ". " : "")
+            + (Accessibility.pointerColour === "custom"
+                ? "Choose another file to replace it, or remove it to go back to the white pointer."
+                : "Use it again, choose another file to replace it, or remove it.")
+
+        Image {
+            Layout.preferredWidth: 48
+            Layout.preferredHeight: 48
+            source: Accessibility.customPointerPreview
+            sourceSize: Qt.size(96, 96)
+            fillMode: Image.PreserveAspectFit
+            cache: false
+        }
+
+        buttons: [
+            UI.Button {
+                text: "Use it"
+                kind: "primary"
+                visible: Accessibility.pointerColour !== "custom"
+                onClicked: {
+                    ownPointerDialog.close();
+                    Accessibility.setPointerColour("custom");
+                }
+            },
+            UI.Button {
+                text: "Choose another file"
+                onClicked: {
+                    ownPointerDialog.close();
+                    pointerFile.open();
+                }
+            },
+            UI.Button {
+                text: "Remove"
+                onClicked: {
+                    ownPointerDialog.close();
+                    Accessibility.removeCustomPointer();
+                }
+            },
+            UI.Button {
+                text: "Cancel"
+                onClicked: ownPointerDialog.close()
+            }
+        ]
+    }
+
+    // A picture has no hotspot of its own: it points from the top-left
+    // corner unless you click somewhere else on it.
+    UI.Dialog {
+        id: hotspotDialog
+
+        property url file
+        property real hotX: 0
+        property real hotY: 0
+
+        function choose(url) {
+            file = url;
+            hotX = 0;
+            hotY = 0;
+            open();
+        }
+
+        title: "Where does it point?"
+        text: "Click the spot on the picture that does the clicking."
+
+        Item {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: 160
+            Layout.preferredHeight: 160
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 8
+                color: UI.Style.surfaceSunken
+            }
+
+            Image {
+                anchors.centerIn: parent
+                width: 136
+                height: 136
+                source: hotspotDialog.file
+                sourceSize: Qt.size(272, 272)
+                fillMode: Image.PreserveAspectFit
+                cache: false
+
+                MouseArea {
+                    x: (parent.width - parent.paintedWidth) / 2
+                    y: (parent.height - parent.paintedHeight) / 2
+                    width: parent.paintedWidth
+                    height: parent.paintedHeight
+                    cursorShape: Qt.CrossCursor
+                    onClicked: mouse => {
+                        hotspotDialog.hotX = Math.max(0, Math.min(1, mouse.x / width));
+                        hotspotDialog.hotY = Math.max(0, Math.min(1, mouse.y / height));
+                    }
+
+                    Rectangle {
+                        x: hotspotDialog.hotX * parent.width - width / 2
+                        y: hotspotDialog.hotY * parent.height - height / 2
+                        width: 12
+                        height: 12
+                        radius: 6
+                        color: "transparent"
+                        border.width: 2
+                        border.color: UI.Style.accent
+                    }
+                }
+            }
+        }
+
+        buttons: [
+            UI.Button {
+                text: "Use it"
+                kind: "primary"
+                onClicked: {
+                    hotspotDialog.close();
+                    Accessibility.addPointer(hotspotDialog.file, hotspotDialog.hotX, hotspotDialog.hotY);
+                }
+            },
+            UI.Button {
+                text: "Cancel"
+                onClicked: hotspotDialog.close()
+            }
+        ]
+    }
+
+    UI.Dialog {
+        id: pointerError
+        title: "Couldn't use that file"
+        buttons: [
+            UI.Button {
+                text: "OK"
+                kind: "primary"
+                onClicked: pointerError.close()
+            }
+        ]
+    }
+
+    Connections {
+        target: Accessibility
+
+        function onPointerFailed(message) {
+            pointerError.text = message;
+            pointerError.open();
         }
     }
 }

@@ -294,19 +294,25 @@ Item {
                             pane.doc.title = text;
                         }
                     }
-                    onActiveFocusChanged: {
-                        if (!activeFocus) {
-                            pane.syncTitle();
-                        }
-                    }
+                    // Resetting the text would drop the selection the open text
+                    // menu is about to copy; the menu holds focus while it is up.
+                    onActiveFocusChanged: if (!activeFocus && !titleMenu.opened) pane.syncTitle()
                     Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        if (titleMenu.isMenuKey(event)) {
+                            titleMenu.openAtCaret();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             body.focusStart();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Down && cursorRectangle.y + cursorRectangle.height >= contentHeight - 2) {
                             body.focusStart();
                             event.accepted = true;
                         }
+                    }
+
+                    UI.TextMenu {
+                        id: titleMenu
+                        onFocusLeft: pane.syncTitle()
                     }
 
                     UI.Label {

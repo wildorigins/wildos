@@ -35,6 +35,9 @@ SIGNATURE = "LiveOS/reset.sha256.sig"
 RELEASE = "https://dl.wildos.io/latest/"
 STATE = "state.json"
 LOG = "/var/log/wildos-restore-points.log"
+# The signed sum of a release whose reset files did not verify, so the same
+# 2 GB download is not tried again after every start-up.
+REJECTED = "/var/lib/wildos/reset-copy-rejected"
 FILES = ["LiveOS/squashfs.img", "live/vmlinuz", "live/initrd.img"]
 
 
@@ -244,6 +247,11 @@ def update():
             return 1
         if state().get("iso_sha256") == want and verify(quick=True)[0]:
             return 0
+        try:
+            if open(REJECTED).read().strip() == want:
+                return 0
+        except OSError:
+            pass
         iso = os.path.join(work, "wildos-amd64.iso")
         log("downloading the newest release for the reset copy")
         fetch(RELEASE + "wildos-amd64.iso", iso)
@@ -262,6 +270,8 @@ def update():
         ok, why = verify(new)
         if not ok:
             log(f"the release's reset files did not verify ({why}); keeping the old copy")
+            with open(REJECTED, "w") as r:
+                r.write(want + "\n")
             return 1
         write_state(new, verified=True, why="", release=release_name(new), iso_sha256=want,
                     copied=int(time.time()))

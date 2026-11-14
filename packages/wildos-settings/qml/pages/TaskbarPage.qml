@@ -17,8 +17,8 @@ PageScroll {
         { mode: 2, title: "Hide it when a window covers it", description: "It stays visible until a window needs the space" }
     ]
 
-    // Clock and battery choices live in wildosrc [Taskbar]; the taskbar
-    // watches the file and follows straight away.
+    // Clock, battery and End task choices live in wildosrc [Taskbar]; the
+    // taskbar watches the file and follows straight away.
     property int revision: 0
     function taskbarOption(key) {
         revision;
@@ -104,6 +104,29 @@ PageScroll {
                         checked: System.taskbarPeek
                         Accessible.name: "Peek at the desktop"
                         onToggled: System.taskbarPeek = checked
+                    }
+                }
+            }
+        }
+
+        // Off by default, as on Windows 11: Close window lets an app ask
+        // about unsaved work, End task does not.
+        UI.Card {
+            Layout.fillWidth: true
+
+            Column {
+                width: parent.width
+
+                UI.SettingRow {
+                    title: "End task"
+                    description: "Adds End task to an app's right-click menu on the taskbar, to close an app that isn't responding. Anything unsaved in it is lost."
+                    status: page.taskbarOption("EndTask") ? "On" : "Off"
+
+                    UI.Toggle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: page.taskbarOption("EndTask")
+                        Accessible.name: "End task"
+                        onToggled: page.setTaskbarOption("EndTask", checked)
                     }
                 }
             }

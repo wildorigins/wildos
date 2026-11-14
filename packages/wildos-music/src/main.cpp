@@ -114,6 +114,9 @@ int main(int argc, char *argv[])
     Incubation incubation;
     QQmlApplicationEngine engine;
     engine.setIncubationController(&incubation);
+    // The mini player's close button calls Qt.quit(), which
+    // QQmlApplicationEngine only wires up when it loads a window itself.
+    QObject::connect(&engine, &QQmlEngine::quit, &app, &QCoreApplication::quit, Qt::QueuedConnection);
     music->setEngine(&engine);
     QObject::connect(&service, &KDBusService::activateRequested, music, [music](const QStringList &arguments, const QString &workingDirectory) {
         music->handle(arguments, workingDirectory);

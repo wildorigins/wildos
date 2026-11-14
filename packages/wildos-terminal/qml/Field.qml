@@ -18,7 +18,9 @@ UI.TextField {
     font.family: monospace ? Config.fontFamily : UI.Style.fontFamily
     Accessible.name: placeholderText
 
-    onValueChanged: if (!activeFocus) text = value
+    // The text menu holds focus while it is open; the box is still being
+    // edited then.
+    onValueChanged: if (!activeFocus && !textMenuOpen) text = value
     Component.onCompleted: text = value
 
     function commit() {
@@ -35,8 +37,12 @@ UI.TextField {
     }
 
     onTextEdited: settle.restart()
-    onEditingFinished: commit()
-    onActiveFocusChanged: if (!activeFocus) {
+    onEditingFinished: if (!textMenuOpen) commit()
+    onActiveFocusChanged: if (!activeFocus && !textMenuOpen) {
+        commit();
+        text = value;
+    }
+    onTextMenuFocusLeft: {
         commit();
         text = value;
     }

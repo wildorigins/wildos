@@ -2,14 +2,19 @@
 // window of its own on the desktop, drawn at the screen's own scale.
 //
 //   wildos-rdp [--app-id ID --title TITLE --icon ICON --reason TEXT --program EXE] /args-from:stdin
+//   wildos-rdp --desktop /args-from:stdin
 //
 // The FreeRDP arguments are the ones xfreerdp3 takes, one per line on
 // standard input with the password last, so nothing secret is ever on a
 // command line. With --app-id the loading window for that app is on screen
 // before they arrive: the agent starts this the moment an app is opened
 // and writes them once Windows is awake.
+//
+// --desktop opens the whole Windows desktop in one window instead, for
+// Settings' "Open Windows desktop"; the arguments arrive the same way.
 
 #include "client.h"
+#include "desktopwindow.h"
 #include "rail.h"
 #include "railwindow.h"
 #include "screens.h"
@@ -17,6 +22,7 @@
 #include "service.h"
 
 #include <QElapsedTimer>
+#include <QFile>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QSocketNotifier>
@@ -48,6 +54,8 @@ struct Options {
     bool fromStdin = false;
     // Signs in and leaves the session ready, disconnected, for the next app.
     bool prepareSession = false;
+    // The whole desktop in one window (desktopwindow.h).
+    bool desktop = false;
     QList<QByteArray> freerdp;
 };
 
@@ -63,6 +71,8 @@ Options parse(int argc, char **argv)
             o.fromStdin = true;
         } else if (a == "--prepare-session") {
             o.prepareSession = true;
+        } else if (a == "--desktop") {
+            o.desktop = true;
         } else {
             o.freerdp.append(a);
         }
@@ -85,6 +95,58 @@ double askedScale(const QList<QByteArray> &args)
     }
     return 0;
 }
+
+// Reads the arguments (password last) from standard input, keeps the
+// window's title out of them, and runs until the window closes or the
+// session ends.
+int runDesktop(QGuiApplication &app, const Options &options)
+{
+    QList<QByteArray> args = options.freerdp;
+    QString title = QStringLiteral("Windows desktop");
+    QFile in;
+    if (options.fromStdin && in.open(stdin, QIODevice::ReadOnly)) {
+        while (!in.atEnd()) {
+            QByteArray line = in.readLine();
+            while (line.endsWith('\n') || line.endsWith('\r')) {
+                line.chop(1);
+            }
+            if (line.startsWith("/title:")) {
+                title = QString::fromUtf8(line.mid(7));
+            } else if (!line.isEmpty()) {
+                args.append(line);
+            }
+        }
+    }
+    if (args.isEmpty()) {
+        return 1;
+    }
+    QGuiApplication::setQuitOnLastWindowClosed(true);
+    int status = 0;
+    QString error;
+    {
+        DesktopWindow window(title);
+        QObject::connect(&window, &DesktopWindow::ended, &app, [&status](const QString &code) {
+            if (!code.isEmpty()) {
+                qWarning("wildos-rdp: the Windows desktop ended: %s", qPrintable(code));
+                status = 1;
+            }
+            QCoreApplication::quit();
+        });
+        const bool started = window.start(args, &error);
+        for (QByteArray &a : args) {
+            a.fill('\0');
+        }
+        if (!started) {
+            qWarning("wildos-rdp: the Windows desktop couldn't open: %s", qPrintable(error));
+            return 1;
+        }
+        const int code = app.exec();
+        if (code != 0) {
+            status = code;
+        }
+    }
+    return status;
+}
 }
 
 int main(int argc, char **argv)
@@ -97,6 +159,10 @@ int main(int argc, char **argv)
     QGuiApplication::setQuitOnLastWindowClosed(false);
 
     Options options = parse(argc, argv);
+
+    if (options.desktop) {
+        return runDesktop(app, options);
+    }
 
     if (pipe2(signalPipe, O_CLOEXEC) == 0) {
         std::signal(SIGTERM, onSignal);

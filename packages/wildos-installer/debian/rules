@@ -9,3 +9,4 @@ execute_after_dh_fixperms:
 	chmod 0755 debian/wildos-installer/usr/bin/install-wildos
 	chmod 0755 debian/wildos-installer/usr/libexec/wildos-installer/*
 	chmod 0755 debian/wildos-installer/usr/share/wildos-installer/modules/wildosrecovery/main.py
+	chmod 0755 debian/wildos-installer/usr/share/wildos-installer/modules/wildoslicence/main.py

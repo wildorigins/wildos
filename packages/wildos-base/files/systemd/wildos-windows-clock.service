@@ -1,0 +1,15 @@
+[Unit]
+Description=Keep the hardware clock in local time, as Windows does
+# The installer writes this start-up menu entry only when Windows is on the
+# same computer.
+ConditionPathExists=/etc/grub.d/30_windows
+ConditionPathExists=!/var/lib/wildos/windows-clock
+# Before sdwdate's first setting, which writes the hardware clock.
+Before=sdwdate.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wildos/windows-clock
+
+[Install]
+WantedBy=multi-user.target

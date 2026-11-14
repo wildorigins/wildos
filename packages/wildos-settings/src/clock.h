@@ -19,6 +19,11 @@ class Clock : public QObject
     Q_PROPERTY(bool automatic READ automatic NOTIFY changed)
     Q_PROPERTY(bool canAutomatic READ canAutomatic NOTIFY changed)
     Q_PROPERTY(bool synchronised READ synchronised NOTIFY changed)
+    // sdwdate sets the clock through Tor; timedated does not know it, so
+    // automatic says off while it runs.
+    Q_PROPERTY(bool secureTime READ secureTime NOTIFY changed)
+    // sdwdate has set the clock since this start-up.
+    Q_PROPERTY(bool secureTimeSet READ secureTimeSet NOTIFY changed)
 
 public:
     explicit Clock(QObject *parent = nullptr);
@@ -28,6 +33,8 @@ public:
     bool automatic() const { return m_automatic; }
     bool canAutomatic() const { return m_canAutomatic; }
     bool synchronised() const { return m_synchronised; }
+    bool secureTime() const { return m_secureTime; }
+    bool secureTimeSet() const { return m_secureTimeSet; }
 
     // Every zone as { value: "Europe/London", text: "(UTC+00:00) London, Europe" },
     // in order of offset as Windows lists them.
@@ -46,6 +53,7 @@ private Q_SLOTS:
 
 private:
     void read();
+    void readSecureTime();
     void call(const QString &method, const QVariantList &arguments);
 
     bool m_available = false;
@@ -53,4 +61,6 @@ private:
     bool m_automatic = false;
     bool m_canAutomatic = false;
     bool m_synchronised = false;
+    bool m_secureTime = false;
+    bool m_secureTimeSet = false;
 };

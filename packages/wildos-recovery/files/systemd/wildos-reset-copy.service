@@ -8,4 +8,7 @@ ConditionPathExists=!/run/initramfs/live
 Type=oneshot
 Nice=19
 IOSchedulingClass=idle
+# Copying a 2 GB release fills the page cache; past this the kernel
+# reclaims the copy's own cache instead of the apps you are using.
+MemoryHigh=768M
 ExecStart=/usr/libexec/wildos/reset-copy update

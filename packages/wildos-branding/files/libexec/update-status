@@ -10,24 +10,42 @@ Keys, in the order printed:
                      "na" in the live session or without PackageKit, with
                      why=live or why=missing after it.
                      "installing" and "checking" while anyone is doing it:
-                     Settings, the Store, this icon or apt's own timers.
-                     "error" when the last check from this icon failed and
-                     nothing has checked successfully since. "unchecked"
+                     Settings, the Store, this icon or apt's own timers,
+                     including the quiet waits between a check's tries.
+                     "error" when the last check, from this icon or from
+                     Settings > Updates, failed and nothing has checked
+                     successfully since. "unchecked"
                      when the list has not been refreshed for a week, so
                      "current" would be a guess.
   by=you|auto        Who is installing or checking: "auto" is apt's daily
                      refresh and the automatic security updates.
+  waiting=yes|no     The install is queued, or waiting for apt's lock or
+                     the password, so nothing is downloading or installing
+                     at this moment.
   updates=N          Updates ready to install, as Settings lists them.
   security=N         How many of those are security fixes.
   checked=EPOCH      When the list of updates was last refreshed; 0 if never.
   restart=yes|no     An installed update takes effect after a restart.
   auto=on|off        Security updates install by themselves.
-  error=TEXT         Why the last check failed, when state is error.
+  error=TEXT         Why the last check failed, when state is error, in the
+                     same words as Settings > Updates.
 
   update-status check    refreshes the list through PackageKit first, as
-                         Check now in Settings does, then reports.
+                         Check now in Settings does, then reports. It tries
+                         again quietly in the same cases as Settings, and
+                         follows a check Settings is already running
+                         instead of starting a second one.
+
+Settings > Updates and this script share one result in
+$XDG_RUNTIME_DIR/wildos-updates: "checking" names the process running a
+check (its pid, then its name, then "clock N" while it waits for sdwdate to
+set a clock at least N seconds behind), "failed" holds the last failed check (when
+the lists had last been refreshed as it failed, the reasons one per line,
+an empty line, then PackageKit's and apt's details). The failure stands
+until a refresh is newer than that, which holds however the clock moves. Whoever checks writes them, so both always show the same thing.
 """
 
+import calendar
 import os
 import re
 import subprocess
@@ -47,19 +65,62 @@ TX = "org.freedesktop.PackageKit.Transaction"
 ROLE_REFRESH_CACHE = 13
 ROLE_UPDATE_PACKAGES = 22
 ROLE_UPGRADE_SYSTEM = 33
+# A transaction queued behind another or waiting for apt's lock or the
+# password is not working yet.
+STATUS_WAIT = 1
+STATUS_WAITING_FOR_LOCK = 30
+STATUS_WAITING_FOR_AUTH = 31
+WAITING = (STATUS_WAIT, STATUS_WAITING_FOR_LOCK, STATUS_WAITING_FOR_AUTH)
 INFO_IMPORTANT = 7
 INFO_SECURITY = 8
 INFO_BLOCKED = 9
 EXIT_SUCCESS = 1
+EXIT_CANCELLED = 3
 FILTER_NONE = 1 << 1
 
+ERROR_UNKNOWN = 0
 ERROR_NO_NETWORK = 2
+ERROR_GPG_FAILURE = 5
+ERROR_PACKAGE_DOWNLOAD_FAILED = 10
+ERROR_TRANSACTION_CANCELLED = 17
 ERROR_NO_CACHE = 18
 ERROR_CANNOT_GET_LOCK = 26
+ERROR_BAD_GPG_SIGNATURE = 30
+ERROR_MISSING_GPG_SIGNATURE = 31
 ERROR_REPO_NOT_AVAILABLE = 37
+ERROR_NO_MORE_MIRRORS_TO_TRY = 43
+ERROR_NO_SPACE_ON_DEVICE = 46
 ERROR_NOT_AUTHORIZED = 48
+ERROR_CANNOT_UPDATE_REPO_UNSIGNED = 51
 ERROR_CANNOT_FETCH_SOURCES = 64
 ERROR_LOCK_REQUIRED = 67
+LOCK_ERRORS = (ERROR_CANNOT_GET_LOCK, ERROR_LOCK_REQUIRED)
+SIGNING_ERRORS = (ERROR_GPG_FAILURE, ERROR_BAD_GPG_SIGNATURE, ERROR_MISSING_GPG_SIGNATURE,
+                  ERROR_CANNOT_UPDATE_REPO_UNSIGNED)
+CONNECTION_ERRORS = (ERROR_NO_NETWORK, ERROR_NO_CACHE, ERROR_REPO_NOT_AVAILABLE, ERROR_CANNOT_FETCH_SOURCES,
+                     ERROR_PACKAGE_DOWNLOAD_FAILED, ERROR_NO_MORE_MIRRORS_TO_TRY)
+
+# NetworkManager's states that mean no connection: asleep, disconnected,
+# disconnecting and a link-local address only.
+NM_OFFLINE = (10, 20, 30, 50)
+
+# The same waits as Settings > Updates. A check that fails while the
+# connection, Tor or the clock is still settling tries again, after 5 s and
+# then less often, for about three minutes before it says why; in the first
+# five minutes after start-up any failure counts. apt's lock, held by the
+# automatic security updates, is waited out for half an hour.
+QUIET_RETRY = 3 * 60
+FIRST_RETRY = 5
+LONGEST_RETRY = 60
+SETTLING = 5 * 60
+LOCK_PATIENCE = 30 * 60
+LOCK_RETRY = 15
+# A clock sdwdate has yet to set is waited for this long at most, looking
+# every few seconds whether it has. Its first run after start-up took four
+# minutes on the PC this was seen on, with two onion sites timing out.
+CLOCK_WAIT = 15 * 60
+CLOCK_POLL = 2
+SDWDATE_SET = "/run/sdwdate/first_success"
 
 LISTS = "/var/lib/apt/lists"
 WEEK = 7 * 86400
@@ -69,11 +130,16 @@ state_dir = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser(
 # The counts, kept until dpkg or the lists change, because asking PackageKit
 # starts it and reads every package.
 counts_file = os.path.join(runtime, "wildos-update-counts.%d" % os.getuid())
-# When PackageKit last refreshed the lists. It only knows while it runs, and
-# it stops when idle, so the last answer is kept.
+# When the list was last refreshed, by PackageKit or by a check that only
+# missed sources added by other software, which PackageKit does not record.
+# PackageKit only knows while it runs, and it stops when idle, so the last
+# answer is kept. Settings > Updates reads it too.
 checked_file = os.path.join(state_dir, "updates-checked")
-# Why this icon's last check failed: the time, then the words.
-failed_file = os.path.join(state_dir, "updates-check-failed")
+# The result Settings > Updates and this script share (see above). In the
+# runtime folder, so a failure is forgotten at the next start-up.
+shared_dir = os.path.join(runtime, "wildos-updates")
+checking_file = os.path.join(shared_dir, "checking")
+failed_file = os.path.join(shared_dir, "failed")
 
 
 def mtime(path):
@@ -98,6 +164,13 @@ def write_lines(path, lines):
         with open(tmp, "w", encoding="utf-8") as f:
             f.write("\n".join(str(x) for x in lines) + "\n")
         os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def remove(path):
+    try:
+        os.remove(path)
     except OSError:
         pass
 
@@ -130,9 +203,41 @@ def auto_updates():
     return "on" if 'APT::Periodic::Unattended-Upgrade "1";' in result.stdout else "off"
 
 
+def system_property(bus, name, path, interface, prop):
+    try:
+        return bus.call_sync(name, path, "org.freedesktop.DBus.Properties", "Get",
+                             GLib.Variant("(ss)", (interface, prop)), GLib.VariantType("(v)"),
+                             Gio.DBusCallFlags.NO_AUTO_START, 3000, None)[0]
+    except GLib.Error:
+        return None
+
+
+def offline(bus):
+    """NetworkManager says there is no connection. Unknown when it is not
+    running, which counts as connected, as in Settings."""
+    state = system_property(bus, "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager",
+                            "org.freedesktop.NetworkManager", "State")
+    return state in NM_OFFLINE
+
+
+def seconds_since_start(bus):
+    """Since start-up finished, not since the kernel started: the wait at the
+    disk password comes before Tor, sdwdate and the network even start."""
+    finished = system_property(bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
+                               "org.freedesktop.systemd1.Manager", "FinishTimestampMonotonic")
+    if finished:
+        return max(0, int(time.clock_gettime(time.CLOCK_MONOTONIC) - finished / 1e6))
+    try:
+        with open("/proc/uptime", encoding="utf-8") as f:
+            return int(float(f.read().split()[0]))
+    except (OSError, ValueError, IndexError):
+        return -1
+
+
 class PackageKit:
     def __init__(self):
         self.bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        self.statuses = {}
 
     def call(self, path, interface, method, args=None, reply=None, timeout=5000):
         return self.bus.call_sync(PK, path, interface, method, args,
@@ -157,7 +262,9 @@ class PackageKit:
             return False
 
     def roles(self):
-        """What the transactions running now are doing. Never starts PackageKit."""
+        """What the transactions running now are doing. Never starts PackageKit.
+        Their statuses, by role, are left in self.statuses."""
+        self.statuses = {}
         if not self.running():
             return []
         roles = []
@@ -170,6 +277,9 @@ class PackageKit:
                 role = self.call(path, "org.freedesktop.DBus.Properties", "Get",
                                  GLib.Variant("(ss)", (TX, "Role")), "(v)")[0]
                 roles.append(role)
+                status = self.call(path, "org.freedesktop.DBus.Properties", "Get",
+                                   GLib.Variant("(ss)", (TX, "Status")), "(v)")[0]
+                self.statuses.setdefault(role, []).append(status)
             except GLib.Error:
                 pass
         return roles
@@ -183,13 +293,13 @@ class PackageKit:
         return seconds if seconds < 10 * 365 * 86400 else None
 
     def transaction(self, method, args, on_package=None, timeout=60):
-        """Runs one transaction to the end. Returns (succeeded, error code, details)."""
+        """Runs one transaction to the end. Returns (exit, error code, details)."""
         loop = GLib.MainLoop()
         outcome = {"exit": 0, "error": 0, "details": ""}
         try:
             path = self.call(PK_PATH, PK, "CreateTransaction", reply="(o)")[0]
         except GLib.Error:
-            return False, 0, ""
+            return 0, 0, ""
 
         def signal(_bus, _sender, _path, _iface, name, params):
             if name == "Package" and on_package:
@@ -209,11 +319,11 @@ class PackageKit:
             self.call(path, TX, method, args)
         except GLib.Error:
             self.bus.signal_unsubscribe(sub)
-            return False, 0, ""
+            return 0, 0, ""
         GLib.timeout_add_seconds(timeout, loop.quit)
         loop.run()
         self.bus.signal_unsubscribe(sub)
-        return outcome["exit"] == EXIT_SUCCESS, outcome["error"], outcome["details"]
+        return outcome["exit"], outcome["error"], outcome["details"]
 
     def updates(self):
         """(updates, security fixes), as Settings counts them, or None."""
@@ -227,28 +337,110 @@ class PackageKit:
             if info in (INFO_SECURITY, INFO_IMPORTANT):
                 found["security"] += 1
 
-        ok, _, _ = self.transaction("GetUpdates", GLib.Variant("(t)", (FILTER_NONE,)), package, timeout=45)
-        return (found["all"], found["security"]) if ok else None
+        result, _, _ = self.transaction("GetUpdates", GLib.Variant("(t)", (FILTER_NONE,)), package, timeout=45)
+        return (found["all"], found["security"]) if result == EXIT_SUCCESS else None
 
 
-def error_text(code):
-    if code in (ERROR_NO_NETWORK, ERROR_NO_CACHE, ERROR_REPO_NOT_AVAILABLE, ERROR_CANNOT_FETCH_SOURCES):
-        return "Wild OS could not reach the update servers. Check your internet connection and try again."
-    if code == ERROR_NOT_AUTHORIZED:
-        return "Checking needs the administrator password, and it was not given."
-    if code in (ERROR_CANNOT_GET_LOCK, ERROR_LOCK_REQUIRED):
-        return "Another app is installing software. Try again when it has finished."
-    return "Wild OS could not check for updates. Try again in a few minutes."
+def hosts_in(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return {h.lower() for h in re.findall(r"https?://([^/\s]+)", f.read())}
+    except OSError:
+        return set()
+
+
+def wildos_hosts():
+    """The servers Wild OS's own packages come from."""
+    return {"deb.wildos.io"} | hosts_in("/etc/apt/sources.list.d/wildos.sources")
 
 
 def own_hosts():
-    hosts = {"deb.wildos.io"}
-    try:
-        with open("/etc/apt/sources.list.d/wildos.sources", encoding="utf-8") as f:
-            hosts.update(h.lower() for h in re.findall(r"https?://([^/\s]+)", f.read()))
-    except OSError:
-        pass
+    """Every server the system itself updates from: Wild OS's, and Debian's
+    and Kicksecure's, which Kicksecure lists in debian.sources and the image
+    in sources.list, mostly through Tor. Any other source was added by the
+    person or by an app's installer (Steam, Chrome, VS Code)."""
+    hosts = wildos_hosts() | {"deb.debian.org", "security.debian.org", "fasttrack.debian.net", "deb.kicksecure.com"}
+    for path in ("/etc/apt/sources.list.d/debian.sources", "/etc/apt/sources.list"):
+        hosts |= hosts_in(path)
     return hosts
+
+
+ADDRESS = re.compile(r"(?:tor\+)?https?://([^/\s'\"]+)")
+
+
+def source_lines(details):
+    """apt's lines that name a source, without its notices about sources
+    that are fine, such as one without 32-bit packages on a PC with 32-bit
+    support turned on."""
+    return [line for line in details.splitlines()
+            if line.strip() and "Skipping acquire" not in line and "support architecture" not in line]
+
+
+def about_signing(line):
+    lower = line.lower()
+    return any(word.lower() in lower for word in (
+        "signature", "not signed", "NO_PUBKEY", "EXPKEYSIG", "Signing key", "OpenPGP", "not valid yet", "is expired"))
+
+
+def signed_later(line):
+    """A signature from after the time the clock shows. Right after start-up
+    sdwdate can set the clock back a minute or two, and a source signed in
+    that gap (Wild OS's, right after a release) fails until the clock passes
+    the signing time again. Seen as sqv's "created after the --not-after
+    date" and "Not live until <time>"; the second is also what a clock
+    hours behind gives (a PC whose hardware clock kept local time for
+    Windows)."""
+    lower = line.lower()
+    return "not-after" in line or "created after" in line or "not valid yet" in lower or "not live until" in lower
+
+
+def clock_problem(details):
+    return any(signed_later(line) for line in source_lines(details))
+
+
+STAMP = re.compile(r"not live until (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)", re.IGNORECASE)
+
+
+def seconds_behind(details):
+    """How far behind the clock is at least: the newest signing time apt
+    named that is still in the future. 0 when none is."""
+    newest = 0
+    for stamp in STAMP.findall(details):
+        try:
+            newest = max(newest, calendar.timegm(time.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ")))
+        except ValueError:
+            pass
+    return max(0, newest - int(time.time())) if newest else 0
+
+
+def duration_text(seconds):
+    # Rounded down: the signing times only show the clock is at least this
+    # far behind.
+    def count(n, one, many):
+        return "%d %s" % (n, one if n == 1 else many)
+    if seconds >= 2 * 86400:
+        return count(seconds // 86400, "day", "days")
+    if seconds >= 3600:
+        return count(seconds // 3600, "hour", "hours")
+    return count(max(1, seconds // 60), "minute", "minutes")
+
+
+def secure_time_running():
+    result = subprocess.run(["systemctl", "is-active", "sdwdate.service"], capture_output=True, text=True)
+    return result.stdout.strip() in ("active", "activating", "reloading")
+
+
+def clock_being_set():
+    """sdwdate sets the clock through Tor a few minutes after start-up and
+    leaves this marker in /run once it has; until then a clock hours off is
+    still expected to be put right without anyone's help."""
+    return not os.path.exists(SDWDATE_SET) and secure_time_running()
+
+
+def through_tor(line):
+    """apt reaches Debian through Tor's SOCKS port; a Tor that is not running
+    or has not finished connecting fails every one of those sources."""
+    return "tor+http" in line or ":9050" in line
 
 
 def only_others_failed(details):
@@ -257,32 +449,217 @@ def only_others_failed(details):
     PackageKit fails the whole refresh for one bad source though apt
     refreshed the rest, and Settings > Updates counts that as checked."""
     failed = set()
-    for line in details.splitlines():
-        # Notices name sources that are fine, such as one without 32-bit
-        # packages on a PC with 32-bit support turned on.
-        if "Skipping acquire" in line or "support architecture" in line:
-            continue
-        match = re.search(r"(?:tor\+)?https?://([^/\s'\"]+)", line)
+    for line in source_lines(details):
+        match = ADDRESS.search(line)
         if match:
             failed.add(match.group(1).lower())
     return bool(failed) and not failed & own_hosts()
 
 
+def retry_quietly(bus, code, details):
+    """Whether a failed check is worth trying again by itself, as Settings
+    decides it: in the first minutes after start-up, or when the connection,
+    Tor or the clock was not ready. A refusal, a full disk or a bad
+    signature after that will not change, and with no connection at all
+    after start-up Settings says so at once."""
+    if code in (ERROR_NOT_AUTHORIZED, ERROR_TRANSACTION_CANCELLED, ERROR_NO_SPACE_ON_DEVICE) + LOCK_ERRORS:
+        return False
+    lines = source_lines(details)
+    up = seconds_since_start(bus)
+    settling = 0 <= up < SETTLING
+    is_offline = offline(bus)
+    if is_offline and not settling:
+        return False
+    # apt's lines for a signature from the future include one that only says
+    # verification failed, so one line naming the time is enough, and
+    # PackageKit may still call it a signing error.
+    clock_behind = any(signed_later(line) for line in lines)
+    signing = not clock_behind and (code in SIGNING_ERRORS or any(about_signing(line) for line in lines))
+    connection = (code in CONNECTION_ERRORS or any(through_tor(line) for line in lines)
+                  or is_offline or clock_behind)
+    return settling or (connection and not signing)
+
+
+def why_failed(bus, code, details):
+    """Why a check failed, one line for each likely cause, in the words
+    Settings > Updates uses."""
+    if code == ERROR_NOT_AUTHORIZED:
+        return ["Checking needs the administrator password, and it was not given."]
+    if code in LOCK_ERRORS:
+        return ["Another install is still running, such as the automatic security updates. Try again when it has finished."]
+    if code == ERROR_NO_SPACE_ON_DEVICE:
+        return ["There is not enough free space to check for updates."]
+    if offline(bus) or code == ERROR_NO_NETWORK:
+        return ["This computer is not connected to the internet."]
+    # A clock far behind fails every source, so it is the one reason given.
+    behind = seconds_behind(details) if clock_problem(details) else 0
+    if behind >= 60:
+        return ["The clock on this computer is at least %s behind, so the updates look as if they "
+                "were signed in the future." % duration_text(behind),
+                "Wild OS sets the clock through Tor after start-up and has not managed to yet. "
+                "Set the date and time in Settings > Date and time, then try again." if clock_being_set()
+                else "Set the date and time in Settings > Date and time, then try again."]
+    wildos = wildos_hosts()
+    own = own_hosts()
+    lines = source_lines(details)
+    # Every server reached directly failing to resolve is no internet at
+    # all, though NetworkManager still has a connection (a router with no
+    # line behind it).
+    unresolved = set()
+    failed_otherwise = False
+    for line in lines:
+        match = ADDRESS.search(line)
+        if not match or through_tor(line):
+            continue
+        if "Temporary failure resolving" in line or "Could not resolve" in line:
+            unresolved.add(match.group(1).lower())
+        else:
+            failed_otherwise = True
+    if len(unresolved) >= 2 and not failed_otherwise:
+        return ["This computer is not connected to the internet."]
+    wildos_down = debian_down = tor_down = False
+    signing = code in SIGNING_ERRORS
+    for line in lines:
+        match = ADDRESS.search(line)
+        host = match.group(1).lower() if match else ""
+        if about_signing(line):
+            signing = signing or not host or host in own
+        elif through_tor(line):
+            tor_down = True
+        elif host in wildos:
+            wildos_down = True
+        elif host in own:
+            debian_down = True
+    reasons = []
+    if wildos_down:
+        reasons.append("Wild OS's update server could not be reached.")
+    if tor_down:
+        # Long after start-up, waiting for Tor is no longer the likely fix.
+        up = seconds_since_start(bus)
+        if 0 <= up < 2 * SETTLING:
+            reasons.append("Debian's updates could not be reached through Tor. "
+                           "Tor can take a few minutes to connect after start-up.")
+        else:
+            reasons.append("Debian's updates could not be reached through Tor.")
+    elif debian_down:
+        reasons.append("Debian's update servers could not be reached.")
+    if signing:
+        reasons.append("The updates' signatures could not be checked. "
+                       "This happens when the date and time on this computer are wrong.")
+    if not reasons:
+        if code in (ERROR_NO_CACHE, ERROR_REPO_NOT_AVAILABLE, ERROR_CANNOT_FETCH_SOURCES, ERROR_PACKAGE_DOWNLOAD_FAILED):
+            reasons.append("The update servers could not be reached. Check your internet connection.")
+        else:
+            reasons.append("Something went wrong while checking. Try again in a few minutes.")
+    return reasons
+
+
+def alive(pid, name):
+    try:
+        with open("/proc/%d/comm" % pid, encoding="utf-8") as f:
+            return f.read().strip() == name
+    except OSError:
+        return False
+
+
+def checker():
+    """The pid of a process running a check now, from this script or
+    Settings, or 0. A checker that quit or crashed no longer counts."""
+    lines = read_lines(checking_file)
+    pid = number(lines[0]) if lines else 0
+    return pid if pid > 0 and len(lines) > 1 and alive(pid, lines[1]) else 0
+
+
+def my_name():
+    try:
+        with open("/proc/self/comm", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return "update-status"
+
+
+def record_failure(pk, reasons, details):
+    # Takes in PackageKit's own record first, so it cannot clear the
+    # failure later.
+    last_checked(pk)
+    write_lines(failed_file, [refreshed_on_disk()] + reasons + [""] + details.strip().splitlines())
+
+
 def check(pk):
-    ok, code, details = pk.transaction("RefreshCache", GLib.Variant("(b)", (True,)), timeout=600)
-    if ok or only_others_failed(details):
-        try:
-            os.remove(failed_file)
-        except OSError:
-            pass
-        write_lines(checked_file, [int(time.time())])
-    else:
-        write_lines(failed_file, [int(time.time()), error_text(code)])
+    # One check at a time: when Settings is already checking, its result is
+    # this one's too.
+    other = checker()
+    if other and other != os.getpid():
+        while checker():
+            time.sleep(2)
+        return
+    write_lines(checking_file, [os.getpid(), my_name()])
+    try:
+        refresh_until_done(pk)
+    finally:
+        remove(checking_file)
 
 
-def last_checked(pk):
-    # apt's own refreshes (the daily timer) leave the lists' times and apt's
-    # stamp; PackageKit's leave its record, which is the one Settings shows.
+def wait_for_clock(behind, since):
+    """Waits while sdwdate sets the clock, saying so in the checking file
+    (a third line, "clock" and the seconds behind) for Settings to show."""
+    write_lines(checking_file, [os.getpid(), my_name(), "clock %d" % max(behind, 1)])
+    while clock_being_set() and time.monotonic() - since < CLOCK_WAIT:
+        time.sleep(CLOCK_POLL)
+    write_lines(checking_file, [os.getpid(), my_name()])
+
+
+def refresh_until_done(pk):
+    quiet_since = None
+    lock_since = None
+    clock_since = None
+    delay = FIRST_RETRY
+    while True:
+        # With no connection at all a refresh waits minutes on Tor before it
+        # fails, so it is not started.
+        if offline(pk.bus):
+            result, code, details = 0, ERROR_NO_NETWORK, ""
+        else:
+            result, code, details = pk.transaction("RefreshCache", GLib.Variant("(b)", (True,)), timeout=600)
+        if result == EXIT_SUCCESS or (code and only_others_failed(details)):
+            remove(failed_file)
+            write_lines(checked_file, [int(time.time())])
+            return
+        if result == EXIT_CANCELLED and code not in LOCK_ERRORS:
+            record_failure(pk, ["The check was cancelled."], details)
+            return
+        if code in LOCK_ERRORS:
+            lock_since = lock_since or time.monotonic()
+            if time.monotonic() - lock_since < LOCK_PATIENCE:
+                time.sleep(LOCK_RETRY)
+                continue
+        print("Update check failed: PackageKit error %d %s" % (code, details.strip()), file=sys.stderr)
+        # A clock hours behind stays so until sdwdate sets it through Tor,
+        # so the check waits for that rather than for a fixed time.
+        if clock_problem(details) and clock_being_set():
+            clock_since = clock_since or time.monotonic()
+            if time.monotonic() - clock_since < CLOCK_WAIT:
+                wait_for_clock(seconds_behind(details), clock_since)
+                # The usual quiet retries start over: sdwdate's first
+                # setting can leave the clock a moment before a source
+                # signed just now.
+                quiet_since = None
+                delay = FIRST_RETRY
+                continue
+        if retry_quietly(pk.bus, code, details):
+            quiet_since = quiet_since or time.monotonic()
+            if time.monotonic() - quiet_since + delay <= QUIET_RETRY:
+                time.sleep(delay)
+                delay = min(delay * 2, LONGEST_RETRY)
+                continue
+        record_failure(pk, why_failed(pk.bus, code, details),
+                       "PackageKit error %d%s" % (code, "\n" + details if details.strip() else ""))
+        return
+
+
+def refreshed_on_disk():
+    """apt's own refreshes (the daily timer) leave the lists' times and
+    apt's stamp, and checks through PackageKit the checked file."""
     checked = mtime("/var/lib/apt/periodic/update-success-stamp")
     try:
         for name in os.listdir(LISTS):
@@ -290,13 +667,20 @@ def last_checked(pk):
                 checked = max(checked, mtime(os.path.join(LISTS, name)))
     except OSError:
         pass
+    return max(checked, number((read_lines(checked_file) or ["0"])[0]))
+
+
+def last_checked(pk):
+    # PackageKit's record is the one Settings shows.
+    checked = refreshed_on_disk()
     known = number((read_lines(checked_file) or ["0"])[0])
     if pk.running() or known == 0:
         seconds = pk.seconds_since_refresh()
         if seconds is not None:
             at = int(time.time()) - seconds
-            # Within a minute is the same answer again.
-            if abs(at - known) > 60:
+            # Within a minute is the same answer again; an older one is a
+            # check that only missed other software's sources.
+            if at > known + 60:
                 known = at
                 write_lines(checked_file, [known])
     return max(checked, known)
@@ -317,11 +701,14 @@ def main():
         check(pk)
 
     roles = pk.roles()
+    waiting = False
     if unit_busy("apt-daily-upgrade.service"):
         busy, by = "installing", "auto"
     elif ROLE_UPDATE_PACKAGES in roles or ROLE_UPGRADE_SYSTEM in roles:
         busy, by = "installing", "you"
-    elif ROLE_REFRESH_CACHE in roles:
+        statuses = pk.statuses.get(ROLE_UPDATE_PACKAGES, []) + pk.statuses.get(ROLE_UPGRADE_SYSTEM, [])
+        waiting = len(statuses) > 0 and all(st in WAITING for st in statuses)
+    elif ROLE_REFRESH_CACHE in roles or checker():
         busy, by = "checking", "you"
     elif unit_busy("apt-daily.service"):
         busy, by = "checking", "auto"
@@ -343,8 +730,14 @@ def main():
             write_lines(counts_file, [key, "%d %d" % answer])
 
     failed = read_lines(failed_file)
-    failed_at = number(failed[0]) if failed else 0
-    error = failed[1] if len(failed) > 1 and failed_at > checked else ""
+    refreshed_before = number(failed[0]) if failed else 0
+    reasons = []
+    for line in failed[1:]:
+        if not line:
+            break
+        reasons.append(line)
+    # Nothing has refreshed the lists since the check failed.
+    error = " ".join(reasons) if reasons and refreshed_on_disk() <= refreshed_before else ""
 
     if busy:
         state = busy
@@ -361,6 +754,7 @@ def main():
 
     print("state=" + state)
     print("by=" + by)
+    print("waiting=" + ("yes" if waiting else "no"))
     print("updates=%d" % updates)
     print("security=%d" % security)
     print("checked=%d" % checked)

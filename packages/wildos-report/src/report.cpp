@@ -1,11 +1,19 @@
 #include "report.h"
+#include "issuewatch.h"
 #include "parts.h"
 #include "sysinfo.h"
 
+#include <KWaylandExtras>
+#include <KWindowSystem>
 #include <KZip>
 
 #include <QBuffer>
 #include <QClipboard>
+#include <QColorSpace>
+#include <QDBusArgument>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusMetaType>
 #include <QDesktopServices>
 #include <QDir>
 #include <QEventLoop>
@@ -13,12 +21,65 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QGuiApplication>
+#include <QImage>
+#include <QImageReader>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLocale>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QPainter>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
 #include <QtConcurrentRun>
+
+#include <unistd.h>
+
+struct PickerRule {
+    uint type = 0;
+    QString pattern;
+};
+struct PickerFilter {
+    QString name;
+    QList<PickerRule> rules;
+};
+Q_DECLARE_METATYPE(PickerRule)
+Q_DECLARE_METATYPE(PickerFilter)
+
+QDBusArgument &operator<<(QDBusArgument &arg, const PickerRule &rule)
+{
+    arg.beginStructure();
+    arg << rule.type << rule.pattern;
+    arg.endStructure();
+    return arg;
+}
+
+const QDBusArgument &operator>>(const QDBusArgument &arg, PickerRule &rule)
+{
+    arg.beginStructure();
+    arg >> rule.type >> rule.pattern;
+    arg.endStructure();
+    return arg;
+}
+
+QDBusArgument &operator<<(QDBusArgument &arg, const PickerFilter &filter)
+{
+    arg.beginStructure();
+    arg << filter.name << filter.rules;
+    arg.endStructure();
+    return arg;
+}
+
+const QDBusArgument &operator>>(const QDBusArgument &arg, PickerFilter &filter)
+{
+    arg.beginStructure();
+    arg >> filter.name >> filter.rules;
+    arg.endStructure();
+    return arg;
+}
 
 namespace
 {
@@ -131,7 +192,8 @@ Report::Report(QObject *parent)
         const char *file;
         bool included;
     } sections[] = {
-        {"description", "report.md", true}, {"about", "about-this-pc.txt", true},     {"crash", "crash.txt", true},
+        {"description", "report.md", true}, {"event", "history-event.txt", true},     {"about", "about-this-pc.txt", true},
+        {"crash", "crash.txt", true},
         {"logs", "logs.txt", true},         {"updates", "recent-updates.txt", true}, {"fulllog", "full-system-log.txt", false},
     };
     for (const auto &s : sections) {
@@ -142,6 +204,8 @@ Report::Report(QObject *parent)
         m_sections << section;
     }
     connect(&m_collector, &Collector::finished, this, &Report::collected);
+    m_watchTimer.setSingleShot(true);
+    connect(&m_watchTimer, &QTimer::timeout, this, &Report::watchOnce);
     m_capturePoll.setInterval(250);
     connect(&m_capturePoll, &QTimer::timeout, this, [this]() {
         const bool done = QFile::exists(m_capturePath);
@@ -188,6 +252,11 @@ void Report::handle(const QStringList &arguments)
         } else if (a == QLatin1String("--app") && i + 1 < arguments.size()) {
             m_crashApp = arguments.at(++i);
             Q_EMIT crashChanged();
+        } else if (a == QLatin1String("--event") && i + 1 < arguments.size()) {
+            const QString about = readEvent(arguments.at(++i));
+            if (part.isEmpty()) {
+                part = about;
+            }
         }
     }
     // A report already under way keeps its answers.
@@ -195,6 +264,64 @@ void Report::handle(const QStringList &arguments)
         setPart(part);
     }
     Q_EMIT raiseRequested();
+}
+
+QString Report::readEvent(const QString &path)
+{
+    // Only from this account's own runtime folder, where Settings leaves it
+    // and nobody else can write.
+    const QFileInfo info(path);
+    const QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    if (runtime.isEmpty() || !info.canonicalFilePath().startsWith(QFileInfo(runtime).canonicalFilePath() + QLatin1Char('/')) || !info.isFile()
+        || info.isSymLink() || info.ownerId() != getuid() || info.size() > 256 * 1024) {
+        return {};
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    const QJsonObject o = QJsonDocument::fromJson(file.readAll()).object();
+    file.close();
+    file.remove();
+    const QString title = o.value(QStringLiteral("title")).toString().left(200);
+    const QString text = o.value(QStringLiteral("text")).toString();
+    if (title.isEmpty() || text.isEmpty()) {
+        return {};
+    }
+    m_eventTitle = title;
+    m_eventTime = QDateTime::fromSecsSinceEpoch(o.value(QStringLiteral("when")).toInteger());
+    section(QStringLiteral("event"))->raw = QStringLiteral("# From Settings > System > History\n\n") + text;
+    m_fixedSince = {};
+    if (o.value(QStringLiteral("crash")).toBool()) {
+        m_crashTime = m_eventTime;
+        m_crashApp = o.value(QStringLiteral("app")).toString();
+    }
+    Q_EMIT crashChanged();
+    Q_EMIT whenChanged();
+    Q_EMIT itemsChanged();
+
+    // The part of Wild OS the event is about, so the logs gathered are its.
+    const QString kind = o.value(QStringLiteral("kind")).toString();
+    const QString program = o.value(QStringLiteral("program")).toString();
+    if (!program.isEmpty()) {
+        return Parts::byProgram(program).id;
+    }
+    if (kind.startsWith(QLatin1String("update")) || kind == QLatin1String("restore-point") || kind == QLatin1String("programs")) {
+        return QStringLiteral("updates");
+    }
+    if (kind.startsWith(QLatin1String("app")) || kind == QLatin1String("install-failed")) {
+        return QStringLiteral("store");
+    }
+    if (kind.startsWith(QLatin1String("drive"))) {
+        return QStringLiteral("files");
+    }
+    if (kind == QLatin1String("signin") || kind == QLatin1String("signout") || kind == QLatin1String("password")) {
+        return QStringLiteral("signin");
+    }
+    if (kind == QLatin1String("firewall")) {
+        return QStringLiteral("network");
+    }
+    return QStringLiteral("other");
 }
 
 QVariantList Report::parts() const
@@ -263,11 +390,13 @@ QPair<QDateTime, QDateTime> Report::window() const
         }
     } else {
         // Ten minutes before the crash or now, so what led up to it is in.
+        // An event from History is looked at however long ago it was.
         const bool recentCrash = m_crashTime.isValid() && m_crashTime.secsTo(now) < 6 * 3600;
-        const QDateTime anchor = recentCrash ? m_crashTime : now;
+        const bool anchored = recentCrash || m_eventTime.isValid();
+        const QDateTime anchor = recentCrash ? m_crashTime : m_eventTime.isValid() ? m_eventTime : now;
         since = anchor.addSecs(-10 * 60);
         since.setTime(QTime(since.time().hour(), since.time().minute()));
-        until = recentCrash ? qMin(now, anchor.addSecs(5 * 60)) : now;
+        until = anchored ? qMin(now, anchor.addSecs(5 * 60)) : now;
     }
     return {since, until};
 }
@@ -311,9 +440,10 @@ QVariantList Report::screenshots() const
     QVariantList list;
     for (const QString &path : m_shots) {
         const QFileInfo info(path);
+        const QString name = m_shotNames.value(path);
         list.append(QVariantMap{
             {QStringLiteral("url"), QUrl::fromLocalFile(path)},
-            {QStringLiteral("label"), QStringLiteral("Screenshot, %1").arg(info.lastModified().toString(QStringLiteral("HH:mm")))},
+            {QStringLiteral("label"), name.isEmpty() ? QStringLiteral("Screenshot, %1").arg(info.lastModified().toString(QStringLiteral("HH:mm"))) : name},
             {QStringLiteral("size"), sizeName(info.size())},
         });
     }
@@ -322,6 +452,11 @@ QVariantList Report::screenshots() const
 
 QString Report::crashNote() const
 {
+    if (!m_eventTitle.isEmpty()) {
+        const QString at = m_eventTime.date() == QDate::currentDate() ? m_eventTime.toString(QStringLiteral("HH:mm"))
+                                                                      : m_eventTime.toString(QStringLiteral("d MMMM, HH:mm"));
+        return QStringLiteral("From History: %1, %2. Its details are added for you.").arg(m_eventTitle, at);
+    }
     if (!m_crashTime.isValid()) {
         return {};
     }
@@ -358,7 +493,9 @@ void Report::removeScreenshot(int index)
     if (index < 0 || index >= m_shots.size()) {
         return;
     }
-    QFile::remove(m_shots.takeAt(index));
+    const QString path = m_shots.takeAt(index);
+    m_shotNames.remove(path);
+    QFile::remove(path);
     Q_EMIT screenshotsChanged();
     if (m_redactSerial > 0) {
         redactAll();
@@ -394,6 +531,9 @@ QString Report::describe() const
     lines << QStringLiteral("Part of Wild OS: %1").arg(partName());
     if (m_crashTime.isValid()) {
         lines << QStringLiteral("Closed unexpectedly at: %1").arg(m_crashTime.toString(QStringLiteral("d MMMM yyyy, HH:mm:ss")));
+    }
+    if (!m_eventTitle.isEmpty()) {
+        lines << QStringLiteral("From History: %1, %2").arg(m_eventTitle, m_eventTime.toString(QStringLiteral("d MMMM yyyy, HH:mm")));
     }
     lines << QStringLiteral("When: %1 (%2 to %3)")
                  .arg(m_when == QLatin1String("today")  ? QStringLiteral("Earlier today")
@@ -512,6 +652,9 @@ QVariantList Report::items() const
                                        : m_shots.size() == 1 ? QStringLiteral("Your description and screenshot")
                                                              : QStringLiteral("Your description"),
         shots, QStringLiteral("file-text"));
+    if (!m_eventTitle.isEmpty()) {
+        add(QStringLiteral("event"), QStringLiteral("This event from History"), m_eventTitle, QStringLiteral("history"));
+    }
     const QString v = SysInfo::version();
     add(QStringLiteral("about"), QStringLiteral("About this PC"),
         v.isEmpty() ? QStringLiteral("Wild OS version, the PC's model, graphics and memory")
@@ -579,6 +722,9 @@ QString Report::previewTitle() const
     }
     if (m_viewing == QLatin1String("crash")) {
         return QStringLiteral("Preview: crash details");
+    }
+    if (m_viewing == QLatin1String("event")) {
+        return QStringLiteral("Preview: the event from History");
     }
     if (m_viewing == QLatin1String("updates")) {
         return QStringLiteral("Preview: recent updates");
@@ -740,6 +886,166 @@ QString Report::suggestedName() const
     return QStringLiteral("wildos-report-%1.zip").arg(QTime::currentTime().toString(QStringLiteral("HHmm")));
 }
 
+// The portal's own call rather than Qt's file dialog: Qt only passes the
+// folder to start in when saving, and Open should start in Screenshots.
+void Report::chooseScreenshotFiles(QWindow *window)
+{
+    if (!m_pickerRequest.isEmpty()) {
+        return;
+    }
+    m_pickerRequest = QStringLiteral("pending");
+    const auto ask = [this](const QString &parent) {
+        static const bool registered = [] {
+            qDBusRegisterMetaType<PickerRule>();
+            qDBusRegisterMetaType<QList<PickerRule>>();
+            qDBusRegisterMetaType<PickerFilter>();
+            qDBusRegisterMetaType<QList<PickerFilter>>();
+            return true;
+        }();
+        Q_UNUSED(registered)
+        static int serial = 0;
+        const QString token = QStringLiteral("wildos_report_%1").arg(++serial);
+        QString sender = QDBusConnection::sessionBus().baseService().mid(1);
+        sender.replace(QLatin1Char('.'), QLatin1Char('_'));
+        m_pickerRequest = QStringLiteral("/org/freedesktop/portal/desktop/request/%1/%2").arg(sender, token);
+        QDBusConnection::sessionBus().connect(QStringLiteral("org.freedesktop.portal.Desktop"), m_pickerRequest,
+                                              QStringLiteral("org.freedesktop.portal.Request"), QStringLiteral("Response"), this,
+                                              SLOT(pickerResponse(uint, QVariantMap)));
+
+        QList<PickerFilter> filters{{QStringLiteral("Pictures"), {}}};
+        for (const char *glob : {"*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif", "*.bmp"}) {
+            filters.first().rules.append({0, QString::fromLatin1(glob)});
+        }
+        QByteArray folder = QFile::encodeName(screenshotsFolder().toLocalFile());
+        folder.append('\0');
+        const QVariantMap options{
+            {QStringLiteral("handle_token"), token},
+            {QStringLiteral("modal"), true},
+            {QStringLiteral("multiple"), true},
+            {QStringLiteral("filters"), QVariant::fromValue(filters)},
+            {QStringLiteral("current_filter"), QVariant::fromValue(filters.first())},
+            {QStringLiteral("current_folder"), folder},
+        };
+        QDBusMessage call = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.portal.Desktop"), QStringLiteral("/org/freedesktop/portal/desktop"),
+                                                           QStringLiteral("org.freedesktop.portal.FileChooser"), QStringLiteral("OpenFile"));
+        call << parent << QStringLiteral("Choose a picture") << options;
+        QDBusConnection::sessionBus().callWithCallback(call, this, SLOT(pickerOpened()), SLOT(pickerFailed()));
+    };
+    if (!window || !KWindowSystem::isPlatformWayland()) {
+        ask(QString());
+        return;
+    }
+    // The dialog belongs to this window (in front of it, no taskbar button
+    // of its own) through the handle the compositor gives it.
+    auto done = std::make_shared<bool>(false);
+    auto exported = std::make_shared<QMetaObject::Connection>();
+    *exported = connect(KWaylandExtras::self(), &KWaylandExtras::windowExported, this, [ask, window, done, exported](QWindow *w, const QString &handle) {
+        if (w != window || *done) {
+            return;
+        }
+        *done = true;
+        QObject::disconnect(*exported);
+        ask(QStringLiteral("wayland:") + handle);
+    });
+    QTimer::singleShot(1000, this, [ask, done, exported]() {
+        if (!*done) {
+            *done = true;
+            QObject::disconnect(*exported);
+            ask(QString());
+        }
+    });
+    KWaylandExtras::exportWindow(window);
+}
+
+void Report::pickerResponse(uint response, const QVariantMap &results)
+{
+    QDBusConnection::sessionBus().disconnect(QStringLiteral("org.freedesktop.portal.Desktop"), m_pickerRequest,
+                                             QStringLiteral("org.freedesktop.portal.Request"), QStringLiteral("Response"), this,
+                                             SLOT(pickerResponse(uint, QVariantMap)));
+    m_pickerRequest.clear();
+    if (response != 0) {
+        return;
+    }
+    QList<QUrl> files;
+    const QStringList uris = results.value(QStringLiteral("uris")).toStringList();
+    for (const QString &uri : uris) {
+        files << QUrl(uri);
+    }
+    addScreenshotFiles(files);
+}
+
+void Report::pickerOpened()
+{
+}
+
+void Report::pickerFailed()
+{
+    m_pickerRequest.clear();
+    Q_EMIT message(QStringLiteral("The Open dialog couldn't be shown"));
+}
+
+void Report::addScreenshotFiles(const QList<QUrl> &files)
+{
+    if (!m_temp.isValid()) {
+        return;
+    }
+    int added = 0;
+    QStringList unreadable;
+    for (const QUrl &file : files) {
+        const QString source = file.toLocalFile();
+        QImageReader reader(source);
+        reader.setAutoTransform(true);
+        QImage image = reader.read();
+        if (image.isNull()) {
+            unreadable << QFileInfo(source).fileName();
+            continue;
+        }
+        if (image.colorSpace().isValid() && image.colorSpace() != QColorSpace(QColorSpace::SRgb)) {
+            image.convertToColorSpace(QColorSpace(QColorSpace::SRgb));
+        }
+        // Photos from a phone run to 50 megapixels; a screen's worth is
+        // plenty to show a problem and keeps the report small.
+        if (image.width() > 3840 || image.height() > 3840) {
+            image = image.scaled(3840, 3840, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+        // Drawn onto a blank picture and saved as a new PNG, the way a
+        // screenshot from Capture is added: the copy carries no location,
+        // camera or author details and no file name, only the pixels.
+        QImage clean(image.size(), image.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
+        clean.fill(Qt::transparent);
+        {
+            QPainter painter(&clean);
+            painter.drawImage(0, 0, image);
+        }
+        const QString path = m_temp.filePath(QStringLiteral("picture-%1-%2.png").arg(QDateTime::currentMSecsSinceEpoch()).arg(added));
+        if (!clean.save(path, "PNG")) {
+            unreadable << QFileInfo(source).fileName();
+            continue;
+        }
+        m_shots << path;
+        m_shotNames.insert(path, QFileInfo(source).fileName());
+        ++added;
+    }
+    if (added > 0) {
+        Q_EMIT screenshotsChanged();
+        if (m_redactSerial > 0) {
+            redactAll();
+        }
+    }
+    if (unreadable.size() == 1) {
+        Q_EMIT message(QStringLiteral("%1 couldn't be opened as a picture").arg(unreadable.first()));
+    } else if (unreadable.size() > 1) {
+        Q_EMIT message(QStringLiteral("%1 files couldn't be opened as pictures").arg(unreadable.size()));
+    }
+}
+
+QUrl Report::screenshotsFolder() const
+{
+    const QString pictures = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    const QString screenshots = pictures + QStringLiteral("/Screenshots");
+    return QUrl::fromLocalFile(QFileInfo(screenshots).isDir() ? screenshots : pictures);
+}
+
 QUrl Report::downloadsFolder() const
 {
     return QUrl::fromLocalFile(QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
@@ -824,6 +1130,7 @@ QString Report::issueBody(const QString &zipName, int budget) const
     QStringList lines{words, QString(), QStringLiteral("| | |"), QStringLiteral("|---|---|")};
     lines << QStringLiteral("| Part of Wild OS | %1 |").arg(partName());
     lines << QStringLiteral("| When | %1 |").arg(m_crashTime.isValid() ? m_crashTime.toString(QStringLiteral("d MMMM yyyy, HH:mm"))
+                                                  : m_eventTime.isValid() ? m_eventTime.toString(QStringLiteral("d MMMM yyyy, HH:mm"))
                                                                         : QStringLiteral("%1 to %2").arg(since.toString(QStringLiteral("d MMMM yyyy, HH:mm")),
                                                                                                          until.toString(QStringLiteral("HH:mm"))));
     if (!repeatText().isEmpty()) {
@@ -841,31 +1148,149 @@ QString Report::issueBody(const QString &zipName, int budget) const
     return lines.join(QLatin1Char('\n'));
 }
 
-bool Report::openGitHub()
+void Report::setHandoff(const QString &state)
 {
-    const QString folder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    QDir().mkpath(folder);
-    const QString path = writeZip(uniquePath(folder), false);
-    if (path.isEmpty()) {
-        Q_EMIT message(QStringLiteral("The report couldn't be saved to Downloads"));
-        return false;
+    m_handoff = state;
+    Q_EMIT handoffChanged();
+}
+
+void Report::openGitHub()
+{
+    if (m_handoff == QLatin1String("opening")) {
+        return;
     }
-    const QString title = m_title.trimmed().isEmpty() ? QStringLiteral("Problem with %1").arg(partName()) : m_title.trimmed();
-    const auto encode = [](const QString &value) { return QString::fromLatin1(QUrl::toPercentEncoding(value)); };
-    const QString zipName = QFileInfo(path).fileName();
-    const auto address = [&](int budget) {
-        return issuesUrl + QStringLiteral("/new?title=") + encode(title) + QStringLiteral("&body=") + encode(issueBody(zipName, budget));
-    };
-    // A long description is cut to fit, and the whole of it is in the zip.
-    QString url = address(-1);
-    for (int budget = int(m_description.size()); url.size() > urlBudget && budget > 0; budget = budget * 4 / 5) {
-        url = address(budget);
+    endHandoff();
+    m_postedNumber = 0;
+    m_postedUrl.clear();
+    setHandoff(QStringLiteral("opening"));
+    const int serial = m_handoffSerial;
+    // Writing the zip holds up the window for a moment, so the dialog that
+    // says what is happening gets drawn first.
+    QTimer::singleShot(150, this, [this, serial]() {
+        if (serial != m_handoffSerial) {
+            return;
+        }
+        const QString folder = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+        QDir().mkpath(folder);
+        const QString path = writeZip(uniquePath(folder), false);
+        if (path.isEmpty()) {
+            setHandoff({});
+            Q_EMIT message(QStringLiteral("The report couldn't be saved to Downloads"));
+            return;
+        }
+        const QString title = m_title.trimmed().isEmpty() ? QStringLiteral("Problem with %1").arg(partName()) : m_title.trimmed();
+        const auto encode = [](const QString &value) { return QString::fromLatin1(QUrl::toPercentEncoding(value)); };
+        const QString zipName = QFileInfo(path).fileName();
+        const auto address = [&](int budget) {
+            return issuesUrl + QStringLiteral("/new?title=") + encode(title) + QStringLiteral("&body=") + encode(issueBody(zipName, budget));
+        };
+        // A long description is cut to fit, and the whole of it is in the zip.
+        QString url = address(-1);
+        for (int budget = int(m_description.size()); url.size() > urlBudget && budget > 0; budget = budget * 4 / 5) {
+            url = address(budget);
+        }
+        if (url.size() > urlBudget) {
+            url = address(0);
+        }
+        m_handoffUrl = url;
+        m_handoffZip = zipName;
+        m_handoffAt = QDateTime::currentDateTimeUtc();
+        if (!QDesktopServices::openUrl(QUrl::fromEncoded(url.toLatin1()))) {
+            setHandoff({});
+            Q_EMIT message(QStringLiteral("The browser couldn't be opened. The report is in Downloads."));
+            return;
+        }
+        // The browser takes a moment to appear; saying "finish in your
+        // browser" before it has would be ahead of what is on screen.
+        QTimer::singleShot(2500, this, [this, serial]() {
+            if (serial != m_handoffSerial) {
+                return;
+            }
+            m_watching = true;
+            setHandoff(QStringLiteral("waiting"));
+            watchNext(20);
+        });
+    });
+}
+
+void Report::reopenGitHub()
+{
+    if (!m_handoffUrl.isEmpty()) {
+        QDesktopServices::openUrl(QUrl::fromEncoded(m_handoffUrl.toLatin1()));
     }
-    if (url.size() > urlBudget) {
-        url = address(0);
+}
+
+void Report::endHandoff()
+{
+    ++m_handoffSerial;
+    m_watchTimer.stop();
+    m_watching = false;
+    m_watchTag.clear();
+    if (m_watchReply) {
+        m_watchReply->abort();
     }
-    QDesktopServices::openUrl(QUrl::fromEncoded(url.toLatin1()));
-    return true;
+    if (!m_handoff.isEmpty()) {
+        setHandoff({});
+    }
+}
+
+void Report::viewPosted()
+{
+    if (!m_postedUrl.isEmpty()) {
+        QDesktopServices::openUrl(QUrl(m_postedUrl));
+    }
+}
+
+// Without signing in, GitHub answers 60 requests an hour from one address,
+// but an answer that nothing has changed since last time (304) is free. So
+// even if new issues kept arriving, every 20 seconds for ten minutes and
+// then every minute until half an hour stays under the limit.
+void Report::watchNext(int seconds)
+{
+    if (m_handoffAt.secsTo(QDateTime::currentDateTimeUtc()) + seconds > 30 * 60) {
+        m_watching = false;
+        Q_EMIT handoffChanged();
+        return;
+    }
+    m_watchTimer.start(seconds * 1000);
+}
+
+void Report::watchOnce()
+{
+    if (!m_net) {
+        m_net = new QNetworkAccessManager(this);
+    }
+    QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/wildorigins/wildos/issues?state=all&sort=created&direction=desc&per_page=30")));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QByteArrayLiteral("Wild OS Report a problem"));
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
+    if (!m_watchTag.isEmpty()) {
+        request.setRawHeader("If-None-Match", m_watchTag);
+    }
+    request.setTransferTimeout(20000);
+    const int serial = m_handoffSerial;
+    QNetworkReply *reply = m_net->get(request);
+    m_watchReply = reply;
+    connect(reply, &QNetworkReply::finished, this, [this, serial, reply]() {
+        reply->deleteLater();
+        if (serial != m_handoffSerial) {
+            return;
+        }
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (status == 200) {
+            m_watchTag = reply->rawHeader("ETag");
+            const IssueWatch::Posted posted = IssueWatch::find(reply->readAll(), m_handoffZip, m_handoffAt);
+            if (posted.number > 0) {
+                m_postedNumber = posted.number;
+                m_postedUrl = posted.url;
+                m_watching = false;
+                setHandoff(QStringLiteral("posted"));
+                return;
+            }
+        }
+        const bool limited = status == 403 || status == 429;
+        watchNext(limited ? 120 : m_handoffAt.secsTo(QDateTime::currentDateTimeUtc()) < 600 ? 20 : 60);
+    });
 }
 
 bool Report::saveTo(const QUrl &file)

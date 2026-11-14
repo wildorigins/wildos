@@ -26,6 +26,16 @@ if [ "$1" = "configure" ]; then
     # Steam's controller rules follow the 32-bit choice, including on PCs
     # that turned it on before the rules came with it.
     /usr/libexec/wildos/settings-32bit devices || true
+    # PCs that turned Steam and 32-bit apps on before games got the split
+    # lock setting with it.
+    SYSCTL32=/etc/sysctl.d/991-wildos-32bit.conf
+    if [ -e /etc/wildos/32bit ] && [ -f "$SYSCTL32" ] && ! grep -q split_lock_mitigate "$SYSCTL32"; then
+        printf '%s\n' '# Some games use split locks, which newer Intel processors otherwise punish' \
+            '# with a delay that shows as stutter. The delay only guards against one' \
+            '# program slowing others down, not against reading them.' \
+            '-kernel.split_lock_mitigate = 0' >> "$SYSCTL32"
+        sysctl -q -w kernel.split_lock_mitigate=0 2>/dev/null || true
+    fi
 fi
 
 #DEBHELPER#

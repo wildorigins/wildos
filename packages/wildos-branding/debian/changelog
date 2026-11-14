@@ -1,3 +1,269 @@
+wildos-branding (0.1.64) trixie; urgency=medium
+
+  * The Updates icon is on the taskbar again when updates are waiting or
+    one failed, with its dot, not only while they install.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 16:00:00 +0000
+
+wildos-branding (0.1.63) trixie; urgency=medium
+
+  * A USB device plugged into a locked PC is asked about once you sign
+    in, not behind the lock screen.
+  * The sign-in screen only offers the fingerprint when it would be
+    accepted.
+  * A light on the taskbar, left of the shield, whenever any app uses the
+    microphone (amber) or the camera (green), sandboxed or not. Clicking it
+    shows which app and since when, with Stop to cut it off, which app used
+    the other one last, and a switch for each that blocks it for every app.
+    Each use is noted in Settings > System > History.
+  * The Updates icon is only on the taskbar while an update downloads or
+    installs, as the two-arrow icon, and only turns while the work is under
+    way.
+  * Notifications that arrive while the screen is locked now show on the
+    lock screen. With "Quiet lock screen" on, as it is to begin with, only
+    the apps and how many arrived; turned off, the title and text too.
+  * Panic key, in Advanced protection: with it on, Ctrl+Alt+End locks the
+    screen, clears the clipboard, its history and pinned items, and cuts
+    the network and Bluetooth in one press. After unlocking, a
+    notification offers to turn them back on.
+  * With the guest session on, Guest is one of the accounts on the
+    sign-in screen. It signs in without a password and says the desktop
+    is wiped at sign-out. The screen still opens on the PC's own people
+    after a guest was the last to sign in.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 14:56:10 +0000
+
+wildos-branding (0.1.62) trixie; urgency=medium
+
+  * The start-up animation flies through the W onto your desktop, taskbar
+    and icons included, plays a little faster and ends as it lands. It
+    loads its picture at screen size, so it starts sooner and uses less
+    memory.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 13:52:18 +0000
+
+wildos-branding (0.1.61) trixie; urgency=medium
+
+  * Updating from an older Wild OS no longer stops to ask about the
+    taskbar's app rules or leaves them out, which showed some apps with
+    the wrong icon.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 11:00:00 +0000
+
+wildos-branding (0.1.60) trixie; urgency=medium
+
+  * The Wi-Fi password box in quick settings takes only what is typed:
+    nothing can be pasted into it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 10:30:00 +0000
+
+wildos-branding (0.1.59) trixie; urgency=medium
+
+  * The sign-in and lock screen password boxes take only what is typed:
+    nothing can be pasted into them.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:45:00 +0000
+
+wildos-branding (0.1.58) trixie; urgency=medium
+
+  * The sign-in and lock screen password boxes have no right-click menu
+    again, as in Windows. Ctrl+V still pastes.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:30:00 +0000
+
+wildos-branding (0.1.57) trixie; urgency=medium
+
+  * The sign-in and lock screen password boxes have a right-click menu
+    with Paste, and the Menu key or Shift+F10 opens it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 09:04:45 +0000
+
+wildos-branding (0.1.56) trixie; urgency=medium
+
+  * The taskbar's Updates icon waits for sdwdate to set a clock that is
+    hours behind before it reports a failed check, and then says how far
+    behind the clock is, as Settings > Updates does.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:33:55 +0000
+
+wildos-branding (0.1.55) trixie; urgency=medium
+
+  * Double-clicking a window's top or bottom edge stretches it to the full
+    height of the screen, and its left or right edge to the full width, as
+    in Windows. Double-click again to put it back.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:45:00 +0000
+
+wildos-branding (0.1.54) trixie; urgency=medium
+
+  * The keyboard light is on at every start-up. It stayed off when the lid
+    closing or the screen going idle had turned it off just before the
+    last shut down. A lower step you picked is still kept.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:30:00 +0000
+
+wildos-branding (0.1.53) trixie; urgency=medium
+
+  * KWin's Blend Changes is off; wildos-shell's colour change fade takes
+    its place.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:20:00 +0000
+
+wildos-branding (0.1.52) trixie; urgency=medium
+
+  * The taskbar shows LM Studio's own icon, and an app Wild OS can't
+    match to a Start entry gets the Wild OS mark instead of a plain W.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:10:00 +0000
+
+wildos-branding (0.1.51) trixie; urgency=medium
+
+  * Pointing at an app on the taskbar no longer sometimes shows a thin
+    empty bar instead of the window preview. It happened after the app
+    briefly hid or replaced its window while its preview was up, as
+    Report a problem does when it opens a picture, and stayed until you
+    pointed at an app with a different number of windows.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 22:50:00 +0000
+
+wildos-branding (0.1.50) trixie; urgency=medium
+
+  * The Updates icon on the taskbar no longer says it could not check
+    right after start-up: while the connection, Tor or the clock is still
+    settling it tries again quietly for about three minutes, as Settings >
+    Updates does. When a check really fails it gives the same reason as
+    Settings, and Debian and Kicksecure sources reached through Tor are no
+    longer taken for other software's.
+  * The Updates icon and Settings > Updates share one check and always
+    show the same state: a check started in either shows in both.
+  * With no connection at all, once start-up has settled, the check says
+    so at once instead of waiting minutes on Tor.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 19:23:03 +0000
+
+wildos-branding (0.1.49) trixie; urgency=medium
+
+  * The security shield lists "Firewall is off" with Turn on while the
+    firewall is off, so it stays amber until it's back on.
+  * Searching Start for "firewall" finds Settings > Privacy and security >
+    Firewall.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 19:01:35 +0000
+
+wildos-branding (0.1.48) trixie; urgency=medium
+
+  * End task is no longer in an app's right-click menu on the taskbar
+    unless it is turned on in Settings > Personalisation > Taskbar, as on
+    Windows 11. Close window, which lets an app ask to save, is always
+    there.
+  * Searching Start for "end task", "kill" or "force close" finds the
+    Taskbar settings.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:44:54 +0000
+
+wildos-branding (0.1.47) trixie; urgency=medium
+
+  * A pinned app no longer pulses on the taskbar after you close it. Its
+    starting line also stops as soon as the app has a window, even when
+    that window shows under another button.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 19:00:00 +0000
+
+wildos-branding (0.1.46) trixie; urgency=medium
+
+  * Start opens smoothly the first time after signing in.
+  * The battery icon shows the bolt whenever the charger is in, also when
+    the battery is full.
+  * Built-in devices such as Bluetooth are never held back by Block new
+    USB devices when they reset themselves after start-up.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:30:00 +0000
+
+wildos-branding (0.1.45) trixie; urgency=medium
+
+  * The sign-in screen uses your own pointer from Settings too. It gets a
+    checked copy, as the sign-in screen can't read your home folder.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:17:04 +0000
+
+wildos-branding (0.1.44) trixie; urgency=medium
+
+  * Closing the lid when it is set to shut down shuts the PC down. It used
+    to go to sleep halfway through instead, and woke to a black screen.
+  * A shutdown started by the lid or the power button is no longer called
+    off by an app asking about unsaved changes: after 15 seconds it shuts
+    down anyway, and the next sign-in says which apps were closed.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 17:48:54 +0000
+
+wildos-branding (0.1.43) trixie; urgency=medium
+
+  * The taskbar uses far less processor time when nothing is happening:
+    the USB watcher no longer rescans every device each second, the
+    Windows mode item asks Windows mode directly instead of starting a
+    program every ten seconds, and the updates icon checks every two
+    minutes.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 18:05:00 +0000
+
+wildos-branding (0.1.42) trixie; urgency=medium
+
+  * The keyboard light comes on at start-up, so the disk unlock password is
+    no longer typed in the dark, and stays at the level it was last left at
+    once you sign in.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 17:24:05 +0000
+
+wildos-branding (0.1.41) trixie; urgency=medium
+
+  * The mouse pointer is white with a dark edge by default, as on Windows,
+    on the desktop, the sign-in screen and in every app. Settings >
+    Accessibility > Pointer colour still changes it.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 17:30:00 +0000
+
+wildos-branding (0.1.40) trixie; urgency=medium
+
+  * Start finds Settings > System > History and Devices when you search for
+    them.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 15:39:43 +0000
+
+wildos-branding (0.1.39) trixie; urgency=medium
+
+  * The list of recently opened files is kept for 3 months instead of
+    forever, unless you chose otherwise in Activity history.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 16:20:00 +0000
+
+wildos-branding (0.1.38) trixie; urgency=medium
+
+  * Uninstall in Start works for Wild OS's own apps and Windows apps,
+    and is never offered for parts of Wild OS that can't be removed.
+  * A taskbar pin for an app that was uninstalled no longer shows as a
+    blank button, and comes back if the app is reinstalled.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 13:36:51 +0000
+
+wildos-branding (0.1.37) trixie; urgency=medium
+
+  * Pin to taskbar from Start search or the pinned grid pins the app
+    itself, and taskbar pins left blank by it before are repaired.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 10:21:27 +0000
+
+wildos-branding (0.1.36) trixie; urgency=medium
+
+  * Uninstall in Start works for apps installed in the home folder.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 12 Nov 2026 21:30:51 +0000
+
+wildos-branding (0.1.35) trixie; urgency=medium
+
+  * Plugging in ends battery saver and returns the PC to balanced.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 12 Nov 2026 21:07:25 +0000
+
 wildos-branding (0.1.34) trixie; urgency=medium
 
   * Start search results show each app's own icon again, not a

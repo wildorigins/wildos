@@ -1,4 +1,5 @@
 singleton PasswordSync 1.0 PasswordSync.qml
+singleton LockNotifications 1.0 LockNotifications.qml
 LockScreen 1.0 LockScreen.qml
 LockScreenUi 1.0 LockScreenUi.qml
 MainBlock 1.0 MainBlock.qml

@@ -91,18 +91,31 @@ FocusScope {
                     radius: 22
                     color: flyout.attention ? UI.Style.warning : UI.Style.accent
 
+                    readonly property bool done: flyout.updates.phase === "current" && !flyout.updates.restartNeeded
+
                     UI.Icon {
-                        id: badgeIcon
+                        visible: flyout.updates.failed || badge.done
                         anchors.centerIn: parent
-                        readonly property bool done: flyout.updates.phase === "current" && !flyout.updates.restartNeeded
-                        name: flyout.updates.failed ? "warning" : done ? "check" : "update"
+                        name: flyout.updates.failed ? "warning" : "check"
                         size: 24
-                        strokeWidth: done ? 2.6 : 2.2
+                        strokeWidth: badge.done ? 2.6 : 2.2
+                        color: UI.Style.textOnAccent
+                    }
+
+                    // The taskbar's two-arrow icon.
+                    UI.Glyph {
+                        id: badgeIcon
+                        visible: !flyout.updates.failed && !badge.done
+                        anchors.centerIn: parent
+                        width: 22
+                        height: 22
+                        path: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"
+                        strokeWidth: 2.2
                         color: UI.Style.textOnAccent
 
                         RotationAnimator {
                             target: badgeIcon
-                            running: flyout.updates.busy
+                            running: flyout.updates.busy && (flyout.updates.phase !== "installing" || flyout.updates.working)
                             from: 0
                             to: 360
                             duration: 1200
@@ -179,7 +192,7 @@ FocusScope {
                                 visible: flyout.updates.phase !== "installing"
                                 size: "small"
                                 kind: flyout.updates.ready ? "text" : "secondary"
-                                text: flyout.updates.phase === "checking" ? "Checking" : "Check now"
+                                text: flyout.updates.phase === "checking" ? "Checking" : flyout.updates.failed ? "Try again" : "Check now"
                                 busy: flyout.updates.phase === "checking"
                                 enabled: flyout.updates.canCheck
                                 focusPolicy: Qt.NoFocus

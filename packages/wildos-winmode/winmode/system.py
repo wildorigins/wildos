@@ -23,7 +23,7 @@ import time
 
 from gi.repository import Gio, GLib
 
-from . import config, dbusutil, documents, firewall, guestlink, hostinfo, lifecycle, paths, qga, setup, usb, virsh
+from . import activation, config, dbusutil, documents, firewall, guestlink, hostinfo, lifecycle, paths, qga, setup, usb, virsh
 
 XML = """
 <node>
@@ -53,6 +53,10 @@ XML = """
     </method>
     <method name="Apps">
       <arg name="icons" type="b" direction="in"/>
+      <arg type="s" direction="out"/>
+    </method>
+    <method name="Uninstall">
+      <arg name="path" type="s" direction="in"/>
       <arg type="s" direction="out"/>
     </method>
     <method name="SetTheme">
@@ -87,6 +91,9 @@ XML = """
       <arg name="key" type="s" direction="in"/>
       <arg type="s" direction="out"/>
     </method>
+    <method name="ActivationStart"><arg type="s" direction="out"/></method>
+    <method name="ActivationCheck"><arg type="s" direction="out"/></method>
+    <method name="ActivationEnd"><arg type="s" direction="out"/></method>
     <method name="EndProgram">
       <arg name="pid" type="u" direction="in"/>
       <arg name="image" type="s" direction="in"/>
@@ -270,6 +277,7 @@ class Service:
             "Windows": (self.m_windows, "s", True),
             "Window": (self.m_window, "s", True),
             "Apps": (self.m_apps, "s", True),
+            "Uninstall": (self.m_uninstall, "s", True),
             "SetTheme": (self.m_set_theme, "s", True),
             "SetOption": (self.m_set_option, "s", True),
             "SetWarm": (self.m_set_warm, "s", True),
@@ -282,6 +290,9 @@ class Service:
             "SetupControl": (self.m_setup_control, "s", True),
             "Firmware": (self.m_firmware, "s", True),
             "SetProductKey": (self.m_set_product_key, "s", True),
+            "ActivationStart": (self.m_activation_start, "s", True),
+            "ActivationCheck": (self.m_activation_check, "s", True),
+            "ActivationEnd": (self.m_activation_end, "s", True),
             "Remove": (self.m_remove, "s", True),
             "UsbDevices": (self.usb.m_devices, "s", True),
             "SetUsbDevice": (self.usb.m_set, "s", True),
@@ -294,6 +305,7 @@ class Service:
             if not ok:
                 log("firewall:", why)
         self.setup = setup.Setup(self)
+        self.activation = activation.Activation(self, random_password)
         self.refresh()
         self.setup_changed()
         self.setup.resume_after_restart()
@@ -567,6 +579,7 @@ class Service:
                 self.restart_for_memory()
         if st == "running":
             self.trim_memory()
+            self.resume_activation_cleanup()
             if not self.link.connected:
                 self.connect_guest()
             else:
@@ -750,6 +763,7 @@ class Service:
             if warm:
                 self.link.send(dict(warm, type="warm"))
             self.link.request({"type": "windows"}, self.guest_event)
+            self.resume_activation_cleanup()
             self.guest_upkeep()
         self.changed()
 
@@ -1242,6 +1256,7 @@ class Service:
             "share_root": self.cfg["share_root"],
             "folders": self.cfg["folders"],
             "setup": self.setup.status(),
+            "activation": self.activation.status(),
         }
 
     def m_status(self, sender):
@@ -1487,6 +1502,11 @@ class Service:
     def m_apps(self, sender, icons, defer):
         return self.guest_request({"type": "apps", "icons": bool(icons)}, defer, 120)
 
+    def m_uninstall(self, sender, path, defer):
+        """Removes a Store app in Windows, or finds another program's own
+        uninstaller for the agent to open (wild-guest's Uninstall.cs)."""
+        return self.guest_request({"type": "uninstall", "path": path}, defer, 200)
+
     def m_set_theme(self, sender, theme_json):
         try:
             theme = json.loads(theme_json)
@@ -1667,6 +1687,88 @@ class Service:
 
         dbusutil.in_thread(work, done=finished)
         return defer
+
+    def m_activation_start(self, sender, defer):
+        """Settings' Use a licence on my Microsoft account (activation.py):
+        Windows woken, the account for it made and the policy lifted.
+        {account, password, domain} for the desktop, or {message}."""
+        why = self.claim(sender)
+        if why:
+            return json.dumps({"message": why})
+        if self.activation.ending:
+            return json.dumps({"message": "The last activation is still being tidied up. Try again in a minute."})
+        self.life.hold(time.monotonic(), activation.HOLD, True)
+        self.schedule_idle()
+
+        def work():
+            while self.busy_action:
+                time.sleep(0.1)
+            try:
+                self.wake()
+            except (RuntimeError, virsh.VirshError) as e:
+                log("waking Windows for activation:", e)
+                return {"message": "Windows mode couldn't start Windows. Try again, or restart the PC."}
+            return self.activation.start()
+
+        def finished(result):
+            if isinstance(result, Exception):
+                log("activation:", result)
+                result = {"message": "Windows mode couldn't add the account for activating. Try again, or restart the PC."}
+            if "password" in result:
+                result["domain"] = self.cfg["computer_name"] or self.state.get("computer_name", "")
+            else:
+                self.life.hold(time.monotonic(), activation.HOLD, False)
+                self.schedule_idle()
+            self.refresh()
+            self.changed()
+            defer.done(json.dumps(result))
+
+        dbusutil.in_thread(work, done=finished)
+        return defer
+
+    def m_activation_check(self, sender, defer):
+        why = self.claim(sender)
+        if why:
+            return json.dumps({"activated": False, "active": False})
+        dbusutil.in_thread(self.activation.check, done=lambda r: (self.changed(), defer.done(json.dumps({
+            "activated": r is True, "active": bool(self.activation.rec)})))[1])
+        return defer
+
+    def m_activation_end(self, sender, defer):
+        """Done or Cancel, the desktop closing, or Windows saying it is
+        activated: "" once the account is gone and the policy is back."""
+        why = self.claim(sender)
+        if why:
+            return why
+        self.end_activation(defer.done)
+        return defer
+
+    def end_activation(self, done=None):
+        def work():
+            while self.activation.ending:
+                time.sleep(0.2)
+            return self.activation.end()
+
+        def finished(result):
+            if isinstance(result, Exception):
+                log("activation clean-up:", result)
+                result = "Windows mode couldn't remove the account for activating yet. It tries again by itself."
+            if not self.activation.rec:
+                self.life.hold(time.monotonic(), activation.HOLD, False)
+                self.schedule_idle()
+            self.changed()
+            if done:
+                done(result)
+
+        dbusutil.in_thread(work, done=finished)
+
+    def resume_activation_cleanup(self):
+        """An activation this run of the service didn't start (Wild OS or
+        Windows mode restarted part way), or one past its hour: the account
+        goes and the policy comes back as soon as Windows runs."""
+        if self.activation.needs_cleanup() and not self.busy_action:
+            log("finishing the clean-up after activating with a Microsoft account")
+            self.end_activation()
 
     def m_firmware(self, sender, defer):
         """Board 9.1's licence row: whether this PC's firmware has a key and

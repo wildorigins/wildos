@@ -1,0 +1,38 @@
+// The guest session (guest-account): the guest may sign out, shut down,
+// use Wi-Fi and the networks already set up, and plug in a USB stick, and
+// nothing else that asks the system. Everything else is refused outright,
+// so no administrator password prompt even comes up. Being a list of what
+// is allowed, anything added to Wild OS later is refused for the guest too.
+polkit.addRule(function(action, subject) {
+    if (subject.user !== "guest") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    var id = action.id;
+    var allowed = [
+        // KWin needs it to take the screen for the guest's own session.
+        "org.freedesktop.login1.chvt",
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.reboot",
+        "org.freedesktop.login1.suspend",
+        "org.freedesktop.login1.hibernate",
+        "org.freedesktop.login1.lock-sessions",
+        "org.freedesktop.login1.set-reboot-to-firmware-setup",
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.encrypted-unlock",
+        "org.freedesktop.udisks2.eject-media",
+        "org.freedesktop.udisks2.power-off-drive",
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.NetworkManager.enable-disable-network",
+        "org.freedesktop.NetworkManager.enable-disable-wifi",
+        "org.freedesktop.NetworkManager.enable-disable-wwan",
+        "org.freedesktop.NetworkManager.wifi.scan",
+        "org.freedesktop.NetworkManager.settings.modify.own",
+        "org.freedesktop.RealtimeKit1.acquire-high-priority",
+        "org.freedesktop.RealtimeKit1.acquire-real-time"
+    ];
+    if (allowed.indexOf(id) >= 0 || id.indexOf("org.freedesktop.login1.inhibit-") === 0
+        || id.indexOf("org.freedesktop.UPower.") === 0 || id.indexOf("org.kde.powerdevil.") === 0) {
+        return polkit.Result.NOT_HANDLED;
+    }
+    return polkit.Result.NO;
+});

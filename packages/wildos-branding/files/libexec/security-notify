@@ -11,6 +11,12 @@
 export LC_ALL=C
 icon=/usr/share/plasma/plasmoids/org.wildos.protected/contents/images/shield.svg
 
+# The screen lock (kscreenlocker's org.freedesktop.ScreenSaver).
+locked() {
+    gdbus call --session --dest org.freedesktop.ScreenSaver --object-path /ScreenSaver \
+        --method org.freedesktop.ScreenSaver.GetActive 2>/dev/null | grep -q true
+}
+
 # A notification left unanswered for six hours has been seen and ignored;
 # the device simply stays blocked and the flyout still offers the choice.
 send() {
@@ -21,6 +27,16 @@ case $1 in
     usb)
         port=$2
         printf '%s' "$port" | grep -qE '^[0-9]+-[0-9]+(\.[0-9]+)*$' || exit 2
+        # Nobody can answer from behind the lock screen, and while it is
+        # locked wildos-usb-lock holds every new device back anyway. At
+        # sign-in it reconnects those, so the device is looked at again
+        # once that has settled.
+        if locked; then
+            while locked; do
+                sleep 3
+            done
+            sleep 3
+        fi
         line=$(/usr/libexec/wildos/usb-devices list | awk -F '\t' -v p="$port" '$1 == p')
         [ -n "$line" ] || exit 0
         kind=$(printf '%s' "$line" | cut -f2)

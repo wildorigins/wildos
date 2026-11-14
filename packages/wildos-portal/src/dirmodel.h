@@ -51,6 +51,8 @@ public:
         SizeRole,
         SelectedRole,
         HiddenRole,
+        PreviewRole,
+        StampRole,
     };
     Q_ENUM(Roles)
 
@@ -148,6 +150,7 @@ private:
         qint64 sizeKey = -1;
         bool isDir = false;
         bool hidden = false;
+        bool preview = false;
         bool selected = false;
     };
 

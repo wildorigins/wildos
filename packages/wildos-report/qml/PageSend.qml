@@ -67,8 +67,10 @@ Item {
                 FieldLabel {
                     text: qsTr("Title")
                 }
-                TextField {
+                UI.TextField {
                     id: titleField
+                    // Escape would otherwise wipe the suggested title.
+                    escapeClears: false
                     Layout.fillWidth: true
                     implicitHeight: 32
                     leftPadding: 10

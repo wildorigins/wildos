@@ -3,6 +3,7 @@
 //   wildos-capture               the toolbar over a frozen screen
 //   wildos-capture --record      the same, ready to record
 //   wildos-capture --edit FILE   a picture in the editor
+//   wildos-capture --scan        the Scan tab, for paper on a scanner
 //   wildos-capture --to FILE     a screenshot written to FILE and nothing
 //                                else, for Report a problem; cancelling
 //                                writes FILE.cancelled instead
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
     engine.setIncubationController(&incubation);
     engine.rootContext()->setContextProperty(QStringLiteral("CaptureApp"), &capture);
     engine.addImageProvider(QStringLiteral("frozen"), capture.frozen());
+    engine.addImageProvider(QStringLiteral("scan"), capture.scanner()->images());
     engine.loadFromModule("WildOS.Capture", "Main");
     if (engine.rootObjects().isEmpty()) {
         return 1;

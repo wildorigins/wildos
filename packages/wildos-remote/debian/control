@@ -25,7 +25,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.3),
+ wildos-ui (>= 0.1.11),
  openssh-client,
  libfreerdp3-3 (>= 3.32),
  libfreerdp-client3-3 (>= 3.32),

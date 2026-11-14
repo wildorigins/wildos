@@ -6,8 +6,9 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5Support
 import WildOS.UI as UI
 
-// The Updates icon beside Protection on the taskbar and its flyout: whether
-// updates are waiting, checking for them, and installing them through
+// The Updates icon beside the shield on the taskbar and its flyout. The icon
+// is only there while an update downloads or installs, turning while that
+// work is under way; the flyout says what is happening and installs through
 // Settings, which asks for the password. Everything shown comes from
 // /usr/libexec/wildos/update-status, which asks PackageKit, so it always
 // agrees with Settings > Updates and the Store.
@@ -27,6 +28,10 @@ PlasmoidItem {
     readonly property int count: number(status.updates)
     readonly property int securityCount: number(status.security)
     readonly property bool busy: phase === "checking" || phase === "installing"
+    // Downloading or installing: the only time the icon is on the taskbar.
+    readonly property bool installing: phase === "installing"
+    // Queued, or waiting for apt's lock or the password: there, but still.
+    readonly property bool working: installing && status.waiting !== "yes"
     readonly property bool byAuto: status.by === "auto"
     readonly property bool restartNeeded: status.restart === "yes"
     readonly property bool ready: phase === "available"
@@ -175,8 +180,49 @@ PlasmoidItem {
     Timer {
         running: true
         repeat: true
-        interval: updates.busy || updates.expanded || updates.justAsked ? 4000 : 30000
+        // Every two minutes when nothing is happening: each check starts a
+        // program, and nothing the icon shows needs to be fresher.
+        interval: updates.busy || updates.expanded || updates.justAsked || updates.packageKitUp ? 4000 : 120000
         onTriggered: updates.refreshStatus()
+    }
+
+    // Settings > Updates and update-status keep the check they share in one
+    // folder (who is checking, why the last check failed). Its time changes
+    // whenever either writes, so a check started or finished in Settings
+    // shows here within seconds, for the price of one stat. Whether
+    // PackageKit and the automatic security updates are running goes with
+    // it, so the icon comes up within seconds of an install starting,
+    // however it was started, without asking PackageKit (which would start
+    // it) every few seconds.
+    property string sharedStamp: ""
+    readonly property bool packageKitUp: / (active|activating)/.test(sharedStamp)
+    property int stampCount: 0
+
+    P5Support.DataSource {
+        id: stamp
+        engine: "executable"
+        onNewData: (source, data) => {
+            disconnectSource(source);
+            const next = String(data.stdout).trim();
+            if (next !== updates.sharedStamp) {
+                const first = updates.sharedStamp === "";
+                updates.sharedStamp = next;
+                if (!first) {
+                    updates.refreshStatus();
+                }
+            }
+        }
+    }
+
+    Timer {
+        running: updates.loaded && updates.phase !== "na"
+        repeat: true
+        interval: 5000
+        onTriggered: {
+            updates.stampCount += 1;
+            stamp.connectSource("{ stat -c %.9Y \"${XDG_RUNTIME_DIR:-/tmp}/wildos-updates\" 2>/dev/null || echo none; "
+                + "systemctl is-active packagekit.service apt-daily-upgrade.service; } | tr '\n' ' ' #" + updates.stampCount);
+        }
     }
 
     // One-off commands; a check answers with the status once it is done.
@@ -238,7 +284,9 @@ PlasmoidItem {
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "system-software-update"
     Plasmoid.title: "Updates"
-    Plasmoid.status: ready || failed ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
+    // On the taskbar while an update is under way, waiting to install or
+    // has failed: the last two need the person.
+    Plasmoid.status: installing || ready || failed ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
     toolTipMainText: summary
     toolTipSubText: loaded && phase !== "na" ? checkedText : ""
 

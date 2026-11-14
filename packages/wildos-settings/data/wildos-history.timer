@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep Settings > System > History up to date
+
+[Timer]
+# Often enough that nothing ages out of the system log or the firewall's
+# own week-long list before History has a copy, even if Settings is never
+# opened.
+OnBootSec=5min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target

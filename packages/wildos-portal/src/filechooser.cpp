@@ -135,7 +135,10 @@ void FileChooserPortal::start(int mode, const QDBusObjectPath &handle, const QSt
     auto portalRequest = new PortalRequest(handle, chooser, chooser);
     Q_UNUSED(portalRequest);
 
-    QQuickWindow *window = Windows::instance()->open(QStringLiteral("FileChooser"), {{QStringLiteral("chooser"), QVariant::fromValue(chooser)}}, parentWindow);
+    QQuickWindow *window = Windows::instance()->open(QStringLiteral("FileChooser"),
+                                                     {{QStringLiteral("chooser"), QVariant::fromValue(chooser)}},
+                                                     parentWindow,
+                                                     options.value(QStringLiteral("modal"), true).toBool());
     if (!window) {
         QDBusConnection::sessionBus().send(call.createErrorReply(QDBusError::Failed, QStringLiteral("The Wild OS file dialog could not open")));
         chooser->deleteLater();

@@ -319,19 +319,14 @@ class NativeClient(unittest.TestCase):
             f.write('#!/bin/sh\nprintf "%s\\n" "$@" > "$0.argv"\ncat > "$0.stdin"\n')
         os.chmod(self.client, 0o755)
 
-    def test_the_own_client_unless_missing_or_asked_not_to(self):
-        self.assertEqual(rdp.client_program("auto", native=self.client), self.client)
-        self.assertEqual(rdp.client_program("xfreerdp3", native=self.client), "xfreerdp3")
-        self.assertEqual(rdp.client_program("auto", native=os.path.join(self.dir, "missing")), "xfreerdp3")
-
-    def test_the_desktop_opens_in_xfreerdp3_unless_remote_is_asked_for(self):
-        remote = os.path.join(self.dir, "wildos-remote")
-        with open(remote, "w") as f:
-            f.write("#!/bin/sh\n")
-        os.chmod(remote, 0o755)
-        self.assertEqual(rdp.desktop_client("xfreerdp3", remote=remote), "xfreerdp3")
-        self.assertEqual(rdp.desktop_client("remote", remote=remote), remote)
-        self.assertEqual(rdp.desktop_client("remote", remote=os.path.join(self.dir, "missing")), "xfreerdp3")
+    def test_the_desktop_opens_in_wildos_rdp(self):
+        conn = rdp.Connection(lambda o: None, lambda: None, os.path.join(self.dir, "log", "d.log"), desktop=True)
+        conn.native_client = self.client
+        conn.start(["/v:192.168.207.10:3389", "/u:wild", "/title:Windows desktop"], "secret")
+        self.wait(conn)
+        self.assertEqual(read(self.client + ".argv").split(NL)[:2], ["--desktop", "/args-from:stdin"])
+        self.assertNotIn("secret", read(self.client + ".argv"))
+        self.assertEqual(read(self.client + ".stdin").splitlines()[-1], "/p:secret")
 
     def test_loading_arguments_are_one_line_each(self):
         args = rdp.loading_arguments("wildos-winmode-word", "Word\n/drive:all,/", "wildos-winmode-word", "Slow, really",
@@ -404,9 +399,8 @@ class NativeClient(unittest.TestCase):
         self.assertEqual(read(self.client + ".stdin"), "")
         self.assertFalse(conn.open)
 
-    def test_xfreerdp_is_never_started_early(self):
-        conn = rdp.Connection(lambda o: None, lambda: None, os.path.join(self.dir, "c.log"), program="xfreerdp3")
-        self.assertFalse(conn.native)
+    def test_the_desktop_is_never_started_early(self):
+        conn = rdp.Connection(lambda o: None, lambda: None, os.path.join(self.dir, "c.log"), desktop=True)
         self.assertFalse(conn.spawn("a", "b", "c"))
         self.assertIsNone(conn.proc)
 
@@ -560,7 +554,7 @@ class Desktop(unittest.TestCase):
     def agent(self, desktop_running=False):
         from winmode import agent
         a = agent.Agent.__new__(agent.Agent)
-        a.removing, a.preparing, a.queue = False, None, []
+        a.removing, a.preparing, a.queue, a.activation = False, None, [], None
         a.host = {"guest_address": "192.168.207.10", "rdp_port": 3389, "account": "wild"}
         a.conn, a.desktop = Client(), Client(desktop_running)
         a.call_json = lambda method, args=None, signature=None, done=None, timeout=600: done({"ok": True})
@@ -943,6 +937,23 @@ class Setup(unittest.TestCase):
         body[9] = (256 - sum(body) % 256) % 256
         return bytes(body)
 
+    def test_apt_status_lines_become_progress(self):
+        from winmode import setup
+        self.assertEqual(setup.apt_progress("dlstatus:3:42.7:Retrieving file 3 of 40"),
+                         "Downloading the parts Windows mode runs on, 42%")
+        self.assertEqual(setup.apt_progress("pmstatus:qemu-system-x86:80:Installing qemu"),
+                         "Installing the parts Windows mode runs on, 80%")
+        self.assertIsNone(setup.apt_progress("E: Could not get lock /var/lib/dpkg/lock-frontend"))
+        self.assertIsNone(setup.apt_progress("dlstatus:junk"))
+
+    def test_the_latest_apt_progress_is_shown(self):
+        from winmode import setup
+        log = ("Reading package lists...\ndlstatus:1:10:a\ndlstatus:2:60:b\n"
+               "E: something\npmstatus:qemu:30:Unpacking\nSetting up qemu\n")
+        self.assertEqual(setup.latest_apt_progress(log), "Installing the parts Windows mode runs on, 30%")
+        self.assertIsNone(setup.latest_apt_progress("Reading package lists...\n"))
+        self.assertIsNone(setup.latest_apt_progress(""))
+
     def test_firmware_key(self):
         from winmode import setup
         key = "VK7JG-NPHTM-C97JM-9MPGT-3V66T"
@@ -1083,3 +1094,368 @@ class Setup(unittest.TestCase):
         self.assertEqual(st["percent"], 56)
         self.assertEqual(st["stages"][2]["title"], "Activation")
         self.assertTrue(st["left"].startswith("About "))
+
+
+class UninstallApp(unittest.TestCase):
+    """Settings' Uninstall for a Windows app (wild-guest's Uninstall.cs)."""
+
+    def agent(self, answers):
+        from winmode import agent
+        a = agent.Agent.__new__(agent.Agent)
+        a.removing = False
+        a.registry = {"steam": {"name": "Steam", "target": r"C:\Program Files (x86)\Steam\steam.exe"}}
+        a.installers, a.installed_since_refresh = {}, False
+        a.asked, a.launched, a.refreshed = [], [], 0
+
+        def call_json(method, args=None, signature=None, done=None, timeout=600):
+            a.asked.append((method, args))
+            done(answers[method])
+        a.call_json = call_json
+        a.m_refresh = lambda sender, defer=None: setattr(a, "refreshed", a.refreshed + 1)
+
+        def launch(path, args, name, app_id, done):
+            a.launched.append((path, args, name, app_id))
+            done("")
+        a.launch = launch
+        return a
+
+    def answer(self, d):
+        import json
+        return json.loads(d.out[0])
+
+    def test_a_program_opens_its_own_uninstaller_unsplit(self):
+        a, d = self.agent({"Wake": {"ok": True},
+                           "Uninstall": {"type": "uninstaller", "name": "Steam",
+                                         "program": r"C:\Program Files (x86)\Steam\uninstall.exe", "arguments": ""}}), Defer()
+        a.m_uninstall_app(None, "steam", d)
+        self.assertEqual(a.asked[1], ("Uninstall", (r"C:\Program Files (x86)\Steam\steam.exe",)))
+        self.assertEqual(a.launched, [(r"C:\Program Files (x86)\Steam\uninstall.exe", [], "Steam", "installer")])
+        self.assertIn("uninstall", a.installers)
+        self.assertTrue(a.installed_since_refresh)
+        self.assertEqual(self.answer(d)["state"], "opened")
+
+    def test_msi_arguments_are_split_windows_style(self):
+        a, d = self.agent({"Wake": {"ok": True},
+                           "Uninstall": {"type": "uninstaller", "name": "X", "program": "MsiExec.exe",
+                                         "arguments": '/X{23C28AD0-2B29-414F-89FA-C8CB0BE36CFD} NAME="a b"'}}), Defer()
+        a.m_uninstall_app(None, "steam", d)
+        self.assertEqual(a.launched[0][1], ["/X{23C28AD0-2B29-414F-89FA-C8CB0BE36CFD}", "NAME=a b"])
+
+    def test_a_store_app_is_removed_and_start_refreshed(self):
+        a, d = self.agent({"Wake": {"ok": True}, "Uninstall": {"type": "uninstalled"}}), Defer()
+        a.m_uninstall_app(None, "steam", d)
+        self.assertEqual(self.answer(d)["state"], "removed")
+        self.assertEqual(a.refreshed, 1)
+        self.assertEqual(a.launched, [])
+
+    def test_no_uninstaller_says_where_to_go(self):
+        a, d = self.agent({"Wake": {"ok": True}, "Uninstall": {"type": "error", "error": "no-uninstaller"}}), Defer()
+        a.m_uninstall_app(None, "steam", d)
+        out = self.answer(d)
+        self.assertEqual(out["state"], "failed")
+        self.assertIn("Windows' own Settings", out["message"])
+
+    def test_windows_that_will_not_start_is_said(self):
+        a, d = self.agent({"Wake": {"ok": False, "message": "No room."}}), Defer()
+        a.m_uninstall_app(None, "steam", d)
+        self.assertEqual(self.answer(d), {"state": "failed", "message": "No room."})
+        self.assertEqual([m for m, _ in a.asked], ["Wake"])
+
+    def test_an_app_already_gone_counts_as_removed(self):
+        import json
+        a = self.agent({})
+        self.assertEqual(json.loads(a.m_uninstall_app(None, "nothing", Defer()))["state"], "removed")
+
+
+class MicrosoftAccountActivation(unittest.TestCase):
+    """Settings' Use a licence on my Microsoft account (issue 56): a second
+    account just for it, the policy lifted meanwhile, everything put back
+    afterwards, even after an interruption."""
+
+    def service(self, licence_status="0", fail_create=False, cleanup="done", ping=True):
+        from types import SimpleNamespace
+        from unittest import mock
+        from winmode import activation
+        saved, ran, passwords, setup_saves = [], [], [], []
+        svc = SimpleNamespace(domain="w", cfg={"account": "wild"}, state={})
+        svc.save_state = lambda: saved.append(json.loads(json.dumps(svc.state)))
+        svc.setup = SimpleNamespace(rec={"licence": {"source": "none", "activated": False}},
+                                    save=lambda **kw: setup_saves.append(kw))
+
+        def powershell(domain, script, timeout=60):
+            if "SoftwareLicensingProduct" in script:
+                ran.append("status")
+                return 0, licence_status + "\r\n", ""
+            if "New-LocalUser" in script:
+                ran.append("create")
+                # The record is on disk before Windows changes.
+                self.assertEqual(saved[-1]["activation"]["stage"], "creating")
+                return (1, "", "boom") if fail_create else (0, "sid S-1-5-21-1-2-3-1002\r\n", "")
+            if "Remove-LocalUser" in script:
+                ran.append("cleanup")
+                return 0, cleanup + "\r\n", ""
+            raise AssertionError(script)
+
+        for p in (mock.patch.object(activation.qga, "powershell", powershell),
+                  mock.patch.object(activation.qga, "set_password", lambda d, account, pw: passwords.append((account, pw))),
+                  mock.patch.object(activation.qga, "ping", lambda d, t=3: ping)):
+            p.start()
+            self.addCleanup(p.stop)
+        act = activation.Activation(svc, lambda: "Secret123a7Q")
+        return act, svc, ran, passwords, saved, setup_saves
+
+    def test_the_account_is_made_and_its_password_set_off_the_command_line(self):
+        from winmode import activation
+        act, svc, ran, passwords, saved, _ = self.service()
+        out = act.start()
+        self.assertEqual(out, {"account": "activate", "password": "Secret123a7Q"})
+        self.assertEqual(ran, ["status", "create"])
+        self.assertEqual(passwords, [("activate", "Secret123a7Q")])
+        self.assertEqual(svc.state["activation"]["stage"], "open")
+        self.assertEqual(svc.state["activation"]["sid"], "S-1-5-21-1-2-3-1002")
+        self.assertNotIn("Secret123a7Q", activation.create_script("activate", "wild"))
+        self.assertNotIn("Secret123a7Q", json.dumps(saved))
+        self.assertFalse(act.needs_cleanup())
+
+    def test_an_activated_windows_needs_no_account(self):
+        act, svc, ran, passwords, _, setup_saves = self.service(licence_status="1")
+        out = act.start()
+        self.assertTrue(out["activated"])
+        self.assertEqual(ran, ["status"])
+        self.assertEqual(passwords, [])
+        self.assertNotIn("activation", svc.state)
+        # Activated before this started: the licence's source stays as it was.
+        self.assertEqual(setup_saves, [{"licence": {"source": "none", "activated": True}}])
+
+    def test_activated_during_it_is_recorded_as_the_accounts(self):
+        act, svc, ran, _, _, setup_saves = self.service()
+        act.start()
+        ran.clear()
+        self.assertFalse(act.check())
+        self.assertEqual(setup_saves, [])
+        act.license_status = lambda: 1
+        self.assertTrue(act.check())
+        self.assertEqual(setup_saves, [{"licence": {"source": "account", "activated": True}}])
+
+    def test_ending_removes_the_record_only_once_windows_is_put_back(self):
+        act, svc, ran, _, _, _ = self.service()
+        act.start()
+        self.assertEqual(act.end(), "")
+        self.assertNotIn("activation", svc.state)
+        self.assertEqual(ran[-1], "cleanup")
+        self.assertFalse(act.needs_cleanup())
+
+    def test_a_clean_up_that_did_not_finish_is_tried_again(self):
+        act, svc, ran, _, _, _ = self.service(cleanup="left profile")
+        act.start()
+        self.assertIn("tries again", act.end())
+        self.assertIn("activation", svc.state)
+        self.assertTrue(act.needs_cleanup())
+
+    def test_windows_not_running_keeps_the_record_for_later(self):
+        act, svc, ran, _, _, _ = self.service(ping=False)
+        svc.state["activation"] = {"stage": "open", "account": "activate", "sid": "S-1-5-21-9", "started": time.time()}
+        self.assertIn("next time it starts", act.end())
+        self.assertIn("activation", svc.state)
+        self.assertNotIn("cleanup", ran)
+        self.assertTrue(act.needs_cleanup())
+
+    def test_a_failed_start_cleans_up_what_it_made(self):
+        act, svc, ran, passwords, _, _ = self.service(fail_create=True)
+        out = act.start()
+        self.assertIn("couldn't add the account", out["message"])
+        self.assertEqual(ran, ["status", "create", "cleanup"])
+        self.assertEqual(passwords, [])
+        self.assertNotIn("activation", svc.state)
+
+    def test_a_record_from_an_earlier_run_is_cleaned_up(self):
+        act, svc, _, _, _, _ = self.service()
+        svc.state["activation"] = {"stage": "open", "account": "activate", "sid": "S-1-5-21-9", "started": time.time()}
+        # Found at start-up: this run of the service didn't start it.
+        self.assertTrue(act.needs_cleanup())
+        act.owned = True
+        self.assertFalse(act.needs_cleanup())
+        # Past its hour, even this run's own is ended.
+        svc.state["activation"]["started"] = time.time() - 3700
+        self.assertTrue(act.needs_cleanup())
+
+    def test_a_new_start_clears_a_leftover_first(self):
+        act, svc, ran, _, _, _ = self.service()
+        svc.state["activation"] = {"stage": "ending", "account": "activate", "sid": "S-1-5-21-9", "started": time.time()}
+        act.start()
+        self.assertEqual(ran, ["cleanup", "status", "create"])
+        self.assertEqual(svc.state["activation"]["stage"], "open")
+        self.assertTrue(act.owned)
+
+    def test_windows_modes_own_account_is_never_used(self):
+        from winmode import activation
+        self.assertFalse(activation.safe_name("wild", "wild"))
+        self.assertFalse(activation.safe_name("WILD", "wild"))
+        self.assertFalse(activation.safe_name("a'b", "wild"))
+        self.assertTrue(activation.safe_name("activate", "wild"))
+        script = activation.cleanup_script("activate", "S-1-5-21-9", "wild")
+        self.assertIn("$keep = 'wild'", script)
+        self.assertIn("'refused'; exit 1", script)
+        self.assertIn("throw 'refusing the Windows mode account'", activation.create_script("activate", "wild"))
+
+    def test_the_policy_goes_back_before_anything_else(self):
+        from winmode import activation
+        script = activation.cleanup_script("activate", "S-1-5-21-9", "wild")
+        restore = script.index("-Name 'NoConnectedUser' -Value 1")
+        self.assertLess(restore, script.index("logoff.exe"))
+        self.assertLess(restore, script.index("Remove-LocalUser"))
+        self.assertLess(script.index("Remove-Item -Force 'C:\\ProgramData\\WildOS\\activation.json'"), script.index("logoff.exe"))
+        create = activation.create_script("activate", "wild")
+        self.assertIn("-Name 'NoConnectedUser' -Value 0", create)
+        # The marker tune.ps1 honours is written before the policy is lifted.
+        self.assertLess(create.index("activation.json"), create.index("'NoConnectedUser' -Value 0"))
+        self.assertIn("S-1-5-32-544", create)
+
+    def test_tune_leaves_the_policy_alone_while_activating(self):
+        tune = read(os.path.join(DATA, "..", "guest", "tune.ps1"))
+        gate = tune.index('$activation = Get-Item "$stateDir\\activation.json"')
+        policy = tune.index("'NoConnectedUser' 1")
+        self.assertLess(gate, policy)
+        self.assertIn("if (-not $activation -or $activation.LastWriteTime -lt (Get-Date).AddDays(-1)) {", tune[gate:policy])
+        # The new version reaches Windows through upkeep, but the long
+        # capabilities check stays keyed to its own version.
+        self.assertIn("$version = '3'", tune)
+        self.assertIn("$featuresVersion = '2'", tune)
+        self.assertIn('$state.features -ne "$featuresVersion/$buildId"', tune)
+
+
+class AccountActivationAgent(unittest.TestCase):
+    def agent(self, start_reply=None):
+        from winmode import agent
+        a = agent.Agent.__new__(agent.Agent)
+        a.removing, a.preparing, a.queue, a.windows = False, None, [], []
+        a.host = {"guest_address": "192.168.207.10", "rdp_port": 3389, "account": "wild"}
+        a.conn, a.desktop, a.activation_desktop = Client(True), Client(True), Client()
+        a.activation = a.activation_account = a.activation_result = a.activation_timer = None
+        a.activation_tidied = False
+        a.asked, a.forgotten, a.reopened = [], [], []
+        a.keyring = type("K", (), {"memory": {}, "put": lambda self, k, v: None,
+                                   "forget": lambda self, k: a.forgotten.append(k)})()
+        a.replies = {"ActivationStart": start_reply or {"account": "activate", "password": "pw2", "domain": "WILDPC"},
+                     "ActivationCheck": {"activated": False, "active": True}}
+
+        def call_json(method, args=None, signature=None, done=None, timeout=600):
+            a.asked.append(method)
+            done(a.replies[method])
+        a.call_json = call_json
+        a.call = lambda method, args=None, signature=None, done=None, timeout=600: (a.asked.append(method), done(""))
+        a.end_preparing = lambda: None
+        a.changed = lambda: None
+        a.refresh_host = lambda then=None: None
+        a.reopen_windows = lambda within=90: a.reopened.append(within)
+        return a
+
+    def run_in(self, fn):
+        from unittest import mock
+        from winmode import agent
+        with mock.patch.object(agent.dbusutil, "in_thread", lambda fn, *args, done=None: fn(*args)), \
+                mock.patch.object(agent.GLib, "timeout_add_seconds", lambda s, fn: 7), \
+                mock.patch.object(agent.GLib, "source_remove", lambda t: None):
+            return fn()
+
+    def start(self, a):
+        d = Defer()
+        self.run_in(lambda: a.m_activate_with_account(None, d))
+        return d
+
+    def test_the_desktop_opens_signed_in_to_the_account_for_activating(self):
+        a = self.agent()
+        d = self.start(a)
+        self.assertEqual(d.out, [""])
+        self.assertEqual(a.activation, "open")
+        self.assertEqual(a.conn.stopped, 1)
+        self.assertEqual(a.desktop.stopped, 1)
+        args = a.activation_desktop.started[0]
+        self.assertIn("/u:activate", args)
+        self.assertIn("/d:WILDPC", args)
+        self.assertIn("/title:Activate Windows", args)
+        # Not the person's shared folders.
+        self.assertFalse(any(x.startswith("/drive:") for x in args))
+        self.assertEqual(a.m_activation_password(None), "pw2")
+
+    def test_nothing_else_takes_the_session_meanwhile(self):
+        from winmode import agent
+        a = self.agent()
+        self.start(a)
+        out = []
+        a.launch(r"C:\Windows\notepad.exe", [], "Notepad", "notepad", out.append)
+        self.assertEqual(out, [agent.ACTIVATING])
+        self.assertEqual(a.m_open_desktop(None, Defer()), agent.ACTIVATING)
+
+    def test_closing_the_window_ends_it_and_forgets_the_password(self):
+        a = self.agent()
+        self.start(a)
+        self.run_in(lambda: a.activation_desktop_changed(False))
+        self.assertEqual(a.asked[-2:], ["ActivationCheck", "ActivationEnd"])
+        self.assertIsNone(a.activation)
+        self.assertEqual(a.forgotten, ["activate"])
+        self.assertEqual(a.activation_result, {"activated": False, "message": ""})
+        self.assertEqual(a.m_activation_password(None), "")
+        self.assertEqual(a.reopened, [60])
+
+    def test_done_counts_an_activation_windows_reports_late(self):
+        a = self.agent()
+        self.start(a)
+        a.replies["ActivationCheck"] = {"activated": True, "active": True}
+        d = Defer()
+        self.run_in(lambda: a.m_end_activation(None, d))
+        self.assertEqual(d.out, [""])
+        self.assertTrue(a.activation_result["activated"])
+
+    def test_activated_ends_it_by_itself(self):
+        a = self.agent()
+        self.start(a)
+        a.replies["ActivationCheck"] = {"activated": True, "active": True}
+        self.run_in(a.check_activation)
+        self.assertEqual(a.asked[-1], "ActivationEnd")
+        self.assertTrue(a.activation_result["activated"])
+
+    def test_already_activated_opens_nothing(self):
+        a = self.agent({"activated": True, "message": "Windows is already activated."})
+        d = self.start(a)
+        self.assertEqual(d.out, [""])
+        self.assertIsNone(a.activation)
+        self.assertTrue(a.activation_result["already"])
+        self.assertEqual(a.activation_desktop.started, [])
+        self.assertEqual(a.conn.stopped, 0)
+
+    def test_a_service_refusal_is_said(self):
+        a = self.agent({"message": "No room."})
+        d = self.start(a)
+        self.assertEqual(d.out, ["No room."])
+        self.assertIsNone(a.activation)
+
+    def test_an_activation_from_before_the_agent_restarted_is_ended_once(self):
+        from winmode import agent
+        a = self.agent()
+        st = {"state": "Running", "activation": {"stage": "open"}}
+        a.call_json = lambda method, args=None, signature=None, done=None, timeout=600: (a.asked.append(method), done(st))
+        a.set_windows = lambda ws: None
+        a.end_connection_if_gone = lambda s: None
+        for _ in range(2):
+            self.run_in(lambda: agent.Agent.refresh_host(a))
+            a.activation = None
+        self.assertEqual(a.asked.count("ActivationEnd"), 1)
+
+
+class AccountActivationService(unittest.TestCase):
+    def test_cleanup_resumes_once_windows_runs(self):
+        from types import SimpleNamespace
+        from winmode import system
+        ended = []
+        s = SimpleNamespace(busy_action=None, activation=SimpleNamespace(needs_cleanup=lambda: True),
+                            end_activation=lambda done=None: ended.append(True))
+        system.Service.resume_activation_cleanup(s)
+        self.assertEqual(ended, [True])
+        s.busy_action = "save"
+        system.Service.resume_activation_cleanup(s)
+        self.assertEqual(ended, [True])
+
+    def test_the_title_stays_one_argument(self):
+        args = rdp.desktop_arguments("h", 3389, "activate", "", title="Activate, Windows")
+        self.assertIn("/title:Activate  Windows", args)

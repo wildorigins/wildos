@@ -4,6 +4,7 @@
 
 #include "flatpakbackend.h"
 #include "packagekitbackend.h"
+#include "packagesizes.h"
 #include "storeapp.h"
 #include "timing.h"
 
@@ -513,9 +514,14 @@ Catalog::Catalog(QObject *parent)
     : QObject(parent)
     , m_packagekit(new PackageKitBackend(this))
     , m_flatpak(new FlatpakBackend(this))
+    , m_sizes(new PackageSizes(this))
 {
     s_instance = this;
     loadCurated();
+    connect(m_sizes, &PackageSizes::changed, this, &Catalog::bumpState);
+    connect(m_packagekit, &PackageKitBackend::installedChanged, this, [this] {
+        m_sizes->refresh(wildosPackages());
+    });
 
     // An app installed or removed changes which launchers exist.
     auto installsChanged = [this] {
@@ -629,6 +635,20 @@ Catalog *Catalog::create(QQmlEngine *, QJSEngine *)
     return s_instance;
 }
 
+
+// Whether apt has this package from any repository this PC uses, installed
+// or not. Only asked for the few curated apps that need it.
+static bool aptKnows(const QString &package)
+{
+    QProcess apt;
+    apt.start(QStringLiteral("apt-cache"), {QStringLiteral("show"), QStringLiteral("--no-all-versions"), package});
+    if (!apt.waitForFinished(5000)) {
+        apt.kill();
+        return false;
+    }
+    return apt.exitCode() == 0 && apt.readAllStandardOutput().contains("Package: ");
+}
+
 void Catalog::loadCurated()
 {
     // The installed copy wins so the list can be tuned without a rebuild;
@@ -662,11 +682,17 @@ void Catalog::loadCurated()
         c.icon = o.value(QStringLiteral("icon")).toString();
         c.desktop = o.value(QStringLiteral("desktop")).toString();
         c.category = o.value(QStringLiteral("category")).toString();
+        // An app from a repository only some PCs have (such as Ganger's)
+        // is listed only where apt knows its package.
+        if (o.value(QStringLiteral("onlyIfAvailable")).toBool() && (c.packages.isEmpty() || !aptKnows(c.packages.constFirst()))) {
+            continue;
+        }
         m_curated.append(c);
     }
     m_homeSwaps = strings(root.value(QStringLiteral("homeSwaps")));
     m_homeInstalled = strings(root.value(QStringLiteral("homeInstalled")));
     m_essentials = strings(root.value(QStringLiteral("essentials")));
+    m_wildos = strings(root.value(QStringLiteral("wildos")));
     const QJsonObject featured = root.value(QStringLiteral("featured")).toObject();
     for (auto it = featured.begin(); it != featured.end(); ++it) {
         m_featured.insert(it.key(), strings(it.value()));
@@ -1057,7 +1083,49 @@ qint64 Catalog::installedSize(const QString &key) const
     if (r && installedSource(key) == QLatin1String("flatpak")) {
         return m_flatpak->installedSizes().value(r->flatpakId, -1);
     }
+    if (r && !r->packages.isEmpty() && installedSource(key) == QLatin1String("apt")) {
+        return m_sizes->size(r->packages.constFirst());
+    }
     return -1;
+}
+
+qint64 Catalog::appSize(const QString &key) const
+{
+    const Record *r = record(key);
+    return r && !r->packages.isEmpty() ? m_sizes->size(r->packages.constFirst()) : -1;
+}
+
+QStringList Catalog::wildosApps() const
+{
+    QStringList out;
+    for (const QString &id : m_wildos) {
+        const QString key = keyFor(id);
+        if (!key.isEmpty() && !out.contains(key)) {
+            out << key;
+        }
+    }
+    return out;
+}
+
+QStringList Catalog::wildosPackages() const
+{
+    QStringList out;
+    for (const Curated &c : m_curated) {
+        if (m_wildos.contains(c.key) && !c.packages.isEmpty()) {
+            out << c.packages.constFirst();
+        }
+    }
+    return out;
+}
+
+void Catalog::reinstallWildOS()
+{
+    for (const QString &key : wildosApps()) {
+        const Record *r = record(key);
+        if (r && !isInstalled(key)) {
+            install(key);
+        }
+    }
 }
 
 int Catalog::updateCount() const

@@ -18,13 +18,13 @@ class Windows : public QObject
 public:
     static Windows *instance();
 
-    QQuickWindow *open(const QString &component, const QVariantMap &properties, const QString &parentWindow);
+    QQuickWindow *open(const QString &component, const QVariantMap &properties, const QString &parentWindow, bool modal = false);
     void hold();
     void release();
 
 private:
     explicit Windows(QObject *parent = nullptr);
-    void attach(QQuickWindow *window, const QString &parentWindow);
+    bool attach(QQuickWindow *window, const QString &parentWindow);
     void scheduleQuit();
 
     QQmlEngine *m_engine;

@@ -3,8 +3,8 @@ import QtQuick.Effects
 import WildOS.UI as UI
 
 // The Capture toolbar at the top of the main screen (AppCapture.dc): 6px
-// in, radius 12, on the panel glass with a 16px 40px shadow. Screenshot or
-// Record; area, window, full screen or freeform; the delay; options; the
+// in, radius 12, on the panel glass with a 16px 40px shadow. Screenshot,
+// Record or Scan (which opens the Scan window); area, window, full screen or freeform; the delay; options; the
 // accent Capture button and Close. Nothing in it takes the keyboard, so
 // Space, Enter and Escape always reach the overlay.
 Item {
@@ -109,6 +109,18 @@ Item {
                     enabled: CaptureApp.canRecord
                     checked: CaptureApp.recordMode
                     onClicked: CaptureApp.recordMode = true
+                }
+                // Paper rather than the screen: opens the Scan window.
+                UI.SegmentButton {
+                    height: 26
+                    focusPolicy: Qt.NoFocus
+                    checkable: false
+                    text: qsTr("Scan")
+                    checked: false
+                    onClicked: {
+                        CaptureApp.cancel();
+                        CaptureApp.openScan();
+                    }
                 }
             }
         }

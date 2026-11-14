@@ -48,8 +48,20 @@ target_link_libraries(wildos-dialogs PRIVATE
 add_executable(32bit-blocked src/32bit-blocked.c)
 target_link_options(32bit-blocked PRIVATE -static)
 
+# sudo in a terminal: one prompt that takes a password or a finger.
+add_library(pam_wildos_fingerprint MODULE src/pam_wildos_fingerprint.c)
+set_target_properties(pam_wildos_fingerprint PROPERTIES PREFIX "")
+target_compile_options(pam_wildos_fingerprint PRIVATE -Wall -Wextra)
+target_link_libraries(pam_wildos_fingerprint PRIVATE pam)
+install(TARGETS pam_wildos_fingerprint LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/security)
+
+# Advanced protection's fingerprint rule: notes each password sign-in.
+add_executable(fingerprint-stamp src/fingerprint-stamp.c)
+target_compile_options(fingerprint-stamp PRIVATE -Wall -Wextra)
+
 set(LIBEXEC ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
-install(TARGETS wildos-dialogs 32bit-blocked RUNTIME DESTINATION ${LIBEXEC})
+install(TARGETS wildos-dialogs 32bit-blocked fingerprint-stamp RUNTIME DESTINATION ${LIBEXEC})
+install(FILES data/fingerprint-stamp.socket data/fingerprint-stamp@.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
 install(PROGRAMS data/32bit-prompt-setup DESTINATION ${LIBEXEC})
 install(FILES data/wildos-32bit-prompt.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
 install(PROGRAMS data/record-package-sources DESTINATION ${LIBEXEC})

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Advanced protection: Guest session (guest). Run as root by
+# advanced-protection-apply with the new value: on makes the guest account,
+# off signs any guest out and removes it.
+case "${1:-}" in
+    on|off) exec /usr/libexec/wildos/guest-account "$1" ;;
+    *) echo "usage: guest on|off" >&2; exit 2 ;;
+esac

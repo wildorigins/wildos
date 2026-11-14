@@ -7,3 +7,7 @@
 # scripts in /etc/grub.d that are executable.
 execute_after_dh_fixperms:
 	chmod 0755 debian/wildos-base/usr/lib/wildos/grub.d/*
+	chmod 0755 debian/wildos-base/usr/libexec/wildos/crypttab-speed
+	chmod 0755 debian/wildos-base/usr/libexec/wildos/windows-clock
+	chmod 0755 debian/wildos-base/usr/libexec/wildos/guest-account
+	chmod 0755 debian/wildos-base/usr/lib/wildos/advanced-protection.d/guest

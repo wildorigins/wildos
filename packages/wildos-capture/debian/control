@@ -19,6 +19,8 @@ Build-Depends:
  libkf6config-dev,
  libkf6purpose-dev,
  libkpipewire-dev,
+ libsane-dev,
+ pkgconf,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -27,7 +29,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.3),
+ wildos-ui (>= 0.1.11),
  wildos-overlays (>= 0.1.1),
  kwin-wayland,
  layer-shell-qt,
@@ -40,9 +42,9 @@ Depends:
  qml6-module-qtquick-window,
  qml6-module-qtqml-workerscript,
  libkf6purpose-bin,
-Breaks: wildos-overlays (<< 0.1.1)
+Breaks: wildos-overlays (<< 0.1.1), wildos-pdf (<< 0.1.4)
 Replaces: wildos-overlays (<< 0.1.1)
-Description: Wild OS Capture: screenshots and screen recording
+Description: Wild OS Capture: screenshots, screen recording and scanning
  Print Screen and Win+Shift+S bring up the Capture toolbar over a frozen
  screen: take a screenshot or record, of an area, a window, the full
  screen or a freeform shape, now or after a delay. Win+Shift+R starts it
@@ -52,3 +54,7 @@ Description: Wild OS Capture: screenshots and screen recording
  pen, highlighter, arrow, box, text, blur and crop in five colours. It
  saves to Pictures/Screenshots; recordings go to Videos/Screen recordings.
  KWin takes the pictures and PipeWire carries the recordings.
+ .
+ The Scan tab scans paper from a network scanner (eSCL and WSD, through
+ sane-airscan) or a USB one (SANE), from the glass or the feeder, and
+ saves the pages as a PDF or as pictures, or opens them in PDF to sign.

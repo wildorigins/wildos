@@ -16,6 +16,11 @@ if [ "$1" = "configure" ]; then
         if [ "$(findmnt -no FSTYPE /)" != btrfs ]; then
             dracut --force >/dev/null 2>&1 || echo "wildos-recovery: the start-up files are updated at the next kernel update" >&2
         fi
+        # The kernel running now works, so a newer one installed later gets
+        # one start to prove itself before the PC goes back to this one.
+        if [ -e /boot/grub/grubenv ] && ! grub-editenv /boot/grub/grubenv list | grep -q '^wildos_kernel_ok='; then
+            grub-editenv /boot/grub/grubenv set "wildos_kernel_ok=$(uname -r)" || true
+        fi
         if [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null; then
             update-grub >/dev/null 2>&1 || true
         fi

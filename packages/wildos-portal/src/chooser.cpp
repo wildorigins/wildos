@@ -171,6 +171,26 @@ Chooser::Chooser(const Request &request, QObject *parent)
     m_purpose = m_request.mode == Folder || m_request.mode == SaveFiles ? QStringLiteral("folders") : purposeOf(m_request.filters);
     m_folder->openUrl(startFolder());
     m_initialName = displayName(m_request.name);
+
+    // Pictures open in Large icons so they can be told apart, everything
+    // else in Details, until the person picks a view for that kind.
+    const QSettings recent(recentFoldersFile(), QSettings::IniFormat);
+    const QString saved = recent.value(QStringLiteral("view/") + m_purpose).toString();
+    m_viewMode = saved == QLatin1String("icons") || saved == QLatin1String("details") ? saved
+        : m_purpose == QLatin1String("pictures")                                     ? QStringLiteral("icons")
+                                                                                     : QStringLiteral("details");
+}
+
+void Chooser::setViewMode(const QString &mode)
+{
+    if (mode == m_viewMode || (mode != QLatin1String("icons") && mode != QLatin1String("details"))) {
+        return;
+    }
+    m_viewMode = mode;
+    Q_EMIT viewModeChanged();
+    QDir().mkpath(QFileInfo(recentFoldersFile()).absolutePath());
+    QSettings recent(recentFoldersFile(), QSettings::IniFormat);
+    recent.setValue(QStringLiteral("view/") + m_purpose, mode);
 }
 
 QString Chooser::recentKey() const
@@ -582,6 +602,16 @@ QString Chooser::accept(const QString &typedText)
             }
             if (row >= 0) {
                 urls.append(folder->urlAt(row));
+            } else if (typed.contains(QLatin1Char('/')) && !typed.contains(QStringLiteral(":/"))) {
+                // A path typed in full opens that file, as Save does.
+                QString path = typed.startsWith(QStringLiteral("~/")) ? QDir::homePath() + typed.mid(1) : typed;
+                if (!path.startsWith(QLatin1Char('/')) && folder->url().isLocalFile()) {
+                    path = QDir(folder->url().toLocalFile()).absoluteFilePath(path);
+                }
+                if (!QFileInfo(path).isFile()) {
+                    return QStringLiteral("\"%1\" does not exist. Check the name, or pick the file in the list.").arg(typed);
+                }
+                urls.append(QUrl::fromLocalFile(QFileInfo(path).absoluteFilePath()));
             } else {
                 const QUrl url = folder->childUrl(typed);
                 if (url.isLocalFile() && !QFileInfo::exists(url.toLocalFile())) {

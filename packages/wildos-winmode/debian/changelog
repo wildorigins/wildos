@@ -1,3 +1,50 @@
+wildos-winmode (0.3.20) trixie; urgency=medium
+
+  * Windows can be activated with a licence on your Microsoft account,
+    through a second Windows account that is removed again afterwards.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 08:39:52 +0000
+
+wildos-winmode (0.3.19) trixie; urgency=medium
+
+  * Setup only offers every processor thread when the threads are
+    really off.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 16:30:00 +0000
+
+wildos-winmode (0.3.18) trixie; urgency=medium
+
+  * Windows apps can be uninstalled from Settings.
+  * The Windows desktop opens in Wild OS's own window; FreeRDP is no
+    longer installed.
+  * Setup shows real progress while it gets the parts Windows mode
+    runs on, instead of sitting at 1%.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 13:36:51 +0000
+
+wildos-winmode (0.3.17) trixie; urgency=medium
+
+  * Windows mode setup knows when the PC is offline: it says so straight
+    away, waits, and carries on by itself once the connection is back,
+    instead of showing Download paused while online and nothing while
+    offline. Other download problems say what happened.
+  * Start over goes back to the first step once setup has stopped,
+    instead of leaving an empty progress page.
+  * Installing the parts Windows mode runs on happens outside its own
+    service, so stopping the service part way can no longer leave software
+    installs (Settings' updates too) refusing to run. An install left
+    half done that way is finished first.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 11:00:00 +0000
+
+wildos-winmode (0.3.16) trixie; urgency=medium
+
+  * Setting up Windows mode while Settings checks for updates no longer
+    stops at the start with "connection dropped": it waits for the update
+    check, and a setup problem says what actually happened.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 12 Nov 2026 21:59:00 +0000
+
 wildos-winmode (0.3.15) trixie; urgency=medium
 
   * Opening a Windows app while Windows is paused no longer starts a new

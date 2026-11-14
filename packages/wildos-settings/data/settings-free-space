@@ -1,0 +1,1368 @@
+#!/usr/bin/python3 -I
+"""Settings > System > Storage > Free up space: measures what can be
+cleared, and clears it.
+
+Half of it is the person's own files and half is the system's, so there
+are two halves:
+
+  As the person, never as root (nothing in a home folder is ever touched
+  with root's rights):
+    measure-home              the Recycle Bins on internal drives, app
+                              caches, leftovers of removed apps in the
+                              home folder, large files in Downloads
+    run ITEM... [--download PATH]...
+                              clear the ticked items; the system ones go
+                              through pkexec (clean), then the home ones
+    run --auto                Tidy up automatically: only when less than 10%
+                              of the disk is free, only the items ticked
+                              when it was turned on, never Downloads; says
+                              what it removed in a notification
+
+  As root, through pkexec, each request under its own polkit action:
+    measure                   (no password) old restore points, update
+                              files, leftovers of removed packages,
+                              Windows mode's disk
+    measure open-files        (no password) which files under the asking
+                              person's cache folders their programs have
+                              open, so App caches leaves them
+    clean ITEM...             (admin password) clear those of them
+    auto-system               (no password) the same for Tidy up
+                              automatically: does nothing unless less than
+                              10% of the disk is free, and clears only what
+                              set-auto stored for the person asking
+    set-auto [ITEM...]        (admin password) store which system items
+                              Tidy up automatically may clear for the
+                              person asking; none turns it off
+
+ITEMs are the page's: bin, restorePoints, updates, caches, leftovers,
+winmode, downloads. Clearing never takes a list of paths from the caller
+(Review's downloads are only checked against the list measured here): it
+measures again and removes exactly what measuring would show.
+
+Sizes are what the disk would really get back, not file lengths: blocks
+in use, each hard-linked file counted once, and on Btrfs only what no
+other snapshot shares. What was cleared is noted in the journal as
+"FREED {json}", which Settings > System > History shows.
+"""
+
+import fcntl
+import glob
+import json
+import os
+import pwd
+import re
+import shutil
+import sqlite3
+import stat
+import subprocess
+import sys
+import syslog
+import time
+import urllib.parse
+
+DAY = 24 * 3600
+
+# Restore points: the newest this many always stay.
+KEEP_POINTS = 3
+RP_TOOL = "/usr/libexec/wildos/restore-points"
+BTRFS_STORE = "/.snapshots"
+EXT4_STORE = "/var/lib/wildos/restore-points"
+# A go-back's undo point is how the person gets back again; restore-points
+# itself protects it for an hour (UNDO_GRACE), so this does too.
+UNDO_GRACE = 60 * 60
+
+APT_ARCHIVES = "/var/cache/apt/archives"
+PACKAGEKIT_CACHE = "/var/cache/PackageKit"
+
+WINMODE_CONFIG = "/etc/wildos/winmode.json"
+WINMODE_DISK = "/var/lib/wildos/winmode/windows.qcow2"
+WINMODE_DOMAIN = "wildos-windows"
+# Windows' own retrim can take a while on a large, long-unused disk.
+TRIM_TIMEOUT = 900
+
+HELPER = "/usr/libexec/wildos/settings-free-space"
+SYSTEM_CONFIG = "/etc/wildos/free-space.json"
+ROOT_LOCK = "/run/lock/wildos-free-space.lock"
+# Tidy up automatically starts below this share of the disk free.
+LOW_SPACE = 0.10
+
+PAGE_ITEMS = ("bin", "restorePoints", "updates", "caches", "leftovers", "winmode", "downloads")
+SYSTEM_ITEMS = ("restorePoints", "updates", "leftovers", "winmode")
+HOME_ITEMS = ("bin", "caches", "leftovers", "downloads")
+# Downloads are only ever cleared from Review, never automatically.
+AUTO_ITEMS = ("bin", "restorePoints", "updates", "caches", "leftovers", "winmode")
+LABELS = {"bin": "Recycle Bin", "restorePoints": "old restore points", "updates": "update files",
+          "caches": "app caches", "leftovers": "leftovers from removed apps",
+          "winmode": "unused space inside Windows mode", "downloads": "large files in Downloads"}
+
+DOWNLOADS_MIN = 100 * 1024 * 1024
+DOWNLOADS_DAYS = 90
+
+# Wild OS's own apps (Recommends of wildos-desktop, so each can be
+# uninstalled) and what each keeps in the home folder, from where their
+# code puts it. Only an app's own settings, index and state: what people
+# make with them lives in Notes, Recordings, Music, Videos, Pictures and
+# Documents, which are never on this list. Only folders whose package is
+# no longer installed count. The shared wildosrc (clock and theme choices)
+# belongs to the whole desktop and is never on it either. Write and Tables
+# keep their documents' settings in LibreOffice's profile, which belongs to
+# LibreOffice, so that stays out.
+WILDOS_APP_FOLDERS = {
+    "wildos-mail": [".config/wildos-mail", ".local/share/wildos-mail", ".cache/wildos-mail"],
+    "wildos-music": [".config/wildos/music.conf", ".local/share/wildos-music"],
+    "wildos-notes": [".config/wildos/notes.conf", ".local/share/wildos-notes"],
+    "wildos-videos": [".config/wildos/videos.conf", ".local/share/wildos-videos", ".cache/wildos-videos"],
+    "wildos-voice": [".config/wildos/voice.conf", ".local/share/wildos-voice"],
+    "wildos-archive": [".config/wildos/archive.conf", ".cache/wildos/archive"],
+    "wildos-backup": [".config/wildos/backup.conf", ".local/state/wildos-backup", ".cache/wildos-backup",
+                      ".config/systemd/user/wildos-backup.timer.d"],
+    "wildos-pdf": [".config/wildos-pdf.conf", ".local/share/wildos-pdf", ".cache/wildos-pdf"],
+    "wildos-remote": [".config/wildos-remote", ".local/share/wildos-remote", ".cache/wildos-remote"],
+    "wildos-capture": [".config/wildosscreenshotrc"],
+    "wildos-terminal": [".config/wildosterminalrc"],
+    "wildos-office": [".local/share/wildos-office"],
+}
+
+# Caches that look like caches but a running session needs whole: KDE's
+# list of installed apps and their file types. Deleting it mid-session
+# leaves Start and Open with empty until it is rebuilt.
+CACHE_KEEP = [re.compile(r"^ksycoca6"), re.compile(r"^ksycoca5")]
+
+
+# ---------------------------------------------------------------- sizes
+
+def used(st):
+    return st.st_blocks * 512
+
+
+class Walker:
+    """Disk use of trees, each inode counted once across every call, so
+    hard-linked restore points and Flatpak deployments are not counted
+    twice. Never follows symbolic links or crosses into other
+    filesystems."""
+
+    def __init__(self):
+        self.seen = set()
+
+    def size(self, path, files=None):
+        total = 0
+        try:
+            top = os.lstat(path)
+        except OSError:
+            return 0
+        stack = [(path, top)]
+        dev = top.st_dev
+        while stack:
+            p, st = stack.pop()
+            key = (st.st_dev, st.st_ino)
+            if key in self.seen:
+                continue
+            self.seen.add(key)
+            total += used(st)
+            if stat.S_ISDIR(st.st_mode):
+                try:
+                    with os.scandir(p) as it:
+                        for e in it:
+                            try:
+                                cst = e.stat(follow_symlinks=False)
+                            except OSError:
+                                continue
+                            if cst.st_dev != dev:
+                                continue
+                            stack.append((e.path, cst))
+                except OSError:
+                    pass
+            elif files is not None and stat.S_ISREG(st.st_mode):
+                files.append(p)
+        return total
+
+
+def tree_size(path):
+    return Walker().size(path)
+
+
+def content_size(w, path):
+    """What clearing a folder's contents gives back: the folder itself
+    stays, so its own block is not counted."""
+    try:
+        if not stat.S_ISDIR(os.lstat(path).st_mode):
+            return w.size(path)
+        with os.scandir(path) as it:
+            return sum(w.size(e.path) for e in it)
+    except OSError:
+        return 0
+
+
+def run(args, timeout=60, ok=(0,)):
+    try:
+        r = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=timeout,
+                           env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C.UTF-8"})
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode not in ok:
+        return None
+    return r.stdout.decode("utf-8", "replace")
+
+
+def item(targets, kept=None, **extra):
+    d = {"bytes": sum(t.get("bytes", 0) for t in targets), "count": len(targets),
+         "targets": targets, "kept": kept or []}
+    d.update(extra)
+    return d
+
+
+# ---------------------------------------------------------------- packages
+
+def installed_packages():
+    """{"name:arch": (version, status)} and {"name": [arch...]}."""
+    out = run(["dpkg-query", "-W", "-f", "${Package}\t${Architecture}\t${Version}\t${db:Status-Abbrev}\n"]) or ""
+    pkgs = {}
+    for line in out.splitlines():
+        f = line.split("\t")
+        if len(f) == 4:
+            pkgs[f[0] + ":" + f[1]] = (f[2], f[3].strip())
+    return pkgs
+
+
+def present(entry):
+    """Installed in any state short of removed: dpkg's "i" plus unpacked,
+    half-configured and waiting on triggers, which an interrupted update
+    leaves behind."""
+    return bool(entry) and len(entry[1]) > 1 and entry[1][1] in "iUFWt"
+
+
+def is_installed(pkgs, name):
+    return any(k.split(":")[0] == name and present(v) for k, v in pkgs.items())
+
+
+def version_le(a, b):
+    return subprocess.run(["dpkg", "--compare-versions", a, "le", b],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+# ---------------------------------------------------------------- restore points
+
+def restore_points():
+    btrfs = os.path.exists(os.path.join(BTRFS_STORE, "index.json"))
+    store = BTRFS_STORE if btrfs else EXT4_STORE
+    if not os.path.isdir(store):
+        return item([], available=False)
+    pts = []
+    for n in os.listdir(store):
+        if not n.isdigit():
+            continue
+        data = os.path.join(store, n, "snapshot" if btrfs else "tree")
+        try:
+            with open(os.path.join(store, n, "info.json")) as f:
+                info = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if os.path.exists(data):
+            pts.append(info)
+    # The same order restore-points keeps them in: oldest first.
+    pts.sort(key=lambda p: (p.get("time", 0), p["id"]))
+    pending = None
+    try:
+        with open(os.path.join(store, "pending")) as f:
+            pending = json.load(f).get("id")
+    except (OSError, ValueError):
+        pass
+
+    newest = pts[-KEEP_POINTS:]
+    kept, victims = [], []
+    for p in pts:
+        if p in newest:
+            kept.append((p, "one of the newest %d" % KEEP_POINTS))
+        elif p["id"] == pending:
+            kept.append((p, "going back to it is waiting for a restart"))
+        elif p.get("kind") == "undo" and time.time() - p.get("time", 0) < UNDO_GRACE:
+            kept.append((p, "it undoes a go-back made less than an hour ago"))
+        else:
+            victims.append(p)
+
+    def describe(p, path, size, why=None):
+        d = {"id": p["id"], "path": path, "label": p.get("label", ""), "time": p.get("time", 0),
+             "kind": p.get("kind", ""), "kernels": p.get("kernels") or [], "bytes": size}
+        if why:
+            d["why"] = why
+        return d
+
+    targets = []
+    if btrfs:
+        # btrfs filesystem du: "Exclusive" is what deleting that one
+        # snapshot frees. Data shared only among the points being deleted
+        # isn't in anyone's Exclusive, so the total may come out a little
+        # low, never high.
+        paths = [os.path.join(store, str(p["id"]), "snapshot") for p in victims]
+        excl = {}
+        out = run(["btrfs", "filesystem", "du", "-s", "--raw"] + paths, timeout=600) if paths else ""
+        for line in (out or "").splitlines()[1:]:
+            f = line.split(None, 3)
+            if len(f) == 4 and f[0].isdigit():
+                excl[f[3]] = int(f[1])
+        w = Walker()
+        for p, _ in kept:
+            w.size(os.path.join(store, str(p["id"]), "boot"))
+        for p in victims:
+            pdir = os.path.join(store, str(p["id"]))
+            size = excl.get(os.path.join(pdir, "snapshot"), 0) + w.size(os.path.join(pdir, "boot"))
+            targets.append(describe(p, pdir, size))
+    else:
+        # The points are rsync copies hard-linked to each other: what the
+        # kept points also hold is not freed, so they are walked first.
+        w = Walker()
+        for p, _ in kept:
+            w.size(os.path.join(store, str(p["id"])))
+        for p in victims:
+            pdir = os.path.join(store, str(p["id"]))
+            targets.append(describe(p, pdir, w.size(pdir)))
+    return item(targets, [describe(p, os.path.join(store, str(p["id"])), 0, why) for p, why in kept],
+                available=True, backend="btrfs" if btrfs else "ext4", how=RP_TOOL + " delete ID")
+
+
+# ---------------------------------------------------------------- update files
+
+def deb_fields(name):
+    """name_version_arch.deb, version with ":" written as %3a."""
+    base = os.path.basename(name)[:-4]
+    parts = base.split("_")
+    if len(parts) != 3:
+        return None
+    return parts[0], urllib.parse.unquote(parts[1]), parts[2]
+
+
+def apt_debs(pkgs):
+    targets, kept = [], []
+    for path in sorted(glob.glob(os.path.join(APT_ARCHIVES, "*.deb"))):
+        f = deb_fields(path)
+        try:
+            size = used(os.lstat(path))
+        except OSError:
+            continue
+        if not f:
+            kept.append({"path": path, "bytes": size, "why": "not a name apt gives its downloads"})
+            continue
+        name, version, arch = f
+        have = pkgs.get(name + ":" + arch)
+        if not have or not present(have):
+            # Not installed: a new package an update still has to install.
+            kept.append({"path": path, "bytes": size, "why": "not installed yet"})
+        elif version_le(version, have[0]):
+            targets.append({"path": path, "bytes": size,
+                            "why": "installed" if version == have[0] else "older than the installed " + have[0]})
+        else:
+            kept.append({"path": path, "bytes": size, "why": "a newer version waiting to be installed"})
+    partial = os.path.join(APT_ARCHIVES, "partial")
+    if os.path.isdir(partial):
+        kept.append({"path": partial, "bytes": tree_size(partial), "why": "downloads apt may still be finishing"})
+    return targets, kept
+
+
+def packagekit_cache(pkgs):
+    """PackageKit's apt backend downloads into apt's own archives; anything
+    of its own that is a .deb follows the same rule, the rest (its
+    metadata) is kept."""
+    targets, kept = [], []
+    if not os.path.isdir(PACKAGEKIT_CACHE):
+        return targets, kept
+    for root, dirs, files in os.walk(PACKAGEKIT_CACHE):
+        for n in files:
+            path = os.path.join(root, n)
+            try:
+                size = used(os.lstat(path))
+            except OSError:
+                continue
+            f = deb_fields(path) if n.endswith(".deb") else None
+            have = f and pkgs.get(f[0] + ":" + f[2])
+            if f and have and present(have) and version_le(f[1], have[0]):
+                targets.append({"path": path, "bytes": size, "why": "installed"})
+            else:
+                kept.append({"path": path, "bytes": size, "why": "PackageKit's own lists, not a download" if not f
+                             else "not installed yet"})
+    return targets, kept
+
+
+def flatpak_refs(installation):
+    """flatpak's own idea of unused runtimes in one installation (the list
+    `flatpak uninstall --unused` would offer, which leaves out pinned and
+    explicitly installed runtimes), read through libflatpak so nothing is
+    asked or removed."""
+    try:
+        import gi
+        gi.require_version("Flatpak", "1.0")
+        from gi.repository import Flatpak
+    except (ImportError, ValueError):
+        return None, []
+    try:
+        inst = Flatpak.Installation.new_system(None) if installation == "system" else Flatpak.Installation.new_user(None)
+        unused = inst.list_unused_refs(None, None)
+        apps = inst.list_installed_refs_by_kind(Flatpak.RefKind.APP, None)
+    except Exception:
+        return None, []
+    return [(r.format_ref(), r.get_deploy_dir(), r.get_installed_size()) for r in unused], \
+        [(a.get_name(), a.get_deploy_dir()) for a in apps]
+
+
+def runtimes_used_by(deploy_dirs):
+    """Runtime and SDK refs named in installed apps' metadata."""
+    used_refs = set()
+    for d in deploy_dirs:
+        try:
+            with open(os.path.join(d, "metadata"), encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        for m in re.finditer(r"^(?:runtime|sdk)=(\S+)", text, re.M):
+            used_refs.add("runtime/" + m.group(1))
+    return used_refs
+
+
+def home_flatpak_apps():
+    """Deploy dirs of every person's own Flatpak apps, read as root but only
+    their small metadata files, so the system's unused list never takes a
+    runtime someone's own app runs on."""
+    dirs = []
+    for p in pwd.getpwall():
+        if 1000 <= p.pw_uid < 60000:
+            dirs += glob.glob(os.path.join(p.pw_dir, ".local/share/flatpak/app/*/*/*/active"))
+    return dirs
+
+
+def flatpak_unused(installation, extra_used=()):
+    unused, apps = flatpak_refs(installation)
+    if unused is None:
+        return [], [{"path": "flatpak (" + installation + ")", "bytes": 0, "why": "libflatpak could not be read"}]
+    needed = runtimes_used_by([a[1] for a in apps] + list(extra_used))
+    targets, kept = [], []
+    w = Walker()
+    for ref, deploy, size in unused:
+        base = "/".join(ref.split("/")[:4])
+        entry = {"path": deploy or ref, "ref": ref}
+        if base in needed:
+            entry.update(bytes=size, why="an installed app still names it")
+            kept.append(entry)
+            continue
+        # The deploy folder's files are hard links into flatpak's store,
+        # which `flatpak uninstall` prunes, so its disk use is what comes
+        # back.
+        entry.update(bytes=w.size(deploy) if deploy else size, why="no installed app uses it")
+        targets.append(entry)
+    return targets, kept
+
+
+def old_kernels(pkgs, points_kernels, btrfs):
+    """Only the kernels apt itself would autoremove: Debian's
+    apt-auto-removal keeps the running one, the newest and the one before
+    it. Never the running kernel, whatever apt says."""
+    running = os.uname().release
+    out = run(["apt-get", "-s", "-o", "Debug::NoLocking=1", "autoremove"], timeout=120) or ""
+    names = []
+    for line in out.splitlines():
+        m = re.match(r"^Remv (\S+)", line)
+        if m and re.match(r"^linux-(image|modules|headers|kbuild)-", m.group(1)):
+            names.append(m.group(1))
+    targets, kept = [], []
+    for name in names:
+        version = re.sub(r"^linux-(image|modules|headers|kbuild)-(unsigned-)?", "", name)
+        size_kib = run(["dpkg-query", "-W", "-f", "${Installed-Size}", name]) or "0"
+        size = int(size_kib.strip() or 0) * 1024
+        entry = {"path": "package " + name, "package": name, "bytes": size}
+        if running.startswith(version) or version.startswith(running):
+            entry["why"] = "the kernel running now"
+            kept.append(entry)
+        elif btrfs and version in points_kernels:
+            # On Btrfs a restore point that still has this kernel keeps
+            # its files, so removing the package frees nothing until that
+            # point goes too.
+            entry.update(bytes=0, why="a restore point being kept still holds it, so nothing would come back")
+            targets.append(entry)
+        else:
+            entry["why"] = "apt marks it as no longer needed"
+            targets.append(entry)
+    for k, v in pkgs.items():
+        n = k.split(":")[0]
+        if re.match(r"^linux-image-\d", n) and present(v) and n not in names:
+            kept.append({"path": "package " + n, "package": n, "bytes": 0,
+                         "why": "the kernel running now" if running in n else "apt keeps it (newest or the one before)"})
+    return targets, kept
+
+
+def update_files(pkgs, rp):
+    parts = {}
+    t, k = apt_debs(pkgs)
+    parts["apt"] = item(t, k, how="rm each file")
+    t, k = packagekit_cache(pkgs)
+    parts["packagekit"] = item(t, k, how="rm each file")
+    t, k = flatpak_unused("system", home_flatpak_apps())
+    parts["flatpak"] = item(t, k, how="flatpak uninstall --system --noninteractive REF")
+    kept_kernels = set()
+    for p in rp.get("kept", []):
+        kept_kernels.update(p.get("kernels") or [])
+    t, k = old_kernels(pkgs, kept_kernels, rp.get("backend") == "btrfs")
+    parts["kernels"] = item(t, k, how="dpkg --remove PACKAGES")
+    return {"bytes": sum(p["bytes"] for p in parts.values()), "count": sum(p["count"] for p in parts.values()),
+            "parts": parts}
+
+
+# ---------------------------------------------------------------- leftovers (system)
+
+def removed_package_configs(pkgs):
+    """Packages removed but not purged (dpkg's "rc"): their configuration
+    files are all that is left of them."""
+    targets = []
+    for k, v in sorted(pkgs.items()):
+        if not v[1].startswith("rc"):
+            continue
+        name = k.split(":")[0]
+        out = run(["dpkg-query", "-W", "-f", "${Conffiles}\n", k]) or ""
+        files, size = [], 0
+        for line in out.splitlines():
+            f = line.split()
+            if f and f[0].startswith("/"):
+                try:
+                    st = os.lstat(f[0])
+                except OSError:
+                    continue
+                files.append(f[0])
+                size += used(st)
+        targets.append({"path": "package " + name, "package": name, "files": files, "bytes": size})
+    return item(targets, how="dpkg --purge PACKAGES")
+
+
+# ---------------------------------------------------------------- Windows mode
+
+def winmode():
+    cfg = {}
+    try:
+        with open(WINMODE_CONFIG) as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        pass
+    domain = cfg.get("domain") or WINMODE_DOMAIN
+    try:
+        st = os.stat(WINMODE_DISK)
+    except OSError:
+        return item([], available=False)
+    allocated = used(st)
+    state = (run(["virsh", "-c", "qemu:///system", "domstate", domain], timeout=15) or "").strip()
+    saved = (run(["virsh", "-c", "qemu:///system", "dominfo", domain], timeout=15) or "")
+    managed_save = bool(re.search(r"^Managed save:\s+yes", saved, re.M))
+    guest_used = None
+    if state == "running":
+        # The guest agent knows how full Windows' own drives are.
+        out = run(["virsh", "-c", "qemu:///system", "qemu-agent-command", domain,
+                   '{"execute":"guest-get-fsinfo"}', "--timeout", "10"], timeout=20)
+        try:
+            fs = json.loads(out or "{}").get("return") or []
+            sizes = [f.get("used-bytes") for f in fs if isinstance(f.get("used-bytes"), int)]
+            if sizes:
+                guest_used = sum(sizes)
+        except ValueError:
+            pass
+    d = {"path": WINMODE_DISK, "allocated": allocated, "apparent": st.st_size, "state": state or "unknown",
+         "managed_save": managed_save, "guest_used": guest_used}
+    if guest_used is None:
+        # Without Windows running nothing can read inside its disk short of
+        # opening NTFS here, which this never does.
+        d["bytes"] = 0
+        d["why"] = "Windows' own free space is only known while Windows mode is on"
+        return item([], [d], available=True, known=False, state=d["state"], managed_save=managed_save,
+                    allocated=allocated)
+    d["bytes"] = max(0, allocated - guest_used)
+    return item([d], available=True, known=True, state=d["state"], managed_save=managed_save, allocated=allocated,
+                guest_used=guest_used)
+
+
+def measure_system():
+    pkgs = installed_packages()
+    rp = restore_points()
+    out = {
+        "restorePoints": rp,
+        "updates": update_files(pkgs, rp),
+        "leftoversSystem": removed_package_configs(pkgs),
+        "winmode": winmode(),
+    }
+    return out
+
+
+# ---------------------------------------------------------------- home
+
+def home():
+    return os.path.expanduser("~")
+
+
+def xdg(name, default):
+    path = os.path.join(home(), ".config/user-dirs.dirs")
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                m = re.match(r'^XDG_%s_DIR="(.*)"' % name, line.strip())
+                if m:
+                    return m.group(1).replace("$HOME", home())
+    except OSError:
+        pass
+    return os.path.join(home(), default)
+
+
+def removable_devices():
+    """Device paths on drives that can be unplugged (USB sticks, SD cards),
+    with everything on them: partitions, and encrypted volumes inside
+    those."""
+    out = run(["lsblk", "-J", "-o", "PATH,RM,HOTPLUG"], timeout=15)
+    found = set()
+
+    def walk(nodes, inherited):
+        for n in nodes or []:
+            gone = inherited or n.get("rm") in (True, "1") or n.get("hotplug") in (True, "1")
+            if gone and n.get("path"):
+                found.add(n["path"])
+            walk(n.get("children"), gone)
+    try:
+        walk(json.loads(out or "{}").get("blockdevices"), False)
+    except ValueError:
+        pass
+    return found
+
+
+def mounted_filesystems():
+    """(mount point, source device) for every mounted block device."""
+    mounts = []
+    try:
+        with open("/proc/self/mountinfo", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                left, _, right = line.partition(" - ")
+                fields, extra = left.split(), right.split()
+                if len(fields) >= 5 and len(extra) >= 2 and extra[1].startswith("/dev/"):
+                    point = fields[4].replace(r"\040", " ")
+                    mounts.append((point, extra[1]))
+    except OSError:
+        pass
+    return mounts
+
+
+def trash_bins():
+    """Every Recycle Bin of this person: the one in the home folder, and the
+    .Trash-UID and .Trash/UID folders the file manager makes at the top of
+    other drives. Bins on removable drives are only reported, never
+    cleared: the drive may be someone else's, or gone by the time the
+    clearing starts."""
+    uid = os.getuid()
+    bins, removable_bins = [], []
+    home_bin = os.path.join(home(), ".local/share/Trash")
+    if os.path.isdir(home_bin):
+        bins.append(home_bin)
+    try:
+        home_dev = os.stat(home()).st_dev
+    except OSError:
+        home_dev = None
+    removable = removable_devices()
+    seen = set()
+    for point, source in mounted_filesystems():
+        try:
+            st = os.stat(point)
+        except OSError:
+            continue
+        # Files on the home folder's own drive always go to the home bin.
+        if st.st_dev == home_dev or st.st_dev in seen:
+            continue
+        seen.add(st.st_dev)
+        for cand in (os.path.join(point, ".Trash-%d" % uid), os.path.join(point, ".Trash", str(uid))):
+            if os.path.isdir(cand) and not os.path.islink(cand) and os.stat(cand).st_uid == uid:
+                (removable_bins if source in removable else bins).append(cand)
+    return bins, removable_bins
+
+
+def recycle_bin():
+    bins, removable_bins = trash_bins()
+    w = Walker()
+    targets, kept, count = [], [], 0
+    for b in bins:
+        files = len(glob.glob(os.path.join(b, "info", "*.trashinfo")))
+        count += files
+        size = sum(content_size(w, os.path.join(b, sub)) for sub in ("files", "info", "expunged"))
+        targets.append({"path": b, "bytes": size, "files": files,
+                        "clears": [os.path.join(b, sub) + "/*" for sub in ("files", "info", "expunged")]
+                        + [os.path.join(b, "directorysizes")]})
+    for b in removable_bins:
+        kept.append({"path": b, "bytes": tree_size(b), "why": "on a removable drive"})
+    return item(targets, kept, files=count, how="the contents of files, info and expunged in each bin")
+
+
+def app_caches(busy=None):
+    targets, kept = [], []
+    cache = os.path.join(home(), ".cache")
+    w = Walker()
+    # Files open apps are using stay, so they are counted first and so
+    # never as space that comes back.
+    if busy is None:
+        busy = open_files() or set()
+    for p in sorted(busy):
+        kept.append({"path": p, "bytes": w.size(p), "why": "an open app is using it"})
+    try:
+        entries = sorted(os.listdir(cache))
+    except OSError:
+        entries = []
+    for n in entries:
+        p = os.path.join(cache, n)
+        if any(r.match(n) for r in CACHE_KEEP):
+            kept.append({"path": p, "bytes": tree_size(p), "why": "KDE's list of installed apps, which the session needs"})
+            continue
+        targets.append({"path": p, "bytes": content_size(w, p)})
+    for p in sorted(glob.glob(os.path.join(home(), ".var/app/*/cache"))):
+        if os.path.islink(p):
+            continue
+        targets.append({"path": p, "bytes": content_size(w, p)})
+    thumbs = os.path.join(cache, "thumbnails")
+    return item(targets, kept, thumbnails=tree_size(thumbs) if os.path.isdir(thumbs) else 0,
+                how="the contents of each folder; files an open app is using are left")
+
+
+def flatpak_ids():
+    ids = set()
+    for scope in ("--user", "--system"):
+        out = run(["flatpak", "list", scope, "--app", "--columns=application"], timeout=30)
+        if out is None:
+            return None
+        ids.update(line.strip() for line in out.splitlines() if line.strip())
+    return ids
+
+
+# plasma-browser-integration puts its native messaging host into the
+# Flatpak folder of every browser it knows, installed or not.
+BROWSER_INTEGRATION = {"org.kde.plasma.browser_integration.json", "plasma-browser-integration-host"}
+
+
+def only_browser_integration(path):
+    found = False
+    for root, dirs, files in os.walk(path):
+        for n in files:
+            if n not in BROWSER_INTEGRATION:
+                return False
+            found = True
+    return found
+
+
+def leftovers_home():
+    targets, kept = [], []
+    ids = flatpak_ids()
+    w = Walker()
+    for p in sorted(glob.glob(os.path.join(home(), ".var/app/*"))):
+        app = os.path.basename(p)
+        if os.path.islink(p) or not os.path.isdir(p):
+            continue
+        if ids is None:
+            kept.append({"path": p, "bytes": 0, "why": "could not list installed Flatpak apps"})
+        elif app in ids:
+            continue
+        elif only_browser_integration(p):
+            kept.append({"path": p, "bytes": w.size(p),
+                         "why": "KDE's browser integration writes it again at every sign-in"})
+        else:
+            targets.append({"path": p, "app": app, "kind": "flatpak", "bytes": w.size(p)})
+    pkgs = installed_packages()
+    for pkg, rels in sorted(WILDOS_APP_FOLDERS.items()):
+        if is_installed(pkgs, pkg):
+            continue
+        for rel in rels:
+            p = os.path.join(home(), rel)
+            if os.path.lexists(p) and not os.path.islink(p):
+                targets.append({"path": p, "app": pkg, "kind": "wildos", "bytes": w.size(p)})
+    apps = sorted({t["app"] for t in targets})
+    return item(targets, kept, apps=apps)
+
+
+def kactivities_last_used():
+    """When KDE's activity history last saw each file opened, if it is on."""
+    db = os.path.join(home(), ".local/share/kactivitymanagerd/resources/database")
+    seen = {}
+    if not os.path.exists(db):
+        return seen
+    try:
+        con = sqlite3.connect("file:" + urllib.parse.quote(db) + "?mode=ro", uri=True, timeout=2)
+        for res, last in con.execute("SELECT targettedResource, MAX(lastUpdate) FROM ResourceScoreCache GROUP BY targettedResource"):
+            if res and last:
+                seen[res if res.startswith("/") else urllib.parse.unquote(res.replace("file://", ""))] = float(last)
+        con.close()
+    except sqlite3.Error:
+        pass
+    return seen
+
+
+def xbel_last_used():
+    path = os.path.join(home(), ".local/share/recently-used.xbel")
+    seen = {}
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+    except OSError:
+        return seen
+    for m in re.finditer(r'<bookmark href="file://([^"]+)"[^>]*?(?:visited="([^"]+)")?[^>]*?(?:modified="([^"]+)")?', text):
+        p = urllib.parse.unquote(m.group(1))
+        for stamp in (m.group(2), m.group(3)):
+            if stamp:
+                try:
+                    t = time.mktime(time.strptime(stamp[:19], "%Y-%m-%dT%H:%M:%S"))
+                except ValueError:
+                    continue
+                seen[p] = max(seen.get(p, 0), t)
+    return seen
+
+
+def large_downloads():
+    folder = xdg("DOWNLOAD", "Downloads")
+    if os.path.realpath(folder) == os.path.realpath(home()):
+        # Downloads pointed at the home folder itself: too wide to judge.
+        return item([], [{"path": folder, "bytes": 0, "why": "Downloads is the home folder"}], folder=folder)
+    opened = kactivities_last_used()
+    for p, t in xbel_last_used().items():
+        opened[p] = max(opened.get(p, 0), t)
+    cutoff = time.time() - DOWNLOADS_DAYS * DAY
+    targets = []
+    for root, dirs, files in os.walk(folder):
+        for n in files:
+            p = os.path.join(root, n)
+            try:
+                st = os.lstat(p)
+            except OSError:
+                continue
+            if not stat.S_ISREG(st.st_mode) or st.st_size < DOWNLOADS_MIN:
+                continue
+            # Wild OS mounts its disk with noatime, so the file's access
+            # time says nothing. Last opened is the later of when it was
+            # last written (downloaded) and when Wild OS's recent files
+            # last saw it opened.
+            last = max(st.st_mtime, opened.get(p, 0))
+            if last < cutoff:
+                targets.append({"path": p, "name": n, "bytes": used(st), "size": st.st_size, "last": last})
+    targets.sort(key=lambda t: -t["bytes"])
+    return item(targets, folder=folder, how="only the files ticked in Review")
+
+
+def measure_home():
+    return {
+        "bin": recycle_bin(),
+        "caches": app_caches(),
+        "leftoversHome": leftovers_home(),
+        "downloads": large_downloads(),
+    }
+
+
+# ---------------------------------------------------------------- clearing
+
+def disk_free():
+    st = os.statvfs("/")
+    return st.f_bavail * st.f_frsize, st.f_blocks * st.f_frsize
+
+
+def low_on_space():
+    free, total = disk_free()
+    return total > 0 and free / total < LOW_SPACE
+
+
+def hold_lock(path):
+    """One clearing at a time: a second one stops instead of waiting."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        return None
+    return fd
+
+
+def result(removed=None, skipped=None, freed=0, error=None):
+    r = {"freed": freed, "removed": removed or [], "skipped": skipped or []}
+    if error:
+        r["error"] = error
+    return r
+
+
+def remove_path(path):
+    """Removes a file, link or folder without ever following a link out of
+    it; True when it is gone."""
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    try:
+        if stat.S_ISDIR(st.st_mode):
+            shutil.rmtree(path)
+        else:
+            os.unlink(path)
+    except OSError:
+        return False
+    return not os.path.lexists(path)
+
+
+def apt_busy():
+    """apt or an update holds its locks, so its downloads may be in use."""
+    for lock in ("/var/lib/dpkg/lock-frontend", "/var/cache/apt/archives/lock"):
+        if not os.path.exists(lock):
+            continue
+        fd = hold_lock(lock)
+        if fd is None:
+            return True
+        os.close(fd)
+    return False
+
+
+def clean_restore_points():
+    rp = restore_points()
+    removed, skipped, freed = [], [], 0
+    for t in rp["targets"]:
+        if run([RP_TOOL, "delete", str(t["id"])], timeout=1800) is not None:
+            removed.append(t["path"])
+            freed += t["bytes"]
+        else:
+            skipped.append({"path": t["path"], "why": "restore-points could not delete it"})
+    return result(removed, skipped, freed)
+
+
+def clean_updates():
+    m = update_files(installed_packages(), restore_points())["parts"]
+    removed, skipped, freed = [], [], 0
+    files = m["apt"]["targets"] + m["packagekit"]["targets"]
+    if files and apt_busy():
+        skipped += [{"path": t["path"], "why": "an update is running"} for t in files]
+    elif files:
+        lock = hold_lock("/var/cache/apt/archives/lock")
+        for t in files:
+            if os.path.isfile(t["path"]) and not os.path.islink(t["path"]) and remove_path(t["path"]):
+                removed.append(t["path"])
+                freed += t["bytes"]
+        if lock is not None:
+            os.close(lock)
+    for t in m["flatpak"]["targets"]:
+        if run(["flatpak", "uninstall", "--system", "--noninteractive", "-y", t["ref"]], timeout=600) is not None:
+            removed.append(t["ref"])
+            freed += t["bytes"]
+        else:
+            skipped.append({"path": t["ref"], "why": "flatpak could not remove it"})
+    # dpkg itself, not apt: apt would take a new restore point first and use
+    # more space than the kernel gives back. Kernels a kept restore point
+    # still holds give nothing back, so they stay.
+    kernels = [t for t in m["kernels"]["targets"] if t["bytes"] > 0]
+    if kernels:
+        names = [t["package"] for t in kernels]
+        if run(["dpkg", "--remove"] + names, timeout=1800) is not None:
+            removed += ["package " + n for n in names]
+            freed += sum(t["bytes"] for t in kernels)
+        else:
+            skipped += [{"path": "package " + n, "why": "dpkg could not remove it"} for n in names]
+    return result(removed, skipped, freed)
+
+
+def clean_leftovers_system():
+    m = removed_package_configs(installed_packages())
+    names = [t["package"] for t in m["targets"]]
+    if not names:
+        return result()
+    if run(["dpkg", "--purge"] + names, timeout=600) is None:
+        return result(skipped=[{"path": "package " + n, "why": "dpkg could not purge it"} for n in names])
+    return result(["package " + n for n in names], freed=m["bytes"])
+
+
+def winmode_domain():
+    try:
+        with open(WINMODE_CONFIG) as f:
+            return json.load(f).get("domain") or WINMODE_DOMAIN
+    except (OSError, ValueError, AttributeError):
+        return WINMODE_DOMAIN
+
+
+def agent(domain, command, timeout):
+    out = run(["virsh", "-c", "qemu:///system", "qemu-agent-command", domain, json.dumps(command),
+               "--timeout", str(timeout)], timeout=timeout + 30)
+    try:
+        return json.loads(out) if out else None
+    except ValueError:
+        return None
+
+
+def clean_winmode():
+    """Windows TRIMs its own free space and the disk's discard='unmap' hands
+    what it frees back to the disk file. Only while Windows mode is on:
+    the disk file itself is never rewritten here."""
+    m = winmode()
+    if not m.get("available"):
+        return result()
+    if m.get("state") != "running":
+        return result(skipped=[{"path": WINMODE_DISK, "why": "Windows mode isn't on"}])
+    domain = winmode_domain()
+    before = m["allocated"]
+    # guest-fstrim is the agent's own retrim (defrag /L on each volume).
+    done = agent(domain, {"execute": "guest-fstrim"}, TRIM_TIMEOUT)
+    if done is None:
+        # An agent without guest-fstrim: run Windows' retrim directly.
+        started = agent(domain, {"execute": "guest-exec", "arguments": {
+            "path": "C:\\Windows\\System32\\defrag.exe", "arg": ["C:", "/L"], "capture-output": True}}, 30)
+        pid = (started or {}).get("return", {}).get("pid")
+        if pid is None:
+            return result(skipped=[{"path": WINMODE_DISK, "why": "Windows' guest agent did not answer"}])
+        deadline = time.time() + TRIM_TIMEOUT
+        while time.time() < deadline:
+            time.sleep(5)
+            st = agent(domain, {"execute": "guest-exec-status", "arguments": {"pid": pid}}, 30)
+            if st is None or st.get("return", {}).get("exited"):
+                break
+    try:
+        after = used(os.stat(WINMODE_DISK))
+    except OSError:
+        after = before
+    return result([WINMODE_DISK], freed=max(0, before - after))
+
+
+SYSTEM_CLEANERS = {"restorePoints": clean_restore_points, "updates": clean_updates,
+                   "leftovers": clean_leftovers_system, "winmode": clean_winmode}
+
+
+def clean_system(items):
+    fd = hold_lock(ROOT_LOCK)
+    if fd is None:
+        return {"error": "busy"}
+    out = {}
+    for it in SYSTEM_ITEMS:
+        if it in items:
+            try:
+                out[it] = SYSTEM_CLEANERS[it]()
+            except Exception as e:  # one item failing must not stop the rest
+                out[it] = result(error=str(e))
+    os.close(fd)
+    return out
+
+
+def system_config():
+    try:
+        with open(SYSTEM_CONFIG) as f:
+            cfg = json.load(f)
+        return cfg if isinstance(cfg, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def asker():
+    try:
+        return int(os.environ.get("PKEXEC_UID", ""))
+    except ValueError:
+        return None
+
+
+# ---------------------------------------------------------------- clearing (home)
+
+def open_cache_files(uid):
+    """As root: the files under one person's cache folders that their
+    running programs have open or mapped. Wild OS's hardened kernel keeps
+    people from reading even their own processes' open files, so the
+    person's half asks for this through the measure action. Only paths
+    inside that person's caches are handed back."""
+    try:
+        pw = pwd.getpwuid(uid)
+    except (KeyError, TypeError):
+        return []
+    roots = (os.path.join(pw.pw_dir, ".cache") + "/", os.path.join(pw.pw_dir, ".var/app") + "/")
+    found = set()
+
+    def keep(path):
+        path = path.rstrip("\n")
+        if path.endswith(" (deleted)"):
+            return
+        if path.startswith(roots):
+            found.add(path)
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        base = "/proc/" + pid
+        try:
+            if os.stat(base).st_uid != uid:
+                continue
+            for fd in os.listdir(base + "/fd"):
+                try:
+                    keep(os.readlink(base + "/fd/" + fd))
+                except OSError:
+                    pass
+            with open(base + "/maps", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    parts = line.split(None, 5)
+                    if len(parts) == 6:
+                        keep(parts[5])
+        except OSError:
+            continue
+    return sorted(found)
+
+
+def open_files():
+    """The person's open cache files, from the root half; None when it
+    could not say."""
+    try:
+        r = subprocess.run(["pkexec", HELPER, "measure", "open-files"], stdout=subprocess.PIPE,
+                           stderr=subprocess.DEVNULL, timeout=60)
+        if r.returncode == 0:
+            return set(json.loads(r.stdout).get("open", []))
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def recently_changed(top, within=3600):
+    """Without the list of open files, whatever changed in the last hour is
+    taken to be in use."""
+    found, cutoff = set(), time.time() - within
+    for root, dirs, files in os.walk(top):
+        for n in files:
+            p = os.path.join(root, n)
+            try:
+                if os.lstat(p).st_mtime > cutoff:
+                    found.add(p)
+            except OSError:
+                pass
+    return found
+
+
+def empty_tree(top, busy):
+    """Removes everything under top except files in busy, bottom up, with
+    the folders that are left empty; top itself stays. A top that is a
+    file is removed unless busy. Returns what was kept for being open."""
+    kept = []
+    try:
+        st = os.lstat(top)
+    except OSError:
+        return kept
+    if not stat.S_ISDIR(st.st_mode):
+        if top in busy:
+            kept.append(top)
+        else:
+            remove_path(top)
+        return kept
+    for root, dirs, files in os.walk(top, topdown=False):
+        for n in files:
+            p = os.path.join(root, n)
+            if p in busy:
+                kept.append(p)
+                continue
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+        for n in dirs:
+            p = os.path.join(root, n)
+            try:
+                if os.path.islink(p):
+                    os.unlink(p)
+                else:
+                    os.rmdir(p)
+            except OSError:
+                pass
+    return kept
+
+
+def clean_bin():
+    m = recycle_bin()
+    removed, freed = [], 0
+    for t in m["targets"]:
+        for sub in ("files", "info", "expunged"):
+            empty_tree(os.path.join(t["path"], sub), set())
+        # KIO's cache of folder sizes in the bin, which it rebuilds.
+        remove_path(os.path.join(t["path"], "directorysizes"))
+        removed.append(t["path"])
+        freed += t["bytes"]
+    return result(removed, freed=freed)
+
+
+def clean_caches():
+    busy = open_files()
+    m = app_caches(busy if busy is not None else set())
+    removed, skipped, freed = [], [], 0
+    for t in m["targets"]:
+        kept = empty_tree(t["path"], busy if busy is not None else recently_changed(t["path"]))
+        left = content_size(Walker(), t["path"]) if kept else 0
+        freed += max(0, t["bytes"] - left)
+        removed.append(t["path"])
+        skipped += [{"path": k, "why": "an open app is using it"} for k in kept]
+    return result(removed, skipped, freed)
+
+
+def clean_leftovers_home():
+    m = leftovers_home()
+    removed, skipped, freed = [], [], 0
+    for t in m["targets"]:
+        if remove_path(t["path"]):
+            removed.append(t["path"])
+            freed += t["bytes"]
+        else:
+            skipped.append({"path": t["path"], "why": "could not be removed"})
+    return result(removed, skipped, freed)
+
+
+def clean_downloads(chosen):
+    allowed = {t["path"]: t for t in large_downloads()["targets"]}
+    removed, skipped, freed = [], [], 0
+    for p in chosen:
+        t = allowed.get(p)
+        if t is None:
+            skipped.append({"path": p, "why": "not a large file left unopened for 90 days"})
+        elif remove_path(p):
+            removed.append(p)
+            freed += t["bytes"]
+    return result(removed, skipped, freed)
+
+
+# ---------------------------------------------------------------- the person's run
+
+def size_text(n):
+    # Units of 1024 labelled GB, the way Settings and Files show sizes.
+    for unit, scale in (("TB", 1024 ** 4), ("GB", 1024 ** 3), ("MB", 1024 ** 2)):
+        if n >= scale:
+            v = n / scale
+            return ("%.0f %s" if unit == "MB" or (unit == "GB" and v >= 100) else "%.1f %s") % (v, unit)
+    return "%d KB" % max(1, n // 1024)
+
+
+def word_list(words):
+    return words[0] if len(words) == 1 else ", ".join(words[:-1]) + " and " + words[-1]
+
+
+def prefs_path():
+    return os.path.join(home(), ".config/wildos/free-space.json")
+
+
+def read_prefs():
+    try:
+        with open(prefs_path()) as f:
+            p = json.load(f)
+        return p if isinstance(p, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def notify(title, body):
+    try:
+        subprocess.run(["notify-send", "--app-name=Wild OS", "--icon=drive-harddisk", title, body],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def person_run(items, downloads, auto):
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+    fd = hold_lock(os.path.join(runtime, "wildos-free-space.lock"))
+    if fd is None:
+        return {"error": "busy"}
+    if auto:
+        prefs = read_prefs()
+        if not prefs.get("auto"):
+            return {"auto": "off"}
+        if not low_on_space():
+            return {"auto": "enough space"}
+        items = [i for i in prefs.get("items", []) if i in AUTO_ITEMS]
+        downloads = []
+    before, _ = disk_free()
+    out = {}
+    system = [i for i in SYSTEM_ITEMS if i in items]
+    if system:
+        args = ["pkexec", HELPER] + (["auto-system"] if auto else ["clean"] + system)
+        r = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        if r.returncode in (126, 127):
+            # No password given: nothing at all is cleared.
+            return {"cancelled": True}
+        try:
+            got = json.loads(r.stdout or b"{}")
+            out.update({k: v for k, v in got.items() if k in SYSTEM_ITEMS and isinstance(v, dict)})
+        except ValueError:
+            pass
+    if "bin" in items:
+        out["bin"] = clean_bin()
+    if "caches" in items:
+        out["caches"] = clean_caches()
+    if "leftovers" in items:
+        home_part = clean_leftovers_home()
+        sys_part = out.get("leftovers") or result()
+        out["leftovers"] = result(sys_part["removed"] + home_part["removed"],
+                                  sys_part["skipped"] + home_part["skipped"],
+                                  sys_part["freed"] + home_part["freed"])
+    if "downloads" in items and downloads:
+        out["downloads"] = clean_downloads(downloads)
+    after, _ = disk_free()
+    freed = {k: v["freed"] for k, v in out.items() if v.get("freed")}
+    summary = {"auto": auto, "bytes": max(0, after - before), "items": freed}
+    if freed:
+        # History reads this back (settings-history, kind space-freed).
+        syslog.openlog("settings-free-space")
+        syslog.syslog(syslog.LOG_INFO, "FREED " + json.dumps(summary, sort_keys=True))
+        if auto:
+            names = [LABELS[k] for k in PAGE_ITEMS if k in freed]
+            names[0] = names[0][0].upper() + names[0][1:]
+            notify("Space was freed up automatically",
+                   "The disk was nearly full, so Wild OS cleared %s: %s."
+                   % (size_text(sum(freed.values())), word_list(names)))
+    os.close(fd)
+    return {"items": out, "freed": summary["bytes"], "auto": auto}
+
+
+def set_auto(items):
+    uid = asker()
+    if uid is None:
+        return None
+    cfg = system_config()
+    if items:
+        cfg[str(uid)] = items
+    else:
+        cfg.pop(str(uid), None)
+    os.makedirs(os.path.dirname(SYSTEM_CONFIG), exist_ok=True)
+    tmp = SYSTEM_CONFIG + ".new"
+    with open(tmp, "w") as f:
+        json.dump(cfg, f, indent=1, sort_keys=True)
+        f.write("\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, SYSTEM_CONFIG)
+    return {"items": items}
+
+
+def main(argv):
+    cmd = argv[0] if argv else ""
+    args = argv[1:]
+    root = os.geteuid() == 0
+    if cmd in ("measure", "clean", "auto-system", "set-auto") and not root:
+        print(cmd + " needs root (pkexec)", file=sys.stderr)
+        return 2
+    if cmd in ("measure-home", "run") and root:
+        # As the person, so nothing in a home folder is ever touched with
+        # root's rights.
+        print(cmd + " runs as the person, not root", file=sys.stderr)
+        return 2
+    res = None
+    if cmd == "measure" and not args:
+        res = measure_system()
+    elif cmd == "measure" and args == ["open-files"]:
+        res = {"open": open_cache_files(asker())}
+    elif cmd == "measure-home":
+        res = measure_home()
+    elif cmd == "clean" and all(a in SYSTEM_ITEMS for a in args):
+        res = clean_system(args)
+    elif cmd == "auto-system" and not args:
+        items = [i for i in system_config().get(str(asker()), []) if i in SYSTEM_ITEMS and i in AUTO_ITEMS]
+        res = clean_system(items) if items and low_on_space() else {}
+    elif cmd == "set-auto" and all(a in SYSTEM_ITEMS and a in AUTO_ITEMS for a in args):
+        res = set_auto(args)
+    elif cmd == "run":
+        downloads, items, i = [], [], 0
+        while i < len(args):
+            if args[i] == "--download" and i + 1 < len(args):
+                downloads.append(args[i + 1])
+                i += 2
+                continue
+            if args[i] in PAGE_ITEMS:
+                items.append(args[i])
+            i += 1
+        res = person_run(items, downloads, "--auto" in args)
+    if res is None:
+        print(__doc__, file=sys.stderr)
+        return 2
+    json.dump(res, sys.stdout)
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

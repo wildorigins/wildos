@@ -24,6 +24,10 @@ org.wildos.launchEnabled=true
 # showing the desktop, so only one may run.
 windowapertureEnabled=false
 org.wildos.peekfadeEnabled=true
+# wildos-shell's fade between the old and new colours when the theme or
+# accent changes takes the place of KWin's, which flashed a darker shadow
+# round each window. Both answer the same D-Bus call, so only one may run.
+blendchangesEnabled=false
 
 # Mica, as on Windows 11: the wallpaper behind glass is blurred until no shapes
 # show, only a soft gradient of its colours, under a mostly opaque tint

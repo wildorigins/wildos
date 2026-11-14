@@ -68,6 +68,21 @@ QStringList keysFrom(const QJsonValue &value)
     return keys;
 }
 
+// The systemd unit a process runs in, from the last part of its cgroup:
+// app-org.wildos.files@1a2b.service, as KIO starts it.
+QString unitOf(int pid)
+{
+    if (pid <= 0) {
+        return {};
+    }
+    QFile file(QStringLiteral("/proc/%1/cgroup").arg(pid));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    const QString line = QString::fromUtf8(file.readAll()).trimmed().section(QLatin1Char('\n'), -1);
+    return line.section(QLatin1Char('/'), -1);
+}
+
 bool intersects(const QStringList &a, const QStringList &b)
 {
     for (const QString &key : a) {
@@ -231,14 +246,21 @@ void Launcher::Windows(const QString &json)
         }
     }
     const QJsonObject added = report.value(QStringLiteral("added")).toObject();
-    const QStringList keys = keysFrom(added.value(QStringLiteral("k")));
-    if (keys.isEmpty()) {
+    if (added.isEmpty()) {
         return;
     }
+    const QStringList keys = keysFrom(added.value(QStringLiteral("k")));
+    // An app can name its window differently from its desktop file; the
+    // process it was started in still says which launch it belongs to.
+    const QString unit = unitOf(added.value(QStringLiteral("pid")).toInt());
     const QStringList ids = m_launches.keys();
     for (const QString &id : ids) {
         const Launch &launch = m_launches[id];
-        if (!intersects(keys, launch.keys)) {
+        const QString prefix = QStringLiteral("app-") + escapeUnitName(launch.desktopId);
+        const bool sameUnit = !unit.isEmpty()
+            && (unit == launch.unit || unit.startsWith(prefix + QLatin1Char('@'))
+                || (unit.startsWith(prefix + QLatin1Char('-')) && unit.endsWith(QLatin1String(".scope"))));
+        if (!sameUnit && !intersects(keys, launch.keys)) {
             continue;
         }
         qInfo("wildos-launchd: %s opened in %lld ms", qPrintable(launch.desktopId), launch.clock.elapsed());

@@ -123,7 +123,7 @@ const QHash<QString, Known> &known()
         {QStringLiteral("flatpak-session-helper"), {"Sandboxed app helper"}},
         {QStringLiteral("flatpak-portal"), {"Sandboxed app helper"}},
         {QStringLiteral("winmoded"), {"Windows mode"}},
-        {QStringLiteral("xfreerdp3"), {"Windows mode"}},
+        {QStringLiteral("wildos-rdp"), {"Windows mode"}},
         {QStringLiteral("(sd-pam)"), {"Session helper", false, true}},
         {QStringLiteral("dconf-service"), {"App settings storage"}},
         {QStringLiteral("drkonqi-coredump-processor"), {"Crash reporter"}},
@@ -212,6 +212,20 @@ QDBusMessage systemdUser(const QString &method, const QVariantList &args)
                                                           QStringLiteral("org.freedesktop.systemd1.Manager"), method);
     message.setArguments(args);
     return QDBusConnection::sessionBus().call(message, QDBus::Block, 3000);
+}
+
+// A process's start time from /proc, which tells a process apart from a
+// later one that was given the same id.
+QByteArray startedAt(qint64 pid)
+{
+    QFile file(QStringLiteral("/proc/%1/stat").arg(pid));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    const QByteArray stat = file.readAll();
+    // The name in brackets may hold spaces; the fields after it do not.
+    const QList<QByteArray> fields = stat.mid(stat.lastIndexOf(')') + 2).split(' ');
+    return fields.size() > 19 ? fields.at(19) : QByteArray();
 }
 
 QString resultText(KSysGuard::ProcessController::Result result)
@@ -1038,6 +1052,33 @@ QString Processes::signal(const QList<qint64> &pids, int sig)
     return resultText(m_controller->sendSignal(list, sig));
 }
 
+// End task as on Windows: the app is asked to quit, and whatever is still
+// running three seconds later is killed, so an app that has stopped
+// responding still goes. A suspended process only acts on the request once
+// it runs again, so it is woken too.
+QString Processes::end(const QList<qint64> &pids)
+{
+    QList<QPair<qint64, QByteArray>> started;
+    for (qint64 pid : pids) {
+        started.append({pid, startedAt(pid)});
+    }
+    const QString error = signal(pids, SIGTERM);
+    if (!error.isEmpty()) {
+        return error;
+    }
+    signal(pids, SIGCONT);
+    QTimer::singleShot(3000, this, [this, started] {
+        QList<qint64> left;
+        for (const auto &[pid, at] : started) {
+            if (!at.isEmpty() && startedAt(pid) == at) {
+                left << pid;
+            }
+        }
+        signal(left, SIGKILL);
+    });
+    return {};
+}
+
 QString Processes::endTask(const QString &key)
 {
     const Item *item = find(key);
@@ -1052,7 +1093,7 @@ QString Processes::endTask(const QString &key)
             return {};
         }
     }
-    return signal(item->pids, SIGTERM);
+    return end(item->pids);
 }
 
 QString Processes::endTree(const QString &key)
@@ -1061,7 +1102,7 @@ QString Processes::endTree(const QString &key)
     if (!item || !item->canEnd || item->winMode) {
         return endTask(key);
     }
-    return signal(treeOf(item->pids), SIGTERM);
+    return end(treeOf(item->pids));
 }
 
 QString Processes::setPriority(const QString &key, int nice)

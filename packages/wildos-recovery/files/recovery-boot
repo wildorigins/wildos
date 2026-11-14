@@ -4,6 +4,7 @@
 #   recovery-boot next [REASON]   start in start-up recovery once (REASON:
 #                                 menu, reset-keep, reset-everything)
 #   recovery-boot good            this start counts as good: clear the count
+#                                 and note the kernel as one that works
 #   recovery-boot watch           wait for a person's desktop, then "good";
 #                                 a clean shutdown from the sign-in screen
 #                                 counts as good too (wildos-boot-ok)
@@ -45,6 +46,7 @@ next)
     ;;
 good)
     editenv unset wildos_tries
+    editenv set "wildos_kernel_ok=$(uname -r)"
     ;;
 watch)
     mkdir -p "$SEEN"
@@ -57,6 +59,7 @@ watch)
             sleep 20
             if [ "$(loginctl show-session "$id" -p State --value 2>/dev/null)" = active ]; then
                 editenv unset wildos_tries
+                editenv set "wildos_kernel_ok=$(uname -r)"
                 : > "$SEEN/good"
                 exit 0
             fi

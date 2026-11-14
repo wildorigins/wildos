@@ -14,6 +14,9 @@ Item {
     // virtualisation, unsupported, noaccess, space, download or failed
     property string kind
     property real received: 0
+    // A download problem because this PC is offline (board 9.7's card), as
+    // opposed to one the server or the package system caused.
+    property bool offline: false
     property string failure
     // An unexpected error's own words, for reporting it.
     property string detail
@@ -88,7 +91,7 @@ Item {
                     case "unsupported": return "This PC can't run Windows mode";
                     case "noaccess": return "Windows mode needs the PC's own screen";
                     case "space": return "Not enough space";
-                    case "download": return "Download paused";
+                    case "download": return card.offline ? "Download paused" : "Download stopped";
                     default: return "Setup couldn't finish";
                     }
                 }
@@ -112,9 +115,17 @@ Item {
                     case "space":
                         return "Windows mode needs about " + Setup.needLabel + " and this PC has " + Setup.freeLabel + " free. Clearing the Downloads folder and emptying the Recycle Bin usually frees enough.";
                     case "download":
-                        return card.received > 0
-                            ? "The connection dropped at " + card.gb(card.received) + ". Nothing is lost; setup carries on from where it stopped as soon as you're back online."
-                            : "The connection dropped. Nothing is lost; setup carries on from where it stopped as soon as you're back online.";
+                        // Offline: setup waits and carries on by itself once
+                        // NetworkManager says the PC is back online. Anything
+                        // else (updates holding the package lock, Microsoft
+                        // refusing the download) says what actually happened
+                        // and waits for Try again.
+                        if (card.offline) {
+                            return card.received > 0
+                                ? "The connection dropped at " + card.gb(card.received) + ". Nothing is lost; setup carries on from where it stopped as soon as you're back online."
+                                : "This PC is offline. Nothing is lost; setup carries on from where it stopped as soon as you're back online.";
+                        }
+                        return (card.failure.length > 0 ? card.failure : "The download stopped.") + " Nothing is lost; Try again carries on from where it stopped.";
                     default:
                         return (card.failure.length > 0 ? card.failure + " " : "") + "Nothing was left half installed.";
                     }

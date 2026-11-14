@@ -59,6 +59,23 @@
         "org.kde.discover.packagekit",
         "org.wildos.store"
     ],
+    "wildos": [
+        "org.wildos.write",
+        "org.wildos.tables",
+        "org.wildos.mail",
+        "org.wildos.pdf",
+        "org.wildos.screenshot",
+        "org.wildos.notes",
+        "org.wildos.remote",
+        "org.wildos.music",
+        "org.wildos.videos",
+        "org.wildos.voice",
+        "org.wildos.backup",
+        "org.wildos.archive",
+        "org.kde.kcalc",
+        "org.wildos.terminal",
+        "io.wildos.ganger"
+    ],
     "apps": [
         {
             "key": "libreoffice",
@@ -544,6 +561,202 @@
             "swapTitle": "A good swap for Snipping Tool",
             "swapText": "Press Print Screen to grab the screen, a window or an area, then mark it up.",
             "category": "utilities"
+        },
+        {
+            "key": "org.wildos.write",
+            "ids": [
+                "org.wildos.write"
+            ],
+            "packages": [
+                "wildos-write"
+            ],
+            "desktop": "libreoffice-writer",
+            "name": "Write",
+            "tagline": "Opens your Word files.",
+            "icon": "org.wildos.write"
+        },
+        {
+            "key": "org.wildos.tables",
+            "ids": [
+                "org.wildos.tables"
+            ],
+            "packages": [
+                "wildos-tables"
+            ],
+            "desktop": "libreoffice-calc",
+            "name": "Tables",
+            "tagline": "Opens your Excel files.",
+            "icon": "org.wildos.tables"
+        },
+        {
+            "key": "org.wildos.mail",
+            "ids": [
+                "org.wildos.mail"
+            ],
+            "packages": [
+                "wildos-mail"
+            ],
+            "desktop": "org.wildos.mail",
+            "name": "Mail",
+            "tagline": "Mail, calendar and people.",
+            "icon": "org.wildos.mail"
+        },
+        {
+            "key": "org.wildos.pdf",
+            "ids": [
+                "org.wildos.pdf"
+            ],
+            "packages": [
+                "wildos-pdf"
+            ],
+            "desktop": "org.wildos.pdf",
+            "name": "PDF",
+            "tagline": "Read, fill in and sign.",
+            "icon": "org.wildos.pdf"
+        },
+        {
+            "key": "org.wildos.screenshot",
+            "ids": [
+                "org.wildos.screenshot"
+            ],
+            "packages": [
+                "wildos-capture"
+            ],
+            "desktop": "org.wildos.screenshot",
+            "name": "Capture",
+            "tagline": "Screenshots and recording.",
+            "icon": "org.wildos.capture"
+        },
+        {
+            "key": "org.wildos.notes",
+            "ids": [
+                "org.wildos.notes"
+            ],
+            "packages": [
+                "wildos-notes"
+            ],
+            "desktop": "org.wildos.notes",
+            "name": "Notes",
+            "tagline": "Notes that stay on this PC.",
+            "icon": "org.wildos.notes"
+        },
+        {
+            "key": "org.wildos.remote",
+            "ids": [
+                "org.wildos.remote"
+            ],
+            "packages": [
+                "wildos-remote"
+            ],
+            "desktop": "org.wildos.remote",
+            "name": "Remote",
+            "tagline": "Remote Desktop and SSH.",
+            "icon": "org.wildos.remote"
+        },
+        {
+            "key": "org.wildos.music",
+            "ids": [
+                "org.wildos.music"
+            ],
+            "packages": [
+                "wildos-music"
+            ],
+            "desktop": "org.wildos.music",
+            "name": "Music",
+            "tagline": "Plays your own music files.",
+            "icon": "org.wildos.music"
+        },
+        {
+            "key": "org.wildos.videos",
+            "ids": [
+                "org.wildos.videos"
+            ],
+            "packages": [
+                "wildos-videos"
+            ],
+            "desktop": "org.wildos.videos",
+            "name": "Videos",
+            "tagline": "Plays your own videos.",
+            "icon": "org.wildos.videos"
+        },
+        {
+            "key": "org.wildos.voice",
+            "ids": [
+                "org.wildos.voice"
+            ],
+            "packages": [
+                "wildos-voice"
+            ],
+            "desktop": "org.wildos.voice",
+            "name": "Voice",
+            "tagline": "Record, with a transcript.",
+            "icon": "org.wildos.voice"
+        },
+        {
+            "key": "org.wildos.backup",
+            "ids": [
+                "org.wildos.backup"
+            ],
+            "packages": [
+                "wildos-backup"
+            ],
+            "desktop": "org.wildos.backup",
+            "name": "Backup",
+            "tagline": "Encrypted backups to a drive.",
+            "icon": "org.wildos.backup"
+        },
+        {
+            "key": "org.wildos.archive",
+            "ids": [
+                "org.wildos.archive"
+            ],
+            "packages": [
+                "wildos-archive"
+            ],
+            "desktop": "org.wildos.archive",
+            "name": "Archive",
+            "tagline": "Open and make zip files.",
+            "icon": "org.wildos.archive"
+        },
+        {
+            "key": "org.kde.kcalc",
+            "ids": [
+                "org.kde.kcalc"
+            ],
+            "packages": [
+                "kcalc"
+            ],
+            "desktop": "org.kde.kcalc",
+            "name": "Calculator",
+            "tagline": "Standard and scientific.",
+            "icon": "accessories-calculator"
+        },
+        {
+            "key": "org.wildos.terminal",
+            "ids": [
+                "org.wildos.terminal"
+            ],
+            "packages": [
+                "wildos-terminal"
+            ],
+            "desktop": "org.wildos.terminal",
+            "name": "Terminal",
+            "tagline": "The command line.",
+            "icon": "org.wildos.terminal"
+        },
+        {
+            "key": "io.wildos.ganger",
+            "ids": [
+                "io.wildos.ganger"
+            ],
+            "packages": [
+                "ganger"
+            ],
+            "desktop": "Ganger",
+            "name": "Ganger",
+            "tagline": "AI coding agents on this PC.",
+            "icon": "wildos-ganger",
+            "onlyIfAvailable": true
         }
     ]
 }

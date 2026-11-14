@@ -137,10 +137,23 @@ Rectangle {
                 bar.folder.failed("Wild OS cannot find \"" + text + "\". Check the spelling and try again.");
             }
         }
-        onActiveFocusChanged: if (!activeFocus) bar.editing = false
+        // The text menu holds focus while it is open; the location is still
+        // being typed.
+        onActiveFocusChanged: if (!activeFocus && !locationMenu.opened) bar.editing = false
         Keys.onEscapePressed: {
             bar.editing = false;
             bar.done();
+        }
+        Keys.onPressed: event => {
+            if (locationMenu.isMenuKey(event)) {
+                locationMenu.openAtCaret();
+                event.accepted = true;
+            }
+        }
+
+        UI.TextMenu {
+            id: locationMenu
+            onFocusLeft: bar.editing = false
         }
     }
 }

@@ -1,0 +1,37 @@
+#!/bin/sh
+# Puts one Advanced protection choice into effect: runs its hook,
+# /usr/lib/wildos/advanced-protection.d/KEY, as root with the value now in
+# the store as $1. Each part of Wild OS that carries out a choice installs
+# its own hook, so a key with no hook installed has nothing to do as root
+# (what it changes is read where it is used, or applied in each session by
+# a service that watches the store).
+
+set -eu
+
+HOOKS=/usr/lib/wildos/advanced-protection.d
+HELPER=/usr/libexec/wildos/settings-advanced
+
+value_of() {
+    "$HELPER" get | sed -n "s/^$1=//p"
+}
+
+run_hook() {
+    hook=$HOOKS/$1
+    [ -x "$hook" ] || return 0
+    value=$(value_of "$1")
+    [ -n "$value" ] || return 0
+    if ! "$hook" "$value"; then
+        echo "advanced-protection-apply: the $1 hook failed" >&2
+        return 1
+    fi
+}
+
+[ $# -eq 1 ] || { echo "usage: advanced-protection-apply KEY" >&2; exit 2; }
+case "$1" in
+    *[!a-z_]* | '')
+        exit 2
+        ;;
+    *)
+        run_hook "$1"
+        ;;
+esac

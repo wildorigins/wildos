@@ -8,3 +8,9 @@ usr/share/icons/WildOS/16x16 usr/share/icons/WildOS-dark/16x16
 usr/share/icons/WildOS/scalable usr/share/icons/WildOS-dark/scalable
 usr/share/icons/Fluent-yellow/scalable/places/user-trash.svg usr/share/icons/WildOS/scalable/places/user-trash.svg
 usr/share/icons/Fluent-yellow/scalable/places/user-trash-full.svg usr/share/icons/WildOS/scalable/places/user-trash-full.svg
+usr/lib/systemd/user/wildos-shutdown-guard.service usr/lib/systemd/user/default.target.wants/wildos-shutdown-guard.service
+usr/lib/systemd/user/wildos-shutdown-notice.service usr/lib/systemd/user/plasma-ksplash-ready.service.wants/wildos-shutdown-notice.service
+usr/share/wildos/xdg/taskmanagerrulesrc etc/xdg/taskmanagerrulesrc
+usr/lib/systemd/user/wildos-camera-mic.service usr/lib/systemd/user/graphical-session.target.wants/wildos-camera-mic.service
+usr/lib/systemd/user/wildos-panic-key.service usr/lib/systemd/user/plasma-workspace.target.wants/wildos-panic-key.service
+usr/lib/systemd/user/wildos-panic-key.path usr/lib/systemd/user/plasma-workspace.target.wants/wildos-panic-key.path

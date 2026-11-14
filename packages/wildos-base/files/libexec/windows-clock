@@ -1,0 +1,28 @@
+#!/bin/sh
+# Windows keeps the computer's hardware clock in local time; Linux reads it
+# as UTC. On a PC that also starts Windows the clock came up off by the time
+# zone's offset (8 hours in California) after every Windows session, so
+# updates failed until sdwdate set the clock through Tor minutes later, and
+# sdwdate then wrote UTC back, which put Windows' clock off in turn. Keeping
+# the hardware clock in local time, as Windows does, keeps both right.
+#
+# Done once, so someone who sets it back to UTC (timedatectl set-local-rtc 0)
+# keeps their choice. The clock of this start-up is left alone: whether the
+# hardware clock holds UTC or local time now depends on which system ran
+# last, and sdwdate sets it either way, then writes local time from here on.
+set -e
+
+marker=/var/lib/wildos/windows-clock
+
+if [ "$(sed -n 3p /etc/adjtime 2>/dev/null)" ]; then
+    sed -i '3s/.*/LOCAL/' /etc/adjtime
+else
+    # No file, or one without the mode line: hwclock's defaults for the
+    # drift lines it would write itself.
+    drift=$(sed -n 1p /etc/adjtime 2>/dev/null || true)
+    last=$(sed -n 2p /etc/adjtime 2>/dev/null || true)
+    printf '%s\n%s\nLOCAL\n' "${drift:-0.0 0 0.0}" "${last:-0}" > /etc/adjtime
+fi
+
+mkdir -p "${marker%/*}"
+: > "$marker"

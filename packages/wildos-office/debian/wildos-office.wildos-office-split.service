@@ -1,0 +1,19 @@
+[Unit]
+Description=Install Write and Tables as their own packages
+# Left by postinst on a PC updating from before Write and Tables were split
+# out of wildos-office, and removed once both are in.
+ConditionPathExists=/var/lib/wildos/office-split
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=DEBIAN_FRONTEND=noninteractive
+# apt-get install also marks both as chosen, so removing one never takes the
+# other with it as no longer needed.
+ExecStart=/usr/bin/apt-get -o DPkg::Lock::Timeout=1800 -o Dpkg::Options::=--force-confold install -y -q --no-install-recommends wildos-write wildos-tables
+ExecStartPost=/usr/bin/rm -f /var/lib/wildos/office-split
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

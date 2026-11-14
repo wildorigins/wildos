@@ -1,0 +1,623 @@
+#!/usr/bin/python3 -I
+"""Wild OS's firewall, for Settings > Privacy and security > Firewall.
+
+Runs as root: through pkexec (org.wildos.settings.policy) for the choices
+made in Settings, from settings-protection when the protection level
+changes or the computer starts, and from wildos-network whenever the
+networks this computer is on change. Takes only the requests below.
+
+    apply                          load the rules for what is set now
+    enabled on|off                 the firewall itself
+    trust UUID home|public         how much a network is trusted
+    discovery on|off               finding printers, screens and speakers
+    service files|remote|ssh on|off
+                                   install and start the server, or stop it
+    allow NAME PORT PROTO SCOPE ADDRESS DURATION
+                                   let other computers reach a port:
+                                   PROTO tcp|udp|both, SCOPE network|device|
+                                   anyone (ADDRESS is the device's, or -),
+                                   DURATION forever|restart|hour
+    rule ID on|off                 switch a rule you added
+    remove ID                      remove it
+
+Everything is one nftables table, wildos_protection, built afresh from the
+saved choices (/etc/wildos/firewall.json) each time, so the rules can never
+drift from what Settings shows. Incoming connections are refused unless
+they answer something this computer asked for, or a row in Settings lets
+them in. A public network gets none of those rows, and a network nobody has
+called Home yet gets only network discovery, as before there were rows: a
+server switched on at home must never open on the next cafe's Wi-Fi. Windows mode's bridge is
+always let through: Windows mode's own table (wildos_win) limits it, and a
+drop here would be final whatever that table allows. Nothing outgoing is
+limited.
+
+Files in /etc/wildos/firewall.d/*.rules add rule lines of their own to the
+input chain on every network (dev access lets one PC's SSH in that way).
+"""
+
+import fcntl
+import ipaddress
+import json
+import os
+import re
+import secrets
+import subprocess
+import sys
+import time
+
+CONFIG = "/etc/wildos/firewall.json"
+SESSION = "/run/wildos/firewall-session.json"
+STATE = "/run/wildos/firewall-state.json"
+EXTRA_DIR = "/etc/wildos/firewall.d"
+LEVEL_FILE = "/etc/wildos/protection-level"
+LOCK = "/run/wildos/firewall.lock"
+# security-status runs without root and cannot list the rules, so this is
+# written once nft has taken them.
+MARK = "/run/wildos/firewall"
+TABLE = "wildos_protection"
+# wildos-network listens on this netlink log group for "What the firewall
+# blocked".
+LOG_GROUP = 47
+
+# Each server is installed the first time it is switched on, so no port is
+# ever opened for nothing.
+SERVICES = {
+    "ssh": {
+        "packages": ["openssh-server"],
+        "units": ["ssh.service"],
+        "ports": [("tcp", 22)],
+        "binary": "/usr/sbin/sshd",
+    },
+    # Samba for the shares Files makes (a folder's Properties > Sharing), and
+    # wsdd2 so Windows PCs see this one under Network.
+    "files": {
+        "packages": ["samba", "wsdd2"],
+        "units": ["smbd.service", "wsdd2.service"],
+        "ports": [("tcp", 445), ("tcp", 5357), ("udp", 3702)],
+        "binary": "/usr/sbin/smbd",
+    },
+    # KDE's RDP server runs in the person's own session (Settings starts its
+    # user service), showing their desktop.
+    "remote": {
+        "packages": ["krdp"],
+        "units": [],
+        "ports": [("tcp", 3389)],
+        "binary": "/usr/bin/krdpserver",
+    },
+}
+
+# mDNS, as Wild OS has always let in: how printers, Chromecasts and AirPlay
+# speakers are found and announce themselves. SSDP and WS-Discovery replies
+# come back to a temporary port that no rule here can open, and Windows PCs
+# find this one through File sharing's own wsdd2 port.
+DISCOVERY = (5353,)
+
+DEFAULT = {"enabled": True, "networks": {}, "discovery": True,
+           "services": {"files": False, "remote": False, "ssh": False}, "rules": []}
+
+UUID_RE = re.compile(r"^[0-9a-fA-F-]{8,64}$")
+IFACE_RE = re.compile(r"^[A-Za-z0-9_.:@-]{1,15}$")
+ID_RE = re.compile(r"^[0-9a-f]{8}$")
+
+
+def history(what, **data):
+    """Each change, for Settings > System > History, which reads it back
+    from the journal. Who asked comes from pkexec."""
+    data["what"] = what
+    try:
+        data["by"] = int(os.environ.get("PKEXEC_UID", "0"))
+    except ValueError:
+        data["by"] = 0
+    try:
+        import syslog
+        syslog.openlog("settings-firewall")
+        syslog.syslog(syslog.LOG_INFO, "HISTORY " + json.dumps(data, sort_keys=True))
+    except OSError:
+        pass
+
+
+def network_name(uuid):
+    p = run(["nmcli", "-g", "connection.id", "connection", "show", uuid])
+    return p.stdout.strip() if p and p.returncode == 0 else ""
+
+
+def fail(message, code=1):
+    print(message, file=sys.stderr)
+    sys.exit(code)
+
+
+def read_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, type(default)) else default
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".new"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=1, sort_keys=True)
+        f.write("\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+
+
+def load_config():
+    cfg = read_json(CONFIG, {})
+    out = json.loads(json.dumps(DEFAULT))
+    out["enabled"] = cfg.get("enabled", True) is not False
+    out["discovery"] = cfg.get("discovery", True) is not False
+    nets = cfg.get("networks", {})
+    if isinstance(nets, dict):
+        out["networks"] = {k: v for k, v in nets.items() if UUID_RE.match(k) and v in ("home", "public")}
+    services = cfg.get("services", {})
+    if isinstance(services, dict):
+        for name in SERVICES:
+            out["services"][name] = services.get(name) is True
+    out["rules"] = [r for r in cfg.get("rules", []) if valid_rule(r)]
+    return out
+
+
+def load_session():
+    return [r for r in read_json(SESSION, {}).get("rules", []) if valid_rule(r)]
+
+
+def valid_rule(r):
+    if not isinstance(r, dict):
+        return False
+    try:
+        if not ID_RE.match(r["id"]) or not 0 < int(r["port"]) < 65536:
+            return False
+        if r["proto"] not in ("tcp", "udp", "both") or r["scope"] not in ("network", "device", "anyone"):
+            return False
+        if r["scope"] == "device":
+            ipaddress.ip_address(r["address"])
+        return isinstance(r.get("name", ""), str)
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def saved_level():
+    try:
+        with open(LEVEL_FILE, encoding="utf-8") as f:
+            level = f.read().strip()
+    except OSError:
+        level = ""
+    return level if level in ("strict", "maximum") else "standard"
+
+
+def run(args, check=False, capture=True):
+    env = dict(os.environ, LC_ALL="C")
+    try:
+        p = subprocess.run(args, capture_output=capture, text=True, env=env, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        if check:
+            fail(str(e))
+        return None
+    if check and p.returncode != 0:
+        fail((p.stderr or p.stdout or "").strip() or "%s failed" % args[0])
+    return p
+
+
+def nmcli_fields(line):
+    # nmcli -t escapes ':' and '\' in values with a backslash.
+    fields, cur, esc = [], "", False
+    for ch in line:
+        if esc:
+            cur += ch
+            esc = False
+        elif ch == "\\":
+            esc = True
+        elif ch == ":":
+            fields.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    fields.append(cur)
+    return fields
+
+
+def active_networks():
+    """The Wi-Fi, Ethernet and other links NetworkManager has up, each with
+    the address ranges of the network it is on and its routers. VPN tunnels
+    are left out: nobody on the far side of one is "on this network"."""
+    # At start-up the firewall goes up before NetworkManager (or even D-Bus)
+    # runs, and nmcli would wait for them; wildos-network applies the rules
+    # again once a network is up.
+    nm = subprocess.run(["systemctl", "is-active", "--quiet", "NetworkManager.service"], capture_output=True)
+    if nm.returncode != 0 or not os.path.exists("/run/dbus/system_bus_socket"):
+        return []
+    p = run(["nmcli", "-t", "-f", "UUID,NAME,TYPE,DEVICE,STATE", "connection", "show", "--active"])
+    if p is None or p.returncode != 0:
+        return []
+    skip = {"loopback", "vpn", "wireguard", "bridge", "tun", "dummy", "veth"}
+    nets = []
+    for line in p.stdout.splitlines():
+        f = nmcli_fields(line)
+        if len(f) < 5 or f[2] in skip or not f[3] or f[4] != "activated":
+            continue
+        uuid, name, kind, dev = f[0], f[1], f[2], f[3]
+        if not UUID_RE.match(uuid) or not IFACE_RE.match(dev) or dev.startswith(("virbr", "wildos-win", "tun", "tap", "docker")):
+            continue
+        v4, v6 = [], []
+        a = run(["ip", "-j", "addr", "show", "dev", dev])
+        try:
+            info = json.loads(a.stdout) if a and a.returncode == 0 else []
+        except ValueError:
+            info = []
+        for iface in info:
+            for addr in iface.get("addr_info", []):
+                try:
+                    net = ipaddress.ip_interface("%s/%s" % (addr["local"], addr["prefixlen"])).network
+                except (KeyError, ValueError):
+                    continue
+                if net.version == 4:
+                    v4.append(str(net))
+                elif net.is_link_local:
+                    v6.append("fe80::/10")
+                elif net.subnet_of(ipaddress.ip_network("fc00::/7")):
+                    v6.append(str(net))
+        gateways = []
+        for fam in ("-4", "-6"):
+            r = run(["ip", fam, "-j", "route", "show", "default", "dev", dev])
+            try:
+                for route in json.loads(r.stdout) if r and r.returncode == 0 else []:
+                    if route.get("gateway"):
+                        gateways.append(route["gateway"])
+            except ValueError:
+                pass
+        # A hotspot (NetworkManager's "shared" method) hands out addresses
+        # and answers name lookups itself, through dnsmasq.
+        m = run(["nmcli", "-g", "ipv4.method", "connection", "show", uuid])
+        shared = m is not None and m.returncode == 0 and m.stdout.strip() == "shared"
+        nets.append({"uuid": uuid, "name": name, "type": kind, "device": dev, "shared": shared,
+                     "v4": collapse(v4), "v6": collapse(v6), "gateways": gateways})
+    return nets
+
+
+def collapse(cidrs):
+    # nft refuses overlapping ranges in one set.
+    return [str(n) for n in ipaddress.collapse_addresses(ipaddress.ip_network(c) for c in set(cidrs))]
+
+
+def extra_lines():
+    lines = []
+    try:
+        names = sorted(n for n in os.listdir(EXTRA_DIR) if n.endswith(".rules"))
+    except OSError:
+        return lines
+    for name in names:
+        try:
+            with open(os.path.join(EXTRA_DIR, name), encoding="utf-8") as f:
+                for line in f:
+                    line = line.split("#", 1)[0].strip()
+                    if line and not any(c in line for c in "{};"):
+                        lines.append(line)
+        except OSError:
+            pass
+    return lines
+
+
+def l4(proto, port):
+    if proto == "both":
+        return "meta l4proto { tcp, udp } th dport %d" % port
+    return "%s dport %d" % (proto, port)
+
+
+def accept_lines(dev, net, proto, port, scope, address=None):
+    """The rules that let one port in on one interface, from the devices
+    the scope names."""
+    match = l4(proto, int(port))
+    lead = 'iifname "%s" ' % dev
+    if scope == "anyone":
+        return [lead + match + " accept"]
+    if scope == "device":
+        a = ipaddress.ip_address(address)
+        return [lead + ("ip" if a.version == 4 else "ip6") + " saddr " + str(a) + " " + match + " accept"]
+    out = []
+    if net["v4"]:
+        out.append(lead + "ip saddr { %s } %s accept" % (", ".join(net["v4"]), match))
+    if net["v6"]:
+        out.append(lead + "ip6 saddr { %s } %s accept" % (", ".join(net["v6"]), match))
+    return out
+
+
+def ruleset(cfg, level, nets, session, extras):
+    body = [
+        "ct state established,related accept",
+        "ct state invalid drop",
+        "iif lo accept",
+        'iifname { "virbr-wildos", "wildos-win*" } accept',
+        "meta l4proto ipv6-icmp accept",
+        "icmp type { echo-reply, destination-unreachable, time-exceeded, parameter-problem } accept",
+        "udp sport 67 udp dport 68 accept",
+        "udp sport 547 udp dport 546 accept",
+    ]
+    body += extras
+    now = time.time()
+    for net in nets:
+        dev = net["device"]
+        # The devices on this PC's own hotspot get their addresses and name
+        # lookups from it, whatever else that network is allowed.
+        if net.get("shared"):
+            body.append('iifname "%s" udp dport { 53, 67 } accept' % dev)
+            body.append('iifname "%s" tcp dport 53 accept' % dev)
+        trust = cfg["networks"].get(net["uuid"])
+        if trust == "public":
+            continue
+        if cfg["discovery"] and level != "maximum":
+            body.append('iifname "%s" udp dport { %s } accept' % (dev, ", ".join(str(p) for p in DISCOVERY)))
+        if trust != "home":
+            continue
+        for name, svc in SERVICES.items():
+            if cfg["services"][name] and os.path.exists(svc["binary"]):
+                for proto, port in svc["ports"]:
+                    body += accept_lines(dev, net, proto, port, "network")
+        for r in cfg["rules"] + session:
+            if r.get("on", True) is False or (r.get("until") or 0) and r["until"] <= now:
+                continue
+            body += accept_lines(dev, net, r["proto"], r["port"], r["scope"], r.get("address"))
+    # Only new connections sent to this computer itself are logged, not
+    # what every device broadcasts to the whole network, and never more
+    # than a few a minute.
+    body.append("meta pkttype host ct state new meta l4proto { tcp, udp } "
+                'limit rate 12/minute burst 20 packets log prefix "wildos-blocked" group %d' % LOG_GROUP)
+    return ("table inet {t}\ndelete table inet {t}\ntable inet {t} {{\n"
+            "    chain input {{\n"
+            "        type filter hook input priority filter; policy drop;\n"
+            "{body}"
+            "    }}\n}}\n").format(t=TABLE, body="".join("        %s\n" % line for line in body))
+
+
+def nft_load(text):
+    p = subprocess.run(["nft", "-f", "-"], input=text, capture_output=True, text=True)
+    return p.returncode == 0, p.stderr.strip()
+
+
+def apply():
+    cfg = load_config()
+    level = saved_level()
+    now = time.time()
+
+    # Rules that ran out are gone for good.
+    keep = [r for r in cfg["rules"] if not (r.get("until") or 0) or r["until"] > now]
+    if len(keep) != len(cfg["rules"]):
+        cfg["rules"] = keep
+        write_json(CONFIG, cfg)
+
+    nets = active_networks() if cfg["enabled"] else []
+    session = load_session()
+    try:
+        os.remove(MARK)
+    except OSError:
+        pass
+
+    if not cfg["enabled"]:
+        subprocess.run(["nft", "delete", "table", "inet", TABLE], capture_output=True)
+        loaded = True
+    elif subprocess.run(["sh", "-c", "command -v nft"], capture_output=True).returncode != 0:
+        loaded = False
+    else:
+        extras = extra_lines()
+        loaded, err = nft_load(ruleset(cfg, level, nets, session, extras))
+        if not loaded and extras:
+            # A broken line in firewall.d must never leave the computer open.
+            print("firewall.d ignored: " + err, file=sys.stderr)
+            loaded, err = nft_load(ruleset(cfg, level, nets, session, []))
+        if not loaded:
+            print(err, file=sys.stderr)
+        else:
+            os.makedirs(os.path.dirname(MARK), exist_ok=True)
+            with open(MARK, "w", encoding="utf-8") as f:
+                f.write(level + "\n")
+            os.chmod(MARK, 0o644)
+
+    expiries = [r["until"] for r in cfg["rules"] if (r.get("until") or 0) > now]
+    write_json(STATE, {
+        "applied": int(now),
+        "enabled": cfg["enabled"],
+        "loaded": bool(loaded and cfg["enabled"]),
+        "level": level,
+        "next_expiry": min(expiries) if expiries else 0,
+        "networks": [dict(n, trust=cfg["networks"].get(n["uuid"], "")) for n in nets],
+    })
+    return loaded
+
+
+def session_user():
+    uid = os.environ.get("PKEXEC_UID", "")
+    if not uid.isdigit():
+        return None
+    try:
+        import pwd
+        return pwd.getpwuid(int(uid)).pw_name
+    except (KeyError, ImportError):
+        return None
+
+
+def apt_install(packages):
+    """Installs with apt, reporting progress as "progress N" lines, and the
+    reason in plain words if it cannot."""
+    env = dict(os.environ, LC_ALL="C", DEBIAN_FRONTEND="noninteractive")
+    lists = "/var/lib/apt/lists"
+    has_lists = any(n.endswith("_Packages") for n in os.listdir(lists)) if os.path.isdir(lists) else False
+
+    def update():
+        print("step Getting the list of packages", flush=True)
+        subprocess.run(["apt-get", "update", "-q"], env=env, capture_output=True)
+
+    if not has_lists:
+        update()
+    for attempt in (1, 2):
+        print("step Downloading", flush=True)
+        p = subprocess.Popen(["apt-get", "install", "-y", "-q", "--no-install-recommends",
+                              "-o", "APT::Status-Fd=1",
+                              "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold"]
+                             + packages, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        errors = []
+        installing = False
+        for line in p.stdout:
+            line = line.strip()
+            if line.startswith(("E:", "Err:")):
+                errors.append(line)
+                continue
+            parts = line.split(":", 3)
+            if len(parts) >= 3 and parts[0] in ("dlstatus", "pmstatus"):
+                try:
+                    pct = float(parts[2])
+                except ValueError:
+                    continue
+                # Downloading is the first half of the bar, installing the second.
+                if parts[0] == "pmstatus" and not installing:
+                    installing = True
+                    print("step Installing", flush=True)
+                print("progress %d" % int(pct / 2 + (50 if parts[0] == "pmstatus" else 0)), flush=True)
+        if p.wait() == 0:
+            return
+        if attempt == 1 and any("Unable to locate" in e or "404" in e or "Failed to fetch" in e for e in errors):
+            update()
+            continue
+        reason = errors[-1].split(":", 1)[1].strip() if errors else "apt-get could not install " + " ".join(packages)
+        if "Could not resolve" in reason or "Failed to fetch" in reason or "Temporary failure" in reason:
+            fail("It could not be downloaded. Check that this computer is online and try again.")
+        if "Could not get lock" in reason:
+            fail("Another install or update is running. Try again when it has finished.")
+        fail(reason)
+
+
+def systemctl(*args):
+    p = run(["systemctl"] + list(args))
+    return p is not None and p.returncode == 0
+
+
+def set_service(name, on):
+    svc = SERVICES[name]
+    cfg = load_config()
+    if on:
+        if not os.path.exists(svc["binary"]):
+            apt_install(svc["packages"])
+            if not os.path.exists(svc["binary"]):
+                fail("It was installed but its server is missing. Nothing was changed.")
+        if name == "files":
+            user = session_user()
+            # Files shares folders through Samba's user shares, which need
+            # this group; it applies from the next sign-in.
+            if user:
+                run(["gpasswd", "-a", user, "sambashare"])
+        for unit in svc["units"]:
+            if not systemctl("enable", "--now", unit):
+                p = run(["systemctl", "status", "--no-pager", "-n", "3", unit])
+                fail("%s did not start. %s" % (unit, (p.stdout.strip().splitlines() or [""])[-1] if p else ""))
+        cfg["services"][name] = True
+        write_json(CONFIG, cfg)
+        apply()
+    else:
+        cfg["services"][name] = False
+        write_json(CONFIG, cfg)
+        apply()
+        for unit in svc["units"]:
+            systemctl("disable", "--now", unit)
+
+
+def parse_allow(args):
+    if len(args) != 6:
+        fail("usage: settings-firewall allow NAME PORT PROTO SCOPE ADDRESS DURATION", 2)
+    name, port, proto, scope, address, duration = args
+    name = " ".join(name.split())[:60]
+    if not name or not name.isprintable():
+        fail("The name can't be used.", 2)
+    if not port.isdigit() or not 0 < int(port) < 65536:
+        fail("A port is a number from 1 to 65535.", 2)
+    if proto not in ("tcp", "udp", "both") or scope not in ("network", "device", "anyone"):
+        fail("usage: settings-firewall allow NAME PORT tcp|udp|both network|device|anyone ADDRESS forever|restart|hour", 2)
+    if duration not in ("forever", "restart", "hour"):
+        fail("usage: settings-firewall allow ... forever|restart|hour", 2)
+    rule = {"id": secrets.token_hex(4), "name": name, "port": int(port), "proto": proto, "scope": scope,
+            "on": True, "added": int(time.time())}
+    if scope == "device":
+        try:
+            a = ipaddress.ip_address(address)
+        except ValueError:
+            fail("That isn't an address. It looks like 192.168.1.24.", 2)
+        if a.is_loopback or a.is_multicast or a.is_unspecified:
+            fail("That address can't be another device.", 2)
+        rule["address"] = str(a)
+    if duration == "hour":
+        rule["until"] = int(time.time()) + 3600
+    return rule, duration == "restart"
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        fail(__doc__.strip(), 2)
+    os.makedirs("/run/wildos", exist_ok=True)
+    lock = open(LOCK, "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+
+    cmd = args[0]
+    if cmd in ("apply", "boot") and len(args) == 1:
+        sys.exit(0 if apply() else 1)
+    if cmd == "enabled" and len(args) == 2 and args[1] in ("on", "off"):
+        cfg = load_config()
+        cfg["enabled"] = args[1] == "on"
+        write_json(CONFIG, cfg)
+        history("firewall", on=cfg["enabled"])
+        sys.exit(0 if apply() else 1)
+    if cmd == "trust" and len(args) == 3 and UUID_RE.match(args[1]) and args[2] in ("home", "public"):
+        cfg = load_config()
+        cfg["networks"][args[1]] = args[2]
+        write_json(CONFIG, cfg)
+        history("trust", trust=args[2], network=network_name(args[1]))
+        sys.exit(0 if apply() else 1)
+    if cmd == "discovery" and len(args) == 2 and args[1] in ("on", "off"):
+        cfg = load_config()
+        cfg["discovery"] = args[1] == "on"
+        write_json(CONFIG, cfg)
+        history("discovery", on=cfg["discovery"])
+        sys.exit(0 if apply() else 1)
+    if cmd == "service" and len(args) == 3 and args[1] in SERVICES and args[2] in ("on", "off"):
+        set_service(args[1], args[2] == "on")
+        history("service", service=args[1], on=args[2] == "on")
+        sys.exit(0)
+    if cmd == "allow":
+        rule, session_only = parse_allow(args[1:])
+        if session_only:
+            data = {"rules": load_session() + [rule]}
+            write_json(SESSION, data)
+        else:
+            cfg = load_config()
+            cfg["rules"].append(rule)
+            write_json(CONFIG, cfg)
+        history("allow", name=rule.get("name", ""), port=rule["port"], proto=rule["proto"], scope=rule["scope"],
+                address=rule.get("address", ""), until=rule.get("until"), session=session_only)
+        sys.exit(0 if apply() else 1)
+    if cmd in ("rule", "remove") and len(args) == (3 if cmd == "rule" else 2) and ID_RE.match(args[1]):
+        if cmd == "rule" and args[2] not in ("on", "off"):
+            fail("usage: settings-firewall rule ID on|off", 2)
+        cfg = load_config()
+        session = load_session()
+        found = None
+        for rules in (cfg["rules"], session):
+            for r in list(rules):
+                if r["id"] == args[1]:
+                    found = r
+                    if cmd == "remove":
+                        rules.remove(r)
+                    else:
+                        r["on"] = args[2] == "on"
+        if not found:
+            fail("That rule has already gone.")
+        write_json(CONFIG, cfg)
+        write_json(SESSION, {"rules": session})
+        history("rule", name=found.get("name", ""), port=found["port"], proto=found["proto"],
+                change="removed" if cmd == "remove" else args[2])
+        sys.exit(0 if apply() else 1)
+    fail(__doc__.strip(), 2)
+
+
+if __name__ == "__main__":
+    main()

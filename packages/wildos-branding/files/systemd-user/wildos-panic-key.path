@@ -1,0 +1,7 @@
+[Unit]
+Description=Follow the panic key switch in Advanced protection
+ConditionUser=!@system
+
+[Path]
+PathChanged=/etc/wildos/advanced-protection
+Unit=wildos-panic-key.service

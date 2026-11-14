@@ -88,8 +88,16 @@ Item {
                     onTextChanged: NoteStore.search = text
                     onEscapePressed: list.stopSearch()
                     onDownPressed: notes.forceActiveFocus()
+                    // An empty box closes when you leave it, but not for the text
+                    // menu, which holds focus while it is up and may be there to
+                    // paste.
                     onActiveFocusChanged: {
-                        if (!activeFocus && text.length === 0) {
+                        if (!activeFocus && !textMenuOpen && text.length === 0) {
+                            list.searching = false;
+                        }
+                    }
+                    onTextMenuFocusLeft: {
+                        if (text.length === 0) {
                             list.searching = false;
                         }
                     }

@@ -70,6 +70,7 @@ FocusScope {
         font.letterSpacing: pill.secret && text.length > 0 ? 1.5 : 0
         echoMode: pill.secret ? TextInput.Password : TextInput.Normal
         passwordCharacter: "•"
+        UI.NoPaste { enabled: pill.secret }
         placeholderText: pill.placeholder
         placeholderTextColor: UI.Style.inkOnWallpaperMuted
         inputMethodHints: pill.secret ? (Qt.ImhHiddenText | Qt.ImhSensitiveData | Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText)

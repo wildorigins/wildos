@@ -10,6 +10,7 @@
 #include <QDBusMetaType>
 #include <QDBusObjectPath>
 #include <QDBusReply>
+#include <QFile>
 #include <QFileInfo>
 #include <QPointer>
 #include <QThread>
@@ -21,6 +22,24 @@ Q_DECLARE_METATYPE(ManagedObjects)
 
 namespace
 {
+// Settings > Privacy and security > Advanced protection's "Password-locked
+// USB sticks" (usb_encrypt in /etc/wildos/advanced-protection, on unless it
+// says off): off, the format window leaves "Encrypt this drive" out.
+bool encryptOffered()
+{
+    QFile store(QStringLiteral("/etc/wildos/advanced-protection"));
+    bool on = true;
+    if (store.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        while (!store.atEnd()) {
+            const QByteArray line = store.readLine().trimmed();
+            if (line.startsWith("usb_encrypt=")) {
+                on = line.mid(12) != "off";
+            }
+        }
+    }
+    return on;
+}
+
 const QString service = QStringLiteral("org.freedesktop.UDisks2");
 const QString root = QStringLiteral("/org/freedesktop/UDisks2");
 const QString blockPrefix = QStringLiteral("/org/freedesktop/UDisks2/block_devices/");
@@ -491,7 +510,7 @@ QVariantMap DriveFormat::describe(const QString &udi) const
     }
     out.insert(QStringLiteral("tools"), tools);
     const QStringList crypt = manager.property("SupportedEncryptionTypes").toStringList();
-    out.insert(QStringLiteral("canEncrypt"), crypt.contains(QStringLiteral("luks2")));
+    out.insert(QStringLiteral("canEncrypt"), crypt.contains(QStringLiteral("luks2")) && encryptOffered());
     return out;
 }
 

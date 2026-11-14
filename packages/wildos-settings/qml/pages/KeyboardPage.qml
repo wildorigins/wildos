@@ -275,7 +275,7 @@ PageScroll {
             const query = filter.text.trim().toLowerCase();
             const taken = page.layouts.map(l => l.layout + "|" + l.variant);
             return all.filter(l => !taken.includes(l.layout + "|" + l.variant)
-                && (query.length === 0 || l.name.toLowerCase().includes(query)));
+                && (query.length === 0 || l.name.toLowerCase().includes(query) || (l.keywords || "").includes(query)));
         }
 
         title: "Add a keyboard"
@@ -292,7 +292,7 @@ PageScroll {
         UI.SearchField {
             id: filter
             Layout.fillWidth: true
-            placeholderText: "Search layouts, for example French"
+            placeholderText: "Search by country, language or layout, for example Belgium"
             onTextChanged: addDialog.chosen = -1
             onDownPressed: {
                 addDialog.chosen = Math.max(0, addDialog.chosen);

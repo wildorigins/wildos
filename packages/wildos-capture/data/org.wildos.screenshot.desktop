@@ -7,9 +7,9 @@ Icon=wildos-capture
 Exec=/usr/bin/wildos-screenshot
 Terminal=false
 Categories=Qt;Utility;Graphics;
-Keywords=screenshot;snip;snipping tool;print screen;capture;record;screen recording;mark up;annotate;
+Keywords=screenshot;snip;snipping tool;print screen;capture;record;screen recording;mark up;annotate;scan;scanner;scanning;document;
 StartupNotify=false
-Actions=Record;
+Actions=Record;Scan;
 # Win+Shift+S and Print Screen, as in Windows 11; Win+Shift+R records.
 X-KDE-Shortcuts=Meta+Shift+S,Print
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
@@ -21,3 +21,7 @@ X-DBUS-ServiceName=org.wildos.screenshot
 Name=Record the screen
 Exec=/usr/bin/wildos-screenshot --record
 X-KDE-Shortcuts=Meta+Shift+R
+
+[Desktop Action Scan]
+Name=Scan a document
+Exec=/usr/bin/wildos-screenshot --scan

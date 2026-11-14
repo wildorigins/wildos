@@ -464,6 +464,10 @@ Item {
             }
             apps.push({ text: "Choose another app…", run: () => root.chooseApp(urls) });
             entries.push({ text: "Open with", icon: "open-with", submenu: apps });
+            // Advanced protection's Safe box, while it is switched on.
+            if (local && FileOps.safeBoxPlan(urls[0]).ok) {
+                entries.push({ text: "Open in safe box", icon: "sandbox", run: () => FileOps.openInSafeBox(urls[0]) });
+            }
         }
         if (local && FileOps.areArchives(urls)) {
             entries.push({ text: "Extract here", icon: "zip", enabled: FileOps.canWriteIn(f.url), run: () => FileOps.extractHere(urls) });
@@ -472,6 +476,11 @@ Item {
             entries.push({ text: "Compress to ZIP file", icon: "zip", enabled: FileOps.canWriteIn(f.url), run: () => FileOps.compress(urls) });
             if (FileOps.canUseArchive()) {
                 entries.push({ text: "Compress…", icon: "zip", run: () => FileOps.compressWith(urls) });
+            }
+            // Advanced protection's Remove personal details, while it is
+            // switched on, for the kinds of file it can clean.
+            if (FileOps.canRemoveDetails(urls)) {
+                entries.push({ text: "Remove personal details", icon: "eye-off", run: () => FileOps.removeDetails(urls) });
             }
             const targets = FileOps.sendTargets(urls).map(t => ({
                 text: t.text,

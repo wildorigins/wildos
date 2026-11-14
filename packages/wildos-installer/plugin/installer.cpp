@@ -1,17 +1,37 @@
 #include "installer.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileDialog>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
 #include <QRandomGenerator>
+#include <QRegularExpression>
+#include <QWindow>
+
+#include <pwd.h>
+#include <unistd.h>
 
 static const QString checker = QStringLiteral("/usr/libexec/wildos-installer/check-computer");
+// From base-files, so it is on every Debian system; the image's slimming
+// only drops /usr/share/doc.
+static const QString licenceFile = QStringLiteral("/usr/share/common-licenses/GPL-3");
 
 Installer::Installer()
 {
+    // Calamares 3.3.14 crashes while tearing its pages down after the event
+    // loop ends, so closing it (the sidebar's Close the installer, Alt+F4)
+    // ended on a crash report. Before the install step nothing is mounted
+    // or written, so it leaves here instead; after it, Calamares' own
+    // shutdown runs as before, so a finished install still restarts.
+    connect(qApp, &QCoreApplication::aboutToQuit, this, [this] {
+        if (m_exitQuickly)
+            ::_exit(0);
+    });
+
     // Letters and digits that cannot be mistaken for one another when
     // written down or read back: 32 of them, so 30 give 150 random bits.
     static const QString alphabet = QStringLiteral("ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
@@ -213,4 +233,98 @@ QString Installer::startMode() const
             mode = QString::fromUtf8(word.mid(12));
     }
     return mode;
+}
+
+QVariantList Installer::licenceSections() const
+{
+    QFile file(licenceFile);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return {};
+    const QString text = QString::fromUtf8(file.readAll());
+
+    // A heading is a paragraph of one line, "  15. Disclaimer of Warranty.",
+    // numbered one more than the last, so a number inside the terms can
+    // never start a section by mistake.
+    static const QRegularExpression heading(QStringLiteral(R"(^\s*(\d{1,2})\.\s+(.+)\.$)"));
+    QVariantList sections;
+    QVariantMap section{{QStringLiteral("number"), -1}, {QStringLiteral("title"), QString()}};
+    QStringList paragraphs;
+    int next = 0;
+    const auto flush = [&] {
+        section.insert(QStringLiteral("paragraphs"), paragraphs);
+        sections.append(section);
+        paragraphs.clear();
+    };
+
+    const QStringList blocks = text.split(QRegularExpression(QStringLiteral(R"(\n[ \t]*\n)")), Qt::SkipEmptyParts);
+    for (const QString &block : blocks) {
+        QStringList lines = block.split(u'\n');
+        for (QString &line : lines)
+            line = line.trimmed();
+        lines.removeAll(QString());
+        if (lines.isEmpty())
+            continue;
+        if (lines.size() == 1) {
+            const auto m = heading.match(lines.first());
+            if (m.hasMatch() && m.captured(1).toInt() == next) {
+                flush();
+                section = {{QStringLiteral("number"), next}, {QStringLiteral("title"), m.captured(2)}};
+                paragraphs.append(lines.first());
+                ++next;
+                continue;
+            }
+        }
+        paragraphs.append(lines.join(u' '));
+    }
+    flush();
+    return sections;
+}
+
+QString Installer::saveLicence(QObject *window)
+{
+    // Calamares runs as root through sudo; the copy belongs to the person
+    // in the live session, so it starts in their home folder and is theirs.
+    QString home = QDir::homePath();
+    uid_t uid = 0;
+    gid_t gid = 0;
+    if (const QByteArray user = qgetenv("SUDO_USER"); !user.isEmpty()) {
+        if (const passwd *pw = getpwnam(user.constData())) {
+            home = QString::fromLocal8Bit(pw->pw_dir);
+            uid = pw->pw_uid;
+            gid = pw->pw_gid;
+        }
+    }
+
+    QFileDialog dialog(nullptr, tr("Save a copy of the licence"), home + QStringLiteral("/GNU General Public License v3.txt"),
+                       tr("Text files (*.txt)"));
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDefaultSuffix(QStringLiteral("txt"));
+    dialog.winId();
+    if (auto *parent = qobject_cast<QWindow *>(window); parent && dialog.windowHandle())
+        dialog.windowHandle()->setTransientParent(parent);
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty())
+        return QString();
+    const QString target = dialog.selectedFiles().first();
+
+    QFile source(licenceFile);
+    if (!source.open(QIODevice::ReadOnly))
+        return tr("The licence file could not be read.");
+    const QByteArray bytes = source.readAll();
+    QFile out(target);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate) || out.write(bytes) != bytes.size()) {
+        return tr("The licence could not be saved there. Try another folder or drive.");
+    }
+    out.close();
+    // FAT and NTFS drives have no owners and refuse; the copy is saved anyway.
+    if (uid != 0)
+        (void)::chown(QFile::encodeName(target).constData(), uid, gid);
+    run(QStringLiteral("sync"), {});
+    return QString();
+}
+
+void Installer::quitNow()
+{
+    // Straight out, without Calamares' "Close the installer?" question:
+    // on the first page nothing has been chosen.
+    ::_exit(0);
 }

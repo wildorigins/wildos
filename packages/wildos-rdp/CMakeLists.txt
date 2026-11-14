@@ -37,6 +37,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 qt_add_executable(wildos-rdp
     src/main.cpp
     src/railwindow.cpp src/railwindow.h
+    src/desktopwindow.cpp src/desktopwindow.h
     src/rail.cpp src/rail.h
     src/loading.cpp src/loading.h
     src/style.cpp src/style.h

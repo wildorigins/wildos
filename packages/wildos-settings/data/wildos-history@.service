@@ -1,0 +1,12 @@
+[Unit]
+Description=Bring Settings > System > History up to date
+Documentation=file:///usr/libexec/wildos/settings-history
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wildos/settings-history serve
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+Nice=10
+IOSchedulingClass=idle

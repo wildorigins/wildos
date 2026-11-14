@@ -1,0 +1,6 @@
+#!/bin/sh
+# Quiet lock screen. Nothing to do as root: the lock screen reads quiet_lock
+# from /etc/wildos/advanced-protection each time it starts
+# (look-and-feel/contents/lockscreen/LockNotifications.qml), so the next lock
+# follows the switch.
+exit 0

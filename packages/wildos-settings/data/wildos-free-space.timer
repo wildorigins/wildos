@@ -1,0 +1,12 @@
+[Unit]
+Description=Check now and then whether the disk is nearly full
+
+# Turned on and off per person from Settings > System > Storage > Free up
+# space (Tidy up automatically). Each run only looks at free space unless
+# less than 10% of the disk is free.
+[Timer]
+OnStartupSec=10min
+OnUnitActiveSec=30min
+
+[Install]
+WantedBy=timers.target

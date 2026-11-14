@@ -39,7 +39,14 @@ const newAccountPins = ["org.wildos.music.desktop", "org.wildos.videos.desktop"]
 
 // Apps that make up the system itself. Windows does not offer to uninstall
 // these from Start either.
-const coreApps = ["org.wildos.files", "org.wildos.store", "org.kde.dolphin", "org.kde.discover", "systemsettings", "org.wildos.settings", "org.wildos.terminal", "org.kde.konsole"];
+const coreApps = ["org.wildos.files", "org.wildos.store", "org.kde.dolphin", "org.kde.discover", "systemsettings", "org.wildos.settings", "org.kde.konsole",
+    "org.wildos.report", "org.wildos.taskmanager", "org.wildos.welcome", "org.wildos.winmode", "org.wildos.run", "org.wildos.security", "org.wildos.access"];
+
+// Wild OS's own apps, which the Store does not list: Settings removes them.
+function isOwnApp(favoriteId) {
+    const id = storageId(favoriteId);
+    return id.indexOf("org.wildos.") === 0 || id === "libreoffice-writer" || id === "libreoffice-calc";
+}
 
 function isCoreApp(favoriteId) {
     return coreApps.includes(storageId(favoriteId));
@@ -99,6 +106,36 @@ const settingsPages = {
     "kcm_virtualkeyboard": ["On-screen keyboard", "Accessibility", "accessibility"],
 };
 
+// Wild OS Settings pages with no KDE module behind them, which the search
+// above can never return, matched here on their own words.
+const wildosPages = [
+    { page: "history", title: "History", category: "System",
+      keywords: "history event viewer events event log logs what happened reliability crash crashes closed unexpectedly problems errors sign in sign-ins signed in failed password wrong password fingerprint shut down shutdown restart restarted sleep woke lid start-up startup boot usb drive firewall blocked updates installed restore point backup" },
+    { page: "hardware", title: "Devices", category: "System",
+      keywords: "device manager devices hardware drivers driver missing driver unknown device firmware graphics card gpu wifi adapter network adapter sound card webcam camera fingerprint reader touchpad battery health disk health drive health smart usb device pci" },
+    { page: "taskbar", title: "Taskbar", category: "Personalisation",
+      keywords: "taskbar panel auto hide autohide clock seconds full date battery percentage show desktop peek end task kill force close force quit not responding frozen hung windows mode status" },
+    { page: "firewall", title: "Firewall", category: "Privacy and security",
+      keywords: "firewall windows defender firewall network protection public network home network allow app allow port open port blocked connections incoming connections network discovery file sharing remote desktop rdp ssh" },
+    { page: "advancedprotection", title: "Advanced protection", category: "Privacy and security",
+      keywords: "advanced protection extra protection hardening locked usb devices quiet lock screen fingerprint password restart when locked wi-fi bluetooth switch off encrypted dns dns over tls quad9 mullvad cloudflare vpn only kill switch clipboard passwords presenting mode screen sharing personal details metadata password-locked usb sticks encrypt drive guest session safe box panic key reset to defaults" },
+];
+
+// Pages from wildosPages for a query: every word typed starts a word of
+// the page's title or keywords; named when they all start its title.
+function wildosPageMatches(query) {
+    const words = String(query ?? "").toLowerCase().trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0 || words.join(" ").length < 2) {
+        return [];
+    }
+    const found = wildosPages.filter(p => {
+        const hay = " " + (p.title + " " + p.keywords).toLowerCase();
+        return words.every(w => hay.includes(" " + w));
+    });
+    const titled = p => words.every(w => (" " + p.title.toLowerCase()).includes(" " + w));
+    return found.map(p => Object.assign({ named: titled(p) }, p));
+}
+
 function settingsPage(url) {
     const text = String(url ?? "");
     const id = text.substring(text.lastIndexOf("/") + 1).replace(/\.desktop$/, "");
@@ -123,6 +160,22 @@ function storageId(favoriteId) {
         id = id.substring(0, id.length - ".desktop".length);
     }
     return id;
+}
+
+// The taskbar launcher URL for an app in Start. Kicker gives an app's id
+// bare in All apps ("org.wildos.report.desktop") but already prefixed in
+// search results and the pinned grid ("applications:org.wildos.report.desktop"),
+// so the prefix is put back on the bare id rather than added to whatever
+// came. An app known only by its file keeps a file URL.
+function taskbarUrl(favoriteId) {
+    const id = String(favoriteId ?? "");
+    if (id.startsWith("file:")) {
+        return id;
+    }
+    if (id.startsWith("/")) {
+        return "file://" + encodeURI(id);
+    }
+    return "applications:" + storageId(id) + ".desktop";
 }
 
 function appName(favoriteId, display) {

@@ -386,6 +386,7 @@ T.Popup {
                         anchors.rightMargin: 12
                         verticalAlignment: TextInput.AlignVCenter
                         echoMode: TextInput.Password
+                        UI.NoPaste {}
                         passwordCharacter: "•"
                         color: UI.Style.ink
                         selectionColor: UI.Style.textSelection
@@ -399,6 +400,16 @@ T.Popup {
                         Accessible.passwordEdit: true
                         onTextChanged: dialog.error = ""
                         onAccepted: dialog.submit()
+                        Keys.onPressed: event => {
+                            if (passwordMenu.isMenuKey(event)) {
+                                passwordMenu.openAtCaret();
+                                event.accepted = true;
+                            }
+                        }
+
+                        UI.TextMenu {
+                            id: passwordMenu
+                        }
                     }
                 }
 

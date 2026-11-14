@@ -1,3 +1,9 @@
+wildos-music (0.1.3) trixie; urgency=medium
+
+  * The mini player's close button closes Music.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 13 Nov 2026 10:21:27 +0000
+
 wildos-music (0.1.2) trixie; urgency=medium
 
   * The empty Music folder message, Liked songs and empty playlists sit in

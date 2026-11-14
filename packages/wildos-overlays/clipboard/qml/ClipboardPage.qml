@@ -152,6 +152,21 @@ Item {
         function onDataChanged() { page.rebuild(); }
     }
 
+    // The history goes first: Klipper puts its newest item back on the
+    // clipboard when the clipboard empties. Item by item, because Klipper's
+    // own clearHistory() asks first in a dialog, which the lock screen
+    // would hide until sign-in.
+    Connections {
+        target: PanelApp
+        function onClearRequested() {
+            for (let i = history.count - 1; i >= 0; i--) {
+                history.remove(String(history.data(history.index(i, 0), page.uuidRole)));
+            }
+            Pins.clear();
+            PanelApp.clearClipboard();
+        }
+    }
+
     Connections {
         target: Pins
         function onChanged() { page.rebuild(); }

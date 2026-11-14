@@ -78,6 +78,13 @@ PlasmoidItem {
         const row = (id, icon, title, text, tone, action, run) =>
             list.push({ id: id, icon: icon, title: title, status: text, tone: tone, action: action, run: run });
 
+        // Only a row while it is off, switched off in Settings or failed to
+        // load, and never one that can be ignored: the shield stays amber
+        // until the firewall is back.
+        if (s.firewall === "off") {
+            row("firewall", "firewall", "Firewall", "Firewall is off", "warn", "Turn on", "settings:firewall");
+        }
+
         if (s.encryption === "on") {
             row("encryption", "lock", "Disk encryption", "Your files are encrypted", "ok", "", "privacy");
         } else if (s.encryption === "off") {
@@ -412,6 +419,8 @@ PlasmoidItem {
             openPrivacy();
         } else if (what === "updates") {
             openUpdates();
+        } else if (what === "settings:firewall") {
+            openSettings("firewall");
         } else if (what.indexOf("ignore:") === 0 || what.indexOf("unignore:") === 0) {
             const at = what.indexOf(":");
             const key = what.slice(at + 1);

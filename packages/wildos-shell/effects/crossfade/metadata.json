@@ -1,0 +1,10 @@
+{
+    "KPlugin": {
+        "Category": "Appearance",
+        "Description": "Fades every window from its old colours to its new ones when the theme or accent changes",
+        "EnabledByDefault": true,
+        "License": "GPL",
+        "Name": "Colour change fade"
+    },
+    "X-KWin-Internal": true
+}

@@ -27,15 +27,26 @@ UI.AppWindow {
     required property string path
     property bool saved: false
 
+    // A scanned page from the Scan tab: Save puts it back in the scan.
+    property bool scanPage: false
+
     // Closing for good, after any question about saving.
     signal done()
+    // Save wrote the picture to `path`.
+    signal wrote(string path)
 
     readonly property string fileName: path.substring(path.lastIndexOf("/") + 1)
+    // A scanned page's file carries its page's number after a #, for the
+    // Scan tab; the title leaves it out.
+    readonly property string shownName: scanPage ? fileName.replace(/ #\d+\.png$/, "") : fileName
     readonly property string placeName: path.indexOf("/Pictures/Screenshots/") >= 0 ? qsTr("Pictures › Screenshots")
         : path.substring(0, path.lastIndexOf("/")).replace(/^.*\//, "")
     // Line widths and text are drawn at the screen's scale, so a mark looks
     // the same size on the picture as it did on screen.
-    readonly property real unit: Math.max(1, Screen.devicePixelRatio)
+    // A scanned page is far bigger than the screen, so there the unit is
+    // what one screen pixel is on the page, shown whole.
+    readonly property real unit: scanPage ? Math.max(1, base.implicitHeight / Math.max(200, Screen.desktopAvailableHeight - 362))
+        : Math.max(1, Screen.devicePixelRatio)
     readonly property int imageWidth: base.implicitWidth
     readonly property int imageHeight: base.implicitHeight
 
@@ -90,7 +101,7 @@ UI.AppWindow {
     }
 
     deep: true
-    title: fileName
+    title: shownName
     width: Math.round(Math.min(Math.max(900, imageWidth / unit + 200), Screen.desktopAvailableWidth - 80))
     height: Math.round(Math.min(Math.max(560, imageHeight / unit + 266), Screen.desktopAvailableHeight - 80))
     minimumWidth: 880
@@ -271,12 +282,13 @@ UI.AppWindow {
             if (CaptureApp.saveImage(image, cropArgument(), path)) {
                 saved = true;
                 dirty = false;
-                status = qsTr("Saved to %1").arg(placeName);
+                status = scanPage ? qsTr("Put back in the scan") : qsTr("Saved to %1").arg(placeName);
+                win.wrote(path);
                 if (then) {
                     then();
                 }
             } else {
-                status = qsTr("Couldn't save to %1").arg(placeName);
+                status = scanPage ? qsTr("Couldn't put it back in the scan") : qsTr("Couldn't save to %1").arg(placeName);
             }
         });
     }
@@ -369,7 +381,7 @@ UI.AppWindow {
                 }
                 UI.Label {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: win.fileName
+                    text: win.shownName
                     font.weight: UI.Style.weightMedium
                     color: win.active ? UI.Style.ink : UI.Style.inkMuted
                 }
@@ -887,7 +899,20 @@ UI.AppWindow {
                                 cursorVisible: win.typing
                                 Accessible.name: qsTr("Text to add")
                                 onAccepted: win.finishText()
-                                onActiveFocusChanged: if (!activeFocus && win.typing) win.finishText()
+                                // The text menu holds focus while it is open; the text is
+                                // still being typed.
+                                onActiveFocusChanged: if (!activeFocus && win.typing && !textMenu.opened) win.finishText()
+                                Keys.onPressed: event => {
+                                    if (textMenu.isMenuKey(event)) {
+                                        textMenu.openAtCaret();
+                                        event.accepted = true;
+                                    }
+                                }
+
+                                UI.TextMenu {
+                                    id: textMenu
+                                    onFocusLeft: win.finishText()
+                                }
                             }
                         }
                     }
@@ -932,7 +957,7 @@ UI.AppWindow {
                 UI.Label {
                     size: 12
                     color: UI.Style.inkMuted
-                    text: qsTr("Saves to %1").arg(win.placeName)
+                    text: win.scanPage ? qsTr("Save puts it back in the scan") : qsTr("Saves to %1").arg(win.placeName)
                 }
             }
         }

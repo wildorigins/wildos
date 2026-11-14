@@ -158,6 +158,7 @@ Item {
                             Layout.preferredWidth: 280
                             echoMode: TextInput.Password
                             revealable: true
+                            UI.NoPaste {}
                             placeholderText: qsTr("Backup password")
                             onAccepted: Restore.givePassword(text)
                         }

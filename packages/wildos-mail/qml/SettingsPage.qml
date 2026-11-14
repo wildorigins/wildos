@@ -180,11 +180,15 @@ Rectangle {
                                 UI.TextField {
                                     width: 240
                                     text: accountCard.modelData.fullName
-                                    onEditingFinished: {
+                                    function save() {
                                         const a = MailEngine.account(accountCard.modelData.id);
                                         a.fullName = text.trim();
                                         MailEngine.updateAccount(a);
                                     }
+                                    // Saving rebuilds this card, and the open text menu
+                                    // with it; the menu holds focus while it is up.
+                                    onEditingFinished: if (!textMenuOpen) save()
+                                    onTextMenuFocusLeft: save()
                                 }
                             }
                             UI.SettingRow {
@@ -193,11 +197,15 @@ Rectangle {
                                 UI.TextField {
                                     width: 240
                                     text: accountCard.modelData.name
-                                    onEditingFinished: {
+                                    function save() {
                                         const a = MailEngine.account(accountCard.modelData.id);
                                         a.name = text.trim() || a.email;
                                         MailEngine.updateAccount(a);
                                     }
+                                    // Saving rebuilds this card, and the open text menu
+                                    // with it; the menu holds focus while it is up.
+                                    onEditingFinished: if (!textMenuOpen) save()
+                                    onTextMenuFocusLeft: save()
                                 }
                             }
                             UI.SettingRow {
@@ -295,6 +303,7 @@ Rectangle {
                                 font.weight: UI.Style.weightSemiBold
                             }
                             QQC.TextArea {
+                                id: signatureEdit
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 110
                                 text: sigCard.modelData.signature
@@ -311,10 +320,24 @@ Rectangle {
                                     border.width: 1
                                     border.color: UI.Style.borderField
                                 }
-                                onEditingFinished: {
+                                function save() {
                                     const a = MailEngine.account(sigCard.modelData.id);
                                     a.signature = text;
                                     MailEngine.updateAccount(a);
+                                }
+                                // Saving rebuilds this card, and the open text menu with
+                                // it; the menu holds focus while it is up.
+                                onEditingFinished: if (!signatureMenu.opened) save()
+                                Keys.onPressed: event => {
+                                    if (signatureMenu.isMenuKey(event)) {
+                                        signatureMenu.openAtCaret();
+                                        event.accepted = true;
+                                    }
+                                }
+
+                                UI.TextMenu {
+                                    id: signatureMenu
+                                    onFocusLeft: signatureEdit.save()
                                 }
                             }
                         }

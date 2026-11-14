@@ -134,7 +134,7 @@ PageScroll {
         id: threadsCard
         Layout.fillWidth: true
         visible: Processor.threadsAvailable
-        readonly property bool pending: Processor.everyThread !== Processor.everyThreadActive
+        readonly property bool pending: Processor.threadsPending
 
         Column {
             width: parent.width
@@ -143,10 +143,11 @@ PageScroll {
                 iconName: "chip"
                 title: "Use every processor thread"
                 description: Processor.everyThreadLocked
-                    ? "Off at Strict and Maximum protection, which keep every CPU flaw protection on."
+                    ? (threadsCard.pending ? "Restart to finish turning it off. " : "")
+                        + "Off while extra processor protection is on, in Privacy and security."
                     : threadsCard.pending
                     ? "Restart to finish turning it " + (Processor.everyThread ? "on." : "off.")
-                    : "Faster heavy apps, one less CPU-flaw protection for the whole PC. Needs a restart."
+                    : "Faster heavy apps. Off keeps the second thread of each core idle, a little safer. Needs a restart."
 
                 UI.Toggle {
                     id: threadsToggle
@@ -154,14 +155,14 @@ PageScroll {
                     checked: Processor.everyThread && !Processor.everyThreadLocked
                     enabled: !Processor.busy && !Processor.everyThreadLocked
                     locked: Processor.everyThreadLocked
-                    lockedReason: "Strict and Maximum protection keep this off"
+                    lockedReason: "Extra processor protection keeps this off"
                     Accessible.name: "Use every processor thread"
                     onToggled: Processor.setEveryThread(checked)
                 }
             }
 
             UI.SettingRow {
-                visible: threadsCard.pending && !Processor.everyThreadLocked
+                visible: threadsCard.pending
                 title: "Restart to apply"
                 description: "Open apps are asked to save first."
 

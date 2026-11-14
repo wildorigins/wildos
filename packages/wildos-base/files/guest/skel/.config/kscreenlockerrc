@@ -1,0 +1,5 @@
+# A guest session has no password to unlock with, and nothing of its own to
+# protect from the next person, so it never locks by itself.
+[Daemon]
+Autolock=false
+LockOnResume=false

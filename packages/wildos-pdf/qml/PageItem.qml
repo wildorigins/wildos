@@ -284,9 +284,19 @@ Item {
                     editor.open = false;
                     input.text = "";
                     event.accepted = true;
+                } else if (inputMenu.isMenuKey(event)) {
+                    inputMenu.openAtCaret();
+                    event.accepted = true;
                 }
             }
-            onActiveFocusChanged: if (!activeFocus) editor.commit()
+            // The text menu holds focus while it is open; the text is still
+            // being typed.
+            onActiveFocusChanged: if (!activeFocus && !inputMenu.opened) editor.commit()
+
+            UI.TextMenu {
+                id: inputMenu
+                onFocusLeft: editor.commit()
+            }
         }
     }
 
@@ -347,7 +357,8 @@ Item {
                         if (most > 0 && text.length > most) {
                             remove(most, text.length);
                         }
-                        dirty = activeFocus;
+                        // A paste from the text menu lands while the menu holds focus.
+                        dirty = activeFocus || textBoxMenu.opened;
                     }
                     function save() {
                         if (dirty) {
@@ -363,9 +374,16 @@ Item {
                             save();
                             nextItemInFocusChain(true).forceActiveFocus(Qt.TabFocusReason);
                             event.accepted = true;
+                        } else if (textBoxMenu.isMenuKey(event)) {
+                            textBoxMenu.openAtCaret();
+                            event.accepted = true;
                         }
                     }
-                    onActiveFocusChanged: if (!activeFocus) save()
+                    onActiveFocusChanged: if (!activeFocus && !textBoxMenu.opened) save()
+                    UI.TextMenu {
+                        id: textBoxMenu
+                        onFocusLeft: textBox.save()
+                    }
                     Connections {
                         target: page.app
                         function onCommitEdits() {

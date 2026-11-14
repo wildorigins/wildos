@@ -22,6 +22,19 @@ PageScroll {
     }
 
     Connections {
+        target: Advanced
+        function onFailed(key, message) {
+            if (key === "usb_locked") {
+                page.usbError = "USB protection could not be changed.";
+            }
+        }
+        // A cancelled password leaves it as it was.
+        function onChanged() {
+            usbToggle.checked = Qt.binding(() => Protection.status.devices === "on");
+        }
+    }
+
+    Connections {
         target: System
         function onUsbProtectionFailed(reason) {
             page.usbError = reason;
@@ -120,6 +133,20 @@ PageScroll {
             size: 12.5
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
+        }
+
+        UI.Card {
+            Layout.fillWidth: true
+            visible: Advanced.available
+
+            UI.SettingRow {
+                width: parent.width
+                iconName: "shield"
+                title: "Advanced protection"
+                description: "Extra protection for people who want it"
+                chevron: true
+                onClicked: Navigator.open("advancedprotection")
+            }
         }
     }
 
@@ -238,10 +265,80 @@ PageScroll {
                     checked: Protection.status.devices === "on"
                     enabled: !(System.securityChecking)
                     Accessible.name: "Block new USB devices"
-                    onToggled: System.setUsbProtection(checked)
+                    // One switch with Advanced protection's "Ignore new USB
+                    // devices while locked", kept in its store.
+                    onToggled: {
+                        page.usbError = "";
+                        if (Advanced.available) {
+                            Advanced.set("usb_locked", checked);
+                        } else {
+                            System.setUsbProtection(checked);
+                        }
+                    }
+                }
+            }
+
+            // Kicksecure's full set of processor flaw protections, forced on
+            // whatever the processor, with every core's second thread off.
+            // Off by default for speed; Strict and Maximum keep it on
+            // (settings-cpu-threads protect, read by 40_wildos.cfg).
+            UI.SettingRow {
+                id: cpuRow
+                readonly property bool pending: Processor.extraProtectionPending
+                minHeight: 64
+                title: "Extra processor protection"
+                description: Processor.extraProtectionLocked
+                    ? "On at Strict and Maximum protection."
+                    : cpuRow.pending
+                    ? "Restart to finish turning it " + (Processor.extraProtection ? "on." : "off.")
+                    : Processor.extraProtection
+                    ? "On. Every processor flaw protection is forced on and each core runs one thread, so heavy apps and Windows mode are slower."
+                    : "Off for speed: Linux picks protections to suit your processor. On forces every one, even for flaws your processor doesn't have, and turns off the second thread of each core. Needs a restart."
+                status: Processor.extraProtection ? "On" : "Off"
+
+                UI.Toggle {
+                    id: cpuToggle
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: Processor.extraProtection
+                    enabled: !Processor.busy && !Processor.extraProtectionLocked
+                    locked: Processor.extraProtectionLocked
+                    lockedReason: "Strict and Maximum protection keep this on"
+                    Accessible.name: "Extra processor protection"
+                    onToggled: {
+                        cpuError.text = "";
+                        Processor.setExtraProtection(checked);
+                    }
+                }
+            }
+
+            UI.SettingRow {
+                visible: cpuRow.pending
+                title: "Restart to apply"
+                description: "Open apps are asked to save first."
+
+                UI.Button {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Restart now"
+                    onClicked: Updates.restart()
                 }
             }
         }
+
+        Connections {
+            target: Processor
+            // A cancelled password leaves the choice as it was, so the switch goes back to it.
+            function onChanged() { cpuToggle.checked = Processor.extraProtection }
+            function onFailed(message) { cpuError.text = message }
+        }
+    }
+
+    UI.Label {
+        id: cpuError
+        visible: text.length > 0
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        size: 13
+        color: UI.Style.warning
     }
 
     // The kernel's 32-bit layer, which Steam and older games need. A boot

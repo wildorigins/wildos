@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- The switches and the Stop button in the taskbar's camera and microphone
+     panel. Only /usr/libexec/wildos/camera-mic-block runs under these, and
+     it takes nothing but the device. Switching a device off, and stopping
+     an app, never asks: they only take access away. Switching one back on
+     asks for the password, so an app cannot quietly turn it on again. -->
+<policyconfig>
+  <vendor>Wild OS</vendor>
+  <vendor_url>https://wildos.io</vendor_url>
+
+  <action id="org.wildos.camera-mic.block">
+    <description>Turn off the camera or microphone for every app</description>
+    <message>Turn off the camera or microphone for every app?</message>
+    <icon_name>security-high</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/camera-mic-block</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">block</annotate>
+  </action>
+
+  <action id="org.wildos.camera-mic.release">
+    <description>Stop an app using the camera</description>
+    <message>Stop the app using the camera?</message>
+    <icon_name>security-high</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/camera-mic-block</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">release</annotate>
+  </action>
+
+  <action id="org.wildos.camera-mic.unblock">
+    <description>Turn the camera or microphone back on</description>
+    <message>Turn this back on for every app?</message>
+    <icon_name>security-high</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/camera-mic-block</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">unblock</annotate>
+  </action>
+</policyconfig>

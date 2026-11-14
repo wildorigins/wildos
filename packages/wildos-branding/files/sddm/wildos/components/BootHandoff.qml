@@ -34,6 +34,15 @@ Item {
     // Typing into these skips to the end.
     property Item input
     property Item secondInput
+    // Plays the boards' timeline this much faster.
+    property real speed: 1.15
+    // Set by the session splash once Plasma has drawn the desktop: the W then
+    // opens onto the real desktop, taskbar and windows included, instead of
+    // the photo, so nothing is left to fade in when the flight ends.
+    property bool live: false
+    // Ends as the flight lands instead of after the sign-in screen's clock
+    // fades in: the desktop has no clock to wait for.
+    property bool endOnLanding: false
 
     readonly property bool active: markerImage.status === Image.Ready && !done
     readonly property bool afterUnlock: unlockedImage.status === Image.Ready
@@ -82,6 +91,10 @@ Item {
     property real d: 0
     property real skip: 0
     property bool done: false
+    // Decode the photo at the size it is shown, grown 1.18 times at most,
+    // rather than at its full 4K: decoding it twice at full size held up the
+    // first frame. Wild OS photos are 16:9.
+    readonly property int photoDecodeWidth: Math.ceil(1.18 * Math.max(screenW, screenH * 16 / 9))
     readonly property string assets: "file:///usr/share/plymouth/themes/wildos/"
     readonly property string handoffAssets: "file:///usr/share/wildos/boot-handoff/"
 
@@ -167,14 +180,21 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: handoff.k.background
+        visible: !(handoff.live && handoff.d >= handoff.k.cover)
     }
 
     // The wallpaper, there from the moment the cover goes up, settling from
-    // 1.18 to its place as the screen flies through the W.
+    // 1.18 to its place as the screen flies through the W. When the desktop
+    // is ready before the cover goes up it never shows; when it is ready
+    // later, it gives way to the desktop part way through.
     Item {
         id: photoLayer
         anchors.fill: parent
-        visible: handoff.d >= handoff.k.cover
+        visible: handoff.d >= handoff.k.cover && opacity > 0
+        opacity: handoff.live ? 0 : 1
+        Behavior on opacity {
+            NumberAnimation { duration: 400; easing.type: Easing.InOutQuad }
+        }
 
         Image {
             id: photo
@@ -191,10 +211,12 @@ Item {
             x: (photoLayer.width - width) / 2
             y: (photoLayer.height - height) * handoff.photoFocus
             source: handoff.active ? handoff.photoSource : ""
+            sourceSize.width: handoff.photoDecodeWidth
             // Loaded before the first frame; until then the screen still
-            // shows Plymouth's identical last frame.
+            // shows Plymouth's identical last frame. Cached, so the screen
+            // around this shares the one decode.
             asynchronous: false
-            cache: false
+            cache: true
             smooth: true
             mipmap: true
             transform: Scale {
@@ -390,8 +412,8 @@ Item {
     Component.onCompleted: d = k.start
 
     function tick() {
-        const end = k.clockEnd + 0.4;
-        d = Math.min(end, k.start + (Date.now() - startedAt) / 1000);
+        const end = endOnLanding ? k.zoom[1] : k.clockEnd + 0.4;
+        d = Math.min(end, k.start + speed * (Date.now() - startedAt) / 1000);
         if (d >= end) {
             done = true;
             finished();
