@@ -1,0 +1,16 @@
+# The shutdown sound, played as the desktop closes rather than before it.
+# Plasma's own logout sound (Event/exitkde) holds the whole sign-out, restart
+# or shutdown back until it has finished. Here it plays while the session
+# winds down: the stop runs when the graphical session ends, and since this
+# starts after PipeWire it stops before it, so the sound is not cut off.
+[Unit]
+Description=Shutdown sound
+PartOf=graphical-session.target
+After=pipewire.service pipewire-pulse.service wireplumber.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/libexec/wildos/logout-sound
+TimeoutStopSec=6

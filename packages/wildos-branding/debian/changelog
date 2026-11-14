@@ -1,3 +1,12 @@
+wildos-branding (0.1.65) trixie; urgency=medium
+
+  * Wild OS plays its shutdown sound as it signs out, restarts or shuts
+    down, and nothing flashes on screen between the maker's logo and the
+    Wild OS screen at start-up or shutdown. Holding Shift at start-up still
+    shows the start-up menu.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 17:25:04 +0000
+
 wildos-branding (0.1.64) trixie; urgency=medium
 
   * The Updates icon is on the taskbar again when updates are waiting or

@@ -88,3 +88,4 @@ execute_after_dh_fixperms:
 	# USBGuard refuses rule files other users can read.
 	chmod 0600 debian/wildos-branding/etc/usbguard/rules.d/40-wildos-built-in.conf
 	chmod 0755 debian/wildos-branding/usr/lib/dracut/modules.d/*/*.sh
+	chmod 0755 debian/wildos-branding/etc/grub.d/06_wildos_menu_look

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Plays desktop-logout from the chosen sound scheme when the session ends
+# (wildos-logout-sound.service). It follows Settings > Sound: no sound when
+# the scheme is None or the start-up and shutdown sound switch is off, which
+# Settings keeps on Plasma's start-up event.
+read_kde() { kreadconfig6 --file "$1" --group "$2" --key "$3" 2>/dev/null; }
+
+[ "$(read_kde kdeglobals Sounds Enable)" = false ] && exit 0
+case "$(read_kde plasma_workspace.notifyrc Event/startkde Action)" in
+    *Sound*) ;;
+    *) exit 0 ;;
+esac
+theme=$(read_kde kdeglobals Sounds Theme)
+file=
+for dir in "${XDG_DATA_HOME:-$HOME/.local/share}" /usr/local/share /usr/share; do
+    if [ -f "$dir/sounds/${theme:-ocean}/stereo/desktop-logout.oga" ]; then
+        file="$dir/sounds/${theme:-ocean}/stereo/desktop-logout.oga"
+        break
+    fi
+done
+[ -n "$file" ] || exit 0
+exec pw-play "$file"

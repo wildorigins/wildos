@@ -13,9 +13,9 @@ KConfigGroup sounds()
     return KSharedConfig::openConfig(QStringLiteral("kdeglobals"))->group(QStringLiteral("Sounds"));
 }
 
-KConfigGroup startEvent()
+KConfigGroup sessionEvent(const QString &event)
 {
-    return KSharedConfig::openConfig(QStringLiteral("plasma_workspace.notifyrc"))->group(QStringLiteral("Event/startkde"));
+    return KSharedConfig::openConfig(QStringLiteral("plasma_workspace.notifyrc"))->group(QStringLiteral("Event/") + event);
 }
 }
 
@@ -35,7 +35,7 @@ QString SoundTheme::scheme() const
 
 bool SoundTheme::startupSound() const
 {
-    return startEvent().readEntry("Action", QString()).contains(QLatin1String("Sound"));
+    return sessionEvent(QStringLiteral("startkde")).readEntry("Action", QString()).contains(QLatin1String("Sound"));
 }
 
 void SoundTheme::setScheme(const QString &scheme)
@@ -55,9 +55,12 @@ void SoundTheme::setScheme(const QString &scheme)
     }
 }
 
+// One switch for both sounds. It is kept on Plasma's start-up event; the
+// shutdown sound (/usr/libexec/wildos/logout-sound) reads it there, since
+// Plasma's own logout event would hold the shutdown back until it finished.
 void SoundTheme::setStartupSound(bool on)
 {
-    auto g = startEvent();
+    auto g = sessionEvent(QStringLiteral("startkde"));
     g.writeEntry("Action", on ? QStringLiteral("Sound") : QString(), KConfig::Notify);
     g.sync();
     Q_EMIT changed();

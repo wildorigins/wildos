@@ -3,4 +3,5 @@ Default: yes
 Priority: 0
 Auth-Type: Additional
 Auth:
+	[success=ignore default=1]	pam_wildos_fingerprint.so typed
 	optional	pam_exec.so quiet seteuid expose_authtok /usr/libexec/wildos/fingerprint-stamp

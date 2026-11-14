@@ -532,15 +532,15 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "power"
-                    title: "Play a sound when Wild OS starts"
-                    description: "When the desktop appears after you sign in"
+                    title: "Play a sound when Wild OS starts and shuts down"
+                    description: "When the desktop appears, and when you sign out, restart or shut down"
                     status: SoundTheme.startupSound ? "On" : "Off"
                     enabled: SoundTheme.scheme !== "none"
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: SoundTheme.startupSound
-                        Accessible.name: "Play a sound when Wild OS starts"
+                        Accessible.name: "Play a sound when Wild OS starts and shuts down"
                         onToggled: {
                             SoundTheme.setStartupSound(checked);
                             if (checked) {

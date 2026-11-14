@@ -14,3 +14,4 @@ usr/share/wildos/xdg/taskmanagerrulesrc etc/xdg/taskmanagerrulesrc
 usr/lib/systemd/user/wildos-camera-mic.service usr/lib/systemd/user/graphical-session.target.wants/wildos-camera-mic.service
 usr/lib/systemd/user/wildos-panic-key.service usr/lib/systemd/user/plasma-workspace.target.wants/wildos-panic-key.service
 usr/lib/systemd/user/wildos-panic-key.path usr/lib/systemd/user/plasma-workspace.target.wants/wildos-panic-key.path
+usr/lib/systemd/user/wildos-logout-sound.service usr/lib/systemd/user/graphical-session.target.wants/wildos-logout-sound.service

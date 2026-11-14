@@ -16,7 +16,7 @@ Depends:
  wildos-ui,
  wildos-desktop-view,
 # fingerprint-turn reads the notes fingerprint-stamp writes.
- wildos-system-dialogs (>= 0.1.14),
+ wildos-system-dialogs (>= 0.1.16),
  wildos-settings (>= 0.1.54),
  wildos-files (>= 0.1.13),
  wildos-store,

@@ -345,8 +345,14 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
     time_t deadline;
 
     (void)flags;
-    (void)argc;
-    (void)argv;
+
+    // "typed": succeeds only when a password was typed in this sign-in, so
+    // the line after it in common-auth (fingerprint-stamp, which needs the
+    // password) is skipped after a fingerprint. pam_exec's expose_authtok
+    // would otherwise ask for a password nobody typed.
+    if (argc == 1 && !strcmp(argv[0], "typed"))
+        return pam_get_item(pamh, PAM_AUTHTOK, &token) == PAM_SUCCESS && token && *(const char *)token
+            ? PAM_SUCCESS : PAM_IGNORE;
 
     if (pam_get_item(pamh, PAM_SERVICE, (const void **)&service) != PAM_SUCCESS || !service)
         return PAM_IGNORE;

@@ -152,6 +152,52 @@ wildos_suffix() {
     echo "+wildos${n:-1}"
 }
 
+# A release image carries Wild OS's packages exactly as the update repository
+# has them. Rebuilding them stamped every one with the release's own +rN,
+# higher than the published copies of unchanged packages, and a fresh install
+# was then offered dozens of "updates" to identical packages with lower
+# numbers (deb.wildos.io is pinned above everything). A source whose version
+# is published, every one of its packages, is taken from there and checked
+# against the repository's SHA-256 sums; anything not published is built.
+if [ -n "${WILDOS_PACKAGES_FROM:-}" ]; then
+    log "Taking published Wild OS packages from $WILDOS_PACKAGES_FROM"
+    # The builder has Python, not curl.
+    fetch() {
+        python3 -I -c 'import sys, urllib.request, shutil
+with urllib.request.urlopen(sys.argv[1], timeout=120) as r, open(sys.argv[2], "wb") as f:
+    shutil.copyfileobj(r, f, 1 << 20)' "$1" "$2" || { echo "ERROR: could not download $1" >&2; exit 1; }
+    }
+    index="$WORK/published-Packages"
+    fetch "$WILDOS_PACKAGES_FROM/dists/stable/main/binary-amd64/Packages" "$index"
+    published_srcs=
+    for pkg in "$WORK"/pkgsrc/*/; do
+        [ -e "$pkg/NOT-READY" ] && continue
+        ver=$(dpkg-parsechangelog -l "$pkg/debian/changelog" -S Version)
+        bins=$(sed -n 's/^Package:[[:space:]]*//p' "$pkg/debian/control")
+        files=()
+        for bin in $bins; do
+            entry=$(awk -v p="$bin" -v v="$ver" '
+                /^Package: /{name=$2} /^Version: /{version=$2} /^Filename: /{file=$2} /^SHA256: /{sum=$2}
+                /^$/{ if (name == p && (version == v || index(version, v "+r") == 1)) print file, sum; name="" }
+                END{ if (name == p && (version == v || index(version, v "+r") == 1)) print file, sum }' "$index" | tail -n 1)
+            [ -n "$entry" ] || { files=(); break; }
+            files+=("$entry")
+        done
+        [ "${#files[@]}" -gt 0 ] || continue
+        for entry in "${files[@]}"; do
+            file=${entry% *}
+            sum=${entry#* }
+            fetch "$WILDOS_PACKAGES_FROM/$file" "$WORK/repo/$(basename "$file")"
+            echo "$sum  $WORK/repo/$(basename "$file")" | sha256sum -c --quiet \
+                || { echo "ERROR: $file does not match the repository's checksum" >&2; exit 1; }
+        done
+        published_srcs="$published_srcs $(basename "$pkg")"
+    done
+    log "Published, not rebuilt:${published_srcs:- none}"
+    # The rest are built as usual.
+    for name in $published_srcs; do touch "$WORK/pkgsrc/$name/PUBLISHED"; done
+fi
+
 if [ -n "${WILDOS_REVISION:-}" ]; then
     stamp=$(date -R)
     for changelog in "$WORK"/pkgsrc/*/debian/changelog; do
@@ -175,6 +221,7 @@ else
     todo=0
     for pkg in "$WORK"/pkgsrc/*/; do
         [ -e "$pkg/NOT-READY" ] && continue
+        [ -e "$pkg/PUBLISHED" ] && continue
         if [ -n "${WILDOS_ONLY+set}" ] && [[ " $WILDOS_ONLY " != *" $(basename "$pkg") "* ]]; then continue; fi
         todo=$((todo + 1))
     done
@@ -187,6 +234,8 @@ else
     for pkg in "$WORK"/pkgsrc/*/; do
         # Work in progress is kept out of the image until it is ready.
         [ -e "$pkg/NOT-READY" ] && continue
+        # Already in the image as published (WILDOS_PACKAGES_FROM).
+        [ -e "$pkg/PUBLISHED" ] && continue
         # WILDOS_ONLY, when set, names the packages to build (an update that
         # reuses the rest as published).
         if [ -n "${WILDOS_ONLY+set}" ] && [[ " $WILDOS_ONLY " != *" $(basename "$pkg") "* ]]; then

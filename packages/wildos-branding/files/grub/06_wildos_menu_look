@@ -1,0 +1,54 @@
+#!/bin/sh
+# Draws the Wild OS start-up menu only when it is going to be seen.
+#
+# GRUB normally switches the screen to its graphics mode at every start, menu
+# hidden or not, and that mode change is a flash between the maker's logo
+# and the Wild OS screen. With GRUB_TERMINAL_OUTPUT=console
+# (45_wildos_theme.cfg) GRUB leaves the firmware's screen alone, and this
+# switches to the themed menu only when Shift is held or the last start did
+# not finish (recordfail, when the menu shows by itself). Esc during the
+# hidden timeout still opens the menu, as plain text.
+set -e
+
+prefix="/usr"
+exec_prefix="/usr"
+datarootdir="/usr/share"
+. "${pkgdatadir:-/usr/share/grub}/grub-mkconfig_lib"
+
+[ -n "$GRUB_THEME" ] && [ -f "$GRUB_THEME" ] && is_path_readable_by_grub "$GRUB_THEME" || exit 0
+
+font_path=
+for dir in "${pkgdatadir}" /boot/grub /usr/share/grub; do
+    if is_path_readable_by_grub "$dir/unicode.pf2" >/dev/null; then
+        font_path="$dir/unicode.pf2"
+        break
+    fi
+done
+[ -n "$font_path" ] || exit 0
+
+# GRUB's script has no || or &&, so the two reasons set one flag.
+cat << 'EOF'
+set wildos_menu_look=0
+if [ "${recordfail}" = 1 ]; then set wildos_menu_look=1; fi
+if keystatus --shift; then set wildos_menu_look=1; fi
+if [ "${wildos_menu_look}" = 1 ]; then
+EOF
+prepare_grub_to_access_device $(${grub_probe} --target=device "$font_path") | sed 's/^/  /'
+cat << EOF
+  if loadfont $(make_system_path_relative_to_its_root "$font_path"); then
+    set gfxmode=${GRUB_GFXMODE:-auto}
+    load_video
+    insmod gfxterm
+    terminal_output gfxterm
+  fi
+EOF
+prepare_grub_to_access_device $(${grub_probe} --target=device "$GRUB_THEME") | sed 's/^/  /'
+echo '  insmod gfxmenu'
+themedir=$(dirname "$GRUB_THEME")
+for x in "$themedir"/*.pf2 "$themedir"/f/*.pf2; do
+    [ -f "$x" ] && echo "  loadfont (\$root)$(make_system_path_relative_to_its_root "$x")"
+done
+echo '  insmod png'
+echo "  set theme=(\$root)$(make_system_path_relative_to_its_root "$GRUB_THEME")"
+echo '  export theme'
+echo 'fi'

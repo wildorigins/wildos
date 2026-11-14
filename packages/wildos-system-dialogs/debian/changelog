@@ -1,3 +1,10 @@
+wildos-system-dialogs (0.1.16) trixie; urgency=medium
+
+  * Signing in with your fingerprint in the terminal no longer asks for
+    your password straight afterwards.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 17:11:38 +0000
+
 wildos-system-dialogs (0.1.15) trixie; urgency=medium
 
   * The fingerprint keeps working after a restart again: asking for the

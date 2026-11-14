@@ -97,6 +97,7 @@ docker run --rm --privileged \
     -e WILDOS_PATCH_COUNTS="$patch_counts" \
     -e WILDOS_ONLY \
     -e WILDOS_PUBLISH \
+    -e WILDOS_PACKAGES_FROM \
     -e WILDOS_BUILD_SLOTS     -e WILDOS_UPDATES_KEY \
     -e WILDOS_CHECKOUT="$PWD" \
     -v "$PWD":/src:ro \

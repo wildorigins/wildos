@@ -30,6 +30,7 @@ files/aurorae/WildOSLight/* usr/share/aurorae/themes/WildOSLight/
 files/skel/.config etc/skel/
 files/polkit/* usr/share/polkit-1/actions/
 files/grub/45_wildos_theme.cfg etc/default/grub.d/
+files/grub/06_wildos_menu_look etc/grub.d/
 files/pam-configs/* usr/share/pam-configs/
 files/sounds/wildos usr/share/sounds/
 icons/apps/fluent-ui-system-icons.txt usr/share/wildos-branding/licences/
