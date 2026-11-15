@@ -1,0 +1,50 @@
+Startup finished in 401ms (kernel) + 4.606s (initrd) + 3.694s (userspace) = 8.702s 
+graphical.target reached after 3.635s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 10.147198
+workspace_ready 10.552076
+splash_end 12.647598
+shell_start plasmashell 9.93
+graphical_target 8.643790
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @3.635s
+└─power-profiles-daemon.service @3.521s +113ms
+  └─multi-user.target @3.516s
+    └─sdwdate.service @3.418s +97ms
+      └─tor@default.service @3.242s +170ms
+        └─network-online.target @3.240s
+          └─NetworkManager-wait-online.service @3.057s +183ms
+            └─NetworkManager.service @2.929s +125ms
+              └─dbus.service @2.864s +61ms
+                └─basic.target @2.837s
+                  └─privleapd.service @2.757s +79ms
+                    └─sysinit.target @2.752s
+                      └─mnt-shared-kvm.service @2.325s +427ms
+                        └─local-fs.target @2.305s
+                          └─run-user-1000.mount @3.372s
+                            └─swap.target @1.297s
+                              └─swap-swapfile.swap @1.290s +5ms
+                                └─swap.mount @1.273s +10ms
+                                  └─local-fs-pre.target @393ms
+                                    └─systemd-tmpfiles-setup-dev.service @333ms +20ms
+                                      └─systemd-tmpfiles-setup-dev-early.service @294ms +35ms
+                                        └─kmod-static-nodes.service @266ms +22ms
+== blame
+4.431s sys-devices-pnp0-00:02-printer-lp0.device
+4.431s dev-lp0.device
+4.375s dev-disk-by\x2ddiskseq-1.device
+4.375s sys-devices-virtual-block-zram0.device
+4.375s dev-zram0.device
+4.343s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+4.343s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+4.343s dev-vport3p1.device
+4.336s sys-devices-pnp0-00:03-00:03:0-00:03:0.0-tty-ttyS0.device
+4.336s dev-ttyS0.device
+4.335s sys-devices-platform-serial8250-serial8250:0-serial8250:0.3-tty-ttyS3.device
+4.335s dev-ttyS3.device
+4.329s sys-devices-platform-serial8250-serial8250:0-serial8250:0.1-tty-ttyS1.device
+4.329s dev-ttyS1.device
+4.324s sys-devices-platform-serial8250-serial8250:0-serial8250:0.2-tty-ttyS2.device

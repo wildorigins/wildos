@@ -1,0 +1,50 @@
+Startup finished in 1.014s (firmware) + 5.277s (loader) + 870ms (kernel) + 2.222s (initrd) + 5.020s (userspace) = 14.405s 
+graphical.target reached after 5.016s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 9.185927
+workspace_ready 9.580267
+splash_end 10.598830
+shell_start plasmashell 8.57
+graphical_target 8.108932
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @5.016s
+└─plasmalogin.service @5.000s +15ms
+  └─drm-module-load.target @4.999s
+    └─plymouth-quit.service @1.424s +3.573s
+      └─systemd-user-sessions.service @1.418s +4ms
+        └─network.target @1.412s
+          └─NetworkManager.service @1.306s +106ms
+            └─basic.target @1.304s
+              └─dbus-broker.service @1.281s +22ms
+                └─dbus.socket @1.279s +41us
+                  └─sysinit.target @1.277s
+                    └─systemd-update-utmp.service @1.264s +13ms
+                      └─systemd-tmpfiles-setup.service @1.229s +33ms
+                        └─systemd-journal-flush.service @1.200s +28ms
+                          └─var-log.mount @1.187s +8ms
+                            └─local-fs-pre.target @311ms
+                              └─systemd-tmpfiles-setup-dev.service @296ms +15ms
+                                └─systemd-tmpfiles-setup-dev-early.service @216ms +71ms
+                                  └─kmod-static-nodes.service @196ms +18ms
+                                    └─systemd-journald.socket
+                                      └─system.slice
+                                        └─-.slice
+== blame
+3.573s plymouth-quit-wait.service
+3.573s plymouth-quit.service
+2.598s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+2.598s dev-vport3p1.device
+2.598s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+2.559s dev-disk-by\x2ddiskseq-1\x2dpart1.device
+2.559s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartuuid-8baf1b2b\x2db475\x2d4b44\x2d83a7\x2d00f3f5b752a8.device
+2.559s dev-disk-by\x2ddesignator-esp.device
+2.559s dev-disk-by\x2dpartuuid-8baf1b2b\x2db475\x2d4b44\x2d83a7\x2d00f3f5b752a8.device
+2.559s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartnum-1.device
+2.559s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart1.device
+2.559s dev-vda1.device
+2.559s sys-devices-pci0000:00-0000:00:01.0-virtio0-block-vda-vda1.device
+2.559s dev-disk-by\x2dpath-virtio\x2dpci\x2d0000:00:01.0\x2dpart1.device
+2.559s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2duuid-7ED3\x2d6DD7.device

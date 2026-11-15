@@ -1,0 +1,374 @@
+
+Phoronix Test Suite v10.8.6
+
+    Installed:     pts/build-linux-kernel-1.18.0
+    Installed:     pts/compress-7zip-1.13.1
+    Installed:     system/compress-7zip-1.0.0
+    Installed:     pts/compress-zstd-1.6.0
+    Installed:     pts/openssl-4.1.1
+    Installed:     system/openssl-1.2.1
+    Installed:     pts/x265-1.6.0
+    Installed:     pts/phpbench-1.1.6
+    Installed:     pts/pybench-1.1.3
+    Installed:     pts/sqlite-speedtest-1.0.1
+    Installed:     pts/simdjson-2.4.0
+    Installed:     pts/stockfish-1.8.0
+    Installed:     pts/git-1.1.0
+
+
+Timed Linux Kernel Compilation 7.0:
+    pts/build-linux-kernel-1.18.0
+    Processor Test Configuration
+    Using Pre-Set Run Option: defconfig
+
+
+Zstd Compression 1.5.4:
+    pts/compress-zstd-1.6.0
+    Processor Test Configuration
+    Using Pre-Set Run Option: 19
+
+
+OpenSSL 4.1:
+    pts/openssl-4.1.1
+    Processor Test Configuration
+    Using Pre-Set Run Option: AES-256-GCM
+
+
+OpenSSL:
+    system/openssl-1.2.1
+    Processor Test Configuration
+    Using Pre-Set Run Option: AES-256-GCM
+
+
+x265 4.2:
+    pts/x265-1.6.0
+    Processor Test Configuration
+    Using Pre-Set Run Option: Bosphorus 1080p
+
+
+simdjson 5.0:
+    pts/simdjson-2.4.0
+    Processor Test Configuration
+    Using Pre-Set Run Option: PartialTweets
+
+System Information
+
+
+    [NOTICE] Undefined array key 0 in phodevi_memory:295
+
+    [NOTICE] Undefined array key 0 in phodevi_memory:307
+
+PROCESSOR:                Intel Core i9-12900K
+    Core Count:           4                                        
+    Extensions:           SSE 4.2 + AVX2 + AVX + RDRAND + FSGSBASE 
+    Cache Size:           16 MB                                    
+    Microcode:            0xffffffff                               
+    Core Family:          Alder Lake                               
+
+GRAPHICS:                 Red Hat Virtio 1.0 GPU
+    Monitor:              QEMU Monitor     
+    Screen:               1280x800         
+
+MOTHERBOARD:              QEMU Standard PC
+    BIOS Version:         2024.02-2ubuntu0.10            
+    Chipset:              Intel 82G33/G31/P35/P31 + ICH9 
+    Network:              Red Hat Virtio device          
+
+MEMORY:                   0 x RAM QEMU
+
+DISK:                     36GB
+    File-System:          btrfs                                                            
+    Mount Options:        compress=zstd:3 noatime rw space_cache=v2 subvol=/@ subvolid=256 
+    Disk Details:         Block Size: 4096                                                 
+
+OPERATING SYSTEM:         cachyos rolling
+    Kernel:               7.3.4-1-cachyos (x86_64)                                                                                                      
+    Desktop:              KDE Plasma                                                                                                                    
+    Compiler:             GCC 16.2.1 20260810 + Clang 23.1.5 + LLVM 23.1.5                                                                              
+    System Layer:         KVM                                                                                                                           
+    Security:             gather_data_sampling: Not affected                                                                                            
+                          + ghostwrite: Not affected                                                                                                    
+                          + indirect_target_selection: Mitigation of Aligned branch/return thunks                                                       
+                          + itlb_multihit: Not affected                                                                                                 
+                          + l1tf: Not affected                                                                                                          
+                          + mds: Not affected                                                                                                           
+                          + meltdown: Not affected                                                                                                      
+                          + mmio_stale_data: Not affected                                                                                               
+                          + old_microcode: Not affected                                                                                                 
+                          + reg_file_data_sampling: Not affected                                                                                        
+                          + retbleed: Mitigation of Enhanced IBRS                                                                                       
+                          + spec_rstack_overflow: Not affected                                                                                          
+                          + spec_store_bypass: Mitigation of SSB disabled via prctl                                                                     
+                          + spectre_v1: Mitigation of usercopy/swapgs barriers and __user pointer sanitization                                          
+                          + spectre_v2: Mitigation of Enhanced / Automatic IBRS; IBPB: conditional; PBRSB-eIBRS: SW sequence; BHI: SW loop KVM: SW loop 
+                          + srbds: Not affected                                                                                                         
+                          + tsa: Not affected                                                                                                           
+                          + tsx_async_abort: Not affected                                                                                               
+                          + vmscape: Not affected                                                                                                       
+
+
+simdjson 5.0:
+    pts/simdjson-2.4.0 [Throughput Test: PartialTweets]
+    Test 1 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      4 Minutes              
+    Estimated Time To Completion: 54 Minutes [01:34 UTC] 
+        Started Run 1 @ 00:41:07
+        Started Run 2 @ 00:42:15
+        Started Run 3 @ 00:43:24
+
+    Throughput Test: PartialTweets:
+        7.74
+        7.77
+        7.75
+
+    Average: 7.75 GB/s
+    Deviation: 0.20%
+
+Zstd Compression 1.5.4:
+    pts/compress-zstd-1.6.0 [Compression Level: 19]
+    Test 2 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      4 Minutes              
+    Estimated Time To Completion: 51 Minutes [01:35 UTC] 
+        Started Run 1 @ 00:44:39
+        Started Run 2 @ 00:45:58
+        Started Run 3 @ 00:47:17
+
+    Compression Level: 19 - Compression Speed:
+        9.76
+        9.85
+        9.65
+
+    Average: 9.75 MB/s
+    Deviation: 1.03%
+
+
+    Compression Level: 19 - Decompression Speed:
+        1401.5
+        1400.6
+        1433.7
+
+    Average: 1411.9 MB/s
+    Deviation: 1.34%
+
+x265 4.2:
+    pts/x265-1.6.0 [Video Input: Bosphorus 1080p]
+    Test 3 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      1 Minute               
+    Estimated Time To Completion: 47 Minutes [01:35 UTC] 
+        Started Run 1 @ 00:48:42
+        Started Run 2 @ 00:49:00
+        Started Run 3 @ 00:49:17
+
+    Video Input: Bosphorus 1080p:
+        45.05
+        46.48
+        46.78
+
+    Average: 46.10 Frames Per Second
+    Deviation: 2.01%
+
+7-Zip Compression 26.01:
+    pts/compress-7zip-1.13.1
+    Test 4 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      2 Minutes              
+    Estimated Time To Completion: 47 Minutes [01:35 UTC] 
+        Started Run 1 @ 00:49:40
+        Started Run 2 @ 00:50:03
+        Started Run 3 @ 00:50:26
+
+    Test: Compression Rating:
+        36949
+        37214
+        37819
+
+    Average: 37327 MIPS
+    Deviation: 1.19%
+
+
+    Test: Decompression Rating:
+        20441
+        20473
+        20350
+
+    Average: 20421 MIPS
+    Deviation: 0.31%
+
+7-Zip Compression:
+    system/compress-7zip-1.0.0
+    Test 5 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      1 Minute               
+    Estimated Time To Completion: 46 Minutes [01:35 UTC] 
+        Started Run 1 @ 00:50:56
+        Started Run 2 @ 00:51:14
+        Started Run 3 @ 00:51:32
+
+    Test: Compression Rating:
+        40200
+        40132
+        39295
+
+    Average: 39876 MIPS
+    Deviation: 1.26%
+
+
+    Test: Decompression Rating:
+        33848
+        33532
+        33620
+
+    Average: 33667 MIPS
+    Deviation: 0.48%
+
+Stockfish 19:
+    pts/stockfish-1.8.0 [Chess Benchmark]
+    Test 6 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      8 Minutes              
+    Estimated Time To Completion: 45 Minutes [01:36 UTC] 
+        Started Run 1 @ 00:51:56
+        Started Run 2 @ 00:54:34
+        Started Run 3 @ 00:57:12
+
+    Chess Benchmark:
+        4892403
+        4980705
+        4942592
+
+    Average: 4938567 Nodes Per Second
+    Deviation: 0.90%
+
+Timed Linux Kernel Compilation 7.0:
+    pts/build-linux-kernel-1.18.0 [Build: defconfig]
+    Test 7 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      14 Minutes             
+    Estimated Time To Completion: 37 Minutes [01:36 UTC] 
+        Running Pre-Test Script @ 00:59:56
+        Started Run 1 @ 01:00:09
+        Running Interim Test Script @ 01:04:37
+        Started Run 2 @ 01:04:43
+        Running Interim Test Script @ 01:09:12
+        Started Run 3 @ 01:09:17
+        Running Post-Test Script @ 01:13:49
+
+    Build: defconfig:
+        266.036
+        266.791
+        270.18
+
+    Average: 267.669 Seconds
+    Deviation: 0.82%
+
+OpenSSL 4.1:
+    pts/openssl-4.1.1 [Algorithm: AES-256-GCM]
+    Test 8 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      4 Minutes              
+    Estimated Time To Completion: 23 Minutes [01:36 UTC] 
+        Started Run 1 @ 01:13:59
+        The test run did not produce a result.
+        Started Run 2 @ 01:17:03
+        The test run did not produce a result.
+        Started Run 3 @ 01:20:07
+        The test run did not produce a result.
+OpenSSL  :
+    system/openssl-1.2.1 [Algorithm: AES-256-GCM]
+    Test 9 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      10 Minutes             
+    Estimated Time To Completion: 20 Minutes [01:42 UTC] 
+        Started Run 1 @ 01:23:17
+        The test run did not produce a result.
+        Started Run 2 @ 01:26:21
+        The test run did not produce a result.
+        Started Run 3 @ 01:29:25
+        The test run did not produce a result.
+SQLite Speedtest 3.30:
+    pts/sqlite-speedtest-1.0.1 [Timed Time - Size 1,000]
+    Test 10 of 13
+    Estimated Trial Run Count:    3                      
+    Estimated Test Run-Time:      8 Minutes              
+    Estimated Time To Completion: 11 Minutes [01:42 UTC] 
+        Started Run 1 @ 01:32:35
+        Started Run 2 @ 01:34:32
+        Started Run 3 @ 01:36:32
+
+    Timed Time - Size 1,000:
+        113.072
+        115.444
+        116.283
+
+    Average: 114.933 Seconds
+    Deviation: 1.45%
+
+PyBench 2018-02-16:
+    pts/pybench-1.1.3 [Total For Average Test Times]
+    Test 11 of 13
+    Estimated Trial Run Count:    3                     
+    Estimated Test Run-Time:      1 Minute              
+    Estimated Time To Completion: 3 Minutes [01:41 UTC] 
+        Started Run 1 @ 01:38:39
+        Started Run 2 @ 01:38:55
+        Started Run 3 @ 01:39:10
+
+    Total For Average Test Times:
+        466
+        464
+        466
+
+    Average: 465 Milliseconds
+    Deviation: 0.25%
+
+PHPBench 0.8.1:
+    pts/phpbench-1.1.6 [PHP Benchmark Suite]
+    Test 12 of 13
+    Estimated Trial Run Count:    3                     
+    Estimated Test Run-Time:      1 Minute              
+    Estimated Time To Completion: 3 Minutes [01:41 UTC] 
+        Started Run 1 @ 01:39:33
+        Started Run 2 @ 01:39:49
+        Started Run 3 @ 01:40:06
+
+    PHP Benchmark Suite:
+        1615803
+        1613638
+        1615776
+
+    Average: 1615072 Score
+    Deviation: 0.08%
+
+Git:
+    pts/git-1.1.0 [Time To Complete Common Git Commands]
+    Test 13 of 13
+    Estimated Trial Run Count:    3                     
+    Estimated Time To Completion: 2 Minutes [01:42 UTC] 
+        Running Pre-Test Script @ 01:40:29
+        Started Run 1 @ 01:40:29
+        Running Interim Test Script @ 01:41:04
+        Started Run 2 @ 01:41:06
+        Running Interim Test Script @ 01:41:40
+        Started Run 3 @ 01:41:43
+        Running Post-Test Script @ 01:42:17
+
+    Time To Complete Common Git Commands:
+        32.904
+        32.619
+        32.291
+
+    Average: 32.605 Seconds
+    Deviation: 0.94%
+
+
+The following tests failed to properly run:
+
+    - pts/openssl-4.1.1: Algorithm: AES-256-GCM
+    - system/openssl-1.2.1: Algorithm: AES-256-GCM
+
+
+
+PTS_RC=0

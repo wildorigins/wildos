@@ -1,0 +1,61 @@
+== os
+Wild OS 0.1 Beta 2
+== kernel
+Linux DESKTOP-NLEHN0W 7.2.12+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 7.2.12-1~bpo13+1 (2026-11-04) x86_64 GNU/Linux
+== cmdline
+BOOT_IMAGE=/vmlinuz-7.2.12+deb13-amd64 root=UUID=eae3d48c-aec3-4288-ae98-10b1a8aff728 ro rootflags=subvol=@ mitigations=auto,nosmt spectre_bhi=on l1tf=full kvm-intel.vmentry_l1d_flush=cond mds=full,nosmt tsx=off tsx_async_abort=full,nosmt l1d_flush=on mmio_stale_data=full,nosmt retbleed=auto,nosmt kvm.mitigate_smt_rsb=1 gather_data_sampling=force reg_file_data_sampling=on slab_nomerge init_on_alloc=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off kfence.sample_interval=100 vdso32=0 cfi=kcfi ia32_emulation=0 efi_pstore.pstore_disable=1 erst_disable proc_mem.force_override=ptrace amd_iommu=force_isolation intel_iommu=on iommu=force iommu.passthrough=0 iommu.strict=0 efi=disable_early_pci_dma random.trust_cpu=off random.trust_bootloader=off extra_latent_entropy init_on_alloc=1 splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 preempt=full loglevel=0 quiet rd.emergency=halt rd.shell=0 systemd.show_status=false rd.systemd.show_status=false
+== cpu
+4
+model name	: 12th Gen Intel(R) Core(TM) i9-12900K
+  x86-64-v3 (supported, searched)
+  x86-64-v2 (supported, searched)
+== governor
+none
+== thp
+[always] madvise never
+always defer defer+madvise [madvise] never
+== sched_ext
+disabled
+== preempt
+preempt=full
+== hz
+CONFIG_HZ=250
+== mitigations
+ Automatic IBRS; IBPB: conditional; PBRSB-eIBRS: SW sequence; BHI: SW loop, KVM: SW loop
+return thunks
+itlb_multihit:Not affected
+ghostwrite:Not affected
+vmscape:Not affected
+mmio_stale_data:Not affected
+mds:Not affected
+reg_file_data_sampling:Not affected
+tsa:Not affected
+l1tf:Not affected
+spec_store_bypass:Mitigation: Speculative Store Bypass disabled via prctl
+tsx_async_abort:Not affected
+old_microcode:Not affected
+swapgs barriers and __user pointer sanitization
+gather_data_sampling:Not affected
+retbleed:Mitigation: Enhanced IBRS
+spec_rstack_overflow:Not affected
+srbds:Not affected
+meltdown:Not affected
+== swap/zram
+NAME           TYPE      SIZE USED PRIO
+/dev/zram0     partition 3.9G   0B  100
+/swap/swapfile file      512M   0B   -1
+100
+== fs
+/dev/mapper/luks-b5c88da0-6720-4e38-864d-417c7abf96e4[/@] btrfs rw,noatime,compress=zstd:1,discard=async,space_cache=v2,subvolid=256,subvol=/@
+== disk used
+18998M
+    Device allocated:		       39404.94MiB
+    Used:			       18958.29MiB
+== packages
+2004
+== compilers
+gcc (Debian 14.2.0-19) 14.2.0
+PHP 8.4.27 (cli) (built: Oct 21 2026 07:53:46) (NTS)
+Python 3.13.5
+== io scheduler
+[none] mq-deadline 

@@ -1,0 +1,23 @@
+cpu_busy_pct .920
+ctxt_per_s 336
+intr_per_s 367
+mem_used_mb 2077
+shmem_mb 53
+pss_total_mb 1820
+processes 227
+== top 15 by PSS (MB)
+506 /usr/bin/plasmashell --no-respawn 
+187 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 
+149 /lib/x86_64-linux-gnu/libexec/kscreenlocker_greet --graceTime 5000 --k
+93 /usr/bin/kded6 
+84 /usr/bin/kwalletd6 
+63 /usr/bin/wildos-clipboard --daemon 
+52 /usr/bin/ksmserver 
+50 /usr/libexec/wildos/wildos-dialogs --session 
+47 /usr/bin/Xwayland :0 -auth /run/user/1000/xauth_UGDAIu -listenfd 8 -li
+45 /usr/lib/x86_64-linux-gnu/libexec/xdg-desktop-portal-kde 
+38 /usr/libexec/wildos/wildos-portal 
+38 /usr/libexec/wildos/wildos-launchd 
+38 /usr/bin/wildos-access 
+36 /usr/bin/kaccess 
+24 /usr/bin/python3 -Bsu /usr/libexec/sdwdate/sdwdate 

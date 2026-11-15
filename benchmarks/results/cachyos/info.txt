@@ -1,0 +1,60 @@
+== os
+CachyOS
+== kernel
+Linux cachybench 7.3.4-1-cachyos #1 SMP PREEMPT_DYNAMIC Fri, 13 Nov 2026 19:45:18 +0000 x86_64 GNU/Linux
+== cmdline
+quiet nowatchdog splash rw rootflags=subvol=/@ rd.luks.uuid=f005155c-6dd6-4031-8c4d-040702b954f8 root=/dev/mapper/luks-f005155c-6dd6-4031-8c4d-040702b954f8
+== cpu
+4
+model name	: 12th Gen Intel(R) Core(TM) i9-12900K
+  x86-64-v3 (supported, searched)
+  x86-64-v2 (supported, searched)
+== governor
+none
+== thp
+[always] madvise never
+always defer [defer+madvise] madvise never
+== sched_ext
+disabled
+== preempt
+(full) lazy 
+== hz
+CONFIG_HZ=1000
+== mitigations
+ Automatic IBRS; IBPB: conditional; PBRSB-eIBRS: SW sequence; BHI: SW loop, KVM: SW loop
+return thunks
+itlb_multihit:Not affected
+ghostwrite:Not affected
+vmscape:Not affected
+mmio_stale_data:Not affected
+mds:Not affected
+reg_file_data_sampling:Not affected
+tsa:Not affected
+l1tf:Not affected
+spec_store_bypass:Mitigation: Speculative Store Bypass disabled via prctl
+tsx_async_abort:Not affected
+old_microcode:Not affected
+swapgs barriers and __user pointer sanitization
+gather_data_sampling:Not affected
+retbleed:Mitigation: Enhanced IBRS
+spec_rstack_overflow:Not affected
+srbds:Not affected
+meltdown:Not affected
+== swap/zram
+NAME       TYPE      SIZE USED PRIO
+/dev/zram0 partition 7.7G   0B  100
+150
+== fs
+/dev/mapper/luks-f005155c-6dd6-4031-8c4d-040702b954f8[/@] btrfs rw,noatime,compress=zstd:3,space_cache=v2,subvolid=256,subvol=/@
+== disk used
+18977M
+    Device allocated:		       29720.00MiB
+    Used:			       18932.18MiB
+== packages
+1208
+== compilers
+gcc (GCC) 16.2.1 20260810
+PHP 8.5.12 (cli) (built: Nov  7 2026 08:42:51) (NTS)
+Python 3.14.10
+== io scheduler
+none [mq-deadline] kyber adios bfq 

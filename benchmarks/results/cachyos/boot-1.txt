@@ -1,0 +1,50 @@
+Startup finished in 1.061s (firmware) + 5.336s (loader) + 909ms (kernel) + 2.654s (initrd) + 4.625s (userspace) = 14.587s 
+graphical.target reached after 4.624s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 9.505332
+workspace_ready 9.980419
+splash_end 10.885226
+shell_start plasmashell 8.73
+graphical_target 8.189184
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @4.624s
+└─plasmalogin.service @4.606s +18ms
+  └─drm-module-load.target @4.605s
+    └─plymouth-quit.service @1.542s +3.061s
+      └─systemd-user-sessions.service @1.536s +5ms
+        └─network.target @1.533s
+          └─NetworkManager.service @1.386s +147ms
+            └─basic.target @1.384s
+              └─dbus-broker.service @1.358s +26ms
+                └─dbus.socket @1.355s +30us
+                  └─sysinit.target @1.354s
+                    └─systemd-update-utmp.service @1.337s +16ms
+                      └─systemd-tmpfiles-setup.service @1.296s +40ms
+                        └─systemd-journal-flush.service @1.266s +28ms
+                          └─var-log.mount @1.257s +5ms
+                            └─local-fs-pre.target @372ms
+                              └─systemd-tmpfiles-setup-dev.service @359ms +12ms
+                                └─systemd-tmpfiles-setup-dev-early.service @283ms +68ms
+                                  └─kmod-static-nodes.service @264ms +16ms
+                                    └─systemd-journald.socket
+                                      └─system.slice
+                                        └─-.slice
+== blame
+3.115s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+3.115s dev-vport3p1.device
+3.115s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+3.064s dev-ttyS0.device
+3.064s sys-devices-pnp0-00:03-00:03:0-00:03:0.0-tty-ttyS0.device
+3.063s sys-devices-platform-serial8250-serial8250:0-serial8250:0.3-tty-ttyS3.device
+3.063s dev-ttyS3.device
+3.062s plymouth-quit-wait.service
+3.061s plymouth-quit.service
+3.049s dev-disk-by\x2ddiskseq-1\x2dpart1.device
+3.049s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2duuid-7ED3\x2d6DD7.device
+3.049s dev-vda1.device
+3.049s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartnum-1.device
+3.049s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart1.device
+3.049s sys-devices-pci0000:00-0000:00:01.0-virtio0-block-vda-vda1.device
