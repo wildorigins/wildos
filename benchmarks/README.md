@@ -1,6 +1,6 @@
 # Benchmarks
 
-The scripts and raw results behind the figures on [wildos.io/measured](https://wildos.io/measured/). Run them yourself and compare.
+The scripts and raw results behind the figures on [wildos.io/benchmarks](https://wildos.io/benchmarks/). Run them yourself and compare.
 
 ## What is measured
 
