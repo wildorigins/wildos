@@ -1,0 +1,50 @@
+Startup finished in 608ms (kernel) + 1.242s (initrd) + 4.586s (userspace) = 6.436s 
+graphical.target reached after 4.551s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start gnome-shell 5.31
+graphical_target 6.402105
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @4.551s
+└─power-profiles-daemon.service @4.499s +51ms
+  └─multi-user.target @4.496s
+    └─plymouth-quit-wait.service @2.918s +1.577s
+      └─systemd-user-sessions.service @2.901s +5ms
+        └─network.target @2.890s
+          └─NetworkManager.service @2.779s +110ms
+            └─dbus.service @2.627s +150ms
+              └─basic.target @2.622s
+                └─sockets.target @2.622s
+                  └─snapd.socket @2.615s +7ms
+                    └─sysinit.target @2.611s
+                      └─snapd.apparmor.service @1.746s +865ms
+                        └─apparmor.service @1.626s +118ms
+                          └─local-fs.target @1.624s
+                            └─run-user-1000-doc.mount @3.561s
+                              └─run-user-1000.mount @3.076s
+                                └─local-fs-pre.target @616ms
+                                  └─systemd-tmpfiles-setup-dev.service @607ms +8ms
+                                    └─systemd-tmpfiles-setup-dev-early.service @590ms +12ms
+                                      └─kmod-static-nodes.service @558ms +14ms
+                                        └─systemd-journald.socket
+== blame
+1.851s sys-devices-virtual-misc-rfkill.device
+1.851s dev-rfkill.device
+1.790s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+1.790s dev-vport3p1.device
+1.790s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+1.738s sys-devices-pnp0-00:03-00:03:0-00:03:0.0-tty-ttyS0.device
+1.738s dev-ttyS0.device
+1.738s dev-disk-by\x2ddiskseq-9\x2dpart1.device
+1.738s dev-disk-by\x2dpath-virtio\x2dpci\x2d0000:00:01.0\x2dpart2.device
+1.738s dev-disk-by\x2ddiskseq-9\x2dpart2.device
+1.738s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart2.device
+1.738s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartuuid-0edc5f47\x2df5f5\x2d4591\x2d8e56\x2d6f093a4966ab.device
+1.738s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2duuid-4e119e5f\x2d37a9\x2d4a30\x2daa92\x2da3fcc2ab3f24.device
+1.738s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartnum-2.device
+1.738s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart1.device

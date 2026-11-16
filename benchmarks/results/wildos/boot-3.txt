@@ -1,50 +1,50 @@
-Startup finished in 402ms (kernel) + 4.600s (initrd) + 3.650s (userspace) = 8.653s 
-graphical.target reached after 3.622s in userspace.
+Startup finished in 403ms (kernel) + 1.259s (initrd) + 3.558s (userspace) = 5.221s 
+graphical.target reached after 3.484s in userspace.
 == seconds since kernel start (monotonic)
-plasmashell 10.103428
-workspace_ready 10.502146
-splash_end 12.655552
-shell_start plasmashell 9.90
-graphical_target 8.625142
+plasmashell 6.763200
+workspace_ready 7.150368
+splash_end 9.238793
+shell_start plasmashell 6.53
+graphical_target 5.147948
 == critical chain
 The time when unit became active or started is printed after the "@" character.
 The time the unit took to start is printed after the "+" character.
 
-graphical.target @3.622s
-└─power-profiles-daemon.service @3.556s +65ms
-  └─multi-user.target @3.551s
-    └─sdwdate.service @3.425s +125ms
-      └─tor@default.service @3.252s +168ms
-        └─network-online.target @3.249s
-          └─NetworkManager-wait-online.service @3.048s +200ms
-            └─NetworkManager.service @2.912s +133ms
-              └─dbus.service @2.832s +76ms
-                └─basic.target @2.826s
-                  └─privleapd.service @2.749s +76ms
-                    └─sysinit.target @2.745s
-                      └─mnt-shared-kvm.service @2.315s +429ms
-                        └─local-fs.target @2.310s
-                          └─run-user-1000.mount @3.353s
-                            └─swap.target @1.320s
-                              └─swap-swapfile.swap @1.313s +5ms
-                                └─swap.mount @1.294s +10ms
-                                  └─local-fs-pre.target @400ms
-                                    └─systemd-tmpfiles-setup-dev.service @345ms +18ms
-                                      └─systemd-tmpfiles-setup-dev-early.service @304ms +35ms
-                                        └─kmod-static-nodes.service @270ms +26ms
+graphical.target @3.484s
+└─power-profiles-daemon.service @3.423s +60ms
+  └─multi-user.target @3.420s
+    └─sdwdate.service @3.366s +52ms
+      └─tor@default.service @3.183s +177ms
+        └─network-online.target @3.178s
+          └─NetworkManager-wait-online.service @3.019s +158ms
+            └─NetworkManager.service @2.892s +125ms
+              └─dbus.service @2.813s +74ms
+                └─basic.target @2.808s
+                  └─privleapd.service @2.736s +71ms
+                    └─sysinit.target @2.731s
+                      └─mnt-shared-kvm.service @2.317s +413ms
+                        └─local-fs.target @2.301s
+                          └─run-user-1000.mount @3.357s
+                            └─swap.target @1.268s
+                              └─swap-swapfile.swap @1.258s +4ms
+                                └─swap.mount @1.243s +12ms
+                                  └─local-fs-pre.target @765ms
+                                    └─lvm2-monitor.service @252ms +513ms
+                                      └─dm-event.socket @240ms
+                                        └─system.slice
 == blame
-4.438s sys-devices-pnp0-00:02-printer-lp0.device
-4.438s dev-lp0.device
-4.419s sys-devices-pnp0-00:03-00:03:0-00:03:0.0-tty-ttyS0.device
-4.419s dev-ttyS0.device
-4.370s sys-devices-virtual-block-zram0.device
-4.370s dev-disk-by\x2ddiskseq-1.device
-4.370s dev-zram0.device
-4.356s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
-4.356s dev-vport3p1.device
-4.356s dev-virtio\x2dports-org.qemu.guest_agent.0.device
-4.339s dev-ttyS2.device
-4.339s sys-devices-platform-serial8250-serial8250:0-serial8250:0.2-tty-ttyS2.device
-4.337s sys-devices-platform-serial8250-serial8250:0-serial8250:0.1-tty-ttyS1.device
-4.337s dev-ttyS1.device
-4.333s dev-ttyS3.device
+1.355s sys-devices-pnp0-00:02-printer-lp0.device
+1.355s dev-lp0.device
+1.189s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+1.189s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+1.189s dev-vport3p1.device
+1.185s sys-devices-platform-serial8250-serial8250:0-serial8250:0.3-tty-ttyS3.device
+1.185s dev-ttyS3.device
+1.161s sys-devices-platform-serial8250-serial8250:0-serial8250:0.1-tty-ttyS1.device
+1.161s dev-ttyS1.device
+1.156s dev-ttyS2.device
+1.156s sys-devices-platform-serial8250-serial8250:0-serial8250:0.2-tty-ttyS2.device
+1.142s sys-devices-virtual-block-zram0.device
+1.142s dev-disk-by\x2ddiskseq-1.device
+1.142s dev-zram0.device
+1.127s sys-devices-pnp0-00:03-00:03:0-00:03:0.0-tty-ttyS0.device

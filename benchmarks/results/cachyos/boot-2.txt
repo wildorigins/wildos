@@ -1,50 +1,44 @@
-Startup finished in 1.031s (firmware) + 5.270s (loader) + 856ms (kernel) + 2.126s (initrd) + 5.151s (userspace) = 14.435s 
-graphical.target reached after 5.151s in userspace.
+Startup finished in 1.005s (firmware) + 5.252s (loader) + 858ms (kernel) + 1.178s (initrd) + 4.069s (userspace) = 12.363s 
+graphical.target reached after 4.068s in userspace.
 == seconds since kernel start (monotonic)
-plasmashell 9.192348
-workspace_ready 9.582452
-splash_end 10.480994
-shell_start plasmashell 8.57
-graphical_target 8.134223
+plasmashell 7.156596
+workspace_ready 7.751965
+splash_end 8.311384
+shell_start plasmashell 6.53
+graphical_target 6.105353
 == critical chain
 The time when unit became active or started is printed after the "@" character.
 The time the unit took to start is printed after the "+" character.
 
-graphical.target @5.151s
-└─plasmalogin.service @5.127s +23ms
-  └─drm-module-load.target @5.126s
-    └─plymouth-quit.service @1.425s +3.699s
-      └─systemd-user-sessions.service @1.419s +4ms
-        └─network.target @1.415s
-          └─NetworkManager.service @1.301s +113ms
-            └─basic.target @1.299s
-              └─dbus-broker.service @1.278s +20ms
-                └─dbus.socket @1.275s +35us
-                  └─sysinit.target @1.274s
+graphical.target @4.068s
+└─plasmalogin.service @4.055s +13ms
+  └─drm-module-load.target @4.054s
+    └─plymouth-quit.service @1.419s +2.633s
+      └─systemd-user-sessions.service @1.413s +4ms
+        └─network.target @1.410s
+          └─NetworkManager.service @1.302s +107ms
+            └─basic.target @1.300s
+              └─dbus-broker.service @1.278s +21ms
+                └─dbus.socket @1.276s +38us
+                  └─sysinit.target @1.275s
                     └─systemd-update-utmp.service @1.261s +13ms
-                      └─systemd-tmpfiles-setup.service @1.223s +37ms
-                        └─systemd-journal-flush.service @1.201s +21ms
-                          └─var-log.mount @1.187s +10ms
-                            └─local-fs-pre.target @316ms
-                              └─systemd-tmpfiles-setup-dev.service @302ms +13ms
-                                └─systemd-tmpfiles-setup-dev-early.service @218ms +68ms
-                                  └─kmod-static-nodes.service @193ms +18ms
-                                    └─systemd-journald.socket
-                                      └─system.slice
-                                        └─-.slice
+                      └─systemd-tmpfiles-setup.service @1.226s +35ms
+                        └─systemd-journal-flush.service @1.190s +35ms
+                          └─var-log.mount @1.179s +7ms
+                            └─dev-vda2.device
 == blame
-3.699s plymouth-quit-wait.service
-3.699s plymouth-quit.service
-2.489s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
-2.489s dev-virtio\x2dports-org.qemu.guest_agent.0.device
-2.489s dev-vport3p1.device
-2.444s dev-disk-by\x2ddiskseq-1\x2dpart1.device
-2.444s dev-disk-by\x2dpath-virtio\x2dpci\x2d0000:00:01.0\x2dpart1.device
-2.444s dev-vda1.device
-2.444s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartnum-1.device
-2.444s dev-disk-by\x2ddesignator-esp.device
-2.444s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart1.device
-2.444s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartuuid-8baf1b2b\x2db475\x2d4b44\x2d83a7\x2d00f3f5b752a8.device
-2.444s sys-devices-pci0000:00-0000:00:01.0-virtio0-block-vda-vda1.device
-2.444s dev-disk-by\x2dpartuuid-8baf1b2b\x2db475\x2d4b44\x2d83a7\x2d00f3f5b752a8.device
-2.444s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2duuid-7ED3\x2d6DD7.device
+2.634s plymouth-quit-wait.service
+2.633s plymouth-quit.service
+1.506s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+1.506s dev-vport3p1.device
+1.506s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+1.475s dev-disk-by\x2ddesignator-esp.device
+1.475s dev-disk-by\x2dpath-virtio\x2dpci\x2d0000:00:01.0\x2dpart1.device
+1.475s dev-disk-by\x2ddiskseq-1\x2dpart1.device
+1.475s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartuuid-dfbc619d\x2d4847\x2d4afb\x2d808e\x2d31d97cc76514.device
+1.475s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartnum-1.device
+1.475s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart1.device
+1.475s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2duuid-5C8A\x2d6557.device
+1.475s dev-vda1.device
+1.475s sys-devices-pci0000:00-0000:00:01.0-virtio0-block-vda-vda1.device
+1.475s dev-disk-by\x2duuid-5C8A\x2d6557.device

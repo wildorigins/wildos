@@ -1,0 +1,50 @@
+Startup finished in 602ms (kernel) + 1.248s (initrd) + 4.512s (userspace) = 6.363s 
+graphical.target reached after 4.512s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start gnome-shell 5.23
+graphical_target 6.363381
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @4.512s
+└─power-profiles-daemon.service @4.463s +48ms
+  └─multi-user.target @4.459s
+    └─plymouth-quit-wait.service @2.889s +1.569s
+      └─systemd-user-sessions.service @2.859s +18ms
+        └─network.target @2.847s
+          └─NetworkManager.service @2.736s +111ms
+            └─dbus.service @2.606s +128ms
+              └─basic.target @2.601s
+                └─sockets.target @2.601s
+                  └─snapd.socket @2.592s +8ms
+                    └─sysinit.target @2.589s
+                      └─snapd.apparmor.service @1.739s +849ms
+                        └─apparmor.service @1.619s +119ms
+                          └─local-fs.target @1.618s
+                            └─run-user-1000-doc.mount @3.535s
+                              └─run-user-1000.mount @3.011s
+                                └─local-fs-pre.target @589ms
+                                  └─systemd-tmpfiles-setup-dev.service @582ms +7ms
+                                    └─systemd-tmpfiles-setup-dev-early.service @554ms +15ms
+                                      └─kmod-static-nodes.service @542ms +8ms
+                                        └─systemd-journald.socket
+== blame
+1.861s dev-rfkill.device
+1.861s sys-devices-virtual-misc-rfkill.device
+1.788s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+1.788s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+1.788s dev-vport3p1.device
+1.709s sys-devices-virtual-tty-ttyprintk.device
+1.709s dev-ttyprintk.device
+1.697s sys-devices-pci0000:00-0000:00:01.0-virtio0-block-vda-vda1.device
+1.697s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartuuid-2c0cc35f\x2dc0e8\x2d4b4c\x2da3fd\x2de17e7d0d480e.device
+1.697s dev-vda1.device
+1.697s dev-disk-by\x2dpath-virtio\x2dpci\x2d0000:00:01.0\x2dpart1.device
+1.697s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart1.device
+1.697s dev-disk-by\x2duuid-CFFC\x2d9EA2.device
+1.697s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2duuid-CFFC\x2d9EA2.device
+1.697s dev-disk-by\x2ddiskseq-9\x2dpart1.device

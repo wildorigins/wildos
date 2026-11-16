@@ -1,0 +1,58 @@
+== os
+Ubuntu 26.04.1 LTS
+== kernel
+Linux bench 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct 23 13:25:25 UTC 2026 x86_64 GNU/Linux
+== cmdline
+BOOT_IMAGE=/boot/vmlinuz-7.0.0-43-generic root=UUID=be3e198b-aa12-4234-9054-d91fc573584a ro quiet splash crashkernel=2G-4G:320M,4G-32G:512M,32G-64G:1024M,64G-128G:2048M,128G-:4096M
+== cpu
+4
+model name	: 12th Gen Intel(R) Core(TM) i9-12900K
+  x86-64-v3 (supported, searched)
+  x86-64-v2 (supported, searched)
+== governor
+none
+== thp
+always [madvise] never
+always defer defer+madvise [madvise] never
+== sched_ext
+disabled
+== preempt
+full (lazy) 
+== hz
+CONFIG_HZ=1000
+== mitigations
+ Automatic IBRS; IBPB: conditional; PBRSB-eIBRS: SW sequence; BHI: SW loop, KVM: SW loop
+return thunks
+itlb_multihit:Not affected
+ghostwrite:Not affected
+vmscape:Not affected
+mmio_stale_data:Not affected
+mds:Not affected
+reg_file_data_sampling:Not affected
+tsa:Not affected
+l1tf:Not affected
+spec_store_bypass:Mitigation: Speculative Store Bypass disabled via prctl
+tsx_async_abort:Not affected
+old_microcode:Not affected
+swapgs barriers and __user pointer sanitization
+gather_data_sampling:Not affected
+retbleed:Mitigation: Enhanced IBRS
+spec_rstack_overflow:Not affected
+srbds:Not affected
+meltdown:Not affected
+== swap/zram
+NAME      TYPE SIZE USED PRIO
+/swap.img file   4G   0B   -1
+60
+== fs
+/dev/vda2 ext4 rw,relatime
+== disk used
+26600M
+== packages
+1606
+== compilers
+gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+PHP 8.5.4 (cli) (built: Oct 19 2026 14:35:18) (NTS)
+Python 3.14.4
+== io scheduler
+[none] mq-deadline 

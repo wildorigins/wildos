@@ -1,0 +1,38 @@
+== 7.0.0-43-generic final
+pts/simdjson|Throughput Test: PartialTweets|7.75 GB/s
+pts/compress-zstd|Compression Level: 19 - Compression Speed|9.75 MB/s
+pts/compress-zstd|Compression Level: 19 - Decompression Speed|1605.0 MB/s
+pts/x265|Video Input: Bosphorus 1080p|46.40 Frames Per Second
+pts/compress-7zip|Test: Compression Rating|37832 MIPS
+pts/compress-7zip|Test: Decompression Rating|21176 MIPS
+system/compress-7zip|Test: Compression Rating|34909 MIPS
+system/compress-7zip|Test: Decompression Rating|20671 MIPS
+pts/stockfish|Chess Benchmark|4900108 Nodes Per Second
+pts/build-linux-kernel|Build: defconfig|292.326 Seconds
+pts/sqlite-speedtest|Timed Time - Size 1,000|45.371 Seconds
+pts/pybench|Total For Average Test Times|471 Milliseconds
+pts/phpbench|PHP Benchmark Suite|1287471 Score
+pts/git|Time To Complete Common Git Commands|43.999 Seconds
+-- deviations
+pts/simdjson-2.4.0 Deviation: 0.07%
+pts/compress-zstd-1.6.0 Deviation: 0.53%
+pts/compress-zstd-1.6.0 Deviation: 1.19%
+pts/x265-1.6.0 Deviation: 1.42%
+pts/compress-7zip-1.13.1 Deviation: 0.08%
+pts/compress-7zip-1.13.1 Deviation: 0.42%
+system/compress-7zip-1.0.0 Deviation: 0.93%
+system/compress-7zip-1.0.0 Deviation: 0.03%
+pts/stockfish-1.8.0 Deviation: 0.50%
+pts/build-linux-kernel-1.18.0 Deviation: 1.84%
+pts/sqlite-speedtest-1.0.1 Deviation: 0.34%
+pts/pybench-1.1.3 Deviation: 0.32%
+pts/phpbench-1.1.6 Deviation: 0.27%
+pts/git-1.1.0 Deviation: 0.14%
+-- openssl
+pts/openssl 28.24 GB/s
+system/openssl 30.02 GB/s (3.0.13)
+-- fio
+randread-4k read_iops=85409 read_bw_kb=341639 write_iops=0 write_bw_kb=0
+randwrite-4k read_iops=0 read_bw_kb=0 write_iops=68997 write_bw_kb=275989
+read-2m read_iops=8015 read_bw_kb=16415742 write_iops=0 write_bw_kb=0
+write-2m read_iops=0 read_bw_kb=0 write_iops=2459 write_bw_kb=5036205

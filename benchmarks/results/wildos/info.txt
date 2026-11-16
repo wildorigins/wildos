@@ -1,9 +1,9 @@
 == os
 Wild OS 0.1 Beta 2
 == kernel
-Linux DESKTOP-NLEHN0W 7.2.12+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 7.2.12-1~bpo13+1 (2026-11-04) x86_64 GNU/Linux
+Linux DESKTOP-86PDHTB 7.2.12+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 7.2.12-1~bpo13+1 (2026-11-04) x86_64 GNU/Linux
 == cmdline
-BOOT_IMAGE=/vmlinuz-7.2.12+deb13-amd64 root=UUID=eae3d48c-aec3-4288-ae98-10b1a8aff728 ro rootflags=subvol=@ mitigations=auto,nosmt spectre_bhi=on l1tf=full kvm-intel.vmentry_l1d_flush=cond mds=full,nosmt tsx=off tsx_async_abort=full,nosmt l1d_flush=on mmio_stale_data=full,nosmt retbleed=auto,nosmt kvm.mitigate_smt_rsb=1 gather_data_sampling=force reg_file_data_sampling=on slab_nomerge init_on_alloc=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off kfence.sample_interval=100 vdso32=0 cfi=kcfi ia32_emulation=0 efi_pstore.pstore_disable=1 erst_disable proc_mem.force_override=ptrace amd_iommu=force_isolation intel_iommu=on iommu=force iommu.passthrough=0 iommu.strict=0 efi=disable_early_pci_dma random.trust_cpu=off random.trust_bootloader=off extra_latent_entropy init_on_alloc=1 splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 preempt=full loglevel=0 quiet rd.emergency=halt rd.shell=0 systemd.show_status=false rd.systemd.show_status=false
+BOOT_IMAGE=/vmlinuz-7.2.12+deb13-amd64 root=UUID=3aa43c6e-fe19-4187-8c8a-4cbeb7382ae5 ro rootflags=subvol=@ mitigations=auto,nosmt spectre_bhi=on l1tf=full kvm-intel.vmentry_l1d_flush=cond mds=full,nosmt tsx=off tsx_async_abort=full,nosmt l1d_flush=on mmio_stale_data=full,nosmt retbleed=auto,nosmt kvm.mitigate_smt_rsb=1 gather_data_sampling=force reg_file_data_sampling=on slab_nomerge init_on_alloc=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off kfence.sample_interval=100 vdso32=0 cfi=kcfi ia32_emulation=0 efi_pstore.pstore_disable=1 erst_disable proc_mem.force_override=ptrace amd_iommu=force_isolation intel_iommu=on iommu=force iommu.passthrough=0 iommu.strict=0 efi=disable_early_pci_dma random.trust_cpu=off random.trust_bootloader=off extra_latent_entropy init_on_alloc=1 splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 preempt=full loglevel=0 quiet rd.emergency=halt rd.shell=0 systemd.show_status=false rd.systemd.show_status=false
 == cpu
 4
 model name	: 12th Gen Intel(R) Core(TM) i9-12900K
@@ -46,13 +46,13 @@ NAME           TYPE      SIZE USED PRIO
 /swap/swapfile file      512M   0B   -1
 100
 == fs
-/dev/mapper/luks-b5c88da0-6720-4e38-864d-417c7abf96e4[/@] btrfs rw,noatime,compress=zstd:1,discard=async,space_cache=v2,subvolid=256,subvol=/@
+/dev/vda3[/@] btrfs rw,noatime,compress=zstd:1,discard=async,space_cache=v2,subvolid=256,subvol=/@
 == disk used
-18998M
-    Device allocated:		       39404.94MiB
-    Used:			       18958.29MiB
+18297M
+    Device allocated:		       20504.00MiB
+    Used:			       18260.44MiB
 == packages
-2004
+2035
 == compilers
 gcc (Debian 14.2.0-19) 14.2.0
 PHP 8.4.27 (cli) (built: Oct 21 2026 07:53:46) (NTS)

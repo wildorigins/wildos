@@ -1,0 +1,45 @@
+Startup finished in 2.778s (kernel) + 1.507s (userspace) = 4.286s 
+graphical.target reached after 1.493s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start cinnamon 5.39
+graphical_target 4.271605
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @1.493s
+└─multi-user.target @1.493s
+  └─kerneloops.service @1.479s +12ms
+    └─network-online.target @1.475s
+      └─NetworkManager-wait-online.service @1.345s +130ms
+        └─NetworkManager.service @921ms +418ms
+          └─dbus.service @837ms +70ms
+            └─basic.target @819ms
+              └─sockets.target @819ms
+                └─uuidd.socket @819ms
+                  └─sysinit.target @815ms
+                    └─apparmor.service @686ms +128ms
+                      └─systemd-sysctl.service @607ms +41ms
+                        └─systemd-modules-load.service @325ms +269ms
+                          └─systemd-journald.socket @308ms
+                            └─system.slice @294ms
+                              └─-.slice @294ms
+== blame
+418ms NetworkManager.service
+277ms dev-vda2.device
+269ms systemd-modules-load.service
+260ms blueman-mechanism.service
+170ms gpu-manager.service
+169ms accounts-daemon.service
+140ms udisks2.service
+134ms power-profiles-daemon.service
+132ms polkit.service
+130ms NetworkManager-wait-online.service
+128ms apparmor.service
+117ms user@1000.service
+110ms rsyslog.service
+ 97ms avahi-daemon.service
+ 93ms lightdm.service

@@ -75,6 +75,7 @@ MEMORY:                   1 x 8 GB RAM QEMU
 DISK:                     39GB
     File-System:          btrfs                                                                          
     Mount Options:        compress=zstd:1 discard=async noatime rw space_cache=v2 subvol=/@ subvolid=256 
+    Disk Scheduler:       NONE                                                                           
     Disk Details:         Block Size: 4096                                                               
 
 OPERATING SYSTEM:         Wildos 0.1
@@ -109,256 +110,256 @@ simdjson 5.0:
     Test 1 of 13
     Estimated Trial Run Count:    3                      
     Estimated Test Run-Time:      4 Minutes              
-    Estimated Time To Completion: 57 Minutes [02:58 UTC] 
-        Started Run 1 @ 02:01:55
-        Started Run 2 @ 02:03:03
-        Started Run 3 @ 02:04:12
+    Estimated Time To Completion: 57 Minutes [20:04 UTC] 
+        Started Run 1 @ 19:08:02
+        Started Run 2 @ 19:09:10
+        Started Run 3 @ 19:10:18
 
     Throughput Test: PartialTweets:
-        7.7
-        7.7
         7.73
+        7.73
+        7.74
 
-    Average: 7.71 GB/s
-    Deviation: 0.22%
+    Average: 7.73 GB/s
+    Deviation: 0.07%
 
 Zstd Compression 1.5.4:
     pts/compress-zstd-1.6.0 [Compression Level: 19]
     Test 2 of 13
     Estimated Trial Run Count:    3                      
     Estimated Test Run-Time:      4 Minutes              
-    Estimated Time To Completion: 54 Minutes [02:58 UTC] 
-        Started Run 1 @ 02:05:28
-        Started Run 2 @ 02:06:46
-        Started Run 3 @ 02:08:04
+    Estimated Time To Completion: 54 Minutes [20:04 UTC] 
+        Started Run 1 @ 19:11:33
+        Started Run 2 @ 19:12:50
+        Started Run 3 @ 19:14:06
 
     Compression Level: 19 - Compression Speed:
-        9.71
-        9.85
-        9.84
+        10.4
+        10.4
+        10.5
 
-    Average: 9.80 MB/s
-    Deviation: 0.80%
+    Average: 10.4 MB/s
+    Deviation: 0.55%
 
 
     Compression Level: 19 - Decompression Speed:
-        1677.1
-        1689.5
-        1693.4
+        1712.3
+        1729.2
+        1727.2
 
-    Average: 1686.7 MB/s
-    Deviation: 0.50%
+    Average: 1722.9 MB/s
+    Deviation: 0.54%
 
 x265 4.2:
     pts/x265-1.6.0 [Video Input: Bosphorus 1080p]
     Test 3 of 13
     Estimated Trial Run Count:    3                      
-    Estimated Test Run-Time:      2 Minutes              
-    Estimated Time To Completion: 50 Minutes [02:58 UTC] 
-        Started Run 1 @ 02:09:29
-        Started Run 2 @ 02:09:46
-        Started Run 3 @ 02:10:03
+    Estimated Test Run-Time:      1 Minute               
+    Estimated Time To Completion: 50 Minutes [20:05 UTC] 
+        Started Run 1 @ 19:15:29
+        Started Run 2 @ 19:15:46
+        Started Run 3 @ 19:16:02
 
     Video Input: Bosphorus 1080p:
-        45.36
-        46.94
-        46.62
+        46.41
+        48.64
+        48.19
 
-    Average: 46.31 Frames Per Second
-    Deviation: 1.80%
+    Average: 47.75 Frames Per Second
+    Deviation: 2.47%
 
 7-Zip Compression 26.01:
     pts/compress-7zip-1.13.1
     Test 4 of 13
     Estimated Trial Run Count:    3                      
-    Estimated Test Run-Time:      2 Minutes              
-    Estimated Time To Completion: 49 Minutes [02:58 UTC] 
-        Started Run 1 @ 02:10:27
-        Started Run 2 @ 02:10:50
-        Started Run 3 @ 02:11:13
+    Estimated Test Run-Time:      1 Minute               
+    Estimated Time To Completion: 50 Minutes [20:05 UTC] 
+        Started Run 1 @ 19:16:25
+        Started Run 2 @ 19:16:47
+        Started Run 3 @ 19:17:09
 
     Test: Compression Rating:
-        36818
-        37574
-        36979
+        39075
+        38991
+        38501
 
-    Average: 37124 MIPS
-    Deviation: 1.07%
+    Average: 38856 MIPS
+    Deviation: 0.80%
 
 
     Test: Decompression Rating:
-        20837
-        20671
-        20723
+        21897
+        21444
+        21934
 
-    Average: 20744 MIPS
-    Deviation: 0.41%
+    Average: 21758 MIPS
+    Deviation: 1.25%
 
 7-Zip Compression:
     system/compress-7zip-1.0.0
     Test 5 of 13
     Estimated Trial Run Count:    3                      
-    Estimated Test Run-Time:      2 Minutes              
-    Estimated Time To Completion: 47 Minutes [02:58 UTC] 
-        Started Run 1 @ 02:11:42
-        Started Run 2 @ 02:12:00
-        Started Run 3 @ 02:12:19
+    Estimated Test Run-Time:      1 Minute               
+    Estimated Time To Completion: 49 Minutes [20:05 UTC] 
+        Started Run 1 @ 19:17:38
+        Started Run 2 @ 19:17:56
+        Started Run 3 @ 19:18:13
 
     Test: Compression Rating:
-        37826
-        38020
-        39658
+        41216
+        39906
+        40117
 
-    Average: 38501 MIPS
-    Deviation: 2.61%
+    Average: 40413 MIPS
+    Deviation: 1.74%
 
 
     Test: Decompression Rating:
-        32793
-        33244
-        33358
+        34603
+        34971
+        34631
 
-    Average: 33132 MIPS
-    Deviation: 0.90%
+    Average: 34735 MIPS
+    Deviation: 0.59%
 
 Stockfish 19:
     pts/stockfish-1.8.0 [Chess Benchmark]
     Test 6 of 13
     Estimated Trial Run Count:    3                      
     Estimated Test Run-Time:      8 Minutes              
-    Estimated Time To Completion: 46 Minutes [02:58 UTC] 
-        Started Run 1 @ 02:12:43
-        Started Run 2 @ 02:15:21
-        Started Run 3 @ 02:17:59
+    Estimated Time To Completion: 48 Minutes [20:06 UTC] 
+        Started Run 1 @ 19:18:37
+        Started Run 2 @ 19:21:15
+        Started Run 3 @ 19:23:53
 
     Chess Benchmark:
-        4934794
-        4893839
-        4971657
+        5142702
+        5144577
+        5137086
 
-    Average: 4933430 Nodes Per Second
-    Deviation: 0.79%
+    Average: 5141455 Nodes Per Second
+    Deviation: 0.08%
 
 Timed Linux Kernel Compilation 7.0:
     pts/build-linux-kernel-1.18.0 [Build: defconfig]
     Test 7 of 13
     Estimated Trial Run Count:    3                      
     Estimated Test Run-Time:      14 Minutes             
-    Estimated Time To Completion: 39 Minutes [02:58 UTC] 
-        Running Pre-Test Script @ 02:20:44
-        Started Run 1 @ 02:20:56
-        Running Interim Test Script @ 02:25:28
-        Started Run 2 @ 02:25:33
-        Running Interim Test Script @ 02:30:01
-        Started Run 3 @ 02:30:05
-        Running Post-Test Script @ 02:34:35
+    Estimated Time To Completion: 40 Minutes [20:06 UTC] 
+        Running Pre-Test Script @ 19:26:38
+        Started Run 1 @ 19:26:51
+        Running Interim Test Script @ 19:31:13
+        Started Run 2 @ 19:31:18
+        Running Interim Test Script @ 19:35:38
+        Started Run 3 @ 19:35:42
+        Running Post-Test Script @ 19:40:04
 
     Build: defconfig:
-        270.042
-        265.6
-        268.181
+        260.468
+        257.983
+        259.703
 
-    Average: 267.941 Seconds
-    Deviation: 0.83%
+    Average: 259.385 Seconds
+    Deviation: 0.49%
 
 OpenSSL 4.1:
     pts/openssl-4.1.1 [Algorithm: AES-256-GCM]
     Test 8 of 13
     Estimated Trial Run Count:    3                      
     Estimated Test Run-Time:      4 Minutes              
-    Estimated Time To Completion: 25 Minutes [02:59 UTC] 
-        Started Run 1 @ 02:34:46
+    Estimated Time To Completion: 27 Minutes [20:07 UTC] 
+        Started Run 1 @ 19:40:14
         The test run did not produce a result.
-        Started Run 2 @ 02:37:50
+        Started Run 2 @ 19:43:18
         The test run did not produce a result.
-        Started Run 3 @ 02:40:54
+        Started Run 3 @ 19:46:22
         The test run did not produce a result.
 OpenSSL  :
     system/openssl-1.2.1 [Algorithm: AES-256-GCM]
     Test 9 of 13
     Estimated Trial Run Count:    3                      
     Estimated Test Run-Time:      10 Minutes             
-    Estimated Time To Completion: 22 Minutes [03:05 UTC] 
-        Started Run 1 @ 02:44:04
+    Estimated Time To Completion: 24 Minutes [20:13 UTC] 
+        Started Run 1 @ 19:49:32
         The test run did not produce a result.
-        Started Run 2 @ 02:47:08
+        Started Run 2 @ 19:52:36
         The test run did not produce a result.
-        Started Run 3 @ 02:50:12
+        Started Run 3 @ 19:55:40
         The test run did not produce a result.
 SQLite Speedtest 3.30:
     pts/sqlite-speedtest-1.0.1 [Timed Time - Size 1,000]
     Test 10 of 13
     Estimated Trial Run Count:    3                      
-    Estimated Test Run-Time:      9 Minutes              
-    Estimated Time To Completion: 12 Minutes [03:05 UTC] 
-        Started Run 1 @ 02:53:22
-        Started Run 2 @ 02:56:05
-        Started Run 3 @ 02:58:49
+    Estimated Test Run-Time:      11 Minutes             
+    Estimated Time To Completion: 15 Minutes [20:12 UTC] 
+        Started Run 1 @ 19:58:50
+        Started Run 2 @ 20:00:39
+        Started Run 3 @ 20:02:26
 
     Timed Time - Size 1,000:
-        158.565
-        159.775
-        174.638
+        104.092
+        103.502
+        108.832
 
-    Average: 164.326 Seconds
-    Deviation: 5.45%
+    Average: 105.475 Seconds
+    Deviation: 2.77%
 
 PyBench 2018-02-16:
     pts/pybench-1.1.3 [Total For Average Test Times]
     Test 11 of 13
     Estimated Trial Run Count:    3                     
     Estimated Test Run-Time:      1 Minute              
-    Estimated Time To Completion: 4 Minutes [03:05 UTC] 
-        Started Run 1 @ 03:01:54
-        Started Run 2 @ 03:02:09
-        Started Run 3 @ 03:02:23
+    Estimated Time To Completion: 4 Minutes [20:07 UTC] 
+        Started Run 1 @ 20:04:26
+        Started Run 2 @ 20:04:40
+        Started Run 3 @ 20:04:54
 
     Total For Average Test Times:
-        438
-        438
-        439
+        431
+        431
+        433
 
-    Average: 438 Milliseconds
-    Deviation: 0.13%
+    Average: 432 Milliseconds
+    Deviation: 0.27%
 
 PHPBench 0.8.1:
     pts/phpbench-1.1.6 [PHP Benchmark Suite]
     Test 12 of 13
     Estimated Trial Run Count:    3                     
     Estimated Test Run-Time:      1 Minute              
-    Estimated Time To Completion: 4 Minutes [03:05 UTC] 
-        Started Run 1 @ 03:02:44
-        Started Run 2 @ 03:03:03
-        Started Run 3 @ 03:03:22
+    Estimated Time To Completion: 3 Minutes [20:07 UTC] 
+        Started Run 1 @ 20:05:15
+        Started Run 2 @ 20:05:34
+        Started Run 3 @ 20:05:53
 
     PHP Benchmark Suite:
-        1334382
-        1327020
-        1326979
+        1341847
+        1338797
+        1347307
 
-    Average: 1329460 Score
+    Average: 1342650 Score
     Deviation: 0.32%
 
 Git:
     pts/git-1.1.0 [Time To Complete Common Git Commands]
     Test 13 of 13
     Estimated Trial Run Count:    3                     
-    Estimated Time To Completion: 3 Minutes [03:06 UTC] 
-        Running Pre-Test Script @ 03:03:48
-        Started Run 1 @ 03:03:48
-        Running Interim Test Script @ 03:04:33
-        Started Run 2 @ 03:04:36
-        Running Interim Test Script @ 03:05:21
-        Started Run 3 @ 03:05:23
-        Running Post-Test Script @ 03:06:07
+    Estimated Time To Completion: 2 Minutes [20:08 UTC] 
+        Running Pre-Test Script @ 20:06:19
+        Started Run 1 @ 20:06:19
+        Running Interim Test Script @ 20:06:57
+        Started Run 2 @ 20:07:00
+        Running Interim Test Script @ 20:07:37
+        Started Run 3 @ 20:07:39
+        Running Post-Test Script @ 20:08:17
 
     Time To Complete Common Git Commands:
-        43.108
-        43.113
-        42.522
+        36.261
+        35.72
+        35.517
 
-    Average: 42.914 Seconds
-    Deviation: 0.79%
+    Average: 35.833 Seconds
+    Deviation: 1.07%
 
 
 The following tests failed to properly run:

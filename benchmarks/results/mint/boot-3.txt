@@ -1,0 +1,45 @@
+Startup finished in 2.679s (kernel) + 1.198s (userspace) = 3.877s 
+graphical.target reached after 1.190s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start cinnamon 4.64
+graphical_target 3.870147
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @1.190s
+└─multi-user.target @1.190s
+  └─kerneloops.service @1.178s +11ms
+    └─network-online.target @1.172s
+      └─NetworkManager-wait-online.service @1.023s +148ms
+        └─NetworkManager.service @678ms +341ms
+          └─dbus.service @596ms +39ms
+            └─basic.target @582ms
+              └─sockets.target @582ms
+                └─uuidd.socket @582ms
+                  └─sysinit.target @580ms
+                    └─apparmor.service @496ms +83ms
+                      └─systemd-sysctl.service @440ms +48ms
+                        └─systemd-modules-load.service @175ms +225ms
+                          └─systemd-journald.socket @158ms
+                            └─system.slice @144ms
+                              └─-.slice @144ms
+== blame
+341ms NetworkManager.service
+225ms systemd-modules-load.service
+170ms blueman-mechanism.service
+166ms dev-vda2.device
+148ms accounts-daemon.service
+148ms NetworkManager-wait-online.service
+138ms gpu-manager.service
+129ms power-profiles-daemon.service
+127ms udisks2.service
+126ms rsyslog.service
+113ms polkit.service
+111ms ubuntu-system-adjustments.service
+ 92ms user@1000.service
+ 84ms grub-common.service
+ 83ms apparmor.service

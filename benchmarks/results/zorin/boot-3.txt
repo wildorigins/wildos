@@ -1,0 +1,50 @@
+Startup finished in 2.392s (kernel) + 23.649s (userspace) = 26.041s 
+graphical.target reached after 23.637s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start gnome-shell 5.90
+graphical_target 26.029914
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @23.637s
+└─multi-user.target @23.637s
+  └─plymouth-quit-wait.service @1.048s +22.587s
+    └─systemd-user-sessions.service @1.039s +6ms
+      └─network.target @1.033s
+        └─NetworkManager.service @689ms +344ms
+          └─dbus.service @550ms +75ms
+            └─basic.target @542ms
+              └─sockets.target @542ms
+                └─snapd.socket @516ms +25ms
+                  └─sysinit.target @514ms
+                    └─systemd-resolved.service @457ms +55ms
+                      └─systemd-tmpfiles-setup.service @369ms +26ms
+                        └─local-fs.target @343ms
+                          └─run-user-1000-doc.mount @4.635s
+                            └─run-user-1000.mount @3.228s
+                              └─local-fs-pre.target @197ms
+                                └─systemd-tmpfiles-setup-dev.service @193ms +4ms
+                                  └─systemd-tmpfiles-setup-dev-early.service @167ms +21ms
+                                    └─kmod-static-nodes.service @147ms +12ms
+                                      └─systemd-journald.socket @140ms
+                                        └─-.mount @129ms
+== blame
+22.587s plymouth-quit-wait.service
+ 1.651s fwupd.service
+  441ms fstrim.service
+  344ms NetworkManager.service
+  261ms snapd.seeded.service
+  186ms accounts-daemon.service
+  169ms gpu-manager.service
+  164ms gnome-remote-desktop.service
+  157ms rsyslog.service
+  146ms systemd-modules-load.service
+  142ms power-profiles-daemon.service
+  141ms dev-vda2.device
+  140ms polkit.service
+  140ms NetworkManager-wait-online.service
+  139ms avahi-daemon.service

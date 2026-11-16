@@ -1,6 +1,6 @@
 #!/bin/bash
-# Same script on Wild OS and CachyOS. Run as root inside the guest.
-#   bench.sh info | idle | boot | pts
+# The same script on every system. Run as root inside the guest.
+#   bench.sh info | boot | ptsinstall | pts | fio_run
 OUT=/var/tmp/bench-out
 mkdir -p $OUT
 host=$(. /etc/os-release; echo "$ID")
@@ -31,31 +31,6 @@ info() {
 }
 
 # Desktop signed in, nothing opened, after 5 minutes settle.
-idle() {
-  tag=${1:-idle}
-  sync; echo 3 > /proc/sys/vm/drop_caches; sleep 30
-  read -r _ u1 n1 s1 i1 w1 q1 sq1 st1 _ < /proc/stat
-  c1=$(awk '/^ctxt/{print $2}' /proc/stat); in1=$(awk '/^intr/{print $2}' /proc/stat)
-  sleep 120
-  read -r _ u2 n2 s2 i2 w2 q2 sq2 st2 _ < /proc/stat
-  c2=$(awk '/^ctxt/{print $2}' /proc/stat); in2=$(awk '/^intr/{print $2}' /proc/stat)
-  busy=$(( (u2-u1)+(n2-n1)+(s2-s1)+(q2-q1)+(sq2-sq1)+(st2-st1) ))
-  total=$(( busy+(i2-i1)+(w2-w1) ))
-  {
-    echo "cpu_busy_pct $(echo "scale=3; 100*$busy/$total" | bc)"
-    echo "ctxt_per_s $(( (c2-c1)/120 ))"
-    echo "intr_per_s $(( (in2-in1)/120 ))"
-    awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}/^Shmem:/{s=$2}END{printf "mem_used_mb %d\nshmem_mb %d\n",(t-a)/1024,s/1024}' /proc/meminfo
-    echo "pss_total_mb $(cat /proc/[0-9]*/smaps_rollup 2>/dev/null | awk '/^Pss:/{s+=$2}END{print int(s/1024)}')"
-    echo "processes $(ls -d /proc/[0-9]* | wc -l)"
-    echo "== top 15 by PSS (MB)"
-    for p in /proc/[0-9]*; do
-      pss=$(awk '/^Pss:/{print $2}' $p/smaps_rollup 2>/dev/null); [ -n "$pss" ] || continue
-      echo "$((pss/1024)) $(tr '\0' ' ' < $p/cmdline 2>/dev/null | cut -c1-70)"
-    done | sort -rn | head -15
-  } > $OUT/$tag.txt
-  cat $OUT/$tag.txt
-}
 
 boot() {
   n=$(ls $OUT/boot-*.txt 2>/dev/null | wc -l); n=$((n+1))

@@ -1,50 +1,50 @@
-Startup finished in 402ms (kernel) + 4.683s (initrd) + 3.730s (userspace) = 8.815s 
-graphical.target reached after 3.642s in userspace.
+Startup finished in 408ms (kernel) + 1.380s (initrd) + 3.734s (userspace) = 5.524s 
+graphical.target reached after 3.661s in userspace.
 == seconds since kernel start (monotonic)
-plasmashell 10.612366
-workspace_ready 10.991351
-splash_end 13.377030
-shell_start plasmashell 10.40
-graphical_target 8.728293
+plasmashell 7.333248
+workspace_ready 7.769195
+splash_end 10.092594
+shell_start plasmashell 7.03
+graphical_target 5.450644
 == critical chain
 The time when unit became active or started is printed after the "@" character.
 The time the unit took to start is printed after the "+" character.
 
-graphical.target @3.642s
-└─power-profiles-daemon.service @3.606s +35ms
-  └─multi-user.target @3.605s
-    └─sdwdate.service @3.546s +56ms
-      └─tor@default.service @3.373s +169ms
-        └─network-online.target @3.371s
-          └─NetworkManager-wait-online.service @3.201s +169ms
-            └─NetworkManager.service @3.082s +117ms
-              └─dbus.service @2.994s +82ms
-                └─basic.target @2.988s
-                  └─privleapd.service @2.903s +84ms
-                    └─sysinit.target @2.898s
-                      └─mnt-shared-kvm.service @2.463s +434ms
-                        └─local-fs.target @2.444s
-                          └─run-user-1000.mount @3.539s
-                            └─swap.target @1.363s
-                              └─swap-swapfile.swap @1.353s +9ms
-                                └─swap.mount @1.317s +30ms
-                                  └─local-fs-pre.target @436ms
-                                    └─lvm2-monitor.service @327ms +71ms
-                                      └─dm-event.socket @314ms
+graphical.target @3.661s
+└─power-profiles-daemon.service @3.592s +68ms
+  └─multi-user.target @3.588s
+    └─sdwdate.service @3.532s +55ms
+      └─tor@default.service @3.354s +175ms
+        └─network-online.target @3.351s
+          └─NetworkManager-wait-online.service @3.181s +169ms
+            └─NetworkManager.service @3.054s +125ms
+              └─dbus.service @2.983s +67ms
+                └─basic.target @2.966s
+                  └─privleapd.service @2.875s +90ms
+                    └─sysinit.target @2.869s
+                      └─mnt-shared-kvm.service @2.435s +433ms
+                        └─local-fs.target @2.406s
+                          └─run-user-1000.mount @3.522s
+                            └─swap.target @1.388s
+                              └─swap-swapfile.swap @1.381s +5ms
+                                └─swap.mount @1.360s +13ms
+                                  └─local-fs-pre.target @839ms
+                                    └─lvm2-monitor.service @351ms +487ms
+                                      └─dm-event.socket @338ms
                                         └─system.slice
 == blame
-4.564s sys-devices-pnp0-00:02-printer-lp0.device
-4.564s dev-lp0.device
-4.492s sys-devices-virtual-block-zram0.device
-4.492s dev-disk-by\x2ddiskseq-1.device
-4.492s dev-zram0.device
-4.469s sys-devices-platform-serial8250-serial8250:0-serial8250:0.1-tty-ttyS1.device
-4.469s dev-ttyS1.device
-4.468s sys-devices-platform-serial8250-serial8250:0-serial8250:0.3-tty-ttyS3.device
-4.468s dev-ttyS3.device
-4.464s sys-devices-platform-serial8250-serial8250:0-serial8250:0.2-tty-ttyS2.device
-4.464s dev-ttyS2.device
-4.464s dev-vport3p1.device
-4.464s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
-4.463s dev-virtio\x2dports-org.qemu.guest_agent.0.device
-4.461s dev-ttyS0.device
+1.488s sys-devices-pnp0-00:02-printer-lp0.device
+1.488s dev-lp0.device
+1.389s dev-vport3p1.device
+1.389s sys-devices-pci0000:00-0000:00:05.0-virtio3-virtio\x2dports-vport3p1.device
+1.389s dev-virtio\x2dports-org.qemu.guest_agent.0.device
+1.372s dev-vda3.device
+1.372s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartuuid-6d3a8c41\x2d6762\x2d407c\x2d8b1d\x2d59efb9268a06.device
+1.372s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2duuid-3aa43c6e\x2dfe19\x2d4187\x2d8c8a\x2d4cbeb7382ae5.device
+1.372s sys-devices-pci0000:00-0000:00:01.0-virtio0-block-vda-vda3.device
+1.372s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart3.device
+1.372s dev-disk-by\x2dpartuuid-6d3a8c41\x2d6762\x2d407c\x2d8b1d\x2d59efb9268a06.device
+1.372s dev-disk-by\x2dpath-pci\x2d0000:00:01.0\x2dpart-by\x2dpartlabel-wildos\x2droot.device
+1.372s dev-disk-by\x2dpath-virtio\x2dpci\x2d0000:00:01.0\x2dpart3.device
+1.372s dev-disk-by\x2dpartlabel-wildos\x2droot.device
+1.371s dev-disk-by\x2dlabel-wildos\x2droot.device

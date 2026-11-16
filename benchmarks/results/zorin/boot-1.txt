@@ -1,0 +1,50 @@
+Startup finished in 2.419s (kernel) + 23.631s (userspace) = 26.050s 
+graphical.target reached after 23.615s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start gnome-shell 6.00
+graphical_target 26.034965
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @23.615s
+└─multi-user.target @23.615s
+  └─plymouth-quit-wait.service @1.284s +22.330s
+    └─systemd-user-sessions.service @1.278s +4ms
+      └─network.target @1.271s
+        └─NetworkManager.service @876ms +394ms
+          └─dbus.service @772ms +54ms
+            └─basic.target @767ms
+              └─sockets.target @767ms
+                └─snapd.socket @762ms +4ms
+                  └─sysinit.target @756ms
+                    └─snapd.apparmor.service @688ms +68ms
+                      └─apparmor.service @547ms +132ms
+                        └─local-fs.target @542ms
+                          └─run-user-1000-doc.mount @4.944s
+                            └─run-user-1000.mount @3.223s
+                              └─local-fs-pre.target @349ms
+                                └─systemd-tmpfiles-setup-dev.service @343ms +6ms
+                                  └─systemd-tmpfiles-setup-dev-early.service @319ms +23ms
+                                    └─kmod-static-nodes.service @299ms +15ms
+                                      └─systemd-journald.socket @292ms
+                                        └─-.mount @279ms
+== blame
+22.330s plymouth-quit-wait.service
+ 1.682s fwupd.service
+  394ms NetworkManager.service
+  237ms snapd.seeded.service
+  210ms dev-vda2.device
+  180ms systemd-modules-load.service
+  171ms NetworkManager-wait-online.service
+  146ms accounts-daemon.service
+  135ms gnome-remote-desktop.service
+  132ms apparmor.service
+  131ms snapd.service
+  119ms gpu-manager.service
+  119ms rsyslog.service
+  118ms polkit.service
+  117ms power-profiles-daemon.service

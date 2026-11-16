@@ -1,0 +1,46 @@
+Startup finished in 2.415s (kernel) + 23.631s (userspace) = 26.046s 
+graphical.target reached after 23.619s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start gnome-shell 5.91
+graphical_target 26.034723
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @23.619s
+└─multi-user.target @23.619s
+  └─plymouth-quit-wait.service @1.046s +22.572s
+    └─systemd-user-sessions.service @1.039s +3ms
+      └─network.target @1.032s
+        └─NetworkManager.service @696ms +335ms
+          └─dbus.service @614ms +54ms
+            └─basic.target @608ms
+              └─sockets.target @608ms
+                └─snapd.socket @578ms +30ms
+                  └─sysinit.target @576ms
+                    └─snapd.apparmor.service @524ms +51ms
+                      └─apparmor.service @429ms +88ms
+                        └─systemd-sysctl.service @403ms +11ms
+                          └─systemd-modules-load.service @162ms +236ms
+                            └─systemd-journald.socket @147ms
+                              └─-.mount @135ms
+                                └─-.slice @135ms
+== blame
+22.572s plymouth-quit-wait.service
+ 1.657s fwupd.service
+  335ms NetworkManager.service
+  236ms systemd-modules-load.service
+  228ms snapd.seeded.service
+  174ms dev-vda2.device
+  169ms NetworkManager-wait-online.service
+  145ms accounts-daemon.service
+  136ms gnome-remote-desktop.service
+  135ms gpu-manager.service
+  126ms snapd.service
+  125ms power-profiles-daemon.service
+  120ms rsyslog.service
+  115ms polkit.service
+  107ms avahi-daemon.service

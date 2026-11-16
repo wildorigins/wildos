@@ -1,0 +1,50 @@
+Startup finished in 2.678s (kernel) + 1.468s (userspace) = 4.147s 
+graphical.target reached after 1.458s in userspace.
+== seconds since kernel start (monotonic)
+plasmashell 
+workspace_ready 
+splash_end 
+shell_start cinnamon 4.76
+graphical_target 5.185909
+== critical chain
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @1.458s
+└─multi-user.target @1.458s
+  └─kerneloops.service @1.443s +14ms
+    └─network-online.target @1.441s
+      └─NetworkManager-wait-online.service @1.020s +421ms
+        └─NetworkManager.service @667ms +349ms
+          └─dbus.service @574ms +55ms
+            └─basic.target @558ms
+              └─sockets.target @558ms
+                └─uuidd.socket @558ms
+                  └─sysinit.target @554ms
+                    └─systemd-resolved.service @450ms +104ms
+                      └─systemd-tmpfiles-setup.service @411ms +28ms
+                        └─local-fs.target @384ms
+                          └─run-user-1000.mount @1.354s
+                            └─local-fs-pre.target @215ms
+                              └─systemd-tmpfiles-setup-dev.service @208ms +6ms
+                                └─systemd-tmpfiles-setup-dev-early.service @190ms +16ms
+                                  └─kmod-static-nodes.service @164ms +21ms
+                                    └─systemd-journald.socket @158ms
+                                      └─system.slice @144ms
+                                        └─-.slice @144ms
+== blame
+421ms NetworkManager-wait-online.service
+349ms NetworkManager.service
+188ms blueman-mechanism.service
+187ms dev-vda2.device
+177ms systemd-modules-load.service
+159ms accounts-daemon.service
+135ms gpu-manager.service
+129ms apparmor.service
+126ms avahi-daemon.service
+124ms power-profiles-daemon.service
+124ms polkit.service
+120ms udisks2.service
+108ms rsyslog.service
+106ms grub-common.service
+104ms systemd-resolved.service

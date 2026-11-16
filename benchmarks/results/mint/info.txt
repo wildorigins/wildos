@@ -1,0 +1,58 @@
+== os
+Linux Mint 22.3
+== kernel
+Linux bench 7.0.0-43-generic #43~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Sat Oct 31 06:52:47 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+== cmdline
+BOOT_IMAGE=/boot/vmlinuz-7.0.0-43-generic root=UUID=40513c0a-cb2f-4b4d-b9c8-f7d77b289b91 ro quiet splash
+== cpu
+4
+model name	: 12th Gen Intel(R) Core(TM) i9-12900K
+  x86-64-v3 (supported, searched)
+  x86-64-v2 (supported, searched)
+== governor
+none
+== thp
+always [madvise] never
+always defer defer+madvise [madvise] never
+== sched_ext
+disabled
+== preempt
+full (lazy) 
+== hz
+CONFIG_HZ=1000
+== mitigations
+ Automatic IBRS; IBPB: conditional; PBRSB-eIBRS: SW sequence; BHI: SW loop, KVM: SW loop
+return thunks
+itlb_multihit:Not affected
+ghostwrite:Not affected
+vmscape:Not affected
+mmio_stale_data:Not affected
+mds:Not affected
+reg_file_data_sampling:Not affected
+tsa:Not affected
+l1tf:Not affected
+spec_store_bypass:Mitigation: Speculative Store Bypass disabled via prctl
+tsx_async_abort:Not affected
+old_microcode:Not affected
+swapgs barriers and __user pointer sanitization
+gather_data_sampling:Not affected
+retbleed:Mitigation: Enhanced IBRS
+spec_rstack_overflow:Not affected
+srbds:Not affected
+meltdown:Not affected
+== swap/zram
+NAME      TYPE SIZE USED PRIO
+/swapfile file   2G   0B   -1
+60
+== fs
+/dev/vda2 ext4   rw,relatime,errors=remount-ro
+== disk used
+27355M
+== packages
+1984
+== compilers
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+PHP 8.3.6 (cli) (built: Oct 19 2026 15:16:58) (NTS)
+Python 3.12.3
+== io scheduler
+[none] mq-deadline 

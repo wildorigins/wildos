@@ -3,7 +3,7 @@ CachyOS
 == kernel
 Linux cachybench 7.3.4-1-cachyos #1 SMP PREEMPT_DYNAMIC Fri, 13 Nov 2026 19:45:18 +0000 x86_64 GNU/Linux
 == cmdline
-quiet nowatchdog splash rw rootflags=subvol=/@ rd.luks.uuid=f005155c-6dd6-4031-8c4d-040702b954f8 root=/dev/mapper/luks-f005155c-6dd6-4031-8c4d-040702b954f8
+quiet nowatchdog splash rw rootflags=subvol=/@ root=UUID=f153369f-1583-43ba-bd2a-65caa9d87c61
 == cpu
 4
 model name	: 12th Gen Intel(R) Core(TM) i9-12900K
@@ -45,11 +45,11 @@ NAME       TYPE      SIZE USED PRIO
 /dev/zram0 partition 7.7G   0B  100
 150
 == fs
-/dev/mapper/luks-f005155c-6dd6-4031-8c4d-040702b954f8[/@] btrfs rw,noatime,compress=zstd:3,space_cache=v2,subvolid=256,subvol=/@
+/dev/vda2[/@] btrfs rw,noatime,compress=zstd:3,discard=async,space_cache=v2,subvolid=256,subvol=/@
 == disk used
-18977M
-    Device allocated:		       29720.00MiB
-    Used:			       18932.18MiB
+18937M
+    Device allocated:		       19480.00MiB
+    Used:			       18897.45MiB
 == packages
 1208
 == compilers
