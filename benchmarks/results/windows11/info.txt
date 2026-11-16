@@ -1,0 +1,40 @@
+== os
+Microsoft Windows 11 Pro 26H2 build 26300.9974
+== cpu
+12th Gen Intel(R) Core(TM) i9-12900K
+logical 4
+== memory_mb 8154
+== disk
+
+FileSystem        Size SizeRemaining
+----------        ---- -------------
+NTFS       67646779392   33794285568
+
+
+
+== secure_boot True
+== tpm True
+== vbs_status 0 services_running 0
+== bitlocker protection Off volume FullyDecrypted encrypted_pct 0 method None
+== manage-bde
+Conversion Status:    Fully Decrypted
+Percentage Encrypted: 0.0%
+Encryption Method:    None
+Protection Status:    Protection Off
+Key Protectors:       None Found
+== defender realtime True antivirus True tamper True engine 1.1.26110.3 signatures 1.463.324.0
+== smart_app_control 2
+== hvci  vbs_configured  hypervisor_present True
+== power plan
+Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)== hotfixes
+
+HotFixID  InstalledOn        
+--------  -----------        
+KB5132061 16/11/2026 00:00:00
+KB5132688 16/11/2026 00:00:00
+KB5127694 16/11/2026 00:00:00
+KB5121794 16/11/2026 00:00:00
+KB5128942 16/11/2026 00:00:00
+
+
+

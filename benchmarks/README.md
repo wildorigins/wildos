@@ -57,6 +57,12 @@ Things to know before comparing:
 - SQLite varied more between passes than any other test on both systems, so treat a single pass with care.
 - Wild OS pauses its secure time sync during the Phoronix pass, because a clock correction in the middle of a test changes its timing.
 
+## Windows 11
+
+The Phoronix tests used here do not run on Windows, so `windows/wtests.ps1` runs the official Windows build of each program three times, with the settings the Phoronix profiles use on Linux: 7-Zip 26.01 (`7z b`), Stockfish 19 (`bench 128 4 24 default depth`), zstd 1.5.4 (level 19 on the same silesia.tar) and OpenSSL 3.5.5 (AES-256-GCM, four processes, as `ssl.sh` does). Stockfish and zstd are the versions the Phoronix tests build on Linux. `windows/winbench.ps1 boot` times start-up from the kernel starting to Explorer starting. Tests with no fair match on Windows (the kernel compile, x265, SQLite, PHP, Python, simdjson and git) are not run. The Windows virtual machine had a 64 GB disk, because Windows Setup will not install on 40 GB, with Secure Boot and a TPM 2.0 on.
+
+`results/windows11/`: `info.txt`, `boot-1.txt` to `boot-3.txt`, and `tests.txt` with each test's runs, average and spread. The disk runs in `tests.txt` varied too much between runs to compare and are not on the site.
+
 ## Results so far
 
 | System | Version | Tested |
@@ -66,3 +72,4 @@ Things to know before comparing:
 | CachyOS | Desktop (KDE Plasma), August 2026 ISO, Linux 7.3, Btrfs | 15 and 16 November 2026 |
 | Linux Mint | 22.3 Cinnamon, Linux 7.0, ext4 | 16 November 2026 |
 | Zorin OS | 18.1 Core, Linux 7.0, ext4 | 16 November 2026 |
+| Windows 11 | Pro 26H2, build 26300, NTFS | 16 November 2026 |

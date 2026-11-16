@@ -1,0 +1,14 @@
+7zip 26.01 compression rating (Avr)|35,333.00 MIPS|runs 35,456.00 / 34,848.00 / 35,695.00|stdev 1.24%|range 2.40%
+7zip 26.01 decompression rating (Avr)|32,793.33 MIPS|runs 32,809.00 / 32,931.00 / 32,640.00|stdev 0.45%|range 0.89%
+stockfish 19 bench 128 4 24 default depth|4,676,819.67 nodes/s|runs 4,381,484.00 / 4,829,120.00 / 4,819,855.00|stdev 5.47%|range 9.57%
+zstd 1.5.4 level 19 compression (-T4 -S -i30 -b19 silesia.tar)|8.68 MB/s|runs 8.77 / 8.38 / 8.88|stdev 3.03%|range 5.76%
+zstd 1.5.4 level 19 decompression|1,577.07 MB/s|runs 1,586.60 / 1,547.80 / 1,596.80|stdev 1.64%|range 3.11%
+openssl OpenSSL 3.5.5 27 Jan 2026 (Library: OpenSSL 3.5.5 27 Jan 2026) aes-256-gcm 16 KB, 4 processes|27.08 GB/s|runs 27.31 / 26.37 / 27.57|stdev 2.34%|range 4.44%
+fio randread-4k iops|71,749.33 IOPS|runs 70,498.00 / 71,882.00 / 72,868.00|stdev 1.66%|range 3.30%
+fio randread-4k bandwidth|286,999.33 KB/s|runs 281,993.00 / 287,531.00 / 291,474.00|stdev 1.66%|range 3.30%
+fio randwrite-4k iops|58,463.67 IOPS|runs 62,295.00 / 48,319.00 / 64,777.00|stdev 15.18%|range 28.15%
+fio randwrite-4k bandwidth|233,856.67 KB/s|runs 249,183.00 / 193,279.00 / 259,108.00|stdev 15.18%|range 28.15%
+fio read-2m iops|4,524.00 IOPS|runs 4,779.00 / 4,811.00 / 3,982.00|stdev 10.38%|range 18.32%
+fio read-2m bandwidth|9,265,844.00 KB/s|runs 9,787,407.00 / 9,854,510.00 / 8,155,615.00|stdev 10.38%|range 18.34%
+fio write-2m iops|2,503.67 IOPS|runs 2,493.00 / 2,492.00 / 2,526.00|stdev 0.77%|range 1.36%
+fio write-2m bandwidth|5,128,123.33 KB/s|runs 5,106,927.00 / 5,104,163.00 / 5,173,280.00|stdev 0.76%|range 1.35%

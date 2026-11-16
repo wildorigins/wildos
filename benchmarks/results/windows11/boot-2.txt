@@ -1,0 +1,6 @@
+firmware_ms 0
+event100 BootTime_ms 20585 MainPathBootTime_ms 4685 BootPostBootTime_ms 15900 BootUserProfileProcessingTime_ms 174 BootExplorerInitTime_ms 1729 written_after_s 98
+shell_start explorer 5.32
+start_menu_host 5.93
+uptime_s 101
+event100 BootTime_ms 20585 MainPathBootTime_ms 4685 BootPostBootTime_ms 15900 BootUserProfileProcessingTime_ms 174 BootExplorerInitTime_ms 1729 written_after_s 98
