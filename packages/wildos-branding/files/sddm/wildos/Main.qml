@@ -31,6 +31,12 @@ Item {
     // Set when PAM explains that signing in is blocked for now, so the
     // failure that follows does not claim the password was wrong.
     property bool blocked: false
+    // What PAM said when it blocked the sign-in, as a plain sentence.
+    property string blockedMessage: ""
+    // The chosen account takes its PIN here (Settings > Accounts > Sign-in
+    // options).
+    readonly property bool pinNow: UI.System.pinSignIn !== undefined
+        && UI.System.pinSignIn(hasUserList ? currentUserName : usernamePill.text.trim())
     // An empty password and Enter go to the fingerprint reader for an
     // account with a finger enrolled (wildos-desktop's wildos-fingerprint
     // PAM profile). Whose finger is enrolled can't be seen from here, so the
@@ -64,6 +70,9 @@ Item {
         }
         failureMessage = "";
         infoMessage = "";
+        // Not when the failure arrives: SDDM can report one failure twice.
+        blocked = false;
+        blockedMessage = "";
         busy = true;
         triedFingerprint = fingerprintNow && passwordPill.text.length === 0;
         sddm.login(user, passwordPill.text, sessionIndex);
@@ -83,10 +92,10 @@ Item {
 
         function onLoginFailed() {
             root.busy = false;
-            root.failureMessage = root.blocked ? Messages.unavailable : root.triedFingerprint ? Messages.fingerprintFailed : Messages.wrongPassword;
+            root.failureMessage = root.blocked ? (root.blockedMessage.length > 0 ? root.blockedMessage : Messages.unavailable)
+                : root.triedFingerprint ? Messages.fingerprintFailed : root.pinNow ? Messages.wrongPasswordOrPin : Messages.wrongPassword;
             root.passwordHint = root.blocked || root.triedFingerprint ? "" : UI.System.passwordHint(root.hasUserList ? root.currentUserName : usernamePill.text.trim());
             root.infoMessage = "";
-            root.blocked = false;
             passwordPill.text = "";
             passwordPill.shake();
             root.focusPassword();
@@ -107,6 +116,7 @@ Item {
             const plain = Messages.translate(message);
             if (plain.length > 0) {
                 root.blocked = true;
+                root.blockedMessage = plain;
                 root.infoMessage = plain;
             }
         }
@@ -275,7 +285,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: root.hasUserList ? root.currentRealName : "Sign in"
+                text: root.hasUserList ? root.currentRealName : qsTr("Sign in")
                 size: 18
                 font.weight: UI.Style.weightSemiBold
                 color: UI.Style.inkOnWallpaper
@@ -296,7 +306,7 @@ Item {
                 visible: !root.hasUserList
                 anchors.horizontalCenter: parent.horizontalCenter
                 backdrop: scenery
-                placeholder: "Username"
+                placeholder: qsTr("Username")
                 secret: false
                 showSubmit: false
                 KeyNavigation.tab: passwordPill.field
@@ -310,8 +320,8 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 backdrop: scenery
                 focus: true
-                placeholder: "Password"
-                submitLabel: "Sign in"
+                placeholder: root.pinNow ? qsTr("Password or PIN") : qsTr("Password")
+                submitLabel: qsTr("Sign in")
                 busy: root.busy
                 onSubmitted: root.signIn()
                 onTextChanged: if (text.length > 0) root.failureMessage = ""
@@ -325,7 +335,7 @@ Item {
                 kind: "primary"
                 size: "large"
                 busy: root.busy
-                text: "Sign in"
+                text: qsTr("Sign in")
                 onClicked: root.signIn()
                 Keys.onReturnPressed: clicked()
                 Keys.onEnterPressed: clicked()
@@ -346,7 +356,7 @@ Item {
                 Notice {
                     id: hintNotice
                     shown: root.failureMessage.length > 0 && root.passwordHint.length > 0
-                    text: "Hint: " + root.passwordHint
+                    text: qsTr("Hint: %1").arg(root.passwordHint)
                     muted: true
                 }
                 Notice {
@@ -358,19 +368,19 @@ Item {
                     id: fingerprintNotice
                     shown: root.fingerprintNow && passwordPill.visible && !root.busy && passwordPill.text.length === 0
                         && root.failureMessage.length === 0 && root.infoMessage.length === 0
-                    text: "Or press Enter and touch the fingerprint reader"
+                    text: qsTr("Or press Enter and touch the fingerprint reader")
                     muted: true
                 }
                 Notice {
                     id: guestNotice
                     shown: root.hasUserList && root.currentIsGuest && root.failureMessage.length === 0
-                    text: "A clean desktop, wiped when you sign out."
+                    text: qsTr("A clean desktop, wiped when you sign out.")
                     muted: true
                 }
                 Notice {
                     id: capsNotice
                     shown: keyboard.capsLock
-                    text: "Caps Lock is on"
+                    text: qsTr("Caps Lock is on")
                     iconName: "caps-lock"
                     muted: true
                 }
@@ -382,7 +392,7 @@ Item {
                 visible: userModel.count > 1 || sessionModel.count > 1 || (keyboard.layouts && keyboard.layouts.length > 1)
                 kind: "text"
                 textColor: UI.Style.inkOnWallpaper
-                text: root.optionsOpen ? "Hide sign-in options" : "Sign-in options"
+                text: root.optionsOpen ? qsTr("Hide sign-in options") : qsTr("Sign-in options")
                 onClicked: root.optionsOpen = !root.optionsOpen
             }
 
@@ -399,11 +409,11 @@ Item {
                     visible: userModel.count > 1
                     backdrop: scenery
                     iconName: "account"
-                    label: "User"
+                    label: qsTr("User")
                     value: root.currentRealName
                     choices: root.users.map((user, index) => ({
                         text: user.realName.length > 0 ? user.realName : user.name,
-                        detail: user.guest ? "Wiped when they sign out" : user.realName.length > 0 && user.realName !== user.name ? user.name : "",
+                        detail: user.guest ? qsTr("Wiped when they sign out") : user.realName.length > 0 && user.realName !== user.name ? user.name : "",
                         checked: index === root.userIndex,
                         run: () => {
                             root.userIndex = index;
@@ -420,7 +430,7 @@ Item {
                     visible: sessionModel.count > 1
                     backdrop: scenery
                     iconName: "desktop"
-                    label: "Session"
+                    label: qsTr("Session")
                     value: root.currentSessionName
                     choices: root.sessions.map((name, index) => ({
                         text: name,
@@ -437,7 +447,7 @@ Item {
                     visible: keyboard.layouts && keyboard.layouts.length > 1
                     backdrop: scenery
                     iconName: "keyboard"
-                    label: "Keyboard"
+                    label: qsTr("Keyboard")
                     value: visible && keyboard.layouts[keyboard.currentLayout]
                            ? keyboard.layouts[keyboard.currentLayout].longName : ""
                     choices: {
@@ -482,7 +492,7 @@ Item {
                 checkable: true
                 checked: keyboardLoader.item ? keyboardLoader.item.wanted : false
                 iconName: "accessibility"
-                label: checked ? "Hide on-screen keyboard" : "Show on-screen keyboard"
+                label: checked ? qsTr("Hide on-screen keyboard") : qsTr("Show on-screen keyboard")
                 onClicked: {
                     keyboardLoader.item.wanted = !keyboardLoader.item.wanted;
                     root.focusPassword();
@@ -501,20 +511,20 @@ Item {
                 readonly property var actions: {
                     const list = [];
                     if (sddm.canSuspend)
-                        list.push({ text: "Sleep", icon: "moon", run: () => sddm.suspend() });
+                        list.push({ text: qsTr("Sleep"), icon: "moon", run: () => sddm.suspend() });
                     if (sddm.canHibernate)
-                        list.push({ text: "Hibernate", icon: "hibernate", run: () => sddm.hibernate() });
+                        list.push({ text: qsTr("Hibernate"), icon: "hibernate", run: () => sddm.hibernate() });
                     if (sddm.canPowerOff)
-                        list.push({ text: "Shut down", icon: "power", run: () => sddm.powerOff() });
+                        list.push({ text: qsTr("Shut down"), icon: "power", run: () => sddm.powerOff() });
                     if (sddm.canReboot)
-                        list.push({ text: "Restart", icon: "restart", run: () => sddm.reboot() });
+                        list.push({ text: qsTr("Restart"), icon: "restart", run: () => sddm.reboot() });
                     return list;
                 }
 
                 visible: actions.length > 0
                 backdrop: scenery
                 iconName: "power"
-                label: "Power"
+                label: qsTr("Power")
                 checked: powerMenu.opened
                 onClicked: powerMenu.opened ? powerMenu.close() : powerMenu.open()
 

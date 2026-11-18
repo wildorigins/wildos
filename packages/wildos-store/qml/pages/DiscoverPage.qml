@@ -34,7 +34,7 @@ PageFlick {
     }
 
     PageTitle {
-        title: "Discover"
+        title: qsTr("Discover")
     }
 
     Item {
@@ -47,9 +47,9 @@ PageFlick {
         HeroCard {
             width: heroes.bigWidth
             height: parent.height
-            eyebrow: "The big swap"
-            title: "Leave Windows behind.\nKeep everything you do."
-            body: "Free apps that open your Office and Photoshop files, picked by us."
+            eyebrow: qsTr("The big swap")
+            title: qsTr("Leave Windows behind.\nKeep everything you do.")
+            body: qsTr("Free apps that open your Office and Photoshop files, picked by us.")
             photo: "qrc:/qt/qml/WildOS/Store/data/photos/swap-desk.jpg"
             photoY: 0.7
             keys: page.swapKeys.slice(0, 4)
@@ -67,12 +67,12 @@ PageFlick {
             HeroCard {
                 width: parent.width
                 height: 154
-                eyebrow: "Make something"
-                title: "Paint, edit and record"
+                eyebrow: qsTr("Make something")
+                title: qsTr("Paint, edit and record")
                 photo: "qrc:/qt/qml/WildOS/Store/data/photos/make-krita.jpg"
                 photoY: 0.4
                 shadeFromLeft: true
-                body: "Free tools for pictures, video and sound."
+                body: qsTr("Free tools for pictures, video and sound.")
                 keys: page.createKeys.slice(0, 1)
                 iconsRight: true
                 onClicked: page.store.open("create")
@@ -81,12 +81,12 @@ PageFlick {
             HeroCard {
                 width: parent.width
                 height: 154
-                eyebrow: "Play"
-                title: "Games, free and on Steam"
+                eyebrow: qsTr("Play")
+                title: qsTr("Games, free and on Steam")
                 photo: "qrc:/qt/qml/WildOS/Store/data/photos/play-controller.jpg"
                 photoY: 0.62
                 shadeFromLeft: true
-                body: "Free games to start with, and Steam for the ones you own."
+                body: qsTr("Free games to start with, and Steam for the ones you own.")
                 keys: page.gameKeys.slice(0, 2)
                 iconsRight: true
                 onClicked: page.store.open("play")
@@ -99,8 +99,8 @@ PageFlick {
         spacing: 0
 
         SectionHeader {
-            title: "Essentials for a new PC"
-            linkText: "See all"
+            title: qsTr("Essentials for a new PC")
+            linkText: qsTr("See all")
             onLinkClicked: page.store.open("swap")
         }
 
@@ -116,8 +116,8 @@ PageFlick {
         visible: page.createKeys.length > 0
 
         SectionHeader {
-            title: "Make something"
-            linkText: "See all"
+            title: qsTr("Make something")
+            linkText: qsTr("See all")
             onLinkClicked: page.store.open("create")
         }
 
@@ -134,8 +134,8 @@ PageFlick {
         visible: page.gameKeys.length > 0
 
         SectionHeader {
-            title: "Play"
-            linkText: "See all"
+            title: qsTr("Play")
+            linkText: qsTr("See all")
             onLinkClicked: page.store.open("play")
         }
 
@@ -148,7 +148,7 @@ PageFlick {
 
     UI.Label {
         visible: !Catalog.ready
-        text: "Getting the list of apps"
+        text: qsTr("Getting the list of apps")
         color: Metrics.inkSecondary
     }
 }

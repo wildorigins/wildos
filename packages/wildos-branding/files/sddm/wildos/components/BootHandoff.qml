@@ -1,17 +1,20 @@
 import QtQuick
 import QtQuick.Shapes
 
-// The end of the start-up animation (BootIntro.dc.html steps 5 and 6, or
-// AfterUnlockD.dc.html after an encrypted disk was unlocked). Plymouth quits
-// with --retain-splash and leaves a fixed frame of its loading loop on screen:
-// the W as glass with the light at the start of its outline, the spark at
-// full strength and "Starting securely". This opens on that exact frame,
-// drawn from Plymouth's own images at the same scale and positions (see
-// plymouth/wildos/wildos.script), then plays the rest: one last full trace,
-// the W fills back to colour and the spark flashes; the wallpaper shows
-// through the W, the screen flies through it and the clock fades in. The
-// screen underneath is usable from the first frame: typing or clicking skips
-// straight to the end.
+// The wait and the finish of the start-up animation (BootPace.dc.html, with
+// BootPaceTarget.dc.html's keyframes; AfterUnlockD.dc.html's place for the W
+// after an encrypted disk was unlocked). Plymouth plays the wait until it
+// quits; after a moment of black while KWin takes the display over, this
+// carries the same wait on, one lap of light every 1.2 s, with the W drawn
+// from Plymouth's own images at the same scale and in the same real pixels
+// (plymouth/wildos/wildos.script, files/libexec/boot-handoff).
+//
+// The finish starts the moment the screen beneath says it is ready, never on
+// a timer: the sign-in screen is ready at once, the session splash when the
+// desktop has drawn itself. In 0.9 s the W lights up, the spark flashes and
+// the screen flies through the W into the wallpaper, or the real desktop.
+// The screen underneath is usable from the first frame: typing or clicking
+// skips straight to the end.
 //
 // It only plays straight after boot. The boot-handoff helper that quits
 // Plymouth leaves a marker in /run for a minute, one for the sign-in screen
@@ -23,6 +26,9 @@ Item {
 
     property url marker: "file:///run/wildos/boot-handoff-greeter.png"
     property url unlockedMarker: "file:///run/wildos/boot-handoff-unlocked.png"
+    // The screen's size in real pixels, written by boot-handoff as an empty
+    // SVG of that size.
+    property url panelMarker: "file:///run/wildos/boot-handoff-panel.svg"
     property url photoSource
     // Kept for the screens that pass them; the photo here is always its own.
     property Item photoItem: null
@@ -34,25 +40,45 @@ Item {
     // Typing into these skips to the end.
     property Item input
     property Item secondInput
-    // Plays the boards' timeline this much faster.
-    property real speed: 1.15
     // Set by the session splash once Plasma has drawn the desktop: the W then
     // opens onto the real desktop, taskbar and windows included, instead of
     // the photo, so nothing is left to fade in when the flight ends.
     property bool live: false
+    // When the finish may start. The sign-in screen is ready as soon as it
+    // shows; the session splash waits for the desktop.
+    property bool ready: true
+    // Reduce motion: the logo holds still and fades out when ready, with no
+    // laps, spark or flight.
+    property bool reducedMotion: false
     // Ends as the flight lands instead of after the sign-in screen's clock
     // fades in: the desktop has no clock to wait for.
     property bool endOnLanding: false
+    // The photo is only needed once the finish starts, which on the session
+    // splash is never at once.
+    property bool photoLater: false
 
     readonly property bool active: markerImage.status === Image.Ready && !done
     readonly property bool afterUnlock: unlockedImage.status === Image.Ready
-    readonly property var k: afterUnlock ? unlockTimes : introTimes
+
+    // The finish's keyframes, in seconds from when it starts (BootPaceTarget
+    // puts the finish at 53.23% of its 6.2 s loop, 3.3 s in).
+    readonly property var k: ({
+        lap: 1.2, lapFrames: 60, background: "#000000",
+        fillUp: [0, 0.17], fillHold: 0.3, fillOff: [0.3, 0.4],
+        baseOff: [0, 0.15], lightOff: [0, 0.12], statusOff: [0, 0.15],
+        wordOff: [0.1, 0.28],
+        flash: [0, 0.12, 0.45],
+        pulse: [0, 0.1, 0.2], sparkOff: [0.2, 0.32],
+        cover: 0.3, zoom: [0.3, 0.8], photo: [0.3, 0.9],
+        clock: [0.62, 0.92]
+    })
 
     // For the screen beneath: the clock appears as the flight ends, the
-    // sign-in controls once it has settled.
-    readonly property real stageOpacity: active ? Math.max(skip, segment(d, k.clock, k.clockEnd)) : 1
-    readonly property real clockShift: active ? Math.round(16 * (1 - Math.max(skip, segment(d, k.clock, k.clockEnd)))) : 0
-    readonly property real uiOpacity: active ? Math.max(skip, segment(d, k.clockEnd - 0.3, k.clockEnd + 0.3)) : 1
+    // sign-in controls with it.
+    readonly property real arrived: active ? Math.max(skip, f < 0 ? 0 : between(f, k.clock)) : 1
+    readonly property real stageOpacity: arrived
+    readonly property real clockShift: active ? Math.round(16 * (1 - arrived)) : 0
+    readonly property real uiOpacity: arrived
 
     signal finished()
 
@@ -62,33 +88,18 @@ Item {
         skipping.start();
     }
 
-    // Each artboard's keyframes, in seconds of its own loop (BootIntro's
-    // 14 s, AfterUnlockD's 10 s), from the moment the final trace starts.
-    readonly property var introTimes: ({
-        start: 8.33, lap: 1.75, lapFrames: 88, background: "#000000",
-        lightOff: [8.33, 8.61], trace: [8.33, 9.24], traceOff: [9.24, 9.8],
-        baseOff: [8.54, 9.1], fillUp: [8.47, 9.24], fillOff: [9.8, 10.3],
-        statusOff: [8.4, 8.96], pulse: [8.68, 9.31, 9.66], sparkOff: [9.66, 10.22],
-        flash: [9.1, 9.38, 10.22], cover: 9.8, zoom: [10.3, 11.76], photo: [9.8, 12.04],
-        clock: 11.76, clockEnd: 12.6
-    })
-    readonly property var unlockTimes: ({
-        start: 5.1, lap: 1.6, lapFrames: 80, background: "#000000",
-        lightOff: [5.1, 5.4], trace: [5.1, 5.9], traceOff: [5.9, 6.4],
-        baseOff: [5.4, 6.0], fillUp: [5.4, 6.1], fillOff: [6.4, 6.9],
-        statusOff: [5.2, 5.7], pulse: [5.6, 5.9, 6.2], sparkOff: [6.2, 6.7],
-        flash: [5.7, 6.0, 6.8], cover: 6.2, zoom: [6.8, 8.2], photo: [6.2, 8.4],
-        clock: 8.2, clockEnd: 8.9
-    })
-
-    // Where the mark's units land, in artboard pixels from the screen centre
-    // (render-boot-assets.py: POSE_I, POSE_U), and the canvases drawn there.
-    readonly property var pose: afterUnlock ? { s: 1.1287, x: 615.22 - 720, y: 367.04 - 450 }
-                                            : { s: 1.6, x: -120 - 18 * 1.6, y: -220 + 10.5 * 1.6 }
-    readonly property string g: afterUnlock ? "u" : "i"
-    readonly property var glass: afterUnlock ? { x: -100, y: -85 } : { x: -135, y: -200 }
-
-    property real d: 0
+    // Seconds since the first frame (the wait's clock, which Plymouth left at
+    // the start of a lap) and since the finish started, or -1 before it.
+    property real w: waitStart
+    // The wait as handed over: two whole laps in on the board's clock, so
+    // the light comes back at the start of a lap.
+    readonly property real waitStart: 2.4
+    readonly property real fillWait: 0.14
+    readonly property real baseWait: 1
+    // The light fades back in after the black and laps on.
+    readonly property real lightWait: segment(w, waitStart, waitStart + 0.2)
+    readonly property real statusWait: 1
+    property real f: -1
     property real skip: 0
     property bool done: false
     // Decode the photo at the size it is shown, grown 1.18 times at most,
@@ -96,7 +107,6 @@ Item {
     // first frame. Wild OS photos are 16:9.
     readonly property int photoDecodeWidth: Math.ceil(1.18 * Math.max(screenW, screenH * 16 / 9))
     readonly property string assets: "file:///usr/share/plymouth/themes/wildos/"
-    readonly property string handoffAssets: "file:///usr/share/wildos/boot-handoff/"
 
     // CSS cubic-bezier, solved as wildos.script does; (.4,0,.2,1) is the
     // design's timing for every keyframe without its own.
@@ -126,9 +136,26 @@ Item {
     function between(t, span) {
         return segment(t, span[0], span[1]);
     }
+    // 0 before the finish, then from 0 to 1 over the span.
+    function fin(span) {
+        return f < 0 ? 0 : between(f, span);
+    }
+
+    // Where the mark's units land, in artboard pixels from the screen centre
+    // (render-boot-assets.py: POSE_I, POSE_U), and the canvases drawn there.
+    readonly property var pose: afterUnlock ? { s: 1.1287, x: 615.22 - 720, y: 367.04 - 450 }
+                                            : { s: 1.6, x: -120 - 18 * 1.6, y: -220 + 10.5 * 1.6 }
+    readonly property string g: afterUnlock ? "u" : "i"
+    readonly property var glass: afterUnlock ? { x: -100, y: -85 } : { x: -135, y: -200 }
 
     // Plymouth's scale choice and rounding, in device pixels.
-    readonly property real dpr: Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1
+    // Real pixels per scene unit. Qt's Screen.devicePixelRatio is the
+    // desktop's scaling rounded up to a whole number (3 at 225%), which drew
+    // the W at three quarters of Plymouth's size; the screen's real width
+    // over this item's gives the exact factor.
+    readonly property real dpr: panelImage.status === Image.Ready && panelImage.implicitWidth > 0 && width > 0
+        ? panelImage.implicitWidth / width
+        : (Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1)
     readonly property int screenW: Math.round(width * dpr)
     readonly property int screenH: Math.round(height * dpr)
     readonly property var scales: [0.8, 1.0, 1.2, 1.6, 2.0, 2.4]
@@ -170,6 +197,14 @@ Item {
     }
 
     Image {
+        id: panelImage
+        visible: false
+        asynchronous: false
+        cache: false
+        source: handoff.panelMarker
+    }
+
+    Image {
         id: unlockedImage
         visible: false
         asynchronous: false
@@ -180,17 +215,16 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: handoff.k.background
-        visible: !(handoff.live && handoff.d >= handoff.k.cover)
+        visible: !(handoff.live && handoff.f >= handoff.k.cover)
     }
 
     // The wallpaper, there from the moment the cover goes up, settling from
     // 1.18 to its place as the screen flies through the W. When the desktop
-    // is ready before the cover goes up it never shows; when it is ready
-    // later, it gives way to the desktop part way through.
+    // is ready it never shows: the W opens onto the desktop itself.
     Item {
         id: photoLayer
         anchors.fill: parent
-        visible: handoff.d >= handoff.k.cover && opacity > 0
+        visible: handoff.f >= handoff.k.cover && opacity > 0
         opacity: handoff.live ? 0 : 1
         Behavior on opacity {
             NumberAnimation { duration: 400; easing.type: Easing.InOutQuad }
@@ -202,7 +236,7 @@ Item {
             readonly property real coverScale: implicitWidth > 0
                 ? Math.max(photoLayer.width / implicitWidth, photoLayer.height / implicitHeight) : 1
             readonly property real grow: 1.18 - 0.18 * handoff.bezier(
-                (handoff.d - handoff.k.photo[0]) / (handoff.k.photo[1] - handoff.k.photo[0]), 0.3, 0, 0.2, 1)
+                (handoff.f - handoff.k.photo[0]) / (handoff.k.photo[1] - handoff.k.photo[0]), 0.3, 0, 0.2, 1)
 
             // Framed as the sign-in screen frames the wallpaper, so the last
             // frame here is the first frame there.
@@ -212,10 +246,12 @@ Item {
             y: (photoLayer.height - height) * handoff.photoFocus
             source: handoff.active ? handoff.photoSource : ""
             sourceSize.width: handoff.photoDecodeWidth
-            // Loaded before the first frame; until then the screen still
-            // shows Plymouth's identical last frame. Cached, so the screen
-            // around this shares the one decode.
-            asynchronous: false
+            // The sign-in screen loads it before its first frame, as it
+            // finishes at once; until then KWin still shows the handover
+            // picture. The session splash loads it while the wait runs, so
+            // its first frame comes sooner. Cached, so the screen around this
+            // shares the one decode.
+            asynchronous: handoff.photoLater
             cache: true
             smooth: true
             mipmap: true
@@ -239,11 +275,11 @@ Item {
     Shape {
         id: cover
         anchors.fill: parent
-        visible: handoff.d >= handoff.k.cover && zoomFactor < 120
+        visible: handoff.f >= handoff.k.cover && zoomFactor < 120
         preferredRendererType: Shape.CurveRenderer
 
         readonly property real zoomFactor: 1 + 139 * handoff.bezier(
-            (handoff.d - handoff.k.zoom[0]) / (handoff.k.zoom[1] - handoff.k.zoom[0]), 0.55, 0, 0.75, 0.2)
+            (handoff.f - handoff.k.zoom[0]) / (handoff.k.zoom[1] - handoff.k.zoom[0]), 0.55, 0, 0.75, 0.2)
 
         transform: [
             Scale { xScale: handoff.pose.s * handoff.s / handoff.dpr; yScale: xScale },
@@ -279,84 +315,84 @@ Item {
         height: implicitHeight / handoff.dpr
     }
 
+    // Glass during the wait, lit up to full colour as the finish starts,
+    // then gone as the cover takes over.
     Placed {
         // The intro's fill has its own canvas; after unlocking it shares the
         // glass canvas.
         source: handoff.active ? handoff.dir + (handoff.afterUnlock ? "fill-u.png" : "fill.png") : ""
         ax: handoff.afterUnlock ? handoff.glass.x : -115
         ay: handoff.afterUnlock ? handoff.glass.y : -180
-        opacity: handoff.d < handoff.k.fillOff[0]
-            ? 0.1 + 0.9 * handoff.between(handoff.d, handoff.k.fillUp)
-            : 1 - handoff.between(handoff.d, handoff.k.fillOff)
+        opacity: handoff.f < handoff.k.fillHold
+            ? handoff.fillWait + (1 - handoff.fillWait) * handoff.fin(handoff.k.fillUp)
+            : 1 - handoff.fin(handoff.k.fillOff)
     }
 
     Placed {
         source: handoff.active ? handoff.dir + "base-" + handoff.g + ".png" : ""
         ax: handoff.glass.x
         ay: handoff.glass.y
-        opacity: 1 - handoff.between(handoff.d, handoff.k.baseOff)
+        opacity: handoff.baseWait * (1 - handoff.fin(handoff.k.baseOff))
     }
 
-    // The running light carries on from where Plymouth left it as it fades.
+    // The light lapping the outline, from the start of a lap where Plymouth
+    // left it, still running as it fades.
     Placed {
-        readonly property int frame: Math.max(0, Math.min(handoff.k.lapFrames - 1,
-            Math.trunc((handoff.d - handoff.k.start) / handoff.k.lap * handoff.k.lapFrames)))
+        readonly property int frame: Math.trunc((handoff.w % handoff.k.lap) / handoff.k.lap * handoff.k.lapFrames) % handoff.k.lapFrames
         source: handoff.active && opacity > 0
             ? handoff.dir + "light-" + handoff.g + "-" + String(frame).padStart(2, "0") + ".png" : ""
         ax: handoff.glass.x
         ay: handoff.glass.y
-        opacity: 1 - handoff.between(handoff.d, handoff.k.lightOff)
+        opacity: handoff.reducedMotion ? 0 : handoff.lightWait * (1 - handoff.fin(handoff.k.lightOff))
     }
 
-    // One last full trace of the outline.
+    // "Wild OS" stays through the wait; after unlocking there is no name.
     Placed {
-        readonly property real drawn: handoff.bezier(
-            (handoff.d - handoff.k.trace[0]) / (handoff.k.trace[1] - handoff.k.trace[0]), 0.45, 0, 0.2, 1)
-        source: handoff.active && opacity > 0
-            ? handoff.handoffAssets + handoff.folder + "complete-" + handoff.g + "-"
-              + String(Math.round(drawn * 45)).padStart(2, "0") + ".png" : ""
-        ax: handoff.glass.x
-        ay: handoff.glass.y
-        opacity: 1 - handoff.bezier(
-            (handoff.d - handoff.k.traceOff[0]) / (handoff.k.traceOff[1] - handoff.k.traceOff[0]), 0.45, 0, 0.2, 1)
+        source: handoff.active && !handoff.afterUnlock ? handoff.dir + "word-40.png" : ""
+        ax: -150
+        ay: 45
+        opacity: 1 - handoff.fin(handoff.k.wordOff)
     }
 
     Placed {
         source: handoff.active ? handoff.dir + "status-" + handoff.g + ".png" : ""
         ax: -100
-        ay: handoff.afterUnlock ? 95 : 50
-        opacity: 0.75 * (1 - handoff.between(handoff.d, handoff.k.statusOff))
+        ay: handoff.afterUnlock ? 95 : 100
+        opacity: 0.75 * handoff.statusWait * (1 - handoff.fin(handoff.k.statusOff))
     }
 
-    // The flash behind the spark as it pulses.
+    // The flash behind the spark as the W lights up.
     Image {
         readonly property real t0: handoff.k.flash[0]
         readonly property real peak: handoff.k.flash[1]
         readonly property real t1: handoff.k.flash[2]
-        readonly property real grow: handoff.d < peak ? 0.3 + 0.7 * handoff.segment(handoff.d, t0, peak)
-                                                       : 1 + 0.9 * handoff.segment(handoff.d, peak, t1)
-        // flash.png is the glow at 1.8 times its size in the 240px box.
-        readonly property real size: 200 * handoff.s / 1.8 * handoff.pose.s / 1.6 * grow / handoff.dpr
+        readonly property real grow: handoff.f < peak ? 0.3 + 0.7 * handoff.segment(handoff.f, t0, peak)
+                                                       : 1 + 0.9 * handoff.segment(handoff.f, peak, t1)
+        // flash.png is 210 artboard pixels: the glow at 1.9 times its size
+        // in the 240px box.
+        readonly property real size: 210 * handoff.s / 1.9 * handoff.pose.s / 1.6 * grow / handoff.dpr
         source: handoff.active ? handoff.dir + "flash.png" : ""
         asynchronous: false
         smooth: true
+        visible: handoff.f >= 0
         width: size
         height: size
         x: handoff.markX(148.5) - size / 2
         y: handoff.markY(40) - size / 2
-        opacity: handoff.d < t0 ? 0 : handoff.d < peak ? 0.95 * handoff.segment(handoff.d, t0, peak)
-                                                       : 0.95 * (1 - handoff.segment(handoff.d, peak, t1))
+        opacity: handoff.f < t0 ? 0 : handoff.f < peak ? 0.95 * handoff.segment(handoff.f, t0, peak)
+                                                       : 0.95 * (1 - handoff.segment(handoff.f, peak, t1))
     }
 
     // The spark: a pulse, then away up and to the right.
     Placed {
         id: spark
         readonly property var p: handoff.k.pulse
-        readonly property real away: handoff.between(handoff.d, handoff.k.sparkOff)
-        readonly property real grow: handoff.d < p[1] ? 1 + 0.35 * handoff.segment(handoff.d, p[0], p[1])
-                                     : handoff.d < p[2] ? 1.35 - 0.35 * handoff.segment(handoff.d, p[1], p[2])
+        readonly property real away: handoff.fin(handoff.k.sparkOff)
+        readonly property real grow: handoff.f < 0 ? 1
+                                     : handoff.f < p[1] ? 1 + 0.3 * handoff.segment(handoff.f, p[0], p[1])
+                                     : handoff.f < p[2] ? 1.3 - 0.3 * handoff.segment(handoff.f, p[1], p[2])
                                      : 1 - 0.4 * away
-        source: handoff.active ? handoff.dir + (handoff.afterUnlock ? "spark-u.png" : "spark-25.png") : ""
+        source: handoff.active ? handoff.dir + (handoff.afterUnlock ? "spark-u.png" : "spark-13.png") : ""
         ax: handoff.afterUnlock ? 40 : 35
         ay: handoff.afterUnlock ? -75 : -195
         opacity: 1 - away
@@ -408,13 +444,25 @@ Item {
     // Driven by the wall clock rather than the animation timer, which steps
     // once per frame and runs slow when software rendering drops frames.
     property real startedAt: -1
-
-    Component.onCompleted: d = k.start
+    property real finishAt: -1
 
     function tick() {
-        const end = endOnLanding ? k.zoom[1] : k.clockEnd + 0.4;
-        d = Math.min(end, k.start + speed * (Date.now() - startedAt) / 1000);
-        if (d >= end) {
+        const now = Date.now();
+        // The light laps from the board's time 0, so its phase carries on.
+        w = waitStart + (now - startedAt) / 1000;
+        if (finishAt < 0 && ready) {
+            // With Reduce motion the logo simply fades out.
+            if (reducedMotion) {
+                finish();
+                return;
+            }
+            finishAt = now;
+        }
+        if (finishAt < 0)
+            return;
+        const end = endOnLanding ? k.zoom[1] : k.clock[1] + 0.1;
+        f = Math.min(end, (now - finishAt) / 1000);
+        if (f >= end) {
             done = true;
             finished();
         }
@@ -430,8 +478,8 @@ Item {
         target: handoff
         property: "skip"
         to: 1
-        duration: 250
-        easing.type: Easing.OutCubic
+        duration: handoff.reducedMotion ? 400 : 250
+        easing.type: handoff.reducedMotion ? Easing.InOutQuad : Easing.OutCubic
         onFinished: {
             handoff.done = true;
             handoff.finished();
@@ -439,8 +487,7 @@ Item {
     }
 
     // The clock starts with the first frame on screen, not when the scene is
-    // built: loading the sign-in screen's wallpaper can take longer than the
-    // first part of the animation.
+    // built.
     Connections {
         target: handoff.Window.window
         enabled: handoff.active && handoff.startedAt < 0

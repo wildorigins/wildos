@@ -68,6 +68,11 @@ FocusScope {
         Accessible.role: Accessible.List
         Accessible.name: content.folder ? content.folder.title : ""
 
+        WheelHandler {
+            acceptedModifiers: Qt.ControlModifier
+            onWheel: event => content.view.wheelLayout(event.angleDelta.y)
+        }
+
         Background {
             view: content.view
             target: content
@@ -97,6 +102,7 @@ FocusScope {
             // A delegate waiting in the reuse pool has index -1, which is
             // also "nothing being renamed".
             renaming: content.renameRow >= 0 && content.renameRow === index
+            nameLabel: rowName
             width: ListView.view.width
             height: content.rowHeight
 
@@ -121,8 +127,8 @@ FocusScope {
                 anchors.fill: parent
                 radius: 6
                 color: row.selected ? UI.Style.accentSelected : row.highlighted ? UI.Style.surfaceHover : "transparent"
-                border.width: row.selected || row.isCurrentFocus ? 1 : 0
-                border.color: row.selected ? Metrics.rowBorder : Metrics.rule
+                border.width: row.selected ? 1 : 0
+                border.color: UI.Style.accentBorderStrong
             }
 
             FileIcon {
@@ -144,6 +150,7 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
 
                 UI.Label {
+                    id: rowName
                     visible: !row.renaming
                     width: parent.width
                     text: row.name

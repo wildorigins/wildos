@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <QCoreApplication>
 
 namespace
 {
@@ -82,7 +83,7 @@ bool openFile(archive *a, const QString &path)
 QString errorOf(archive *a)
 {
     const char *e = archive_error_string(a);
-    return e ? QString::fromLocal8Bit(e) : QStringLiteral("unknown error");
+    return e ? QString::fromLocal8Bit(e) : QCoreApplication::translate("Reader", "unknown error");
 }
 
 bool passwordError(archive *a)
@@ -131,7 +132,7 @@ QString formatName(archive *a, bool raw)
     case ARCHIVE_FORMAT_CPIO: format = QStringLiteral("CPIO"); break;
     case ARCHIVE_FORMAT_CAB: format = QStringLiteral("CAB"); break;
     case ARCHIVE_FORMAT_LHA: format = QStringLiteral("LHA"); break;
-    default: format = QStringLiteral("Archive"); break;
+    default: format = QCoreApplication::translate("Reader", "Archive"); break;
     }
     return filter.isEmpty() ? format : format + QLatin1Char('.') + filter;
 }
@@ -514,7 +515,7 @@ Listing listLibarchive(const QString &path, Progress *progress)
             }
             if (order == 0) {
                 if (raw && archive_filter_count(h.a) <= 1) {
-                    listing.error = QStringLiteral("This file isn't an archive.");
+                    listing.error = QCoreApplication::translate("Reader", "This file isn't an archive.");
                     return listing;
                 }
                 listing.format = formatName(h.a, raw);
@@ -574,7 +575,7 @@ Listing listLibarchive(const QString &path, Progress *progress)
         progress->done = progress->total.load();
         return listing;
     }
-    listing.error = QStringLiteral("This file isn't an archive Archive can open.");
+    listing.error = QCoreApplication::translate("Reader", "This file isn't an archive Archive can open.");
     return listing;
 }
 
@@ -686,8 +687,8 @@ Listing fromTool(const Tools::Contents &contents, const QString &tool, const QSt
 
 QString missingTool(const QString &program)
 {
-    return program == QLatin1String("7z") ? QStringLiteral("Archive needs 7-Zip (the 7zip package) for this archive, and it isn't installed.")
-                                          : QStringLiteral("Archive needs The Unarchiver (the unar package) for this archive, and it isn't installed.");
+    return program == QLatin1String("7z") ? QCoreApplication::translate("Reader", "Archive needs 7-Zip (the 7zip package) for this archive, and it isn't installed.")
+                                          : QCoreApplication::translate("Reader", "Archive needs The Unarchiver (the unar package) for this archive, and it isn't installed.");
 }
 
 const QString rar4Locked = QStringLiteral(
@@ -908,12 +909,12 @@ Listing list(const QString &path, const QByteArray &password, Progress *progress
     const QFileInfo info(path);
     if (!info.isFile()) {
         Listing listing;
-        listing.error = QStringLiteral("This file isn't there any more.");
+        listing.error = QCoreApplication::translate("Reader", "This file isn't there any more.");
         return listing;
     }
     if (!info.isReadable()) {
         Listing listing;
-        listing.error = QStringLiteral("You don't have permission to open this file.");
+        listing.error = QCoreApplication::translate("Reader", "You don't have permission to open this file.");
         return listing;
     }
     Listing listing = listLibarchive(path, progress);
@@ -1031,7 +1032,7 @@ Result extractWithTool(const ExtractOptions &options, const Listing &listing, co
     const Staging staging(Tools::makeStaging(root));
     if (staging.path.isEmpty()) {
         result.ok = false;
-        result.error = QStringLiteral("Couldn't write in %1: %2").arg(Format::folder(root), QString::fromLocal8Bit(std::strerror(errno)));
+        result.error = QCoreApplication::translate("Reader", "Couldn't write in %1: %2").arg(Format::folder(root), QString::fromLocal8Bit(std::strerror(errno)));
         return result;
     }
     if (!files.isEmpty()) {
@@ -1073,7 +1074,7 @@ Result extractWithTool(const ExtractOptions &options, const Listing &listing, co
             continue;
         }
         if (made == Made::Blocked) {
-            result.failed.append(QStringLiteral("%1: a file is in the way of its folder").arg(entry.path));
+            result.failed.append(QCoreApplication::translate("Reader", "%1: a file is in the way of its folder").arg(entry.path));
             continue;
         }
         if (entry.dir) {
@@ -1085,7 +1086,7 @@ Result extractWithTool(const ExtractOptions &options, const Listing &listing, co
         struct stat st;
         const bool exists = ::lstat(targetName.constData(), &st) == 0;
         if (exists && S_ISDIR(st.st_mode)) {
-            result.failed.append(QStringLiteral("%1: a folder has the same name").arg(entry.path));
+            result.failed.append(QCoreApplication::translate("Reader", "%1: a folder has the same name").arg(entry.path));
             continue;
         }
         if (exists && !options.replace) {
@@ -1120,7 +1121,7 @@ Result extractWithTool(const ExtractOptions &options, const Listing &listing, co
         const QString source = unpacked(staging, entry);
         struct stat from;
         if (source.isEmpty() || ::lstat(QFile::encodeName(source).constData(), &from) != 0) {
-            result.failed.append(QStringLiteral("%1: it couldn't be unpacked").arg(entry.path));
+            result.failed.append(QCoreApplication::translate("Reader", "%1: it couldn't be unpacked").arg(entry.path));
             continue;
         }
         bool placed = false;
@@ -1143,7 +1144,7 @@ Result extractWithTool(const ExtractOptions &options, const Listing &listing, co
         }
         if (!placed) {
             result.ok = false;
-            result.error = QStringLiteral("Couldn't write %1: %2").arg(entry.name, error);
+            result.error = QCoreApplication::translate("Reader", "Couldn't write %1: %2").arg(entry.name, error);
             return result;
         }
         ::chmod(targetName.constData(), (from.st_mode & 0111) || entry.executable ? 0755 : 0644);
@@ -1275,9 +1276,9 @@ Result testWithTool(const QString &path, const QByteArray &password, const Listi
             }
             const QString test = contents.at(i).toObject().value(QLatin1String("lsarTestResult")).toString();
             if (test == QLatin1String("wrong_checksum")) {
-                result.failed.append(QStringLiteral("%1: its checksum is wrong").arg(listing.entries[index].path));
+                result.failed.append(QCoreApplication::translate("Reader", "%1: its checksum is wrong").arg(listing.entries[index].path));
             } else if (test == QLatin1String("unpacking_failed")) {
-                result.failed.append(QStringLiteral("%1: it couldn't be unpacked").arg(listing.entries[index].path));
+                result.failed.append(QCoreApplication::translate("Reader", "%1: it couldn't be unpacked").arg(listing.entries[index].path));
             } else {
                 ++result.written;
             }
@@ -1291,7 +1292,7 @@ Result testWithTool(const QString &path, const QByteArray &password, const Listi
     const Staging staging(privateStaging());
     if (staging.path.isEmpty()) {
         result.ok = false;
-        result.error = QStringLiteral("Couldn't make a private folder to test in.");
+        result.error = QCoreApplication::translate("Reader", "Couldn't make a private folder to test in.");
         return result;
     }
     const Tools::Outcome outcome = unpack(path, listing, password, files, staging, total, progress);
@@ -1302,7 +1303,7 @@ Result testWithTool(const QString &path, const QByteArray &password, const Listi
     for (int order : files) {
         const Entry &entry = listing.entries[listing.byOrder[order]];
         if (unpacked(staging, entry).isEmpty()) {
-            result.failed.append(QStringLiteral("%1: it couldn't be unpacked").arg(entry.path));
+            result.failed.append(QCoreApplication::translate("Reader", "%1: it couldn't be unpacked").arg(entry.path));
         } else {
             ++result.written;
         }
@@ -1324,7 +1325,7 @@ Result readOneWithTool(const QString &path, const QByteArray &password, const Li
     const int index = listing.byOrder.value(order, -1);
     if (index < 0) {
         result.ok = false;
-        result.error = QStringLiteral("The file isn't in the archive any more.");
+        result.error = QCoreApplication::translate("Reader", "The file isn't in the archive any more.");
         return result;
     }
     const Entry &entry = listing.entries[index];
@@ -1383,7 +1384,7 @@ Result readOneWithTool(const QString &path, const QByteArray &password, const Li
     if (outcome.cancelled || result.password != PasswordState::Fine || source.isEmpty()) {
         result.ok = false;
         result.cancelled = outcome.cancelled;
-        result.error = QStringLiteral("It couldn't be unpacked.");
+        result.error = QCoreApplication::translate("Reader", "It couldn't be unpacked.");
         return result;
     }
     if (::rename(QFile::encodeName(source).constData(), QFile::encodeName(target).constData()) != 0) {
@@ -1448,7 +1449,7 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
     Result result;
     if (!QDir().mkpath(options.destination)) {
         result.ok = false;
-        result.error = QStringLiteral("Couldn't make the folder %1.").arg(Format::folder(options.destination));
+        result.error = QCoreApplication::translate("Reader", "Couldn't make the folder %1.").arg(Format::folder(options.destination));
         return result;
     }
     const QString root = QDir::cleanPath(QFileInfo(options.destination).absoluteFilePath());
@@ -1516,7 +1517,7 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
         }
         if (r < ARCHIVE_WARN) {
             result.ok = false;
-            result.error = QStringLiteral("The archive is damaged: %1").arg(errorOf(h.a));
+            result.error = QCoreApplication::translate("Reader", "The archive is damaged: %1").arg(errorOf(h.a));
             return result;
         }
         const auto found = targets.constFind(order);
@@ -1537,7 +1538,7 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
             continue;
         }
         if (made == Made::Blocked) {
-            result.failed.append(QStringLiteral("%1: a file is in the way of its folder").arg(entry.path));
+            result.failed.append(QCoreApplication::translate("Reader", "%1: a file is in the way of its folder").arg(entry.path));
             continue;
         }
         if (entry.dir) {
@@ -1549,7 +1550,7 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
         struct stat st;
         const bool exists = ::lstat(targetName.constData(), &st) == 0;
         if (exists && S_ISDIR(st.st_mode)) {
-            result.failed.append(QStringLiteral("%1: a folder has the same name").arg(entry.path));
+            result.failed.append(QCoreApplication::translate("Reader", "%1: a folder has the same name").arg(entry.path));
             continue;
         }
         if (exists && !options.replace) {
@@ -1586,14 +1587,14 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
             }
             const QString source = written.value(other);
             if (source.isEmpty()) {
-                result.failed.append(QStringLiteral("%1: it links to a file that wasn't extracted").arg(entry.path));
+                result.failed.append(QCoreApplication::translate("Reader", "%1: it links to a file that wasn't extracted").arg(entry.path));
                 continue;
             }
             if (exists) {
                 ::unlink(targetName.constData());
             }
             if (!QFile::copy(source, target)) {
-                result.failed.append(QStringLiteral("%1: couldn't copy the file it links to").arg(entry.path));
+                result.failed.append(QCoreApplication::translate("Reader", "%1: couldn't copy the file it links to").arg(entry.path));
             } else {
                 ++result.written;
             }
@@ -1606,7 +1607,7 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
         out.setDirectWriteFallback(false);
         if (!out.open(QIODevice::WriteOnly)) {
             result.ok = false;
-            result.error = QStringLiteral("Couldn't write in %1: %2").arg(Format::folder(QFileInfo(target).absolutePath()), out.errorString());
+            result.error = QCoreApplication::translate("Reader", "Couldn't write in %1: %2").arg(Format::folder(QFileInfo(target).absolutePath()), out.errorString());
             return result;
         }
         QString error;
@@ -1627,7 +1628,7 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
             }
             if (writeFailed) {
                 result.ok = false;
-                result.error = QStringLiteral("Couldn't write %1: %2").arg(entry.name, error);
+                result.error = QCoreApplication::translate("Reader", "Couldn't write %1: %2").arg(entry.name, error);
                 return result;
             }
             result.failed.append(QStringLiteral("%1: %2").arg(entry.path, error));
@@ -1636,7 +1637,7 @@ Result extract(const ExtractOptions &options, const Listing &listing, Progress *
         }
         if (!out.commit()) {
             result.ok = false;
-            result.error = QStringLiteral("Couldn't write %1: %2").arg(entry.name, out.errorString());
+            result.error = QCoreApplication::translate("Reader", "Couldn't write %1: %2").arg(entry.name, out.errorString());
             return result;
         }
         const mode_t mode = archive_entry_perm(e);
@@ -1674,7 +1675,7 @@ Result test(const QString &path, const QByteArray &password, const Listing &list
         }
         if (r < ARCHIVE_WARN) {
             result.ok = false;
-            result.error = QStringLiteral("The archive is damaged: %1").arg(errorOf(h.a));
+            result.error = QCoreApplication::translate("Reader", "The archive is damaged: %1").arg(errorOf(h.a));
             return result;
         }
         if (archive_entry_filetype(e) != AE_IFREG) {
@@ -1721,7 +1722,7 @@ Result readOne(const QString &path, const QByteArray &password, const Listing &l
         const int r = archive_read_next_header(h.a, &e);
         if (r == ARCHIVE_EOF || r < ARCHIVE_WARN) {
             result.ok = false;
-            result.error = r == ARCHIVE_EOF ? QStringLiteral("The file isn't in the archive any more.") : errorOf(h.a);
+            result.error = r == ARCHIVE_EOF ? QCoreApplication::translate("Reader", "The file isn't in the archive any more.") : errorOf(h.a);
             return result;
         }
         if (n != order) {
@@ -1851,9 +1852,9 @@ Result create(const CreateOptions &options, Progress *progress)
         source = list(options.source, options.sourcePassword, &quiet);
         if (!source.error.isEmpty() || source.lockedHeaders || source.cantDecrypt) {
             result.ok = false;
-            result.error = QStringLiteral("Couldn't read %1: %2")
+            result.error = QCoreApplication::translate("Reader", "Couldn't read %1: %2")
                                .arg(QFileInfo(options.source).fileName(),
-                                    source.error.isEmpty() ? QStringLiteral("Archive can't unlock it.") : source.error);
+                                    source.error.isEmpty() ? QCoreApplication::translate("Reader", "Archive can't unlock it.") : source.error);
             return result;
         }
         if (!source.tool.isEmpty()) {
@@ -1871,9 +1872,9 @@ Result create(const CreateOptions &options, Progress *progress)
                 result.ok = false;
                 result.cancelled = unpackedResult.cancelled;
                 result.password = unpackedResult.password;
-                result.error = QStringLiteral("Couldn't read %1: %2")
+                result.error = QCoreApplication::translate("Reader", "Couldn't read %1: %2")
                                    .arg(QFileInfo(options.source).fileName(),
-                                        unpackedResult.error.isEmpty() ? QStringLiteral("it couldn't be unpacked.") : unpackedResult.error);
+                                        unpackedResult.error.isEmpty() ? QCoreApplication::translate("Reader", "it couldn't be unpacked.") : unpackedResult.error);
                 return result;
             }
             result.failed += unpackedResult.failed;
@@ -1902,7 +1903,7 @@ Result create(const CreateOptions &options, Progress *progress)
     QTemporaryFile temp(targetInfo.absolutePath() + QStringLiteral("/.") + targetInfo.fileName() + QStringLiteral(".XXXXXX"));
     if (!temp.open()) {
         result.ok = false;
-        result.error = QStringLiteral("Couldn't save in %1: %2").arg(Format::folder(targetInfo.absolutePath()), temp.errorString());
+        result.error = QCoreApplication::translate("Reader", "Couldn't save in %1: %2").arg(Format::folder(targetInfo.absolutePath()), temp.errorString());
         return result;
     }
     archive *w = archive_write_new();
@@ -1940,7 +1941,7 @@ Result create(const CreateOptions &options, Progress *progress)
                 break;
             }
             if (r < ARCHIVE_WARN) {
-                return fail(QStringLiteral("%1 is damaged: %2").arg(QFileInfo(options.source).fileName(), errorOf(h.a)));
+                return fail(QCoreApplication::translate("Reader", "%1 is damaged: %2").arg(QFileInfo(options.source).fileName(), errorOf(h.a)));
             }
             const int index = order < source.byOrder.size() ? source.byOrder[order] : -1;
             if (index < 0) {
@@ -1951,7 +1952,7 @@ Result create(const CreateOptions &options, Progress *progress)
                 continue;
             }
             if (archive_entry_hardlink(e)) {
-                result.failed.append(QStringLiteral("%1: hard links can't go into a new archive").arg(entry.path));
+                result.failed.append(QCoreApplication::translate("Reader", "%1: hard links can't go into a new archive").arg(entry.path));
                 continue;
             }
             archive_entry *o = archive_entry_new();
@@ -1994,7 +1995,7 @@ Result create(const CreateOptions &options, Progress *progress)
                     if (passwordError(h.a)) {
                         result.password = passwordState(options.sourcePassword);
                     }
-                    return fail(QStringLiteral("Couldn't read %1 from %2: %3").arg(entry.path, QFileInfo(options.source).fileName(), errorOf(h.a)));
+                    return fail(QCoreApplication::translate("Reader", "Couldn't read %1 from %2: %3").arg(entry.path, QFileInfo(options.source).fileName(), errorOf(h.a)));
                 }
                 if (archive_write_data(w, buffer.constData(), size_t(n)) < 0) {
                     return fail(QString::fromLocal8Bit(archive_error_string(w)));
@@ -2056,7 +2057,7 @@ Result create(const CreateOptions &options, Progress *progress)
                 break;
             }
             if (n < 0) {
-                return fail(QStringLiteral("Couldn't read %1: %2").arg(item.name, file.errorString()));
+                return fail(QCoreApplication::translate("Reader", "Couldn't read %1: %2").arg(item.name, file.errorString()));
             }
             if (archive_write_data(w, buffer.constData(), size_t(n)) < 0) {
                 return fail(QString::fromLocal8Bit(archive_error_string(w)));
@@ -2072,7 +2073,7 @@ Result create(const CreateOptions &options, Progress *progress)
     temp.close();
     if (QFileInfo::exists(targetPath) || !temp.rename(targetPath)) {
         result.ok = false;
-        result.error = QStringLiteral("Couldn't save %1: a file with that name is there now.").arg(targetInfo.fileName());
+        result.error = QCoreApplication::translate("Reader", "Couldn't save %1: a file with that name is there now.").arg(targetInfo.fileName());
         return result;
     }
     temp.setAutoRemove(false);

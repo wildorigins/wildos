@@ -8,7 +8,7 @@ Image {
 
     width: size
     height: size
-    source: Office.tables ? "data/org.wildos.tables.svg" : "data/org.wildos.write.svg"
+    source: Office.tables ? "data/org.wildos.tables.svg" : Office.slides ? "data/org.wildos.slides.svg" : "data/org.wildos.write.svg"
     sourceSize.width: Math.ceil(size * 2)
     sourceSize.height: Math.ceil(size * 2)
     fillMode: Image.PreserveAspectFit

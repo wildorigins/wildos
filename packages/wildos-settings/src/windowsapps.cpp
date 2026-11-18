@@ -135,12 +135,12 @@ void WindowsApps::reload()
             const bool documents = p.readEntry("Documents", false);
             const bool printer = p.readEntry("Printer", false);
             const bool internet = p.readEntry("Internet", false);
-            permissions << QVariantMap{{QStringLiteral("text"), documents ? QStringLiteral("Documents") : QStringLiteral("Its own folder")},
+            permissions << QVariantMap{{QStringLiteral("text"), documents ? tr("Documents") : tr("Its own folder")},
                                        {QStringLiteral("granted"), true}};
             if (printer) {
-                permissions << QVariantMap{{QStringLiteral("text"), QStringLiteral("Printer")}, {QStringLiteral("granted"), true}};
+                permissions << QVariantMap{{QStringLiteral("text"), tr("Printer")}, {QStringLiteral("granted"), true}};
             }
-            permissions << QVariantMap{{QStringLiteral("text"), internet ? QStringLiteral("Internet") : QStringLiteral("No internet")},
+            permissions << QVariantMap{{QStringLiteral("text"), internet ? tr("Internet") : tr("No internet")},
                                        {QStringLiteral("granted"), internet}};
         }
 

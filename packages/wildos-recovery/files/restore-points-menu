@@ -14,10 +14,30 @@ import sys
 import time
 
 boot, uuid, args = sys.argv[1], sys.argv[2], sys.argv[3]
+POINTS = "/boot/wildos-startup/points"
+
+
+def for_manager(rows):
+    """The same list for the start-up manager (wildos-startup), which runs
+    before the disk holding the restore points is unlocked and starts a
+    point by its entry here."""
+    try:
+        if rows:
+            os.makedirs(os.path.dirname(POINTS), exist_ok=True)
+            with open(POINTS + ".new", "w") as f:
+                f.writelines(rows)
+            os.replace(POINTS + ".new", POINTS)
+        elif os.path.exists(POINTS):
+            os.remove(POINTS)
+    except OSError:
+        pass
+
+
 try:
     with open("/.snapshots/index.json") as f:
         index = json.load(f)
 except (OSError, ValueError):
+    for_manager([])
     sys.exit(0)
 
 
@@ -41,16 +61,20 @@ for p in index.get("points", []):
         entries.append((p, k))
 
 if not entries:
+    for_manager([])
     sys.exit(0)
 
-print("submenu 'Restore points' --class wildos-restore-points $menuentry_id_option 'wildos-restore-points' {")
+rows = []
+print("submenu 'Restore points' --class wildos-restore-points --unrestricted $menuentry_id_option 'wildos-restore-points' {")
 for p, (kern, init) in entries:
     when = time.strftime("%-d %b %H:%M", time.localtime(p["time"]))
     title = f"{p['label']} ({when})".replace("'", "")
-    print(f"\tmenuentry '{title}' --class wildos-previous $menuentry_id_option 'wildos-point-{p['id']}' {{")
+    rows.append(f"{p['id']}\t{title}\n")
+    print(f"\tmenuentry '{title}' --class wildos-previous --unrestricted $menuentry_id_option 'wildos-point-{p['id']}' {{")
     print("\t\tload_video")
     print("\t\tinsmod gzio")
     print(f"\t\tlinux\t{boot}{kern} root=UUID={uuid} rootflags=subvol=@snapshots/{p['id']}/snapshot ro wildos.snapshot={p['id']} {args}")
     print(f"\t\tinitrd\t{boot}{init}")
     print("\t}")
 print("}")
+for_manager(rows)

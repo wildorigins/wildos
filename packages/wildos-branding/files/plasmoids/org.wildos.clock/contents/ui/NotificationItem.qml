@@ -11,7 +11,9 @@ import "Formats.js" as Formats
 // title with the time on the right, a 12 px body, and any actions as a row of
 // buttons, the last one filled. Notifications asking for a decision (with
 // actions, or critical) sit on the accent tint; the rest on a light fill.
-// In a pop-up toast the window's glass is the card, so no fill is drawn.
+// In a pop-up toast the window's glass is the card, so no fill is drawn, and
+// the app's name sits over the title; in the list the group's heading names
+// the app. A body longer than its few lines gets a chevron that opens it.
 CardButton {
     id: item
 
@@ -35,12 +37,15 @@ CardButton {
     // The keyboard is on this notification or one of its buttons.
     readonly property bool keyboardInside: Nav.keyboard && Nav.current !== null
         && (Nav.current === item || Nav.current === closeButton || Nav.current === cancelJob
-            || Nav.current.parent === actionsGrid)
+            || Nav.current === expandButton || Nav.current.parent === actionsGrid)
     readonly property var iconSource: n?.image || n?.iconName || n?.applicationIconName || ""
+    readonly property string appName: String(n?.applicationName || "")
     readonly property string title: {
         const summary = String(n?.summary || "").trim();
-        return summary.length > 0 ? summary : String(n?.applicationName || "");
+        return summary.length > 0 ? summary : appName;
     }
+    // The whole body instead of its first few lines.
+    property bool expanded: false
 
     // Every button in the item, in reading order, for keyboard focus.
     function stops(): var {
@@ -50,6 +55,9 @@ CardButton {
         const list = [];
         if (hasDefault) {
             list.push(item);
+        }
+        if (expandButton.visible) {
+            list.push(expandButton);
         }
         for (let i = 0; i < actionRepeater.count; i++) {
             list.push(actionRepeater.itemAt(i));
@@ -68,13 +76,19 @@ CardButton {
     signal closeRequested()
     signal killJobRequested()
     signal linkActivated(string link)
+    // A right click, or the Menu key, at this point on the item.
+    signal menuRequested(real x, real y)
+
+    function requestMenu(): void {
+        menuRequested(width / 2, height / 2);
+    }
 
     implicitHeight: (runningJob ? jobProgress.implicitHeight : content.implicitHeight) + (toast ? 0 : 28)
     radius: Metrics.itemRadius
     clickable: hasDefault && !runningJob
     baseColor: toast ? "transparent" : tinted ? UI.Style.accentSoft : UI.Style.surfaceControl
     hoverColor: toast ? UI.Style.tone(0.04) : tinted ? UI.Style.fillSelected(0.16, 0.13) : UI.Style.surfaceHover
-    accessibleName: title + ". " + body.text.replace(/<[^>]*>/g, "")
+    accessibleName: (appName.length > 0 && appName !== title ? appName + ". " : "") + title + ". " + body.text.replace(/<[^>]*>/g, "")
     onClicked: defaultActionInvoked()
 
     function ago(time: var): string {
@@ -83,16 +97,16 @@ CardButton {
         }
         const minutes = Math.floor((now - time.getTime()) / 60000);
         if (minutes < 1) {
-            return "now";
+            return qsTr("now");
         }
         if (minutes < 60) {
-            return minutes + " min";
+            return qsTr("%1 min").arg(minutes);
         }
         const hours = Math.floor(minutes / 60);
         if (hours < 24) {
-            return hours + " hr";
+            return qsTr("%1 hr").arg(hours);
         }
-        return hours < 48 ? "Yesterday" : Formats.shortDate(time);
+        return hours < 48 ? qsTr("Yesterday") : Formats.shortDate(time);
     }
 
     Rectangle {
@@ -106,6 +120,12 @@ CardButton {
 
     HoverHandler {
         id: hover
+    }
+
+    TapHandler {
+        enabled: !item.toast
+        acceptedButtons: Qt.RightButton
+        onTapped: eventPoint => item.menuRequested(eventPoint.position.x, eventPoint.position.y)
     }
 
     Loader {
@@ -158,6 +178,14 @@ CardButton {
                 Layout.fillWidth: true
                 spacing: 3
 
+                UI.Label {
+                    Layout.fillWidth: true
+                    visible: item.toast && item.appName.length > 0 && item.appName !== item.title
+                    text: item.appName
+                    size: 11
+                    color: UI.Style.inkMuted
+                }
+
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
@@ -166,6 +194,34 @@ CardButton {
                         Layout.fillWidth: true
                         text: item.title
                         font.weight: UI.Style.weightSemiBold
+                    }
+
+                    CardButton {
+                        id: expandButton
+                        visible: body.visible && (body.truncated || item.expanded)
+                        Layout.preferredWidth: 20
+                        Layout.preferredHeight: 16
+                        fillWidth: 22
+                        fillHeight: 22
+                        radius: 6
+                        accessibleName: item.expanded ? qsTr("Show less") : qsTr("Show more")
+                        onClicked: item.expanded = !item.expanded
+
+                        UI.Icon {
+                            anchors.centerIn: parent
+                            name: item.expanded ? "chevron-up" : "chevron-down"
+                            size: 12
+                            strokeWidth: 2.4
+                            color: UI.Style.inkMuted
+                        }
+
+                        // A finger-sized target around the small chevron.
+                        MouseArea {
+                            anchors.centerIn: parent
+                            width: parent.width
+                            height: 44
+                            onClicked: expandButton.activate()
+                        }
                     }
 
                     UI.Label {
@@ -185,7 +241,7 @@ CardButton {
                         fillWidth: 22
                         fillHeight: 22
                         radius: 6
-                        accessibleName: "Dismiss " + item.title
+                        accessibleName: qsTr("Dismiss %1").arg(item.title)
 
                         UI.Glyph {
                             anchors.centerIn: parent
@@ -220,7 +276,7 @@ CardButton {
                     lineHeightMode: item.tinted ? Text.FixedHeight : Text.ProportionalHeight
                     lineHeight: item.tinted ? 17 : 1
                     wrapMode: Text.Wrap
-                    maximumLineCount: item.toast ? 3 : 4
+                    maximumLineCount: item.expanded ? (item.toast ? 15 : 30) : item.toast ? 3 : 4
                     elide: Text.ElideRight
                     textFormat: Text.StyledText
                     linkColor: UI.Style.accentText
@@ -281,7 +337,7 @@ CardButton {
                     && item.n?.jobState !== NotificationManager.Notifications.JobStateStopped
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: item.killJobRequested()
             }
         }

@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=PDF
+Name[fr]=PDF
 GenericName=PDF reader
+GenericName[fr]=Lecteur PDF
 Comment=Read, fill in and sign PDF files
+Comment[fr]=Lisez, remplissez et signez des fichiers PDF
 Exec=wildos-pdf %f
 Icon=wildos-pdf
 Terminal=false

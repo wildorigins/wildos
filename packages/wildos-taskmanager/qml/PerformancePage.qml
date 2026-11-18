@@ -26,10 +26,10 @@ Item {
     PageHeader {
         id: header
         width: parent.width
-        title: "Performance"
+        title: qsTr("Performance")
 
         HeaderButton {
-            text: "Run new task"
+            text: qsTr("Run new task")
             iconName: "plus"
             onClicked: page.runTask()
         }
@@ -118,7 +118,7 @@ Item {
 
                 Segmented {
                     visible: page.current === "cpu"
-                    options: ["Overall", "Each core"]
+                    options: [qsTr("Overall"), qsTr("Each core")]
                     currentIndex: page.eachCore ? 1 : 0
                     onActivated: index => page.eachCore = index === 1
                 }
@@ -129,7 +129,7 @@ Item {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: page.eachCore && page.current === "cpu" ? "% utilisation of each logical processor over 60 seconds" : (page.info.caption || "")
+                    text: page.eachCore && page.current === "cpu" ? qsTr("% utilisation of each logical processor over 60 seconds") : (page.info.caption || "")
                     size: 11
                     color: UI.Style.inkAlpha(0.7, 0.64)
                 }
@@ -229,7 +229,7 @@ Item {
 
                         UI.Label {
                             width: parent.width
-                            text: "Core " + (index + 1)
+                            text: qsTr("Core %1").arg(index + 1)
                             size: 10
                             color: UI.Style.inkPlaceholder
                         }

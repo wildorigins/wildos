@@ -119,7 +119,7 @@ if [ -n "$have_recovery" ]; then
     if [ -n "$luks" ]; then extra="$extra rd.luks.uuid=$luks rd.luks.options=discard"; fi
     if [ -n "$keymap" ]; then extra="$extra rd.vconsole.keymap=$keymap"; fi
     if [ -n "$lang" ]; then extra="$extra wildos.lang=$lang"; fi
-    echo "menuentry 'Start-up recovery' --class wildos-recovery --class gnu-linux --class os \$menuentry_id_option 'wildos-recovery' {"
+    echo "menuentry 'Start-up recovery' --class wildos-recovery --class gnu-linux --class os --unrestricted \$menuentry_id_option 'wildos-recovery' {"
     echo "	load_video"
     echo "	insmod gzio"
     printf '%s\n' "$prepare"

@@ -49,9 +49,11 @@ UI.TitleBar {
         width: implicitWidth
         // Leaves some bar free to drag the window by, however many tabs.
         room: parent.width + 8 - profilesButton.width - 4 - 48
-        newTabTip: "New tab (Ctrl+Shift+T)"
+        newTabTip: qsTr("New tab (Ctrl+Shift+T)")
         currentIndex: host.currentIndex
         onNewTabRequested: host.newTab("")
+        reorderable: true
+        onMoved: (from, to) => host.moveTab(from, to)
 
         Repeater {
             model: host.tabs
@@ -68,11 +70,7 @@ UI.TitleBar {
                 checked: index === host.currentIndex
                 onPressed: host.currentIndex = index
                 onCloseRequested: host.closeTab(index)
-
-                TapHandler {
-                    acceptedButtons: Qt.RightButton
-                    onTapped: point => bar.tabMenuRequested(tab.index, tab, point.position.x, point.position.y)
-                }
+                onContextMenuRequested: (x, y) => bar.tabMenuRequested(tab.index, tab, x, y)
             }
         }
     }
@@ -87,7 +85,7 @@ UI.TitleBar {
         iconName: "chevron-down"
         iconSize: 12
         stroke: 2.2
-        tip: "Profiles and settings (Ctrl+Shift+Space)"
+        tip: qsTr("Profiles and settings (Ctrl+Shift+Space)")
         focusPolicy: Qt.NoFocus
         onClicked: bar.profilesMenuRequested(profilesButton)
     }

@@ -14,9 +14,9 @@ ColumnLayout {
     property bool expanded: false
 
     readonly property var sections: [
-        { category: "new", title: "New" },
-        { category: "improved", title: "Improved" },
-        { category: "fixed", title: "Fixed" }
+        { category: "new", title: qsTr("New") },
+        { category: "improved", title: qsTr("Improved") },
+        { category: "fixed", title: qsTr("Fixed") }
     ]
 
     // Every line once, in section order.
@@ -108,7 +108,7 @@ ColumnLayout {
     UI.LinkButton {
         Layout.leftMargin: -4
         visible: notes.lines.length > notes.limit
-        text: notes.expanded ? "Show fewer" : "Show all " + notes.lines.length + " changes"
+        text: notes.expanded ? qsTr("Show fewer") : qsTr("Show all %1 changes").arg(notes.lines.length)
         onClicked: notes.expanded = !notes.expanded
     }
 }

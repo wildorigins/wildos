@@ -5,9 +5,12 @@
 #include "keychain.h"
 #include "paths.h"
 #include "secrets.h"
+#include "settings.h"
 #include "terminalview.h"
 #include "windowframe.h"
 
+#include <QClipboard>
+#include <QDesktopServices>
 #include <QElapsedTimer>
 #include <QGuiApplication>
 #include <QPainter>
@@ -29,8 +32,6 @@ namespace
 {
 constexpr int inset = 6;
 constexpr int grip = 5;
-// Remote.colorscheme's background, so the frame and the terminal meet unseen.
-const QColor terminalBackground(18, 19, 23);
 }
 
 SessionTab::SessionTab(const QVariantMap &host, QObject *parent)
@@ -49,10 +50,10 @@ SessionTab::SessionTab(const QVariantMap &host, QObject *parent)
     layout->addWidget(m_splitter);
 
     if (m_local) {
-        m_title = QStringLiteral("Local");
+        m_title = tr("Local");
         m_colour = QStringLiteral("#8b93a8");
         m_userHost = qEnvironmentVariable("USER") + QLatin1Char('@') + QSysInfo::machineHostName();
-        m_auth = QStringLiteral("This PC");
+        m_auth = tr("This PC");
     } else {
         Hosts *hosts = Hosts::instance();
         m_title = host.value(QStringLiteral("name")).toString();
@@ -61,11 +62,11 @@ SessionTab::SessionTab(const QVariantMap &host, QObject *parent)
         const QString user = host.value(QStringLiteral("user")).toString();
         m_userHost = (user.isEmpty() ? QString() : user + QLatin1Char('@')) + hosts->hostName(host);
         const QString identity = ssh.value(QStringLiteral("identity")).toString();
-        m_auth = identity.isEmpty() ? QStringLiteral("SSH") : QStringLiteral("SSH, key “%1”").arg(Keychain::instance()->label(identity));
+        m_auth = identity.isEmpty() ? QStringLiteral("SSH") : tr("SSH, key “%1”").arg(Keychain::instance()->label(identity));
         for (const QVariant &v : ssh.value(QStringLiteral("forwards")).toList()) {
             const QVariantMap f = v.toMap();
             const QString target = f.value(QStringLiteral("remoteHost")).toString();
-            m_forwards.append(QStringLiteral("localhost:%1 to %2").arg(f.value(QStringLiteral("localPort")).toInt())
+            m_forwards.append(tr("localhost:%1 to %2").arg(f.value(QStringLiteral("localPort")).toInt())
                                   .arg(target.isEmpty() || target == QLatin1String("localhost") ? m_title : target));
         }
         m_passwordKey = hosts->passwordKey(host);
@@ -94,9 +95,13 @@ QStringList SessionTab::sshArgs(bool withForwards) const
         // new before this ran, and a changed key is never taken.
         QStringLiteral("-o"), QStringLiteral("StrictHostKeyChecking=yes"),
         QStringLiteral("-o"), QStringLiteral("UpdateHostKeys=no"),
-        QStringLiteral("-o"), QStringLiteral("ServerAliveInterval=30"),
         QStringLiteral("-p"), QString::number(hosts->port(m_host)),
     };
+    // A quiet check every 30 seconds, so a router or firewall does not drop
+    // a tab left alone; it can be switched off in Remote's settings.
+    if (RemoteSettings::instance()->keepAlive()) {
+        args << QStringLiteral("-o") << QStringLiteral("ServerAliveInterval=30");
+    }
     const QString identity = ssh.value(QStringLiteral("identity")).toString();
     if (!identity.isEmpty()) {
         args << QStringLiteral("-i") << identity << QStringLiteral("-o") << QStringLiteral("IdentitiesOnly=yes");
@@ -146,6 +151,20 @@ TerminalView *SessionTab::makeView(bool first)
     connect(view, &TerminalView::focused, this, [this, view] {
         m_current = view;
         Q_EMIT suggestionsChanged();
+    });
+    connect(view, &TerminalView::contextMenuWanted, this, [this, view](const QPoint &position) {
+        m_current = view;
+        m_menuLink = view->linkAt(position);
+        const QPoint p = view->mapTo(m_page, position);
+        Q_EMIT contextMenuRequested(p.x(), p.y(), view->hasSelection(), m_menuLink.isValid());
+    });
+    connect(view, &TerminalView::pasteNeedsConfirming, this, [this, view](const QString &text) {
+        m_pasteView = view;
+        m_pasteText = text;
+        QString body = text.trimmed();
+        body.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+        body.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+        Q_EMIT pasteConfirmationNeeded(int(body.count(QLatin1Char('\n'))) + 1);
     });
     connect(view, &TerminalView::exitedChanged, this, [this, view] {
         // A second pane that ends just goes; the tab ends with its last.
@@ -270,6 +289,59 @@ void SessionTab::focusTerminal()
     }
 }
 
+void SessionTab::copy()
+{
+    if (TerminalView *v = current()) {
+        v->copy();
+    }
+}
+
+void SessionTab::paste()
+{
+    if (TerminalView *v = current()) {
+        v->paste();
+        // A paste that is being checked first has the keyboard in its
+        // dialog; the terminal gets it back with the answer.
+        if (m_pasteText.isEmpty()) {
+            v->setFocus();
+        }
+    }
+}
+
+void SessionTab::answerPaste(bool paste)
+{
+    if (paste && m_pasteView) {
+        m_pasteView->sendPaste(m_pasteText);
+    }
+    m_pasteText.clear();
+    m_pasteView = nullptr;
+    focusTerminal();
+}
+
+void SessionTab::clear()
+{
+    if (TerminalView *v = current()) {
+        v->clear();
+        v->setFocus();
+    }
+}
+
+void SessionTab::openLink()
+{
+    if (m_menuLink.isValid()) {
+        QDesktopServices::openUrl(m_menuLink);
+    }
+}
+
+void SessionTab::copyLink()
+{
+    if (m_menuLink.isValid()) {
+        // As written in the terminal: the default form decodes parts of an
+        // address, and a sign-in link has to arrive as it was sent.
+        QGuiApplication::clipboard()->setText(m_menuLink.toString(QUrl::FullyEncoded));
+    }
+}
+
 void SessionTab::measureLatency()
 {
     // One TCP handshake, timed, when the tab opens: the round trip to the
@@ -282,7 +354,7 @@ void SessionTab::measureLatency()
         clock->restart();
     });
     connect(socket, &QTcpSocket::connected, this, [this, socket, clock] {
-        m_latency = QStringLiteral("%1 ms").arg(std::max<qint64>(1, clock->elapsed()));
+        m_latency = tr("%1 ms").arg(std::max<qint64>(1, clock->elapsed()));
         delete clock;
         socket->abort();
         socket->deleteLater();
@@ -420,7 +492,7 @@ SessionWindow::SessionWindow()
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_DeleteOnClose);
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
-    setWindowTitle(QStringLiteral("Remote"));
+    setWindowTitle(tr("Remote"));
     setWindowIcon(QIcon::fromTheme(QStringLiteral("org.wildos.remote")));
     setMinimumSize(640, 360);
 
@@ -443,6 +515,8 @@ SessionWindow::SessionWindow()
     }
     m_chrome->raise();
 
+    connect(RemoteSettings::instance(), &RemoteSettings::terminalChanged, this, qOverload<>(&QWidget::update));
+
     auto add = [this](const QString &key, auto slot) {
         auto *s = new QShortcut(QKeySequence(key), this);
         s->setContext(Qt::WindowShortcut);
@@ -450,6 +524,7 @@ SessionWindow::SessionWindow()
     };
     add(QStringLiteral("Ctrl+Shift+T"), [this] { openLocal(); });
     add(QStringLiteral("Ctrl+Shift+W"), [this] { closeTab(m_current); });
+    add(QStringLiteral("Ctrl+,"), [this] { showSettings(); });
     add(QStringLiteral("Ctrl+Tab"), [this] { setCurrentIndex((m_current + 1) % std::max<qsizetype>(1, m_tabs.size())); });
     add(QStringLiteral("Ctrl+Shift+Tab"), [this] { setCurrentIndex((m_current + m_tabs.size() - 1) % std::max<qsizetype>(1, m_tabs.size())); });
 
@@ -505,7 +580,7 @@ void SessionWindow::setCurrentIndex(int index)
     }
     m_current = index;
     m_stack->setCurrentWidget(m_tabs[index]->page());
-    setWindowTitle(m_tabs[index]->title() + QStringLiteral(", Remote"));
+    setWindowTitle(tr("%1, Remote").arg(m_tabs[index]->title()));
     Q_EMIT currentChanged();
     Q_EMIT layoutChanged();
     updateMask();
@@ -584,6 +659,11 @@ void SessionWindow::focusChrome()
 void SessionWindow::showHome()
 {
     Q_EMIT homeRequested(QString());
+}
+
+void SessionWindow::showSettings()
+{
+    Q_EMIT homeRequested(QStringLiteral("settings"));
 }
 
 void SessionWindow::editHost(const QString &hostId)
@@ -737,8 +817,8 @@ void SessionWindow::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(rect(), Qt::transparent);
-    // The terminal's own colour under the gap around it, so the terminal
-    // and the window edge read as one surface.
+    // The terminal's own colour (its scheme's background) under the gap
+    // around it, so the terminal and the window edge read as one surface.
     p.setRenderHint(QPainter::Antialiasing);
     const qreal r = maximised() ? 0 : radius;
     QPainterPath path;
@@ -746,5 +826,5 @@ void SessionWindow::paintEvent(QPaintEvent *)
     QPainterPath area;
     const QRect t = terminalArea();
     area.addRect(QRectF(0, t.top(), t.right() + 1, t.height()));
-    p.fillPath(path.intersected(area), terminalBackground);
+    p.fillPath(path.intersected(area), RemoteSettings::instance()->background());
 }

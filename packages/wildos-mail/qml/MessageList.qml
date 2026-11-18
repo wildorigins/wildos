@@ -14,7 +14,7 @@ Rectangle {
     signal openMessage(string key)
     readonly property bool listFocused: list.activeFocus
 
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRest
     border.width: 1
     border.color: UI.Style.borderSubtle

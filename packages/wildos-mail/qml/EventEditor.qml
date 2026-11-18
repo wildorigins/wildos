@@ -118,7 +118,7 @@ Rectangle {
         }
     }
 
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRest
     border.width: 1
     border.color: UI.Style.borderSubtle
@@ -286,7 +286,7 @@ Rectangle {
                         implicitHeight: 36
                         onClicked: datePopup.open()
                         background: Rectangle {
-                            radius: 6
+                            radius: UI.Style.radiusXs
                             color: dateButton.hovered ? UI.Style.surfaceHover : UI.Style.surfaceControl
                             border.width: 1
                             border.color: UI.Style.borderField
@@ -472,7 +472,7 @@ Rectangle {
                             placeholderTextColor: UI.Style.inkPlaceholder
                             padding: 12
                             background: Rectangle {
-                                radius: 6
+                                radius: UI.Style.radiusXs
                                 color: UI.Style.surfaceSunken
                                 border.width: 1
                                 border.color: notes.activeFocus ? UI.Style.accent : UI.Style.borderField
@@ -541,7 +541,7 @@ Rectangle {
                     visible: sameDay && !editor.allDay
                     Layout.fillWidth: true
                     implicitHeight: 32
-                    radius: 6
+                    radius: UI.Style.radiusXs
                     color: clashes.length > 0 ? UI.Style.warningSoft : UI.Style.successSoft
                     RowLayout {
                         anchors.fill: parent

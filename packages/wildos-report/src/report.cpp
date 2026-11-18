@@ -90,12 +90,12 @@ constexpr int urlBudget = 8000;
 QString sizeName(qint64 bytes)
 {
     if (bytes < 1024) {
-        return QStringLiteral("%1 bytes").arg(bytes);
+        return QCoreApplication::translate("Report", "%1 bytes").arg(bytes);
     }
     if (bytes < 1024 * 1024) {
-        return QStringLiteral("%1 KB").arg(qMax<qint64>(1, qRound64(bytes / 1024.0)));
+        return QCoreApplication::translate("Report", "%1 KB").arg(qMax<qint64>(1, qRound64(bytes / 1024.0)));
     }
-    return QStringLiteral("%1 MB").arg(QLocale(QLocale::English, QLocale::UnitedKingdom).toString(bytes / (1024.0 * 1024.0), 'f', 1));
+    return QCoreApplication::translate("Report", "%1 MB").arg(QLocale(QLocale::English, QLocale::UnitedKingdom).toString(bytes / (1024.0 * 1024.0), 'f', 1));
 }
 
 // A log line as it reads in the saved file: "13:09:58  files: message".
@@ -404,11 +404,9 @@ QPair<QDateTime, QDateTime> Report::window() const
 QString Report::windowText() const
 {
     const auto [since, until] = window();
-    QString text = QStringLiteral("%1 to %2").arg(since.toString(QStringLiteral("HH:mm")), until.toString(QStringLiteral("HH:mm")));
-    if (until.date() != QDate::currentDate()) {
-        text += QStringLiteral(" yesterday");
-    }
-    return text;
+    const QString from = since.toString(QStringLiteral("HH:mm"));
+    const QString to = until.toString(QStringLiteral("HH:mm"));
+    return until.date() != QDate::currentDate() ? tr("%1 to %2 yesterday").arg(from, to) : tr("%1 to %2").arg(from, to);
 }
 
 void Report::setDescription(const QString &text)
@@ -443,7 +441,7 @@ QVariantList Report::screenshots() const
         const QString name = m_shotNames.value(path);
         list.append(QVariantMap{
             {QStringLiteral("url"), QUrl::fromLocalFile(path)},
-            {QStringLiteral("label"), name.isEmpty() ? QStringLiteral("Screenshot, %1").arg(info.lastModified().toString(QStringLiteral("HH:mm"))) : name},
+            {QStringLiteral("label"), name.isEmpty() ? tr("Screenshot, %1").arg(info.lastModified().toString(QStringLiteral("HH:mm"))) : name},
             {QStringLiteral("size"), sizeName(info.size())},
         });
     }
@@ -455,13 +453,13 @@ QString Report::crashNote() const
     if (!m_eventTitle.isEmpty()) {
         const QString at = m_eventTime.date() == QDate::currentDate() ? m_eventTime.toString(QStringLiteral("HH:mm"))
                                                                       : m_eventTime.toString(QStringLiteral("d MMMM, HH:mm"));
-        return QStringLiteral("From History: %1, %2. Its details are added for you.").arg(m_eventTitle, at);
+        return tr("From History: %1, %2. Its details are added for you.").arg(m_eventTitle, at);
     }
     if (!m_crashTime.isValid()) {
         return {};
     }
-    const QString app = m_crashApp.isEmpty() ? partName() : m_crashApp;
-    return QStringLiteral("%1 closed unexpectedly at %2. Its details are added for you.").arg(app, m_crashTime.toString(QStringLiteral("HH:mm")));
+    const QString app = m_crashApp.isEmpty() ? Parts::shownName(Parts::byId(m_part)) : m_crashApp;
+    return tr("%1 closed unexpectedly at %2. Its details are added for you.").arg(app, m_crashTime.toString(QStringLiteral("HH:mm")));
 }
 
 void Report::takeScreenshot()
@@ -482,7 +480,7 @@ void Report::takeScreenshot()
             if (cancelled.open(QIODevice::WriteOnly)) {
                 cancelled.close();
             }
-            Q_EMIT message(QStringLiteral("Capture couldn't be started"));
+            Q_EMIT message(tr("Capture couldn't be started"));
         }
         m_capturePoll.start();
     });
@@ -645,48 +643,48 @@ QVariantList Report::items() const
     for (const QString &path : m_shots) {
         shotBytes += QFileInfo(path).size();
     }
-    const QString shots = m_shots.isEmpty() ? QStringLiteral("No screenshot")
-        : m_shots.size() == 1                ? QStringLiteral("1 screenshot, %1").arg(sizeName(shotBytes))
-                                             : QStringLiteral("%1 screenshots, %2").arg(m_shots.size()).arg(sizeName(shotBytes));
-    add(QStringLiteral("description"), m_shots.size() > 1 ? QStringLiteral("Your description and screenshots")
-                                       : m_shots.size() == 1 ? QStringLiteral("Your description and screenshot")
-                                                             : QStringLiteral("Your description"),
+    const QString shots = m_shots.isEmpty() ? tr("No screenshot")
+        : m_shots.size() == 1                ? tr("1 screenshot, %1").arg(sizeName(shotBytes))
+                                             : tr("%1 screenshots, %2").arg(m_shots.size()).arg(sizeName(shotBytes));
+    add(QStringLiteral("description"), m_shots.size() > 1 ? tr("Your description and screenshots")
+                                       : m_shots.size() == 1 ? tr("Your description and screenshot")
+                                                             : tr("Your description"),
         shots, QStringLiteral("file-text"));
     if (!m_eventTitle.isEmpty()) {
-        add(QStringLiteral("event"), QStringLiteral("This event from History"), m_eventTitle, QStringLiteral("history"));
+        add(QStringLiteral("event"), tr("This event from History"), m_eventTitle, QStringLiteral("history"));
     }
     const QString v = SysInfo::version();
-    add(QStringLiteral("about"), QStringLiteral("About this PC"),
-        v.isEmpty() ? QStringLiteral("Wild OS version, the PC's model, graphics and memory")
-                    : QStringLiteral("Wild OS %1, the PC's model, graphics and memory").arg(v),
+    add(QStringLiteral("about"), tr("About this PC"),
+        v.isEmpty() ? tr("Wild OS version, the PC's model, graphics and memory")
+                    : tr("Wild OS %1, the PC's model, graphics and memory").arg(v),
         QStringLiteral("cpu"));
     if (!waiting && !m_raw.crash.isEmpty()) {
-        const QString app = m_crashApp.isEmpty() ? partName() : m_crashApp;
+        const QString app = m_crashApp.isEmpty() ? Parts::shownName(Parts::byId(m_part)) : m_crashApp;
         const QString at = m_raw.crashTime.isValid() ? m_raw.crashTime.toString(QStringLiteral("HH:mm")) : QString();
-        add(QStringLiteral("crash"), QStringLiteral("Crash details for %1").arg(app),
-            (m_raw.crashTrace ? QStringLiteral("Where it stopped, %1") : QStringLiteral("How it stopped, %1")).arg(at), QStringLiteral("zap"));
+        add(QStringLiteral("crash"), tr("Crash details for %1").arg(app),
+            (m_raw.crashTrace ? tr("Where it stopped, %1") : tr("How it stopped, %1")).arg(at), QStringLiteral("zap"));
     }
     const Part &part = Parts::byId(m_part);
     QString logs;
     if (waiting) {
-        logs = QStringLiteral("Gathering");
+        logs = tr("Gathering");
     } else {
         const int count = int(m_raw.logs.size());
-        const QString lines = count == 1 ? QStringLiteral("1 line") : QStringLiteral("%1 lines").arg(count);
+        const QString lines = count == 1 ? tr("1 line") : tr("%1 lines").arg(count);
         if (!m_raw.systemLogs) {
-            logs = part.programs.isEmpty() ? QStringLiteral("Your own apps only, %1").arg(lines) : QStringLiteral("%1 only, %2").arg(part.name, lines);
+            logs = part.programs.isEmpty() ? tr("Your own apps only, %1").arg(lines) : tr("%1 only, %2").arg(Parts::shownName(part), lines);
         } else {
-            logs = part.programs.isEmpty() ? QStringLiteral("The system, %1").arg(lines) : QStringLiteral("%1 and the system, %2").arg(part.name, lines);
+            logs = part.programs.isEmpty() ? tr("The system, %1").arg(lines) : tr("%1 and the system, %2").arg(Parts::shownName(part), lines);
         }
     }
-    add(QStringLiteral("logs"), QStringLiteral("Logs from %1").arg(windowText()), logs, QStringLiteral("logs"));
-    add(QStringLiteral("updates"), QStringLiteral("Recent updates"),
-        waiting || m_raw.updateDays > 0 ? QStringLiteral("What changed in the last 7 days") : QStringLiteral("Nothing changed in the last 7 days"),
+    add(QStringLiteral("logs"), tr("Logs from %1").arg(windowText()), logs, QStringLiteral("logs"));
+    add(QStringLiteral("updates"), tr("Recent updates"),
+        waiting || m_raw.updateDays > 0 ? tr("What changed in the last 7 days") : tr("Nothing changed in the last 7 days"),
         QStringLiteral("history"));
     const Section *full = section(QStringLiteral("fulllog"));
-    add(QStringLiteral("fulllog"), QStringLiteral("Full system log"),
-        waiting ? QStringLiteral("For problems that are hard to pin down")
-                : QStringLiteral("For problems that are hard to pin down · %1").arg(sizeName(full->raw.toUtf8().size())),
+    add(QStringLiteral("fulllog"), tr("Full system log"),
+        waiting ? tr("For problems that are hard to pin down")
+                : tr("For problems that are hard to pin down · %1").arg(sizeName(full->raw.toUtf8().size())),
         QStringLiteral("database"));
     return list;
 }
@@ -715,24 +713,24 @@ void Report::view(const QString &id)
 QString Report::previewTitle() const
 {
     if (m_viewing == QLatin1String("description")) {
-        return QStringLiteral("Preview: your description");
+        return tr("Preview: your description");
     }
     if (m_viewing == QLatin1String("about")) {
-        return QStringLiteral("Preview: about this PC");
+        return tr("Preview: about this PC");
     }
     if (m_viewing == QLatin1String("crash")) {
-        return QStringLiteral("Preview: crash details");
+        return tr("Preview: crash details");
     }
     if (m_viewing == QLatin1String("event")) {
-        return QStringLiteral("Preview: the event from History");
+        return tr("Preview: the event from History");
     }
     if (m_viewing == QLatin1String("updates")) {
-        return QStringLiteral("Preview: recent updates");
+        return tr("Preview: recent updates");
     }
     if (m_viewing == QLatin1String("fulllog")) {
-        return QStringLiteral("Preview: full system log");
+        return tr("Preview: full system log");
     }
-    return QStringLiteral("Preview: Logs from %1").arg(windowText());
+    return tr("Preview: Logs from %1").arg(windowText());
 }
 
 void Report::showPreview()
@@ -749,7 +747,7 @@ void Report::showPreview()
         }
     }
     if (lines.isEmpty()) {
-        lines << (log ? QStringLiteral("Nothing was logged in this time.") : QStringLiteral("Nothing to show."));
+        lines << (log ? tr("Nothing was logged in this time.") : tr("Nothing to show."));
     }
     m_preview.setLines(lines, log);
 }
@@ -822,7 +820,7 @@ void Report::measure()
 
 QString Report::sizeText() const
 {
-    return m_size < 0 || busy() ? QString() : QStringLiteral("Report size %1").arg(sizeName(m_size));
+    return m_size < 0 || busy() ? QString() : tr("Report size %1").arg(sizeName(m_size));
 }
 
 QByteArray Report::zip(const QList<Section> &sections, const QStringList &shots, bool all)
@@ -912,7 +910,7 @@ void Report::chooseScreenshotFiles(QWindow *window)
                                               QStringLiteral("org.freedesktop.portal.Request"), QStringLiteral("Response"), this,
                                               SLOT(pickerResponse(uint, QVariantMap)));
 
-        QList<PickerFilter> filters{{QStringLiteral("Pictures"), {}}};
+        QList<PickerFilter> filters{{tr("Pictures"), {}}};
         for (const char *glob : {"*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif", "*.bmp"}) {
             filters.first().rules.append({0, QString::fromLatin1(glob)});
         }
@@ -928,7 +926,7 @@ void Report::chooseScreenshotFiles(QWindow *window)
         };
         QDBusMessage call = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.portal.Desktop"), QStringLiteral("/org/freedesktop/portal/desktop"),
                                                            QStringLiteral("org.freedesktop.portal.FileChooser"), QStringLiteral("OpenFile"));
-        call << parent << QStringLiteral("Choose a picture") << options;
+        call << parent << tr("Choose a picture") << options;
         QDBusConnection::sessionBus().callWithCallback(call, this, SLOT(pickerOpened()), SLOT(pickerFailed()));
     };
     if (!window || !KWindowSystem::isPlatformWayland()) {
@@ -981,7 +979,7 @@ void Report::pickerOpened()
 void Report::pickerFailed()
 {
     m_pickerRequest.clear();
-    Q_EMIT message(QStringLiteral("The Open dialog couldn't be shown"));
+    Q_EMIT message(tr("The Open dialog couldn't be shown"));
 }
 
 void Report::addScreenshotFiles(const QList<QUrl> &files)
@@ -1033,9 +1031,9 @@ void Report::addScreenshotFiles(const QList<QUrl> &files)
         }
     }
     if (unreadable.size() == 1) {
-        Q_EMIT message(QStringLiteral("%1 couldn't be opened as a picture").arg(unreadable.first()));
+        Q_EMIT message(tr("%1 couldn't be opened as a picture").arg(unreadable.first()));
     } else if (unreadable.size() > 1) {
-        Q_EMIT message(QStringLiteral("%1 files couldn't be opened as pictures").arg(unreadable.size()));
+        Q_EMIT message(tr("%1 files couldn't be opened as pictures").arg(unreadable.size()));
     }
 }
 
@@ -1070,7 +1068,7 @@ QString Report::writeZip(const QString &path, bool all)
     }
     file.close();
     m_savedPath = path;
-    m_savedText = QStringLiteral("Report saved as %1, %2").arg(QFileInfo(path).fileName(), sizeName(bytes.size()));
+    m_savedText = tr("Report saved as %1, %2").arg(QFileInfo(path).fileName(), sizeName(bytes.size()));
     Q_EMIT savedChanged();
     return path;
 }
@@ -1175,7 +1173,7 @@ void Report::openGitHub()
         const QString path = writeZip(uniquePath(folder), false);
         if (path.isEmpty()) {
             setHandoff({});
-            Q_EMIT message(QStringLiteral("The report couldn't be saved to Downloads"));
+            Q_EMIT message(tr("The report couldn't be saved to Downloads"));
             return;
         }
         const QString title = m_title.trimmed().isEmpty() ? QStringLiteral("Problem with %1").arg(partName()) : m_title.trimmed();
@@ -1197,7 +1195,7 @@ void Report::openGitHub()
         m_handoffAt = QDateTime::currentDateTimeUtc();
         if (!QDesktopServices::openUrl(QUrl::fromEncoded(url.toLatin1()))) {
             setHandoff({});
-            Q_EMIT message(QStringLiteral("The browser couldn't be opened. The report is in Downloads."));
+            Q_EMIT message(tr("The browser couldn't be opened. The report is in Downloads."));
             return;
         }
         // The browser takes a moment to appear; saying "finish in your
@@ -1303,7 +1301,7 @@ bool Report::saveTo(const QUrl &file)
         path += QStringLiteral(".zip");
     }
     if (writeZip(path, false).isEmpty()) {
-        Q_EMIT message(QStringLiteral("The report couldn't be saved there"));
+        Q_EMIT message(tr("The report couldn't be saved there"));
         return false;
     }
     return true;
@@ -1313,7 +1311,7 @@ void Report::copyDescription()
 {
     QString text = issueBody(QString(), -1);
     QGuiApplication::clipboard()->setText(text);
-    Q_EMIT message(QStringLiteral("Description copied"));
+    Q_EMIT message(tr("Description copied"));
 }
 
 void Report::copyPreview()
@@ -1322,7 +1320,7 @@ void Report::copyPreview()
     if (s) {
         const bool log = m_viewing == QLatin1String("logs") || m_viewing == QLatin1String("fulllog");
         QGuiApplication::clipboard()->setText(log ? fileLines(s->redacted) : s->redacted);
-        Q_EMIT message(QStringLiteral("Copied"));
+        Q_EMIT message(tr("Copied"));
     }
 }
 

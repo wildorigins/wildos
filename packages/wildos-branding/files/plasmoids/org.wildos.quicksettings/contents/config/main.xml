@@ -13,6 +13,10 @@
             <label>Tiles that only fill free slots (cast, accessibility) which the person has added with "Edit quick settings", so they stay even when the grid is full.</label>
             <default></default>
         </entry>
+        <entry name="tileOrder" type="StringList">
+            <label>The order of the tiles after the person has rearranged them in "Edit quick settings". Empty means the built-in order; tiles not named here follow in the built-in order.</label>
+            <default></default>
+        </entry>
         <entry name="nightLightScheduleMode" type="Int">
             <label>The night light schedule (KWin NightColor Mode) to go back to when the tile, which switched night light to always on, is turned off. -1 when the tile has not changed it.</label>
             <default>-1</default>

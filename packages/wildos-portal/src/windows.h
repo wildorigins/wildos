@@ -17,6 +17,9 @@ class Windows : public QObject
 
 public:
     static Windows *instance();
+    // Whether any dialog has been asked for since the service started.
+    static bool started();
+    static constexpr int idleQuitMs = 5 * 60 * 1000;
 
     QQuickWindow *open(const QString &component, const QVariantMap &properties, const QString &parentWindow, bool modal = false);
     void hold();

@@ -31,26 +31,26 @@ struct Category {
 const QList<Category> &categoryList()
 {
     static const QList<Category> list = {
-        {"browser", "Web browser", "Opens web links", "globe",
+        {"browser", QT_TRANSLATE_NOOP("DefaultApps", "Web browser"), QT_TRANSLATE_NOOP("DefaultApps", "Opens web links"), "globe",
          {QStringLiteral("x-scheme-handler/https"), QStringLiteral("x-scheme-handler/http"), QStringLiteral("text/html"),
           QStringLiteral("application/xhtml+xml")},
          QStringLiteral("WebBrowser")},
-        {"email", "Email", "Opens email addresses", "mail", {QStringLiteral("x-scheme-handler/mailto")}, QString()},
-        {"pictures", "Pictures", "Photos and other images", "image",
+        {"email", QT_TRANSLATE_NOOP("DefaultApps", "Email"), QT_TRANSLATE_NOOP("DefaultApps", "Opens email addresses"), "mail", {QStringLiteral("x-scheme-handler/mailto")}, QString()},
+        {"pictures", QT_TRANSLATE_NOOP("DefaultApps", "Pictures"), QT_TRANSLATE_NOOP("DefaultApps", "Photos and other images"), "image",
          {QStringLiteral("image/jpeg"), QStringLiteral("image/png"), QStringLiteral("image/gif"), QStringLiteral("image/webp"),
           QStringLiteral("image/bmp"), QStringLiteral("image/tiff"), QStringLiteral("image/heif")},
          QString()},
-        {"music", "Music", "Songs and other audio", "sound",
+        {"music", QT_TRANSLATE_NOOP("DefaultApps", "Music"), QT_TRANSLATE_NOOP("DefaultApps", "Songs and other audio"), "sound",
          {QStringLiteral("audio/mpeg"), QStringLiteral("audio/flac"), QStringLiteral("audio/x-vorbis+ogg"), QStringLiteral("audio/mp4"),
           QStringLiteral("audio/x-wav"), QStringLiteral("audio/ogg")},
          QString()},
-        {"video", "Videos", "Films and clips", "video",
+        {"video", QT_TRANSLATE_NOOP("DefaultApps", "Videos"), QT_TRANSLATE_NOOP("DefaultApps", "Films and clips"), "video",
          {QStringLiteral("video/mp4"), QStringLiteral("video/x-matroska"), QStringLiteral("video/webm"), QStringLiteral("video/quicktime"),
           QStringLiteral("video/x-msvideo")},
          QString()},
-        {"pdf", "PDF documents", "Opens PDF files", "document", {QStringLiteral("application/pdf")}, QString()},
-        {"text", "Text files", "Plain text and notes", "pencil", {QStringLiteral("text/plain")}, QString()},
-        {"files", "Files and folders", "Opens folders", "folder", {QStringLiteral("inode/directory")}, QString()},
+        {"pdf", QT_TRANSLATE_NOOP("DefaultApps", "PDF documents"), QT_TRANSLATE_NOOP("DefaultApps", "Opens PDF files"), "document", {QStringLiteral("application/pdf")}, QString()},
+        {"text", QT_TRANSLATE_NOOP("DefaultApps", "Text files"), QT_TRANSLATE_NOOP("DefaultApps", "Plain text and notes"), "pencil", {QStringLiteral("text/plain")}, QString()},
+        {"files", QT_TRANSLATE_NOOP("DefaultApps", "Files and folders"), QT_TRANSLATE_NOOP("DefaultApps", "Opens folders"), "folder", {QStringLiteral("inode/directory")}, QString()},
     };
     return list;
 }
@@ -122,8 +122,8 @@ void DefaultApps::reload()
         const KService::Ptr preferred = KApplicationTrader::preferredService(mime);
         list << QVariantMap{
             {QStringLiteral("id"), QString::fromLatin1(c.id)},
-            {QStringLiteral("title"), QString::fromLatin1(c.title)},
-            {QStringLiteral("description"), QString::fromLatin1(c.description)},
+            {QStringLiteral("title"), tr(c.title)},
+            {QStringLiteral("description"), tr(c.description)},
             {QStringLiteral("icon"), QString::fromLatin1(c.icon)},
             {QStringLiteral("current"), preferred ? preferred->storageId() : QString()},
             {QStringLiteral("apps"), apps},

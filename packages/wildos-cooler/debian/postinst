@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+#DEBHELPER#
+
+# Outside a running system (the image build) there is no udev or systemd to
+# ask, which is fine: both read the new files at start-up.
+if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
+    # A service from the version before is replaced by this one.
+    systemctl try-restart wildos-coolerd.service >/dev/null 2>&1 || true
+    # A cooler that is already plugged in is named and its service started,
+    # as if it had just been plugged in.
+    udevadm control --reload >/dev/null 2>&1 || true
+    udevadm trigger --action=change --subsystem-match=usb --attr-match=idVendor=1e71 >/dev/null 2>&1 || true
+fi

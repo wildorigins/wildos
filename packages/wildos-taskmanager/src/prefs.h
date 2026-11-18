@@ -33,6 +33,12 @@ public:
     Q_INVOKABLE QString runTask(const QString &command);
     Q_INVOKABLE void openSettings(const QString &page);
 
+    // How a table was last sorted: "processes", "startup", "windowsapps" or
+    // "services", by a column's id.
+    Q_INVOKABLE QString sortColumn(const QString &table, const QString &fallback) const;
+    Q_INVOKABLE bool sortDescending(const QString &table) const;
+    Q_INVOKABLE void setSort(const QString &table, const QString &column, bool descending);
+
 Q_SIGNALS:
     void changed();
 

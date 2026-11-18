@@ -45,11 +45,11 @@ struct FolderSpec {
 };
 
 const FolderSpec folderSpecs[] = {
-    {"documents", "Documents", QStandardPaths::DocumentsLocation},
-    {"desktop", "Desktop", QStandardPaths::DesktopLocation},
-    {"pictures", "Pictures", QStandardPaths::PicturesLocation},
-    {"music", "Music", QStandardPaths::MusicLocation},
-    {"videos", "Videos", QStandardPaths::MoviesLocation},
+    {"documents", QT_TRANSLATE_NOOP("WindowsImport", "Documents"), QStandardPaths::DocumentsLocation},
+    {"desktop", QT_TRANSLATE_NOOP("WindowsImport", "Desktop"), QStandardPaths::DesktopLocation},
+    {"pictures", QT_TRANSLATE_NOOP("WindowsImport", "Pictures"), QStandardPaths::PicturesLocation},
+    {"music", QT_TRANSLATE_NOOP("WindowsImport", "Music"), QStandardPaths::MusicLocation},
+    {"videos", QT_TRANSLATE_NOOP("WindowsImport", "Videos"), QStandardPaths::MoviesLocation},
 };
 
 // About what a USB 3 or SATA drive manages with lots of small files mixed
@@ -145,7 +145,7 @@ QVariantList WindowsImport::sources() const
         list.append(QVariantMap{
             {QStringLiteral("label"), drive.label},
             {QStringLiteral("user"), source.user},
-            {QStringLiteral("detail"), QStringLiteral("Found on this computer, user folder \"%1\"").arg(source.user)},
+            {QStringLiteral("detail"), QCoreApplication::translate("WindowsImport", "Found on this computer, user folder \"%1\"").arg(source.user)},
         });
     }
     return list;
@@ -248,9 +248,9 @@ void WindowsImport::mountNext()
             const QString text = reply.error().message();
             if (text.contains(QLatin1String("hibernat"), Qt::CaseInsensitive) || text.contains(QLatin1String("unclean"), Qt::CaseInsensitive)
                 || text.contains(QLatin1String("dirty"), Qt::CaseInsensitive)) {
-                m_mountError = QStringLiteral("Windows was not shut down fully, so its drive can't be read. Start Windows, hold Shift while you choose Shut down, then come back to this step.");
+                m_mountError = QCoreApplication::translate("WindowsImport", "Windows was not shut down fully, so its drive can't be read. Start Windows, hold Shift while you choose Shut down, then come back to this step.");
             } else if (reply.error().name().contains(QLatin1String("NotAuthorized"))) {
-                m_mountError = QStringLiteral("Reading the Windows drive needs the administrator password, and it was not given.");
+                m_mountError = QCoreApplication::translate("WindowsImport", "Reading the Windows drive needs the administrator password, and it was not given.");
             }
         } else {
             m_drives[index].mountPoint = reply.value();
@@ -268,9 +268,9 @@ void WindowsImport::inspect(int driveIndex)
     if (drive.hasWindows) {
         // Linux has no drive letters; the drive Windows runs from is C: on
         // every normal install.
-        drive.label = QStringLiteral("Windows (C:)");
+        drive.label = QCoreApplication::translate("WindowsImport", "Windows (C:)");
     } else if (drive.label.isEmpty()) {
-        drive.label = QStringLiteral("Local disk");
+        drive.label = QCoreApplication::translate("WindowsImport", "Local disk");
     }
 
     const QString users = childIgnoringCase(drive.mountPoint, QStringLiteral("Users"));
@@ -319,9 +319,9 @@ void WindowsImport::finishScan()
     if (!m_mountError.isEmpty()) {
         setState(QStringLiteral("error"), m_mountError);
     } else if (m_sawBitLocker) {
-        setState(QStringLiteral("locked"), QStringLiteral("Windows on this computer is encrypted with BitLocker, so Wild OS can't read your files from it. Copy them to a USB drive from Windows instead."));
+        setState(QStringLiteral("locked"), QCoreApplication::translate("WindowsImport", "Windows on this computer is encrypted with BitLocker, so Wild OS can't read your files from it. Copy them to a USB drive from Windows instead."));
     } else {
-        setState(QStringLiteral("none"), QStringLiteral("There's no Windows on this computer, so there's nothing to copy. If your files are on a USB drive, open Files after setup."));
+        setState(QStringLiteral("none"), QCoreApplication::translate("WindowsImport", "There's no Windows on this computer, so there's nothing to copy. If your files are on a USB drive, open Files after setup."));
     }
 }
 
@@ -380,7 +380,7 @@ void WindowsImport::buildFolders()
         }
         m_folders.append(QVariantMap{
             {QStringLiteral("key"), QString::fromLatin1(spec.key)},
-            {QStringLiteral("name"), name},
+            {QStringLiteral("name"), QCoreApplication::translate("WindowsImport", spec.name)},
             {QStringLiteral("from"), from},
             {QStringLiteral("parts"), parts},
             {QStringLiteral("to"), home},
@@ -388,7 +388,7 @@ void WindowsImport::buildFolders()
             {QStringLiteral("sized"), from.isEmpty()},
             {QStringLiteral("enabled"), !from.isEmpty()},
             {QStringLiteral("checked"), !from.isEmpty()},
-            {QStringLiteral("detail"), from.isEmpty() ? QStringLiteral("Not found") : QString()},
+            {QStringLiteral("detail"), from.isEmpty() ? QCoreApplication::translate("WindowsImport", "Not found") : QString()},
         });
         if (from.isEmpty()) {
             continue;
@@ -477,16 +477,16 @@ void WindowsImport::buildFolders()
     const bool brave = Bookmarks::braveInstalled();
     QString detail;
     if (!brave) {
-        detail = QStringLiteral("Needs Brave, which isn't installed");
+        detail = QCoreApplication::translate("WindowsImport", "Needs Brave, which isn't installed");
     } else if (browserNames.isEmpty()) {
-        detail = QStringLiteral("None found in Edge or Chrome");
+        detail = QCoreApplication::translate("WindowsImport", "None found in Edge or Chrome");
     } else {
-        detail = QStringLiteral("From %1").arg(browserNames.join(QStringLiteral(" and ")));
+        detail = QCoreApplication::translate("WindowsImport", "From %1").arg(browserNames.join(QCoreApplication::translate("WindowsImport", " and ")));
     }
     const bool usable = brave && !browserNames.isEmpty();
     m_folders.append(QVariantMap{
         {QStringLiteral("key"), QStringLiteral("bookmarks")},
-        {QStringLiteral("name"), QStringLiteral("Browser bookmarks and history")},
+        {QStringLiteral("name"), QCoreApplication::translate("WindowsImport", "Browser bookmarks and history")},
         {QStringLiteral("files"), files},
         {QStringLiteral("size"), qint64(0)},
         {QStringLiteral("sized"), true},
@@ -669,18 +669,18 @@ QString WindowsImport::formatBytes(qint64 bytes, bool whole) const
     const QLocale locale = QLocale::system();
     const double value = double(bytes);
     if (value >= 1e12) {
-        return QStringLiteral("%1 TB").arg(locale.toString(value / 1e12, 'f', 1));
+        return QCoreApplication::translate("WindowsImport", "%1 TB").arg(locale.toString(value / 1e12, 'f', 1));
     }
     if (value >= 1e9) {
-        return QStringLiteral("%1 GB").arg(locale.toString(value / 1e9, 'f', whole && value >= 1e10 ? 0 : 1));
+        return QCoreApplication::translate("WindowsImport", "%1 GB").arg(locale.toString(value / 1e9, 'f', whole && value >= 1e10 ? 0 : 1));
     }
     if (value >= 1e6) {
-        return QStringLiteral("%1 MB").arg(locale.toString(value / 1e6, 'f', 0));
+        return QCoreApplication::translate("WindowsImport", "%1 MB").arg(locale.toString(value / 1e6, 'f', 0));
     }
     if (value >= 1e3) {
-        return QStringLiteral("%1 KB").arg(locale.toString(value / 1e3, 'f', 0));
+        return QCoreApplication::translate("WindowsImport", "%1 KB").arg(locale.toString(value / 1e3, 'f', 0));
     }
-    return bytes == 1 ? QStringLiteral("1 byte") : QStringLiteral("%1 bytes").arg(bytes);
+    return bytes == 1 ? QCoreApplication::translate("WindowsImport", "1 byte") : QCoreApplication::translate("WindowsImport", "%1 bytes").arg(bytes);
 }
 
 QString WindowsImport::estimate() const
@@ -689,17 +689,17 @@ QString WindowsImport::estimate() const
     const double minutes = double(bytes) / bytesPerSecond / 60.0;
     QString time;
     if (minutes < 1.5) {
-        time = QStringLiteral("about a minute");
+        time = QCoreApplication::translate("WindowsImport", "about a minute");
     } else if (minutes < 10) {
-        time = QStringLiteral("about %1 minutes").arg(qRound(minutes));
+        time = QCoreApplication::translate("WindowsImport", "about %1 minutes").arg(qRound(minutes));
     } else if (minutes < 90) {
-        time = QStringLiteral("about %1 minutes").arg(qRound(minutes / 5) * 5);
+        time = QCoreApplication::translate("WindowsImport", "about %1 minutes").arg(qRound(minutes / 5) * 5);
     } else {
         const double hours = minutes / 60;
-        time = hours < 1.75 ? QStringLiteral("about an hour") : QStringLiteral("about %1 hours").arg(qRound(hours));
+        time = hours < 1.75 ? QCoreApplication::translate("WindowsImport", "about an hour") : QCoreApplication::translate("WindowsImport", "about %1 hours").arg(qRound(hours));
     }
     if (bytes == 0) {
-        return QStringLiteral("Your bookmarks and history will be ready in Brave in a moment.");
+        return QCoreApplication::translate("WindowsImport", "Your bookmarks and history will be ready in Brave in a moment.");
     }
-    return QStringLiteral("Copying %1, %2. You can start using Wild OS while it runs.").arg(formatBytes(bytes, true), time);
+    return QCoreApplication::translate("WindowsImport", "Copying %1, %2. You can start using Wild OS while it runs.").arg(formatBytes(bytes, true), time);
 }

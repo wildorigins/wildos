@@ -1,5 +1,7 @@
 #include "terminalview.h"
 #include "config.h"
+#include "schemes.h"
+#include "termlinks.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -130,6 +132,11 @@ TerminalView::TerminalView(const QVariantMap &profile, const QString &directory,
     m_display = display();
     if (m_display) {
         m_display->installEventFilter(this);
+        m_links = new TermLinks(this, m_display);
+        m_links->setColour(Schemes::find(config->scheme()).foreground);
+        connect(m_links, &TermLinks::activated, this, [](const QUrl &url) {
+            QDesktopServices::openUrl(url);
+        });
     }
 
     m_outline = new Outline(this);
@@ -147,9 +154,6 @@ TerminalView::TerminalView(const QVariantMap &profile, const QString &directory,
     connect(this, &QTermWidget::finished, this, &TerminalView::closed);
     connect(this, &QTermWidget::copyAvailable, this, [this](bool) {
         m_copiedByCtrlC = false;
-    });
-    connect(this, &QTermWidget::urlActivated, this, [](const QUrl &url, bool) {
-        QDesktopServices::openUrl(url);
     });
 
     startShellProgram();
@@ -182,6 +186,9 @@ void TerminalView::applyConfig()
     setBlinkingCursor(config->cursorBlink());
     setBoldIntense(config->boldBright());
     setHistorySize(config->scrollback());
+    if (m_links) {
+        m_links->setColour(Schemes::find(config->scheme()).foreground);
+    }
 }
 
 QString TerminalView::displayTitle() const
@@ -264,16 +271,7 @@ void TerminalView::resizeEvent(QResizeEvent *event)
 
 QUrl TerminalView::linkAt(const QPoint &pos) const
 {
-    auto *spot = dynamic_cast<Konsole::UrlFilter::HotSpot *>(getHotSpotAt(pos));
-    if (!spot || spot->capturedTexts().isEmpty()) {
-        return {};
-    }
-    const QString text = spot->capturedTexts().first();
-    if (!text.contains(QLatin1String("://")) && text.contains(QLatin1Char('@')) && !text.startsWith(QLatin1String("www."))) {
-        return QUrl(QStringLiteral("mailto:") + text);
-    }
-    const QUrl url = QUrl::fromUserInput(text);
-    return url.isValid() ? url : QUrl();
+    return m_links ? m_links->linkAt(pos) : QUrl();
 }
 
 bool TerminalView::eventFilter(QObject *watched, QEvent *event)
@@ -340,6 +338,10 @@ bool TerminalView::eventFilter(QObject *watched, QEvent *event)
             // which runs after this filter.
             QTimer::singleShot(0, this, [this] {
                 copy();
+                // Already copied, so the next Ctrl+C stops the running
+                // command instead of copying the selection again.
+                m_copiedText = selectedText(true);
+                m_copiedByCtrlC = !m_copiedText.isEmpty();
             });
         }
     }

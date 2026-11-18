@@ -11,6 +11,10 @@ import WildOS.UI as UI
 T.ItemDelegate {
     id: row
 
+    // The statuses Processes sets, in English there so it can compare them;
+    // listed here for the translations and shown with qsTr().
+    readonly property var statusNames: [QT_TR_NOOP("Sandboxed"), QT_TR_NOOP("Suspended"), QT_TR_NOOP("Paused"), QT_TR_NOOP("Working")]
+
     required property int index
     required property string key
     required property int kind
@@ -28,13 +32,14 @@ T.ItemDelegate {
     required property string chip
 
     property bool selected: false
+    // The selected row while the keyboard is what moves the selection.
+    property bool focused: false
     property real memoryTotal: 1
     readonly property bool heading: kind === Processes.Header
 
     signal chosen(string key)
     signal expandToggled(string key)
     signal menuRequested(string key, point at)
-    signal activated(string key)
 
     implicitHeight: heading ? 34 : 37
     padding: 0
@@ -46,16 +51,8 @@ T.ItemDelegate {
     Accessible.name: heading ? name + " (" + count + ")" : name
 
     onClicked: if (!heading) chosen(key)
-    onDoubleClicked: {
-        if (heading) {
-            return;
-        }
-        if (expandable) {
-            expandToggled(key);
-        } else {
-            activated(key);
-        }
-    }
+    // A single process has nothing to open, as in Windows.
+    onDoubleClicked: if (!heading && expandable) expandToggled(key)
 
     TapHandler {
         acceptedButtons: Qt.RightButton
@@ -68,6 +65,9 @@ T.ItemDelegate {
 
     background: Rectangle {
         color: row.heading ? "transparent" : row.selected ? UI.Style.tone(0.08) : row.hovered ? UI.Style.surfaceRaised : "transparent"
+        Behavior on color {
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
 
         Rectangle {
             visible: !row.heading
@@ -75,6 +75,12 @@ T.ItemDelegate {
             width: parent.width
             height: 1
             color: UI.Style.tone(0.04)
+        }
+
+        UI.FocusRing {
+            visible: row.focused
+            anchors.margins: 2
+            targetRadius: 4
         }
     }
 
@@ -104,7 +110,7 @@ T.ItemDelegate {
                 height: parent.height
                 visible: row.expandable
                 focusPolicy: Qt.NoFocus
-                Accessible.name: row.expanded ? "Collapse" : "Expand"
+                Accessible.name: row.expanded ? qsTr("Collapse") : qsTr("Expand")
                 onClicked: row.expandToggled(row.key)
 
                 UI.Icon {
@@ -150,7 +156,7 @@ T.ItemDelegate {
             x: nameCell.width + 12
             width: 120 - 12
             height: parent.height
-            text: row.status
+            text: qsTr(row.status)
             size: 12
             color: UI.Style.inkMuted
         }

@@ -6,7 +6,7 @@ import WildOS.UI as UI
 // More printer settings: what Printers and scanners leaves out. Each
 // printer opens its print queue, with Cancel per document and Pause, and
 // its printing preferences (paper size, two-sided, colour), kept for this
-// account. "Add a printer that needs a driver" covers USB printers and
+// account. qsTr("Add a printer that needs a driver") covers USB printers and
 // older network printers: choose the printer, then its maker and model from
 // the drivers installed.
 PageScroll {
@@ -25,7 +25,7 @@ PageScroll {
     property var prefs: ({})
 
     readonly property int depth: selected.length > 0 || adding ? 2 : 1
-    readonly property var subTitles: adding ? ["Add a printer that needs a driver"] : printer ? [printer.info] : []
+    readonly property var subTitles: adding ? [qsTr("Add a printer that needs a driver")] : printer ? [printer.info] : []
 
     function back() {
         if (selected.length > 0 || adding) {
@@ -37,8 +37,10 @@ PageScroll {
     }
 
     function statusOf(p) {
-        return (p.isDefault ? "Default, " + p.status.charAt(0).toLowerCase() + p.status.slice(1) : p.status)
-            + (p.jobs > 0 ? ", " + Format.plural(p.jobs, "document", "documents") + " waiting" : "");
+        const state = p.isDefault ? qsTr("Default, %1").arg(p.status.charAt(0).toLowerCase() + p.status.slice(1)) : p.status;
+        return p.jobs === 1 ? qsTr("%1, 1 document waiting").arg(state)
+            : p.jobs > 1 ? qsTr("%1, %2 documents waiting").arg(state).arg(p.jobs)
+            : state;
     }
 
     function startAdding() {
@@ -72,7 +74,8 @@ PageScroll {
         target: Printers
         function onDone(title, message) {
             notice.show(title, message, false);
-            if (title === "Printer added") {
+            // The title comes from Printers, translated there once it is.
+            if (title === "Printer added" || title === qsTranslate("Printers", "Printer added")) {
                 page.adding = false;
             }
         }
@@ -89,8 +92,8 @@ PageScroll {
         visible: !Printers.available
         iconName: "printer"
         warning: true
-        title: "Printing isn't running"
-        description: "The service that talks to printers is not running on this computer, so printers can't be added or used."
+        title: qsTr("Printing isn't running")
+        description: qsTr("The service that talks to printers is not running on this computer, so printers can't be added or used.")
     }
 
     ColumnLayout {
@@ -108,12 +111,12 @@ PageScroll {
                     iconName: "printer"
                     iconTile: true
                     minHeight: 68
-                    title: "Add a printer that needs a driver"
-                    description: "For printers plugged in with USB, and older network printers"
+                    title: qsTr("Add a printer that needs a driver")
+                    description: qsTr("For printers plugged in with USB, and older network printers")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Add a printer"
+                        text: qsTr("Add a printer")
                         kind: "primary"
                         enabled: Printers.busy.length === 0
                         onClicked: page.startAdding()
@@ -128,7 +131,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Print queues and preferences"
+                text: qsTr("Print queues and preferences")
             }
 
             UI.Card {
@@ -177,13 +180,13 @@ PageScroll {
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: page.printer !== null && !page.printer.isDefault
-                        text: "Set as default"
+                        text: qsTr("Set as default")
                         onClicked: Printers.setDefault(page.selected)
                     }
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: page.printer && page.printer.paused ? "Resume printing" : "Pause printing"
+                        text: page.printer && page.printer.paused ? qsTr("Resume printing") : qsTr("Pause printing")
                         busy: Printers.busy === page.selected
                         enabled: Printers.busy.length === 0
                         onClicked: page.printer.paused ? Printers.resume(page.selected) : Printers.pause(page.selected)
@@ -197,7 +200,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Print queue"
+                text: qsTr("Print queue")
             }
 
             UI.Card {
@@ -213,12 +216,12 @@ PageScroll {
                             id: job
                             required property var modelData
                             iconName: "document"
-                            title: modelData.title.length > 0 ? modelData.title : "Document"
+                            title: modelData.title.length > 0 ? modelData.title : qsTr("Document")
                             description: [modelData.state, modelData.user, Format.time(modelData.created)].filter(t => t && t.length > 0).join(", ")
 
                             UI.Button {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "Cancel"
+                                text: qsTr("Cancel")
                                 onClicked: Printers.cancelJob(page.selected, job.modelData.id)
                             }
                         }
@@ -227,7 +230,7 @@ PageScroll {
                     UI.SettingRow {
                         visible: page.printer !== null && page.printer.queue.length === 0
                         iconName: "check"
-                        title: "No documents waiting"
+                        title: qsTr("No documents waiting")
                     }
                 }
             }
@@ -239,12 +242,12 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Printing preferences"
+                text: qsTr("Printing preferences")
             }
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "What apps choose for this printer unless you change it when printing. Kept for your account only."
+                text: qsTr("What apps choose for this printer unless you change it when printing. Kept for your account only.")
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
                 elide: Text.ElideNone
@@ -258,9 +261,9 @@ PageScroll {
 
                     Repeater {
                         model: [
-                            { key: "media", option: "media", icon: "document", title: "Paper size" },
-                            { key: "sides", option: "sides", icon: "copy", title: "Two-sided printing" },
-                            { key: "color", option: "print-color-mode", icon: "palette", title: "Colour" }
+                            { key: "media", option: "media", icon: "document", title: qsTr("Paper size") },
+                            { key: "sides", option: "sides", icon: "copy", title: qsTr("Two-sided printing") },
+                            { key: "color", option: "print-color-mode", icon: "palette", title: qsTr("Colour") }
                         ].filter(r => page.prefs[r.key] !== undefined)
 
                         UI.SettingRow {
@@ -296,9 +299,9 @@ PageScroll {
         // The device list plus a last choice for typing an address.
         readonly property var connections: Printers.devices.map(d => ({
             value: d.uri,
-            text: (d.kind === "usb" ? "USB: " : "Network: ") + (d.name.length > 0 ? d.name : d.uri),
+            text: (d.kind === "usb" ? qsTr("USB: %1") : qsTr("Network: %1")).arg(d.name.length > 0 ? d.name : d.uri),
             device: d
-        })).concat([{ value: "", text: "A network printer by its address", device: null }])
+        })).concat([{ value: "", text: qsTr("A network printer by its address"), device: null }])
         readonly property var connection: connectionBox.currentIndex >= 0 && connectionBox.currentIndex < connections.length
             ? connections[connectionBox.currentIndex] : null
         readonly property bool byAddress: connection !== null && connection.device === null
@@ -344,7 +347,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Printer"
+                text: qsTr("Printer")
             }
 
             UI.Card {
@@ -355,8 +358,8 @@ PageScroll {
 
                     UI.SettingRow {
                         iconName: "plug"
-                        title: "Connected by"
-                        description: Printers.findingDevices ? "Looking for printers" : ""
+                        title: qsTr("Connected by")
+                        description: Printers.findingDevices ? qsTr("Looking for printers") : ""
 
                         UI.Spinner {
                             anchors.verticalCenter: parent.verticalCenter
@@ -366,7 +369,7 @@ PageScroll {
                         UI.ComboBox {
                             id: connectionBox
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "Connected by"
+                            Accessible.name: qsTr("Connected by")
                             enabled: !Printers.findingDevices
                             model: add.connections
                             onActivated: add.suggest()
@@ -378,7 +381,7 @@ PageScroll {
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Look again"
+                            text: qsTr("Look again")
                             enabled: !Printers.findingDevices
                             onClicked: Printers.findDevices()
                         }
@@ -386,23 +389,23 @@ PageScroll {
 
                     UI.SettingRow {
                         visible: add.byAddress
-                        title: "Address"
-                        description: "The printer's network name or IP address"
+                        title: qsTr("Address")
+                        description: qsTr("The printer's network name or IP address")
 
                         UI.TextField {
                             id: addressField
                             anchors.verticalCenter: parent.verticalCenter
                             width: 240
-                            placeholderText: "For example 192.168.1.20"
+                            placeholderText: qsTr("For example 192.168.1.20")
                             onTextChanged: if (add.byAddress) add.suggest()
                         }
 
                         UI.ComboBox {
                             id: protocolBox
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "How it prints"
+                            Accessible.name: qsTr("How it prints")
                             model: [
-                                { value: "socket", text: "Port 9100 (most printers)" },
+                                { value: "socket", text: qsTr("Port 9100 (most printers)") },
                                 { value: "lpd", text: "LPD" },
                                 { value: "ipp", text: "IPP" }
                             ]
@@ -417,7 +420,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Driver"
+                text: qsTr("Driver")
             }
 
             UI.Card {
@@ -428,8 +431,8 @@ PageScroll {
 
                     UI.SettingRow {
                         iconName: "cog"
-                        title: "Maker"
-                        description: Printers.loadingDrivers ? "Reading the installed drivers, which can take a moment" : ""
+                        title: qsTr("Maker")
+                        description: Printers.loadingDrivers ? qsTr("Reading the installed drivers, which can take a moment") : ""
 
                         UI.Spinner {
                             anchors.verticalCenter: parent.verticalCenter
@@ -439,7 +442,7 @@ PageScroll {
                         UI.ComboBox {
                             id: makeBox
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "Maker"
+                            Accessible.name: qsTr("Maker")
                             enabled: add.makeList.length > 0
                             model: add.makeList.map(m => ({ value: m, text: m }))
                             onActivated: index => {
@@ -451,14 +454,14 @@ PageScroll {
 
                     UI.SettingRow {
                         iconName: "printer"
-                        title: "Model"
-                        description: "Pick the exact model, or the nearest one from the same series"
+                        title: qsTr("Model")
+                        description: qsTr("Pick the exact model, or the nearest one from the same series")
 
                         UI.ComboBox {
                             id: modelBox
                             anchors.verticalCenter: parent.verticalCenter
                             width: Math.min(implicitWidth, 420)
-                            Accessible.name: "Model"
+                            Accessible.name: qsTr("Model")
                             enabled: add.modelList.length > 0
                             model: add.modelList
                         }
@@ -472,7 +475,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Name"
+                text: qsTr("Name")
             }
 
             UI.Card {
@@ -483,14 +486,14 @@ PageScroll {
 
                     UI.SettingRow {
                         iconName: "rename"
-                        title: "Printer name"
-                        description: "How apps show it when you print"
+                        title: qsTr("Printer name")
+                        description: qsTr("How apps show it when you print")
 
                         UI.TextField {
                             id: nameField
                             anchors.verticalCenter: parent.verticalCenter
                             width: 280
-                            placeholderText: "For example Office printer"
+                            placeholderText: qsTr("For example Office printer")
                         }
                     }
                 }
@@ -506,12 +509,12 @@ PageScroll {
             }
 
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: page.adding = false
             }
 
             UI.Button {
-                text: "Add printer"
+                text: qsTr("Add printer")
                 kind: "primary"
                 busy: Printers.busy === "add"
                 enabled: Printers.busy.length === 0 && add.uri.length > 0 && modelBox.currentIndex >= 0 && add.modelList.length > 0

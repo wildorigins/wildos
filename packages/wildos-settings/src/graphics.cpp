@@ -1,5 +1,8 @@
 #include "graphics.h"
 
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCall>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -42,7 +45,7 @@ Graphics::Graphics(QObject *parent)
                 }
             }
             if (m_name.isEmpty()) {
-                m_name = QStringLiteral("NVIDIA graphics");
+                m_name = tr("NVIDIA graphics");
             }
             break;
         }
@@ -82,7 +85,7 @@ void Graphics::useDriver(const QString &driver)
         return;
     }
     m_error.clear();
-    m_step = QStringLiteral("Waiting for your password");
+    m_step = tr("Waiting for your password");
     m_process = new QProcess(this);
     connect(m_process, &QProcess::readyReadStandardOutput, this, [this] {
         while (m_process->canReadLine()) {
@@ -97,11 +100,13 @@ void Graphics::useDriver(const QString &driver)
     });
     connect(m_process, &QProcess::finished, this, [this](int code) {
         if (code == 126 || code == 127) {
-            m_error = QStringLiteral("Nothing was changed because the password was not given.");
+            m_error = tr("Nothing was changed because the password was not given.");
         } else if (code == 4) {
-            m_error = QStringLiteral("Debian's NVIDIA driver doesn't support this graphics card, so it keeps the open driver.");
+            m_error = tr("Debian's NVIDIA driver doesn't support this graphics card, so it keeps the open driver.");
+        } else if (code == 5) {
+            m_error = tr("NVIDIA's driver could not be installed whole on this PC, so the open driver was kept.");
         } else if (code != 0) {
-            m_error = QStringLiteral("The driver could not be changed. Check the internet connection and try again.");
+            m_error = tr("The driver could not be changed. Check the internet connection and try again.");
         }
         m_process->deleteLater();
         m_process = nullptr;
@@ -110,4 +115,24 @@ void Graphics::useDriver(const QString &driver)
     });
     m_process->start(QStringLiteral("pkexec"), {helper, driver});
     Q_EMIT changed();
+}
+
+bool Graphics::trialFailed() const
+{
+    return QFile::exists(QStringLiteral("/var/lib/wildos/graphics-driver/failed"));
+}
+
+void Graphics::restart()
+{
+    // Plasma's own restart path first, so open apps get the chance to save.
+    // Between a driver switch and the restart, newly started programs cannot
+    // draw, and that includes Plasma's sign-out screen: its restart can wait
+    // for ever. So the system's own restart follows 20 seconds later
+    // whatever happens to the first.
+    QProcess::startDetached(QStringLiteral("systemd-run"),
+                            {QStringLiteral("--user"), QStringLiteral("--collect"), QStringLiteral("--on-active=20"), QStringLiteral("systemctl"),
+                             QStringLiteral("reboot")});
+    auto message = QDBusMessage::createMethodCall(QStringLiteral("org.kde.Shutdown"), QStringLiteral("/Shutdown"), QStringLiteral("org.kde.Shutdown"),
+                                                  QStringLiteral("logoutAndReboot"));
+    QDBusConnection::sessionBus().asyncCall(message);
 }

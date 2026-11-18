@@ -133,7 +133,13 @@ public:
     // Favourites have no account: openFolder("", "inbox") shows every
     // account's inbox together.
     Q_INVOKABLE void openFolder(const QString &accountId, const QString &fullName);
+    // The folder that was open when Mail last closed, or the Inbox.
+    Q_INVOKABLE void openLastFolder();
     Q_INVOKABLE void toggleExpanded(const QString &accountId);
+    // The folder pane's order of accounts: this one goes to place `to`,
+    // counting from 0, and stays there the next time Mail opens.
+    Q_INVOKABLE void moveAccount(const QString &accountId, int to);
+    Q_INVOKABLE int accountIndex(const QString &accountId) const;
     // Ctrl+click adds or takes away one message; Shift+click takes
     // everything from the last one clicked.
     Q_INVOKABLE void toggleSelect(const QString &key);
@@ -225,6 +231,8 @@ public:
         return m_messageModel->row(key);
     }
     static bool splitKey(const QString &key, QString *accountId, QString *folder, QString *uid);
+    // A failure as a plain sentence; the server's own words go to the log.
+    static QString plainError(const GError *error, const QString &otherwise);
     QString folderLabel(const QString &accountId, const QString &fullName) const;
     void queueOutbox(const QString &accountId, const QByteArray &message);
     void sendOutbox();
@@ -316,6 +324,9 @@ private:
     QString m_folderAccount;
     QString m_folderFullName;
     QString m_folderRole = QStringLiteral("inbox");
+    // The folder from last time is open, and its account hasn't listed its
+    // folders yet to say what it is or whether it is still there.
+    bool m_restoringFolder = false;
     QString m_selected;
     QString m_searchText;
     QString m_syncStatus;

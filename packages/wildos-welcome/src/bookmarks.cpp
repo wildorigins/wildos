@@ -1,5 +1,6 @@
 #include "bookmarks.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -209,8 +210,8 @@ int importInto(const QString &braveFile, const QList<BrowserProfile> &profiles)
         }
         const QJsonObject source = QJsonDocument::fromJson(file.readAll()).object().value(QStringLiteral("roots")).toObject();
         const int number = ++seen[profile.browser];
-        const QString folderName = perBrowser.value(profile.browser) > 1 ? QStringLiteral("From %1 (%2)").arg(profile.browser).arg(number)
-                                                                         : QStringLiteral("From %1").arg(profile.browser);
+        const QString folderName = perBrowser.value(profile.browser) > 1 ? QCoreApplication::translate("Bookmarks", "From %1 (%2)").arg(profile.browser).arg(number)
+                                                                         : QCoreApplication::translate("Bookmarks", "From %1").arg(profile.browser);
         // Run twice, it would add the same folder twice.
         if (existingNames.contains(folderName)) {
             continue;
@@ -226,7 +227,7 @@ int importInto(const QString &braveFile, const QList<BrowserProfile> &profiles)
         if (!other.value(QStringLiteral("children")).toArray().isEmpty()) {
             children.append(QJsonObject{
                 {QStringLiteral("type"), QStringLiteral("folder")},
-                {QStringLiteral("name"), QStringLiteral("Other bookmarks")},
+                {QStringLiteral("name"), QCoreApplication::translate("Bookmarks", "Other bookmarks")},
                 {QStringLiteral("children"), other.value(QStringLiteral("children")).toArray()},
             });
         }

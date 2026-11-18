@@ -2,12 +2,23 @@
 
 #include "clockformat.h"
 
+#include <QCoreApplication>
 #include <QHash>
 #include <QLocale>
 #include <QMimeDatabase>
 
 namespace Format
 {
+
+namespace
+{
+// Day and month names in the display language. The translation names its
+// locale, so a language without one keeps the English names.
+QLocale wordsLocale()
+{
+    return QLocale(QCoreApplication::translate("Format", "en_GB", "locale for day and month names"));
+}
+}
 
 QString visibleName(const QString &fileName, bool isDir, bool showExtensions)
 {
@@ -27,40 +38,40 @@ QString visibleName(const QString &fileName, bool isDir, bool showExtensions)
 QString typeName(const QMimeType &mime, bool isDir)
 {
     if (isDir) {
-        return QStringLiteral("Folder");
+        return QCoreApplication::translate("Format", "Folder");
     }
-    static const QHash<QString, QString> plain = {
-        {QStringLiteral("application/vnd.oasis.opendocument.spreadsheet"), QStringLiteral("Spreadsheet")},
-        {QStringLiteral("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), QStringLiteral("Spreadsheet")},
-        {QStringLiteral("application/vnd.ms-excel"), QStringLiteral("Spreadsheet")},
-        {QStringLiteral("text/csv"), QStringLiteral("Spreadsheet")},
-        {QStringLiteral("application/vnd.oasis.opendocument.text"), QStringLiteral("Document")},
-        {QStringLiteral("application/vnd.openxmlformats-officedocument.wordprocessingml.document"), QStringLiteral("Document")},
-        {QStringLiteral("application/msword"), QStringLiteral("Document")},
-        {QStringLiteral("application/rtf"), QStringLiteral("Document")},
-        {QStringLiteral("application/vnd.oasis.opendocument.presentation"), QStringLiteral("Presentation")},
-        {QStringLiteral("application/vnd.openxmlformats-officedocument.presentationml.presentation"), QStringLiteral("Presentation")},
-        {QStringLiteral("application/vnd.ms-powerpoint"), QStringLiteral("Presentation")},
-        {QStringLiteral("application/pdf"), QStringLiteral("PDF")},
-        {QStringLiteral("text/plain"), QStringLiteral("Text")},
-        {QStringLiteral("text/markdown"), QStringLiteral("Text")},
-        {QStringLiteral("application/zip"), QStringLiteral("Compressed folder")},
-        {QStringLiteral("application/x-desktop"), QStringLiteral("Shortcut")},
-        {QStringLiteral("application/x-ms-dos-executable"), QStringLiteral("Windows app")},
-        {QStringLiteral("application/x-msi"), QStringLiteral("Windows installer")},
-        {QStringLiteral("application/x-ms-shortcut"), QStringLiteral("Windows shortcut")},
-        {QStringLiteral("application/x-iso9660-image"), QStringLiteral("Disc image")},
-        {QStringLiteral("application/vnd.debian.binary-package"), QStringLiteral("App package")},
-        {QStringLiteral("application/octet-stream"), QStringLiteral("File")},
-        {QStringLiteral("inode/symlink"), QStringLiteral("Shortcut")},
+    static const QHash<QString, const char *> plain = {
+        {QStringLiteral("application/vnd.oasis.opendocument.spreadsheet"), QT_TRANSLATE_NOOP("Format", "Spreadsheet")},
+        {QStringLiteral("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), QT_TRANSLATE_NOOP("Format", "Spreadsheet")},
+        {QStringLiteral("application/vnd.ms-excel"), QT_TRANSLATE_NOOP("Format", "Spreadsheet")},
+        {QStringLiteral("text/csv"), QT_TRANSLATE_NOOP("Format", "Spreadsheet")},
+        {QStringLiteral("application/vnd.oasis.opendocument.text"), QT_TRANSLATE_NOOP("Format", "Document")},
+        {QStringLiteral("application/vnd.openxmlformats-officedocument.wordprocessingml.document"), QT_TRANSLATE_NOOP("Format", "Document")},
+        {QStringLiteral("application/msword"), QT_TRANSLATE_NOOP("Format", "Document")},
+        {QStringLiteral("application/rtf"), QT_TRANSLATE_NOOP("Format", "Document")},
+        {QStringLiteral("application/vnd.oasis.opendocument.presentation"), QT_TRANSLATE_NOOP("Format", "Presentation")},
+        {QStringLiteral("application/vnd.openxmlformats-officedocument.presentationml.presentation"), QT_TRANSLATE_NOOP("Format", "Presentation")},
+        {QStringLiteral("application/vnd.ms-powerpoint"), QT_TRANSLATE_NOOP("Format", "Presentation")},
+        {QStringLiteral("application/pdf"), QT_TRANSLATE_NOOP("Format", "PDF")},
+        {QStringLiteral("text/plain"), QT_TRANSLATE_NOOP("Format", "Text")},
+        {QStringLiteral("text/markdown"), QT_TRANSLATE_NOOP("Format", "Text")},
+        {QStringLiteral("application/zip"), QT_TRANSLATE_NOOP("Format", "Compressed folder")},
+        {QStringLiteral("application/x-desktop"), QT_TRANSLATE_NOOP("Format", "Shortcut")},
+        {QStringLiteral("application/x-ms-dos-executable"), QT_TRANSLATE_NOOP("Format", "Windows app")},
+        {QStringLiteral("application/x-msi"), QT_TRANSLATE_NOOP("Format", "Windows installer")},
+        {QStringLiteral("application/x-ms-shortcut"), QT_TRANSLATE_NOOP("Format", "Windows shortcut")},
+        {QStringLiteral("application/x-iso9660-image"), QT_TRANSLATE_NOOP("Format", "Disc image")},
+        {QStringLiteral("application/vnd.debian.binary-package"), QT_TRANSLATE_NOOP("Format", "App package")},
+        {QStringLiteral("application/octet-stream"), QT_TRANSLATE_NOOP("Format", "File")},
+        {QStringLiteral("inode/symlink"), QT_TRANSLATE_NOOP("Format", "Shortcut")},
     };
     const auto it = plain.constFind(mime.name());
     if (it != plain.constEnd()) {
-        return it.value();
+        return QCoreApplication::translate("Format", it.value());
     }
     QString comment = mime.comment();
     if (comment.isEmpty()) {
-        return QStringLiteral("File");
+        return QCoreApplication::translate("Format", "File");
     }
     // Shared MIME info writes "plain text document" and "JPEG image";
     // the first letter is raised and acronyms stay as they are.
@@ -74,19 +85,19 @@ QString date(const QDateTime &when)
         return QString();
     }
     // The regional format chosen in Settings decides the order and the
-    // clock, unless a 12 or 24-hour clock is chosen; the words stay
-    // English, as the rest of Wild OS is.
-    const QLocale names(QLocale::English, QLocale::UnitedKingdom);
+    // clock, unless a 12 or 24-hour clock is chosen; the words follow the
+    // display language.
+    const QLocale names = wordsLocale();
     const QLocale format = QLocale::system();
     const QDateTime local = when.toLocalTime();
     const QDate today = QDate::currentDate();
     const QString time = ClockFormat::time(local.time());
     const qint64 days = local.date().daysTo(today);
     if (days == 0) {
-        return QStringLiteral("Today ") + time;
+        return QCoreApplication::translate("Format", "Today %1").arg(time);
     }
     if (days == 1) {
-        return QStringLiteral("Yesterday ") + time;
+        return QCoreApplication::translate("Format", "Yesterday %1").arg(time);
     }
     if (days > 1 && days < 7) {
         return names.dayName(local.date().dayOfWeek()) + QLatin1Char(' ') + time;
@@ -100,7 +111,7 @@ QString longDate(const QDateTime &when)
         return QString();
     }
     const QDateTime local = when.toLocalTime();
-    const QLocale names(QLocale::English, QLocale::UnitedKingdom);
+    const QLocale names = wordsLocale();
     const QLocale format = QLocale::system();
     // Qt writes UK dates as "Monday, 9 November"; Wild OS has no comma.
     QString day = format.dateFormat(QLocale::LongFormat);
@@ -121,9 +132,10 @@ QString size(qint64 bytes)
     // Windows rounds small files up, so a 200 byte note is 1 KB, not 0.
     if (bytes < 1024 * 1024) {
         const qint64 kb = bytes == 0 ? 0 : (bytes + 1023) / 1024;
-        return numbers.toString(kb) + QStringLiteral(" KB");
+        return QCoreApplication::translate("Format", "%1 KB").arg(numbers.toString(kb));
     }
-    static const char *units[] = {"MB", "GB", "TB", "PB"};
+    static const char *units[] = {QT_TRANSLATE_NOOP("Format", "MB"), QT_TRANSLATE_NOOP("Format", "GB"), QT_TRANSLATE_NOOP("Format", "TB"),
+                                  QT_TRANSLATE_NOOP("Format", "PB")};
     double value = bytes / (1024.0 * 1024.0);
     int unit = 0;
     while (value >= 1024 && unit < 3) {
@@ -141,12 +153,14 @@ QString size(qint64 bytes)
             text.chop(1);
         }
     }
-    return text + QLatin1Char(' ') + QLatin1String(units[unit]);
+    return text + QLatin1Char(' ') + QCoreApplication::translate("Format", units[unit]);
 }
 
 QString exactSize(qint64 bytes)
 {
-    return size(bytes) + QStringLiteral(" (") + QLocale::system().toString(bytes) + (bytes == 1 ? QStringLiteral(" byte)") : QStringLiteral(" bytes)"));
+    const QString exact = QLocale::system().toString(bytes);
+    return bytes == 1 ? QCoreApplication::translate("Format", "%1 (%2 byte)").arg(size(bytes), exact)
+                      : QCoreApplication::translate("Format", "%1 (%2 bytes)").arg(size(bytes), exact);
 }
 
 QString count(qint64 n, const QString &one, const QString &many)

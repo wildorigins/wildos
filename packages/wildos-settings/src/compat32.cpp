@@ -77,9 +77,9 @@ void Compat32::setOverlay(bool on)
         process->deleteLater();
         m_overlayBusy = false;
         if (code == 3) {
-            Q_EMIT failed(QStringLiteral("Install Steam from the Store first."));
+            Q_EMIT failed(tr("Install Steam from the Store first."));
         } else if (code != 0) {
-            Q_EMIT failed(QStringLiteral("The overlay could not be downloaded. Check you're online and try again."));
+            Q_EMIT failed(tr("The overlay could not be downloaded. Check you're online and try again."));
         }
         Q_EMIT changed();
     });
@@ -133,11 +133,11 @@ void Compat32::setEnabled(bool on)
         process->deleteLater();
         m_busy = false;
         if (code == 126 || code == 127) {
-            Q_EMIT failed(QStringLiteral("Nothing was changed because the password was not given."));
+            Q_EMIT failed(tr("Nothing was changed because the password was not given."));
         } else if (code == 3) {
-            Q_EMIT failed(QStringLiteral("Strict and Maximum protection keep 32-bit apps off."));
+            Q_EMIT failed(tr("Strict and Maximum protection keep 32-bit apps off."));
         } else if (code != 0) {
-            Q_EMIT failed(QStringLiteral("The setting could not be changed."));
+            Q_EMIT failed(tr("The setting could not be changed."));
         }
         Q_EMIT changed();
     });

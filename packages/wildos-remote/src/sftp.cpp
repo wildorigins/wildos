@@ -198,14 +198,14 @@ void Sftp::start(const QStringList &sshArgs, const std::optional<QString> &passw
         for (const Reply &r : pending) {
             QByteArray status;
             putU32(status, 4);
-            putString(status, "The connection to the server ended");
+            putString(status, tr("The connection to the server ended").toUtf8());
             putString(status, "");
             r(FxpStatus, status);
         }
         if (was) {
             Q_EMIT readyChanged();
         }
-        Q_EMIT failed(m_stderr.trimmed().isEmpty() ? QStringLiteral("The file connection ended.") : m_stderr.trimmed());
+        Q_EMIT failed(m_stderr.trimmed().isEmpty() ? tr("The file connection ended.") : m_stderr.trimmed());
     });
     m_process->start();
     QByteArray init;
@@ -246,7 +246,7 @@ void Sftp::send(quint8 type, const QByteArray &payload, const Reply &reply)
     if (!m_process || m_process->state() != QProcess::Running) {
         QByteArray status;
         putU32(status, 4);
-        putString(status, "Not connected");
+        putString(status, tr("Not connected").toUtf8());
         putString(status, "");
         reply(FxpStatus, status);
         return;
@@ -309,9 +309,9 @@ QString Sftp::statusText(const QByteArray &body)
     const QString message = QString::fromUtf8(r.string());
     switch (code) {
     case 0: return {};
-    case 2: return QStringLiteral("That file or folder isn't there any more.");
-    case 3: return QStringLiteral("The server doesn't allow that here.");
-    default: return message.isEmpty() ? QStringLiteral("The server couldn't do that.") : message;
+    case 2: return tr("That file or folder isn't there any more.");
+    case 3: return tr("The server doesn't allow that here.");
+    default: return message.isEmpty() ? tr("The server couldn't do that.") : message;
     }
 }
 
@@ -327,7 +327,7 @@ void Sftp::realPath(const QString &path, const std::function<void(const QString 
                 return;
             }
         }
-        done({}, type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+        done({}, type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
     });
 }
 
@@ -343,7 +343,7 @@ void Sftp::stat(const QString &path, const std::function<void(const Entry &, con
             done(e, {});
             return;
         }
-        done({}, type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+        done({}, type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
     });
 }
 
@@ -353,7 +353,7 @@ void Sftp::list(const QString &path, const Listed &done)
     putString(p, pathBytes(path));
     send(FxpOpendir, p, [this, done](quint8 type, const QByteArray &body) {
         if (type != FxpHandle) {
-            done({}, type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+            done({}, type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
             return;
         }
         Reader r{body};
@@ -398,7 +398,7 @@ void Sftp::mkdir(const QString &path, const Done &done)
     putString(p, pathBytes(path));
     putU32(p, 0);
     send(FxpMkdir, p, [done](quint8 type, const QByteArray &body) {
-        done(type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+        done(type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
     });
 }
 
@@ -407,7 +407,7 @@ void Sftp::remove(const QString &path, const Done &done)
     QByteArray p;
     putString(p, pathBytes(path));
     send(FxpRemove, p, [done](quint8 type, const QByteArray &body) {
-        done(type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+        done(type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
     });
 }
 
@@ -416,7 +416,7 @@ void Sftp::rmdir(const QString &path, const Done &done)
     QByteArray p;
     putString(p, pathBytes(path));
     send(FxpRmdir, p, [done](quint8 type, const QByteArray &body) {
-        done(type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+        done(type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
     });
 }
 
@@ -426,7 +426,7 @@ void Sftp::rename(const QString &from, const QString &to, const Done &done)
     putString(p, pathBytes(from));
     putString(p, pathBytes(to));
     send(FxpRename, p, [done](quint8 type, const QByteArray &body) {
-        done(type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+        done(type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
     });
 }
 
@@ -448,7 +448,7 @@ void Sftp::openHandle(const QString &path, quint32 flags, const std::function<vo
             done(r.string(), {});
             return;
         }
-        done({}, type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer"));
+        done({}, type == FxpStatus ? statusText(body) : tr("Unexpected answer"));
     });
 }
 
@@ -463,7 +463,7 @@ void Sftp::upload(const QString &local, const QString &remote, const Progress &p
 {
     auto file = QSharedPointer<QFile>::create(local);
     if (!file->open(QIODevice::ReadOnly)) {
-        done(QStringLiteral("%1 couldn't be read.").arg(local.section(QLatin1Char('/'), -1)));
+        done(tr("%1 couldn't be read.").arg(local.section(QLatin1Char('/'), -1)));
         return;
     }
     openHandle(remote, FlagWrite | FlagCreate | FlagTruncate, [this, file, progress, done](const QByteArray &handle, const QString &error) {
@@ -495,7 +495,7 @@ void Sftp::upload(const QString &local, const QString &remote, const Progress &p
                 const qint64 size = data.size();
                 send(FxpWrite, p, [this, state, pump, size, progress, done, handle](quint8 type, const QByteArray &body) {
                     --state->inFlight;
-                    const QString err = type == FxpStatus ? statusText(body) : QStringLiteral("Unexpected answer");
+                    const QString err = type == FxpStatus ? statusText(body) : tr("Unexpected answer");
                     if (!err.isEmpty() && !state->failed) {
                         state->failed = true;
                         closeHandle(handle);
@@ -527,7 +527,7 @@ void Sftp::download(const QString &remote, const QString &local, const Progress 
 {
     auto file = QSharedPointer<QFile>::create(local);
     if (!file->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        done(QStringLiteral("%1 couldn't be written.").arg(local.section(QLatin1Char('/'), -1)));
+        done(tr("%1 couldn't be written.").arg(local.section(QLatin1Char('/'), -1)));
         return;
     }
     openHandle(remote, FlagRead, [this, file, progress, done](const QByteArray &handle, const QString &error) {

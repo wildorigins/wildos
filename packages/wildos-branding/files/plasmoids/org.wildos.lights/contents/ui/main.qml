@@ -42,12 +42,16 @@ PlasmoidItem {
         return { uses: d.uses || [], blocked: d.blocked === true, maximum: d.maximum === true, last: d.last || null };
     }
 
-    function deviceWord(name: string): string {
-        return name === "camera" ? "camera" : "microphone";
-    }
-
     function timeText(seconds: real): string {
         return Qt.locale().toString(new Date(seconds * 1000), UI.TimeFormat.shortFormat);
+    }
+
+    // Day and month names in the display language chosen in Settings, as the
+    // clock's Formats.js picks them.
+    function names(): var {
+        const languages = Qt.locale().uiLanguages;
+        const first = languages.length > 0 ? languages[0] : "";
+        return first === "" || first === "C" || first.startsWith("en") ? Qt.locale("en_GB") : Qt.locale(first.replace("-", "_"));
     }
 
     // "today", "yesterday", a weekday within the week, then the date.
@@ -57,35 +61,36 @@ PlasmoidItem {
         today.setHours(0, 0, 0, 0);
         const days = Math.round((today.getTime() - new Date(when.getFullYear(), when.getMonth(), when.getDate()).getTime()) / 86400000);
         if (days <= 0) {
-            return "today";
+            return qsTr("today");
         }
         if (days === 1) {
-            return "yesterday";
+            return qsTr("yesterday");
         }
         if (days < 7) {
-            return "on " + Qt.locale("en_GB").dayName(when.getDay(), Locale.LongFormat);
+            return qsTr("on %1", "a weekday").arg(names().dayName(when.getDay(), Locale.LongFormat));
         }
-        return "on " + Qt.locale("en_GB").toString(when, "d MMMM");
+        // A Qt date format, so a language can put its own word in the quotes.
+        return names().toString(when, qsTr("'on' d MMMM", "a date format"));
     }
 
     function idleText(d: var): string {
-        return d.last && d.last.app ? "Not in use. Last used " + dayText(d.last.t) + " by " + d.last.app + "." : "Not in use.";
+        return d.last && d.last.app ? qsTr("Not in use. Last used %1 by %2.").arg(dayText(d.last.t)).arg(d.last.app) : qsTr("Not in use.");
     }
 
     readonly property string summary: {
         const parts = [];
         for (const u of microphone.uses) {
-            parts.push("Microphone in use by " + u.app);
+            parts.push(qsTr("Microphone in use by %1").arg(u.app));
         }
         for (const u of camera.uses) {
-            parts.push("Camera in use by " + u.app);
+            parts.push(qsTr("Camera in use by %1").arg(u.app));
         }
         if (parts.length === 0) {
             if (microphone.blocked) {
-                parts.push("Microphone off for every app");
+                parts.push(qsTr("Microphone off for every app"));
             }
             if (camera.blocked) {
-                parts.push("Camera off for every app");
+                parts.push(qsTr("Camera off for every app"));
             }
         }
         return parts.join(". ");
@@ -165,10 +170,16 @@ PlasmoidItem {
 
     // Settings ships with Wild OS, but if it has gone the click still says
     // something rather than doing nothing.
+    // A translated message can hold an apostrophe, which would end the
+    // shell's single quotes.
+    function shellQuote(text: string): string {
+        return "'" + text.replace(/'/g, "'\\''") + "'";
+    }
+
     function openHistory(): void {
         run("if command -v wildos-settings >/dev/null; then setsid -f wildos-settings --page history-camera >/dev/null 2>&1; "
-            + "else notify-send -a 'Wild OS' -i preferences-system 'Settings is missing' "
-            + "'Reinstall it from the Store to see History.'; fi");
+            + "else notify-send -a 'Wild OS' -i preferences-system " + shellQuote(qsTr("Settings is missing")) + " "
+            + shellQuote(qsTr("Reinstall it from the Store to see History.")) + "; fi");
         expanded = false;
     }
 
@@ -194,10 +205,10 @@ PlasmoidItem {
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "camera-web"
-    Plasmoid.title: "Camera and microphone"
+    Plasmoid.title: qsTr("Camera and microphone")
     Plasmoid.status: shown ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.HiddenStatus
     toolTipMainText: summary
-    toolTipSubText: "Click for details"
+    toolTipSubText: qsTr("Click for details")
 
     preferredRepresentation: compactRepresentation
     compactRepresentation: Light {

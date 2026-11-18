@@ -1,9 +1,11 @@
 #include "document.h"
 
+#include "history.h"
 #include "signatures.h"
 
 #include <poppler-annotation.h>
 #include <poppler-form.h>
+#include <poppler-link.h>
 #include <poppler-qt6.h>
 
 #include <QClipboard>
@@ -69,6 +71,26 @@ QRectF normalised(const QRectF &points, const QSizeF &page)
 QRectF clampToPage(const QRectF &r)
 {
     return r.intersected(QRectF(0, 0, 1, 1));
+}
+
+// The outline as rows, each a level deeper than the one it sits under.
+void flatten(const QVector<Poppler::OutlineItem> &items, int level, int pageCount, QVariantList &out)
+{
+    for (const Poppler::OutlineItem &item : items) {
+        if (item.isNull()) {
+            continue;
+        }
+        const QSharedPointer<const Poppler::LinkDestination> to = item.destination();
+        const int page = to ? to->pageNumber() - 1 : -1;
+        out << QVariantMap{{QStringLiteral("title"), item.name()},
+                           {QStringLiteral("level"), level},
+                           {QStringLiteral("page"), page >= 0 && page < pageCount ? page : -1},
+                           {QStringLiteral("top"), to && to->isChangeTop() ? std::clamp(to->top(), 0.0, 1.0) : 0.0}};
+        // Deep enough for any book; a file that nests without end stops here.
+        if (level < 12 && item.hasChildren()) {
+            flatten(item.children(), level + 1, pageCount, out);
+        }
+    }
 }
 
 double distanceTo(const QRectF &r, const QPointF &p)
@@ -170,6 +192,11 @@ bool PdfDocument::canUndo() const
     return !m_added.isEmpty();
 }
 
+bool PdfDocument::canRedo() const
+{
+    return !m_undone.isEmpty();
+}
+
 QVariantList PdfDocument::revisions() const
 {
     QVariantList out;
@@ -178,6 +205,11 @@ QVariantList PdfDocument::revisions() const
         out << r;
     }
     return out;
+}
+
+QVariantList PdfDocument::outline() const
+{
+    return m_outline;
 }
 
 QString PdfDocument::lastError() const
@@ -215,6 +247,7 @@ QString PdfDocument::load(const QString &file)
         }
     }
     findSerial.fetch_add(1);
+    History::instance()->opened(m_path);
     afterLoad();
     return locked() ? QStringLiteral("locked") : QString();
 }
@@ -249,8 +282,10 @@ void PdfDocument::afterLoad()
     {
         QMutexLocker locker(&m_lock);
         m_pageSizes.clear();
+        m_outline.clear();
         m_revisions.clear();
         m_added.clear();
+        m_undone.clear();
         m_modified = false;
         m_pageCount = 0;
         if (m_doc && !m_doc->isLocked()) {
@@ -265,6 +300,7 @@ void PdfDocument::afterLoad()
                 m_pageSizes << QVariant::fromValue(QSizeF(size.width() > 0 ? size.width() : 595, size.height() > 0 ? size.height() : 842));
                 m_revisions << 0;
             }
+            flatten(m_doc->outline(), 0, m_pageCount, m_outline);
         }
     }
     Q_EMIT loadedChanged();
@@ -440,7 +476,12 @@ bool PdfDocument::addHighlight(int index, const QVariantList &rects)
     style.setColor(highlightColour);
     annotation->setStyle(style);
     page->addAnnotation(annotation.get());
-    m_added.append({index, name});
+    Added added;
+    added.page = index;
+    added.name = name;
+    added.kind = Added::Highlight;
+    added.shape = rects;
+    record(added);
     locker.unlock();
     touch(index);
     return true;
@@ -481,7 +522,12 @@ bool PdfDocument::addInk(int index, const QVariantList &points)
     style.setWidth(2.0);
     annotation->setStyle(style);
     page->addAnnotation(annotation.get());
-    m_added.append({index, name});
+    Added added;
+    added.page = index;
+    added.name = name;
+    added.kind = Added::Ink;
+    added.shape = points;
+    record(added);
     locker.unlock();
     touch(index);
     return true;
@@ -517,10 +563,25 @@ bool PdfDocument::addText(int index, const QRectF &rect, const QString &text, do
     style.setWidth(0.0);
     annotation->setStyle(style);
     page->addAnnotation(annotation.get());
-    m_added.append({index, name});
+    Added added;
+    added.page = index;
+    added.name = name;
+    added.kind = Added::Text;
+    added.rect = rect;
+    added.text = text;
+    added.pointSize = pointSize;
+    record(added);
     locker.unlock();
     touch(index);
     return true;
+}
+
+void PdfDocument::record(const Added &added)
+{
+    m_added.append(added);
+    if (!m_redoing) {
+        m_undone.clear();
+    }
 }
 
 void PdfDocument::removeAnnotation(const Added &added)
@@ -547,8 +608,42 @@ void PdfDocument::undo()
     }
     const Added last = m_added.takeLast();
     removeAnnotation(last);
+    m_undone.append(last);
     locker.unlock();
     touch(last.page);
+}
+
+void PdfDocument::redo()
+{
+    Added next;
+    {
+        QMutexLocker locker(&m_lock);
+        if (!m_doc || m_undone.isEmpty()) {
+            return;
+        }
+        next = m_undone.takeLast();
+    }
+    m_redoing = true;
+    bool added = false;
+    switch (next.kind) {
+    case Added::Highlight:
+        added = addHighlight(next.page, next.shape);
+        break;
+    case Added::Ink:
+        added = addInk(next.page, next.shape);
+        break;
+    case Added::Text:
+        added = addText(next.page, next.rect, next.text, next.pointSize);
+        break;
+    case Added::Stamp:
+        break;
+    }
+    m_redoing = false;
+    if (!added) {
+        // Nothing was put back, so the menu still has to hear that there
+        // is one fewer to redo.
+        Q_EMIT modifiedChanged();
+    }
 }
 
 void PdfDocument::find(const QString &text)
@@ -585,6 +680,65 @@ void PdfDocument::find(const QString &text)
         QMetaObject::invokeMethod(this, [this, text, hits, serial]() {
             if (findSerial.load() == serial) {
                 Q_EMIT found(text, hits);
+            }
+        }, Qt::QueuedConnection);
+    });
+}
+
+void PdfDocument::findLinks(int index)
+{
+    const int generation = m_generation;
+    QThreadPool::globalInstance()->start([this, index, generation]() {
+        QVariantList links;
+        {
+            // Off the main thread, so a page being drawn never holds up
+            // the window while this waits its turn.
+            QMutexLocker locker(&m_lock);
+            if (generation != m_generation || !m_doc || m_doc->isLocked() || index < 0 || index >= m_pageCount) {
+                return;
+            }
+            std::unique_ptr<Poppler::Page> page = m_doc->page(index);
+            if (!page) {
+                return;
+            }
+            for (const auto &link : page->links()) {
+                if (!link) {
+                    continue;
+                }
+                const QRectF area = clampToPage(link->linkArea().normalized());
+                if (area.isEmpty()) {
+                    continue;
+                }
+                QVariantMap item = rectMap(area);
+                if (link->linkType() == Poppler::Link::Goto) {
+                    const auto *jump = static_cast<const Poppler::LinkGoto *>(link.get());
+                    const Poppler::LinkDestination to = jump->destination();
+                    if (jump->isExternal() || to.pageNumber() < 1 || to.pageNumber() > m_pageCount) {
+                        continue;
+                    }
+                    item.insert(QStringLiteral("page"), to.pageNumber() - 1);
+                    item.insert(QStringLiteral("top"), to.isChangeTop() ? std::clamp(to.top(), 0.0, 1.0) : 0.0);
+                    item.insert(QStringLiteral("url"), QString());
+                } else if (link->linkType() == Poppler::Link::Browse) {
+                    const QString address = static_cast<const Poppler::LinkBrowse *>(link.get())->url();
+                    // Web pages and mail only: a PDF doesn't get to open
+                    // files or start programs through a link.
+                    const QString scheme = QUrl(address).scheme().toLower();
+                    if (scheme != QLatin1String("http") && scheme != QLatin1String("https") && scheme != QLatin1String("mailto")) {
+                        continue;
+                    }
+                    item.insert(QStringLiteral("page"), -1);
+                    item.insert(QStringLiteral("top"), 0.0);
+                    item.insert(QStringLiteral("url"), address);
+                } else {
+                    continue;
+                }
+                links << item;
+            }
+        }
+        QMetaObject::invokeMethod(this, [this, index, links, generation]() {
+            if (generation == m_generation) {
+                Q_EMIT linksFound(index, links);
             }
         }, Qt::QueuedConnection);
     });
@@ -835,7 +989,7 @@ bool PdfDocument::saveSignedCopy(const QUrl &url, const QVariantList &placements
                 style.setWidth(0.0);
                 annotation->setStyle(style);
                 page->addAnnotation(annotation.get());
-                stamped.append({index, name});
+                stamped.append(Added{index, name});
                 continue;
             }
             const QImage image = kind == QLatin1String("initials") ? signatures->initialsImage() : signatures->image(p.value(QStringLiteral("signature")).toString());
@@ -854,7 +1008,7 @@ bool PdfDocument::saveSignedCopy(const QUrl &url, const QVariantList &placements
             const QImage placed = image.width() > wide ? image.scaledToWidth(wide, Qt::SmoothTransformation) : image;
             annotation->setStampCustomImage(placed.convertToFormat(QImage::Format_ARGB32));
             page->addAnnotation(annotation.get());
-            stamped.append({index, name});
+            stamped.append(Added{index, name});
         }
         if (!writeTo(target)) {
             // Taken off again, so a later Save can't put them in the

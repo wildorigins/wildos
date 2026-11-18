@@ -107,6 +107,28 @@ Item {
         openKey = key;
         peek.show(key, block);
     }
+    // An event's right-click menu: at the pointer, or under the event when
+    // it was asked for with the keyboard.
+    function showEventMenu(key, from) {
+        const e = CalendarEngine.event(key);
+        if (!e.key) {
+            return;
+        }
+        peek.close();
+        eventMenu.event = e;
+        if (from) {
+            eventMenu.popup(from, 0, from.height + 4);
+        } else {
+            eventMenu.popup();
+        }
+    }
+    // An empty slot's. A whole day (the all-day band, a day in Month) starts
+    // its timed event when the working day does.
+    function showSlotMenu(start, allDay) {
+        slotMenu.day = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        slotMenu.start = allDay ? new Date(start.getFullYear(), start.getMonth(), start.getDate(), Math.floor(prefs.workStart), 0) : start;
+        slotMenu.popup();
+    }
     // From the command line: a reminder's Open, or search.
     function showEvent(key, day) {
         editing = false;
@@ -255,7 +277,7 @@ Item {
                 Layout.rightMargin: 12
                 Layout.topMargin: 8
                 implicitHeight: 44
-                radius: 8
+                radius: UI.Style.radiusSm
                 color: UI.Style.surfaceRaised
                 border.width: 1
                 border.color: UI.Style.borderSubtle
@@ -349,7 +371,7 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: 46
-                        radius: 10
+                        radius: UI.Style.radiusPanel
                         color: UI.Style.surfaceRest
                         border.width: 1
                         border.color: UI.Style.borderSubtle
@@ -385,8 +407,11 @@ Item {
                                     iconName: modelData.icon
                                     checkable: false
                                     background: Rectangle {
-                                        radius: 6
+                                        radius: UI.Style.radiusXs
                                         color: window.view === modelData.id && !window.editing ? UI.Style.surfaceSelected : parent.hovered ? UI.Style.surfaceHover : "transparent"
+                                        Behavior on color {
+                                            ColorAnimation { duration: UI.Style.hoverDuration }
+                                        }
                                     }
                                     onClicked: window.setView(modelData.id)
                                 }
@@ -514,7 +539,7 @@ Item {
                         visible: !window.editing
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        radius: 10
+                        radius: UI.Style.radiusPanel
                         color: UI.Style.surfaceRest
                         border.width: 1
                         border.color: UI.Style.borderSubtle
@@ -582,6 +607,12 @@ Item {
                                     window.goTo(day);
                                     window.setView("day");
                                 }
+                                onEventMenu: function (key, from) {
+                                    window.showEventMenu(key, from);
+                                }
+                                onSlotMenu: function (start, allDay) {
+                                    window.showSlotMenu(start, allDay);
+                                }
                             }
 
                             MonthView {
@@ -602,6 +633,12 @@ Item {
                                 onDayClicked: function (day) {
                                     window.goTo(day);
                                     window.setView("day");
+                                }
+                                onEventMenu: function (key, from) {
+                                    window.showEventMenu(key, from);
+                                }
+                                onSlotMenu: function (start, allDay) {
+                                    window.showSlotMenu(start, allDay);
                                 }
                             }
                         }
@@ -647,6 +684,34 @@ Item {
         }
     }
 
+    UI.Menu {
+        id: eventMenu
+        property var event: ({})
+        entries: {
+            const e = eventMenu.event;
+            const can = e.key !== undefined && !e.readOnly;
+            const remove = e.recurring ? [
+                { text: qsTr("Delete this one"), enabled: can, run: () => CalendarEngine.removeEvent(e.key, false) },
+                { text: qsTr("Delete the whole series"), icon: "delete", danger: true, enabled: can, run: () => CalendarEngine.removeEvent(e.key, true) }
+            ] : [
+                { text: qsTr("Delete"), icon: "delete", danger: true, enabled: can, run: () => CalendarEngine.removeEvent(e.key, true) }
+            ];
+            return [
+                { text: qsTr("Edit"), icon: "pencil", enabled: can, run: () => window.editEvent(e) },
+                { separator: true }
+            ].concat(remove);
+        }
+    }
+    UI.Menu {
+        id: slotMenu
+        property date day
+        property date start
+        entries: [
+            { text: qsTr("New event"), icon: "plus", enabled: CalendarEngine.ready, run: () => window.newEvent({ start: slotMenu.start, allDay: false }) },
+            { text: qsTr("New all-day event"), enabled: CalendarEngine.ready, run: () => window.newEvent({ start: slotMenu.day, allDay: true }) }
+        ]
+    }
+
     // Search results, under the search box.
     QQC.Popup {
         id: results
@@ -671,7 +736,7 @@ Item {
                 required property var modelData
                 width: ListView.view.width
                 height: 48
-                radius: 6
+                radius: UI.Style.radiusXs
                 color: rowMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
                 Rectangle {
                     x: 10

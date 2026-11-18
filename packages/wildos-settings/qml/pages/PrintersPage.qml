@@ -58,17 +58,17 @@ PageScroll {
         }
         for (const s of Printers.scanners) {
             out.push({ kind: "scanner", key: "net:" + s.name, title: s.name, url: s.url, network: true,
-                line: s.seen ? "Ready · On your network" : Printers.scannersLooked ? "Not found on your network" : "On your network",
+                line: s.seen ? qsTr("Ready · On your network") : Printers.scannersLooked ? qsTr("Not found on your network") : qsTr("On your network"),
                 problem: !s.seen && Printers.scannersLooked });
         }
         for (const d of usbScanners) {
             out.push({ kind: "scanner", key: "usb:" + d.name, title: d.name, url: "", network: false, model: d.model || "",
-                line: "Ready · Connected by USB", problem: false });
+                line: qsTr("Ready · Connected by USB"), problem: false });
         }
         return out;
     }
 
-    // The printer "Print a test page" uses: the default, or the only one.
+    // The printer qsTr("Print a test page") uses: the default, or the only one.
     readonly property var testPrinter: {
         const list = Printers.printers;
         return list.find(p => p.isDefault) || (list.length > 0 ? list[0] : null);
@@ -84,25 +84,26 @@ PageScroll {
     }
 
     function statusOf(p) {
-        return [p.status, p.isDefault ? "Default" : "", p.scans ? "Prints and scans" : "", p.ink,
-                p.jobs > 0 ? Format.plural(p.jobs, "document", "documents") + " waiting" : ""]
+        return [p.status, p.isDefault ? qsTr("Default") : "", p.scans ? qsTr("Prints and scans") : "", p.ink,
+                p.jobs === 1 ? qsTr("1 document waiting") : p.jobs > 1 ? qsTr("%1 documents waiting").arg(p.jobs) : ""]
             .filter(t => t && t.length > 0).join(" · ");
     }
 
     function offerText(o) {
-        return (o.kind === "scanner" ? "Scans." : o.scans ? "Prints and scans." : "Prints.")
-            + " It works straight away, with no driver to install.";
+        return o.kind === "scanner" ? qsTr("Scans. It works straight away, with no driver to install.")
+            : o.scans ? qsTr("Prints and scans. It works straight away, with no driver to install.")
+            : qsTr("Prints. It works straight away, with no driver to install.");
     }
 
     function openCapture() {
         if (!Printers.openCapture()) {
-            notice.show("Capture didn't open", "Capture isn't installed on this computer.", true);
+            notice.show(qsTr("Capture didn't open"), qsTr("Capture isn't installed on this computer."), true);
         }
     }
 
     Component.onDestruction: Printers.stopSearch()
 
-    // The page looks as soon as it opens. System > Devices' "Set up" opens
+    // The page looks as soon as it opens. System > Devices' qsTr("Set up") opens
     // it with Navigator.request "printers-add", which this look answers.
     Component.onCompleted: {
         if (Navigator.request === "printers-add") {
@@ -154,8 +155,8 @@ PageScroll {
         visible: !Printers.available
         iconName: "printer"
         warning: true
-        title: "Printing isn't running"
-        description: "The service that talks to printers is not running on this computer, so printers can't be added or used."
+        title: qsTr("Printing isn't running")
+        description: qsTr("The service that talks to printers is not running on this computer, so printers can't be added or used.")
     }
 
     ColumnLayout {
@@ -176,12 +177,12 @@ PageScroll {
                     id: offer
                     required property var modelData
                     iconName: modelData.kind === "scanner" ? "scan-line" : "printer-round"
-                    title: "Found on your network: " + modelData.name
+                    title: qsTr("Found on your network: %1").arg(modelData.name)
                     description: page.offerText(modelData)
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Add"
+                        text: qsTr("Add")
                         kind: "primary"
                         busy: Printers.busy === "add" && page.addingUri === offer.modelData.uri && offer.modelData.kind === "printer"
                         enabled: Printers.busy.length === 0
@@ -206,12 +207,12 @@ PageScroll {
             visible: page.offers.length === 0 && (page.rows.length === 0 || !page.online)
             readonly property bool looking: Printers.searching || Printers.findingScanners
             iconName: !page.online && !looking ? "wifi-round" : looking ? "search-round" : "printer-round"
-            title: !page.online && !looking ? "Not connected to a network"
-                : looking ? "Looking for printers and scanners"
-                : "No new printers or scanners found"
-            description: !page.online && !looking ? "Printers and scanners on a network show up here once this computer joins it."
-                : looking ? "On the network this computer is joined to."
-                : "Check it's switched on and joined to the same network as this computer."
+            title: !page.online && !looking ? qsTr("Not connected to a network")
+                : looking ? qsTr("Looking for printers and scanners")
+                : qsTr("No new printers or scanners found")
+            description: !page.online && !looking ? qsTr("Printers and scanners on a network show up here once this computer joins it.")
+                : looking ? qsTr("On the network this computer is joined to.")
+                : qsTr("Check it's switched on and joined to the same network as this computer.")
 
             UI.Spinner {
                 anchors.verticalCenter: parent.verticalCenter
@@ -221,7 +222,7 @@ PageScroll {
             UI.Button {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: !idle.looking
-                text: page.online ? "Search again" : "Network settings"
+                text: page.online ? qsTr("Search again") : qsTr("Network settings")
                 onClicked: page.online ? Printers.search() : Navigator.open("network")
             }
         }
@@ -231,7 +232,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Your printers and scanners"
+                text: qsTr("Your printers and scanners")
             }
 
             UI.Card {
@@ -252,7 +253,7 @@ PageScroll {
                             descriptionColor: modelData.problem ? UI.Style.warning : UI.Style.inkMuted
                             interactive: true
                             minHeight: 60
-                            Accessible.name: modelData.title + ", " + modelData.line
+                            Accessible.name: qsTr("%1, %2").arg(modelData.title).arg(modelData.line)
                             onClicked: manage()
 
                             function manage() {
@@ -271,8 +272,8 @@ PageScroll {
 
                             UI.LinkButton {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "Manage"
-                                Accessible.name: "Manage " + row.modelData.title
+                                text: qsTr("Manage")
+                                Accessible.name: qsTr("Manage %1").arg(row.modelData.title)
                                 onClicked: row.manage()
                             }
                         }
@@ -283,7 +284,7 @@ PageScroll {
             UI.Label {
                 Layout.fillWidth: true
                 visible: page.rows.length === 0
-                text: "No printers or scanners yet. Most made since 2014 work without a driver and show up above when they're switched on."
+                text: qsTr("No printers or scanners yet. Most made since 2014 work without a driver and show up above when they're switched on.")
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
                 elide: Text.ElideNone
@@ -295,7 +296,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "If something is not working"
+                text: qsTr("If something is not working")
             }
 
             UI.Card {
@@ -305,14 +306,14 @@ PageScroll {
                     width: parent.width
 
                     UI.SettingRow {
-                        title: "My printer is not in the list"
-                        description: "Add it by its network address, or plug it in with a USB cable."
+                        title: qsTr("My printer is not in the list")
+                        description: qsTr("Add it by its network address, or plug it in with a USB cable.")
                         minHeight: 60
                         leading: PathIcon { name: "search-round"; size: 20; strokeWidth: 1.8 }
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Add by address"
+                            text: qsTr("Add by address")
                             enabled: Printers.busy.length === 0
                             onClicked: addressDialog.open()
                         }
@@ -323,15 +324,15 @@ PageScroll {
                     // drivers Wild OS has, where a model from the same
                     // series often prints.
                     UI.SettingRow {
-                        title: "It only has a Windows driver"
-                        description: "Try a driver for the same maker or series. Plain printing works on many models."
+                        title: qsTr("It only has a Windows driver")
+                        description: qsTr("Try a driver for the same maker or series. Plain printing works on many models.")
                         minHeight: 60
                         visible: Pages.exists("printersadvanced")
                         leading: PathIcon { name: "app-window"; size: 20; strokeWidth: 1.8 }
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Set up"
+                            text: qsTr("Set up")
                             onClicked: {
                                 Navigator.request = "printers-driver";
                                 Navigator.open("printersadvanced");
@@ -340,16 +341,16 @@ PageScroll {
                     }
 
                     UI.SettingRow {
-                        title: "Print a test page"
-                        description: page.testPrinter === null ? "Add a printer first."
-                            : Printers.printers.length > 1 ? "Prints on " + page.testPrinter.info + ". Check it's lined up and has ink."
-                            : "Check the printer is lined up and has ink."
+                        title: qsTr("Print a test page")
+                        description: page.testPrinter === null ? qsTr("Add a printer first.")
+                            : Printers.printers.length > 1 ? qsTr("Prints on %1. Check it's lined up and has ink.").arg(page.testPrinter.info)
+                            : qsTr("Check the printer is lined up and has ink.")
                         minHeight: 60
                         leading: PathIcon { name: "file-text"; size: 20; strokeWidth: 1.8 }
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Print"
+                            text: qsTr("Print")
                             busy: page.testPrinter !== null && Printers.busy === page.testPrinter.name
                             enabled: Printers.busy.length === 0 && page.testPrinter !== null && !page.testPrinter.paused
                             onClicked: Printers.printTestPage(page.testPrinter.name)
@@ -357,14 +358,14 @@ PageScroll {
                     }
 
                     UI.SettingRow {
-                        title: "Scan something"
-                        description: "Opens Capture on its Scan tab."
+                        title: qsTr("Scan something")
+                        description: qsTr("Opens Capture on its Scan tab.")
                         minHeight: 60
                         leading: PathIcon { name: "scan-line"; size: 20; strokeWidth: 1.8 }
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Open Capture"
+                            text: qsTr("Open Capture")
                             onClicked: page.openCapture()
                         }
                     }
@@ -378,7 +379,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Related settings"
+                text: qsTr("Related settings")
             }
 
             UI.Card {
@@ -389,8 +390,8 @@ PageScroll {
 
                     UI.SettingRow {
                         iconName: "cog"
-                        title: "More printer settings"
-                        description: "Printers that need their own driver, USB printers and print queues"
+                        title: qsTr("More printer settings")
+                        description: qsTr("Printers that need their own driver, USB printers and print queues")
                         chevron: true
                         onClicked: Navigator.open("printersadvanced")
                     }
@@ -419,21 +420,21 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "check"
-                    title: "Default printer"
-                    description: page.printer && page.printer.isDefault ? "Apps print here unless you choose another printer"
-                        : "Make apps print here unless you choose another printer"
+                    title: qsTr("Default printer")
+                    description: page.printer && page.printer.isDefault ? qsTr("Apps print here unless you choose another printer")
+                        : qsTr("Make apps print here unless you choose another printer")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: page.printer !== null && !page.printer.isDefault
-                        text: "Set as default"
+                        text: qsTr("Set as default")
                         onClicked: Printers.setDefault(page.selected)
                     }
 
                     UI.Label {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: page.printer !== null && page.printer.isDefault
-                        text: "Default"
+                        text: qsTr("Default")
                         size: 12
                         color: UI.Style.inkMuted
                     }
@@ -441,12 +442,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "document"
-                    title: "Print a test page"
-                    description: "Checks the printer and this computer can talk to each other"
+                    title: qsTr("Print a test page")
+                    description: qsTr("Checks the printer and this computer can talk to each other")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Print test page"
+                        text: qsTr("Print test page")
                         busy: Printers.busy === page.selected
                         enabled: Printers.busy.length === 0 && page.printer !== null && !page.printer.paused
                         onClicked: Printers.printTestPage(page.selected)
@@ -455,13 +456,13 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.printer !== null && page.printer.scans
-                    title: "Scan something"
-                    description: "Opens Capture on its Scan tab"
+                    title: qsTr("Scan something")
+                    description: qsTr("Opens Capture on its Scan tab")
                     leading: PathIcon { name: "scan-line"; size: 20; strokeWidth: 1.8 }
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Open Capture"
+                        text: qsTr("Open Capture")
                         onClicked: page.openCapture()
                     }
                 }
@@ -469,12 +470,13 @@ PageScroll {
                 UI.SettingRow {
                     visible: page.printer !== null && page.printer.jobs > 0
                     iconName: "list"
-                    title: "Documents waiting"
-                    description: page.printer ? Format.plural(page.printer.jobs, "document is", "documents are") + " waiting to print" : ""
+                    title: qsTr("Documents waiting")
+                    description: !page.printer ? "" : page.printer.jobs === 1 ? qsTr("1 document is waiting to print")
+                        : qsTr("%1 documents are waiting to print").arg(page.printer.jobs)
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Cancel all"
+                        text: qsTr("Cancel all")
                         onClicked: Printers.cancelJobs(page.selected)
                     }
                 }
@@ -482,12 +484,12 @@ PageScroll {
                 UI.SettingRow {
                     visible: page.printer !== null && page.printer.paused
                     iconName: "warning"
-                    title: "Printing is paused"
-                    description: "Documents wait until the printer is resumed"
+                    title: qsTr("Printing is paused")
+                    description: qsTr("Documents wait until the printer is resumed")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Resume"
+                        text: qsTr("Resume")
                         busy: Printers.busy === page.selected
                         enabled: Printers.busy.length === 0
                         onClicked: Printers.resume(page.selected)
@@ -496,12 +498,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "delete"
-                    title: "Remove this printer"
-                    description: "Apps stop offering it. You can add it again at any time."
+                    title: qsTr("Remove this printer")
+                    description: qsTr("Apps stop offering it. You can add it again at any time.")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Remove"
+                        text: qsTr("Remove")
                         danger: true
                         enabled: Printers.busy.length === 0
                         onClicked: removeDialog.open()
@@ -511,13 +513,13 @@ PageScroll {
         }
 
         AboutCard {
-            heading: "About this printer"
+            heading: qsTr("About this printer")
             facts: page.printer ? [
-                ["Ink and toner", page.printer.inkDetail],
-                ["Model", page.printer.model],
-                ["Location", page.printer.location],
-                ["Address", page.printer.uri],
-                ["Name apps use", page.printer.name]
+                [qsTr("Ink and toner"), page.printer.inkDetail],
+                [qsTr("Model"), page.printer.model],
+                [qsTr("Location"), page.printer.location],
+                [qsTr("Address"), page.printer.uri],
+                [qsTr("Name apps use"), page.printer.name]
             ] : []
         }
     }
@@ -541,13 +543,13 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Scan something"
-                    description: "Opens Capture on its Scan tab"
+                    title: qsTr("Scan something")
+                    description: qsTr("Opens Capture on its Scan tab")
                     leading: PathIcon { name: "scan-line"; size: 20; strokeWidth: 1.8 }
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Open Capture"
+                        text: qsTr("Open Capture")
                         onClicked: page.openCapture()
                     }
                 }
@@ -555,12 +557,12 @@ PageScroll {
                 UI.SettingRow {
                     visible: page.scanner !== null && page.scanner.network
                     iconName: "delete"
-                    title: "Remove this scanner"
-                    description: "It leaves this list. Capture can still find it on the network."
+                    title: qsTr("Remove this scanner")
+                    description: qsTr("It leaves this list. Capture can still find it on the network.")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Remove"
+                        text: qsTr("Remove")
                         danger: true
                         onClicked: {
                             Printers.removeScanner(page.scanner.title);
@@ -572,11 +574,11 @@ PageScroll {
         }
 
         AboutCard {
-            heading: "About this scanner"
+            heading: qsTr("About this scanner")
             facts: page.scanner ? [
-                ["Connected by", page.scanner.network ? "Your network" : "USB"],
-                ["Model", page.scanner.model || ""],
-                ["Address", page.scanner.url || ""]
+                [qsTr("Connected by"), page.scanner.network ? qsTr("Your network") : "USB"],
+                [qsTr("Model"), page.scanner.model || ""],
+                [qsTr("Address"), page.scanner.url || ""]
             ] : []
         }
     }
@@ -737,8 +739,8 @@ PageScroll {
 
     UI.Dialog {
         id: addressDialog
-        title: "Add a printer by its address"
-        text: "Type the printer's network name or IP address. You can usually find it on the printer's screen or a page it prints about its network settings."
+        title: qsTr("Add a printer by its address")
+        text: qsTr("Type the printer's network name or IP address. You can usually find it on the printer's screen or a page it prints about its network settings.")
         onAboutToShow: {
             addressField.text = "";
             addressField.forceActiveFocus();
@@ -747,14 +749,14 @@ PageScroll {
         UI.TextField {
             id: addressField
             Layout.fillWidth: true
-            placeholderText: "For example 192.168.1.20 or printer.local"
+            placeholderText: qsTr("For example 192.168.1.20 or printer.local")
             onAccepted: addressAdd.clicked()
         }
 
         buttons: [
             UI.Button {
                 id: addressAdd
-                text: "Add"
+                text: qsTr("Add")
                 kind: "primary"
                 enabled: addressField.text.trim().length > 0
                 onClicked: {
@@ -767,7 +769,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: addressDialog.close()
             }
         ]
@@ -775,11 +777,11 @@ PageScroll {
 
     UI.Dialog {
         id: removeDialog
-        title: page.printer ? "Remove " + page.printer.info + "?" : ""
-        text: "Documents waiting for it are cancelled. You can add the printer again at any time."
+        title: page.printer ? qsTr("Remove %1?").arg(page.printer.info) : ""
+        text: qsTr("Documents waiting for it are cancelled. You can add the printer again at any time.")
         buttons: [
             UI.Button {
-                text: "Remove"
+                text: qsTr("Remove")
                 kind: "primary"
                 onClicked: {
                     removeDialog.close();
@@ -787,7 +789,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: removeDialog.close()
             }
         ]

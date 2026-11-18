@@ -22,14 +22,14 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "play"
-                title: "Use AutoPlay for all media and devices"
-                description: "Drives and memory cards are ready in Files as soon as you plug them in"
-                status: page.on ? "On" : "Off"
+                title: qsTr("Use AutoPlay for all media and devices")
+                description: qsTr("Drives and memory cards are ready in Files as soon as you plug them in")
+                status: page.on ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: page.on
-                    Accessible.name: "Use AutoPlay for all media and devices"
+                    Accessible.name: qsTr("Use AutoPlay for all media and devices")
                     onToggled: {
                         AutoPlay.setOnPlugin(checked);
                         AutoPlay.setOnLogin(checked);
@@ -45,7 +45,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "When to use AutoPlay"
+            text: qsTr("When to use AutoPlay")
         }
 
         UI.Card {
@@ -55,39 +55,39 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "When you plug in a drive or memory card"
-                    status: AutoPlay.onPlugin ? "On" : "Off"
+                    title: qsTr("When you plug in a drive or memory card")
+                    status: AutoPlay.onPlugin ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: AutoPlay.onPlugin
-                        Accessible.name: "When you plug in a drive or memory card"
+                        Accessible.name: qsTr("When you plug in a drive or memory card")
                         onToggled: AutoPlay.setOnPlugin(checked)
                     }
                 }
 
                 UI.SettingRow {
-                    title: "When you sign in"
-                    description: "For drives that are already plugged in"
-                    status: AutoPlay.onLogin ? "On" : "Off"
+                    title: qsTr("When you sign in")
+                    description: qsTr("For drives that are already plugged in")
+                    status: AutoPlay.onLogin ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: AutoPlay.onLogin
-                        Accessible.name: "When you sign in"
+                        Accessible.name: qsTr("When you sign in")
                         onToggled: AutoPlay.setOnLogin(checked)
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Include drives this PC hasn't seen before"
-                    description: "Otherwise only drives you've opened here before are made ready"
-                    status: AutoPlay.unknownDevices ? "On" : "Off"
+                    title: qsTr("Include drives this PC hasn't seen before")
+                    description: qsTr("Otherwise only drives you've opened here before are made ready")
+                    status: AutoPlay.unknownDevices ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: AutoPlay.unknownDevices
-                        Accessible.name: "Include drives this PC hasn't seen before"
+                        Accessible.name: qsTr("Include drives this PC hasn't seen before")
                         onToggled: AutoPlay.setUnknownDevices(checked)
                     }
                 }
@@ -100,7 +100,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Drives"
+            text: qsTr("Drives")
         }
 
         UI.Card {
@@ -121,8 +121,8 @@ PageScroll {
 
                         UI.ComboBox {
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "AutoPlay for " + driveRow.modelData.name
-                            model: [{ value: false, text: "Use the settings above" }, { value: true, text: "Always" }]
+                            Accessible.name: qsTr("AutoPlay for %1").arg(driveRow.modelData.name)
+                            model: [{ value: false, text: qsTr("Use the settings above") }, { value: true, text: qsTr("Always") }]
                             readonly property bool choice: driveRow.modelData.always === true
                             currentIndex: model.findIndex(o => o.value === choice)
                             onActivated: index => AutoPlay.setAlways(driveRow.modelData.udi, model[index].value)
@@ -130,7 +130,7 @@ PageScroll {
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Forget"
+                            text: qsTr("Forget")
                             onClicked: AutoPlay.forget(driveRow.modelData.udi)
                         }
                     }
@@ -138,8 +138,8 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: driveList.count === 0
-                    title: "No drives yet"
-                    description: "Drives and memory cards you plug in appear here."
+                    title: qsTr("No drives yet")
+                    description: qsTr("Drives and memory cards you plug in appear here.")
                 }
             }
         }

@@ -180,10 +180,11 @@ Restore *Restore::create(QQmlEngine *, QJSEngine *)
     return restore;
 }
 
-void Restore::setState(const QString &state, const QString &error)
+void Restore::setState(const QString &state, const QString &error, const QString &detail)
 {
     m_state = state;
     m_error = error;
+    m_errorDetail = detail;
     Q_EMIT stateChanged();
 }
 
@@ -256,7 +257,7 @@ void Restore::loadSnapshots()
             return;
         }
         if (code != Restic::Ok) {
-            setState(QStringLiteral("failed"), Restic::explain(code, restic->errorText()));
+            setState(QStringLiteral("failed"), Restic::explain(code, restic->errorText()), Restic::detail(code, restic->errorText()));
             return;
         }
         const QJsonArray list = QJsonDocument::fromJson(restic->output()).array();
@@ -338,7 +339,8 @@ void Restore::list(const QString &path)
         m_listing = false;
         sortEntries(m_entries);
         if (code != Restic::Ok && m_entries.isEmpty()) {
-            setState(QStringLiteral("failed"), Restic::explain(code, m_restic ? m_restic->errorText() : QString()));
+            const QString said = m_restic ? m_restic->errorText() : QString();
+            setState(QStringLiteral("failed"), Restic::explain(code, said), Restic::detail(code, said));
         }
         Q_EMIT folderChanged();
     });
@@ -449,7 +451,7 @@ void Restore::restore(const QString &destination, bool replace)
     const QString base = destination.isEmpty() ? Paths::home() : QDir::cleanPath(destination);
     m_stage = base + QStringLiteral("/.wildos-backup-restore-") + QString::number(QRandomGenerator::global()->generate(), 36);
     if (!QDir().mkpath(m_stage)) {
-        Q_EMIT restoreFailed(tr("Couldn't write to %1.").arg(base));
+        Q_EMIT restoreFailed(tr("Couldn't write to %1.").arg(base), QString());
         return;
     }
     m_restoring = true;
@@ -476,7 +478,7 @@ void Restore::restore(const QString &destination, bool replace)
             m_restoring = false;
             Q_EMIT restoreChanged();
             if (code != Restic::Interrupted) {
-                Q_EMIT restoreFailed(Restic::explain(code, restic->errorText()));
+                Q_EMIT restoreFailed(Restic::explain(code, restic->errorText()), Restic::detail(code, restic->errorText()));
             }
             return;
         }
@@ -518,7 +520,7 @@ void Restore::moveIntoPlace(const QString &stage, const QStringList &items, cons
             if (count == total) {
                 Q_EMIT self->restored(count, where);
             } else {
-                Q_EMIT self->restoreFailed(tr("%1 of %2 couldn't be put back.").arg(total - count).arg(total));
+                Q_EMIT self->restoreFailed(tr("%1 of %2 couldn't be put back.").arg(total - count).arg(total), QString());
             }
         }, Qt::QueuedConnection);
     });

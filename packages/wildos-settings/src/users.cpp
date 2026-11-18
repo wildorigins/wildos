@@ -120,7 +120,7 @@ QString changeOwnPassword(const QByteArray &current, const QByteArray &next)
     if (reply.errorName().startsWith(QLatin1String("org.wildos.WalletKeys1.Error.")) && !reply.errorMessage().isEmpty()) {
         return reply.errorMessage();
     }
-    return QStringLiteral("Wild OS could not change the password.");
+    return QCoreApplication::translate("Users", "Wild OS could not change the password.");
 }
 
 // pam_kwallet's key: PBKDF2 SHA-512, 50000 rounds, 56 bytes (kwallet-pam's
@@ -206,8 +206,14 @@ bool moveWallet(const QByteArray &current, const QByteArray &next)
     return code == 0 || code == 1;
 }
 
+// wildos-pin keeps an account's PIN there; only that it exists shows here.
+bool hasPin(const QString &userName)
+{
+    return !userName.isEmpty() && !userName.contains(QLatin1Char('/')) && QFile::exists(QStringLiteral("/var/lib/wildos/pin/") + userName);
+}
+
 // The system's copy of the key, for the account that signs in
-// automatically, follows the new password. A copy that cannot be refreshed
+// automatically or with a PIN, follows the new password. A copy that cannot be refreshed
 // is removed, since it no longer opens the wallet; the next start then asks
 // for the password instead.
 void refreshKeptKey(const QByteArray &next)
@@ -324,8 +330,8 @@ void Users::callUser(const QString &method, const QVariant &argument, const QStr
         QDBusPendingReply<> reply = *watcher;
         reload();
         if (reply.isError()) {
-            Q_EMIT failed(what, reply.error().type() == QDBusError::AccessDenied ? QStringLiteral("Wild OS was not allowed to change it.")
-                                                                                 : QStringLiteral("Wild OS could not save the change."));
+            Q_EMIT failed(what, reply.error().type() == QDBusError::AccessDenied ? tr("Wild OS was not allowed to change it.")
+                                                                                 : tr("Wild OS could not save the change."));
         } else {
             Q_EMIT done(what, QString());
         }
@@ -336,7 +342,7 @@ void Users::setRealName(const QString &name)
 {
     const QString clean = name.simplified();
     if (clean.isEmpty() || clean.contains(QLatin1Char(':')) || clean.contains(QLatin1Char(','))) {
-        Q_EMIT failed(QStringLiteral("name"), QStringLiteral("A name can't be empty or contain a colon or comma."));
+        Q_EMIT failed(QStringLiteral("name"), tr("A name can't be empty or contain a colon or comma."));
         return;
     }
     callUser(QStringLiteral("SetRealName"), clean, QStringLiteral("name"));
@@ -361,7 +367,7 @@ void Users::setPicture(const QString &file, qreal x, qreal y, qreal size)
     reader.setAutoTransform(true);
     const QImage image = reader.read();
     if (image.isNull()) {
-        Q_EMIT failed(QStringLiteral("picture"), QStringLiteral("That file isn't a picture Wild OS can open."));
+        Q_EMIT failed(QStringLiteral("picture"), tr("That file isn't a picture Wild OS can open."));
         return;
     }
     const QRect square = QRectF(x, y, size, size).toRect().intersected(image.rect());
@@ -373,7 +379,7 @@ void Users::setPicture(const QString &file, qreal x, qreal y, qreal size)
     QDir().mkpath(dir);
     const QString staged = dir + QStringLiteral("/account-picture.png");
     if (!face.save(staged, "PNG")) {
-        Q_EMIT failed(QStringLiteral("picture"), QStringLiteral("Wild OS could not save the picture."));
+        Q_EMIT failed(QStringLiteral("picture"), tr("Wild OS could not save the picture."));
         return;
     }
     // ~/.face.icon is what KDE parts and the sign-in screen read for the
@@ -406,7 +412,10 @@ void Users::changePassword(const QString &current, const QString &next, const QS
 {
     setBusy(QStringLiteral("password"));
     QPointer<Users> self(this);
-    const bool automatic = !m_autoLogin.isEmpty() && m_autoLogin == m_me.value(QStringLiteral("userName")).toString();
+    // The system keeps the wallet key of an account that signs in
+    // automatically or with a PIN.
+    const QString me = m_me.value(QStringLiteral("userName")).toString();
+    const bool automatic = (!m_autoLogin.isEmpty() && m_autoLogin == me) || hasPin(me);
     QThread *thread = QThread::create([self, current = current.toUtf8(), next = next.toUtf8(), hint, automatic] {
         const QString error = changeOwnPassword(current, next);
         bool walletMoved = true;
@@ -431,9 +440,9 @@ void Users::changePassword(const QString &current, const QString &next, const QS
                 self->callUser(QStringLiteral("SetPasswordHint"), hint, QStringLiteral("password"));
             }
             Q_EMIT self->done(QStringLiteral("password"),
-                              walletMoved ? QStringLiteral("Your password was changed. Use the new one next time you sign in.")
-                                          : QStringLiteral("Your password was changed. Your saved passwords still open with the old one, so apps may ask "
-                                                           "you for it."));
+                              walletMoved ? tr("Your password was changed. Use the new one next time you sign in.")
+                                          : tr("Your password was changed. Your saved passwords still open with the old one, so apps may ask "
+                                               "you for it."));
         });
     });
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
@@ -443,12 +452,13 @@ void Users::changePassword(const QString &current, const QString &next, const QS
 void Users::openWallet(const QString &password, const QString &walletPassword)
 {
     setBusy(QStringLiteral("wallet"));
-    const bool automatic = !m_autoLogin.isEmpty() && m_autoLogin == m_me.value(QStringLiteral("userName")).toString();
+    const QString me = m_me.value(QStringLiteral("userName")).toString();
+    const bool automatic = (!m_autoLogin.isEmpty() && m_autoLogin == me) || hasPin(me);
     QPointer<Users> self(this);
     QThread *thread = QThread::create([self, password = password.toUtf8(), walletPassword = walletPassword.toUtf8(), automatic] {
         // The account password first, checked by PAM: a wallet moved to a
         // mistyped password would open with nothing. Store also keeps the
-        // key for the automatic sign-in.
+        // key for the automatic sign-in and the PIN sign-in.
         QDBusMessage check = QDBusMessage::createMethodCall(walletKeysName, QStringLiteral("/org/wildos/WalletKeys1"), walletKeysName,
                                                             automatic ? QStringLiteral("Store") : QStringLiteral("CheckPassword"));
         check << QString::fromUtf8(password);
@@ -456,17 +466,17 @@ void Users::openWallet(const QString &password, const QString &walletPassword)
         QString what = QStringLiteral("wallet");
         QString error;
         if (checked.type() != QDBusMessage::ReplyMessage) {
-            error = checked.errorName().endsWith(QLatin1String("WrongPassword")) ? QStringLiteral("That password isn't right.")
-                                                                                  : QStringLiteral("Wild OS could not check your password.");
+            error = checked.errorName().endsWith(QLatin1String("WrongPassword")) ? tr("That password isn't right.")
+                                                                                  : tr("Wild OS could not check your password.");
         } else {
             const int code = walletPassword.isEmpty() ? rekeyWalletOrEmpty(password, password, true) : rekeyWallet(walletPassword, password, true);
             if (wrongWalletKey(code)) {
                 what = QStringLiteral("wallet-other");
                 error = walletPassword.isEmpty()
-                    ? QStringLiteral("Your saved passwords use a different password from your account. Type that one too, and they will move to your account password.")
-                    : QStringLiteral("That isn't the password your saved passwords use.");
+                    ? tr("Your saved passwords use a different password from your account. Type that one too, and they will move to your account password.")
+                    : tr("That isn't the password your saved passwords use.");
             } else if (code != 0 && code != 1) {
-                error = QStringLiteral("Wild OS could not open your saved passwords.");
+                error = tr("Wild OS could not open your saved passwords.");
             }
         }
         QMetaObject::invokeMethod(qApp, [self, what, error, automatic] {
@@ -478,8 +488,8 @@ void Users::openWallet(const QString &password, const QString &walletPassword)
                 Q_EMIT self->failed(what, error);
             } else {
                 Q_EMIT self->done(QStringLiteral("wallet"),
-                                  automatic ? QStringLiteral("Your saved passwords are open, and open by themselves from now on.")
-                                            : QStringLiteral("Your saved passwords are open, and open by themselves when you sign in with your password."));
+                                  automatic ? tr("Your saved passwords are open, and open by themselves from now on.")
+                                            : tr("Your saved passwords are open, and open by themselves when you sign in with your password."));
             }
         });
     });
@@ -499,9 +509,9 @@ void Users::helper(const QString &what, const QStringList &arguments, const QByt
         if (status == QProcess::NormalExit && code == 0) {
             Q_EMIT done(what, success);
         } else if (code == 126 || code == 127) {
-            Q_EMIT failed(what, QStringLiteral("An administrator's password is needed for this."));
+            Q_EMIT failed(what, tr("An administrator's password is needed for this."));
         } else {
-            Q_EMIT failed(what, error.isEmpty() ? QStringLiteral("Wild OS could not make the change.") : error);
+            Q_EMIT failed(what, error.isEmpty() ? tr("Wild OS could not make the change.") : error);
         }
     });
     process->start(QStringLiteral("pkexec"), QStringList{usersHelper} + arguments);
@@ -514,26 +524,26 @@ void Users::helper(const QString &what, const QStringList &arguments, const QByt
 void Users::addUser(const QString &fullName, const QString &userName, const QString &password, bool admin)
 {
     helper(QStringLiteral("add"), {QStringLiteral("add"), userName, admin ? QStringLiteral("admin") : QStringLiteral("standard"), fullName.simplified()},
-           password.toUtf8() + '\n', fullName.simplified() + QStringLiteral(" can now sign in to this computer."));
+           password.toUtf8() + '\n', tr("%1 can now sign in to this computer.").arg(fullName.simplified()));
 }
 
 void Users::removeUser(const QString &userName)
 {
-    helper(QStringLiteral("remove"), {QStringLiteral("remove"), userName}, {}, QStringLiteral("The account and its files were removed."));
+    helper(QStringLiteral("remove"), {QStringLiteral("remove"), userName}, {}, tr("The account and its files were removed."));
 }
 
 void Users::setAdmin(const QString &userName, bool admin)
 {
     helper(QStringLiteral("type"), {QStringLiteral("admin"), userName, admin ? QStringLiteral("on") : QStringLiteral("off")}, {},
-           admin ? QStringLiteral("The account is now an administrator.") : QStringLiteral("The account is now a standard user."));
+           admin ? tr("The account is now an administrator.") : tr("The account is now a standard user."));
 }
 
 void Users::setAutoLogin(bool on, const QString &password)
 {
     helper(QStringLiteral("autologin"), {QStringLiteral("autologin"), on ? m_me.value(QStringLiteral("userName")).toString() : QStringLiteral("off")},
            on ? password.toUtf8() + '\n' : QByteArray(),
-           on ? QStringLiteral("This computer will sign you in when it starts, with your saved passwords ready.")
-              : QStringLiteral("This computer will ask for your password when it starts."));
+           on ? tr("This computer will sign you in when it starts, with your saved passwords ready.")
+              : tr("This computer will ask for your password when it starts."));
 }
 
 QString Users::suggestUserName(const QString &fullName) const
@@ -556,13 +566,13 @@ QString Users::checkUserName(const QString &userName) const
 {
     static const QRegularExpression valid(QStringLiteral("^[a-z_][a-z0-9_-]{0,31}$"));
     if (userName.isEmpty()) {
-        return QStringLiteral("Choose a user name.");
+        return tr("Choose a user name.");
     }
     if (!valid.match(userName).hasMatch()) {
-        return QStringLiteral("Use small letters, numbers, - and _ only, starting with a letter.");
+        return tr("Use small letters, numbers, - and _ only, starting with a letter.");
     }
     if (getpwnam(userName.toUtf8().constData()) != nullptr || getgrnam(userName.toUtf8().constData()) != nullptr) {
-        return QStringLiteral("That user name is taken.");
+        return tr("That user name is taken.");
     }
     return {};
 }

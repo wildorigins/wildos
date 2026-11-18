@@ -265,7 +265,7 @@ UI.Dialog {
                 placeholderTextColor: UI.Style.inkPlaceholder
                 padding: 10
                 background: Rectangle {
-                    radius: 6
+                    radius: UI.Style.radiusXs
                     color: UI.Style.surfaceSunken
                     border.width: 1
                     border.color: notesField.activeFocus ? UI.Style.accent : UI.Style.borderField

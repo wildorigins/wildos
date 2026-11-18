@@ -1,5 +1,6 @@
 #include "camelsession.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QStandardPaths>
 
@@ -20,7 +21,7 @@ gchar *getPassword(CamelSession *, CamelService *service, const gchar *, const g
 {
     const QString password = Session::instance().password(Session::accountOf(service));
     if (password.isEmpty()) {
-        g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED, "No password saved for this account");
+        g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED, QCoreApplication::translate("MailSession", "No password saved for this account").toUtf8().constData());
         return nullptr;
     }
     return g_strdup(password.toUtf8().constData());
@@ -38,13 +39,13 @@ gboolean authenticateSync(CamelSession *, CamelService *service, const gchar *me
     }
     const QString password = Session::instance().password(account);
     if (password.isEmpty()) {
-        g_set_error_literal(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_UNAVAILABLE, "Waiting for the password store");
+        g_set_error_literal(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_UNAVAILABLE, QCoreApplication::translate("MailSession", "Waiting for the password store").toUtf8().constData());
         return FALSE;
     }
     camel_service_set_password(service, password.toUtf8().constData());
     const CamelAuthenticationResult result = camel_service_authenticate_sync(service, mechanism, cancellable, error);
     if (result == CAMEL_AUTHENTICATION_REJECTED && error && !*error) {
-        g_set_error_literal(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE, "The password was not accepted");
+        g_set_error_literal(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE, QCoreApplication::translate("MailSession", "The password was not accepted").toUtf8().constData());
     }
     return result == CAMEL_AUTHENTICATION_ACCEPTED;
 }
@@ -64,7 +65,7 @@ gboolean getOAuth2AccessToken(CamelSession *, CamelService *service, gchar **out
     int expires = 0;
     if (!Session::instance().accessToken(Session::accountOf(service), &token, &expires, &message)) {
         g_set_error_literal(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE,
-                            message.isEmpty() ? "Google sign-in has expired" : message.toUtf8().constData());
+                            (message.isEmpty() ? QCoreApplication::translate("MailSession", "Google sign-in has expired") : message).toUtf8().constData());
         return FALSE;
     }
     if (outToken) {
@@ -161,7 +162,7 @@ bool Session::accessToken(const QString &accountId, QString *token, int *expires
         refresh = m_passwords.value(accountId);
     }
     if (refresh.isEmpty()) {
-        *error = QStringLiteral("Waiting for the password store");
+        *error = QCoreApplication::translate("MailSession", "Waiting for the password store");
         return false;
     }
     if (!GoogleSignIn::accessToken(refresh, token, expiresIn, error)) {

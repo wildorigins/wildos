@@ -11,19 +11,43 @@ UI.AppWindow {
 
     property var startUrls: []
     property string formatUdi: ""
+    // The size to come back to from maximised, which is also the size the
+    // next window opens at.
+    property size restored: Settings.windowSize()
 
+    // Files keeps its own size and maximised state in its settings.
+    rememberSize: false
     width: Settings.windowSize().width
     height: Settings.windowSize().height
-    visible: true
+    // A window closed maximised opens maximised, as on Windows.
+    visibility: Settings.windowMaximised() ? Window.Maximized : Window.Windowed
     title: view.title
 
     onActiveChanged: if (active) FileOps.activeWindow = window
+    onWidthChanged: sizeSettled.restart()
+    onHeightChanged: sizeSettled.restart()
     onClosing: {
-        if (!maximised) {
-            Settings.setWindowSize(Qt.size(width, height));
+        if (visibility === Window.Windowed) {
+            restored = Qt.size(width, height);
         }
+        Settings.setWindowSize(restored);
+        Settings.setWindowMaximised(maximised);
+        view.saveTabs();
     }
     Component.onCompleted: FileOps.activeWindow = window
+
+    // The size changes a moment before or after the window reports that it
+    // is maximised, depending on the compositor, so the size is only taken
+    // as the one to come back to once both have settled.
+    Timer {
+        id: sizeSettled
+        interval: 250
+        onTriggered: {
+            if (window.visibility === Window.Windowed) {
+                window.restored = Qt.size(window.width, window.height);
+            }
+        }
+    }
 
     FilesView {
         id: view

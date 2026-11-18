@@ -99,9 +99,9 @@ Readers lookAtReaders()
             QFile removable(usb.filePath(entry + QStringLiteral("/removable")));
             const QByteArray how = removable.open(QIODevice::ReadOnly) ? removable.readAll().trimmed() : QByteArray();
             if (how == "removable") {
-                readers.place = QStringLiteral("plugged in over USB");
+                readers.place = QCoreApplication::translate("Fingerprint", "plugged in over USB");
             } else if (how == "fixed" || portable) {
-                readers.place = QStringLiteral("built into this PC");
+                readers.place = QCoreApplication::translate("Fingerprint", "built into this PC");
             }
         }
     }
@@ -384,17 +384,17 @@ void Fingerprint::setBusy(const QString &busy)
 QString Fingerprint::interrupted(const QString &what, const QString &errorName) const
 {
     if (errorName == errorPrefix + QLatin1String("AlreadyInUse")) {
-        return QStringLiteral("Something else is using the fingerprint reader. Try again in a moment.");
+        return tr("Something else is using the fingerprint reader. Try again in a moment.");
     }
     if (errorName == errorPrefix + QLatin1String("PermissionDenied") || errorName == QLatin1String("org.freedesktop.DBus.Error.AccessDenied")) {
-        return what == QLatin1String("remove") ? QStringLiteral("Wild OS needs your password to remove a fingerprint.")
-                                               : QStringLiteral("Wild OS needs your password to add a fingerprint.");
+        return what == QLatin1String("remove") ? tr("Wild OS needs your password to remove a fingerprint.")
+                                               : tr("Wild OS needs your password to add a fingerprint.");
     }
     if (errorName == errorPrefix + QLatin1String("NoSuchDevice") || errorName == errorPrefix + QLatin1String("Internal")) {
-        return QStringLiteral("The fingerprint reader stopped answering. Try again, or restart the PC if it keeps happening.");
+        return tr("The fingerprint reader stopped answering. Try again, or restart the PC if it keeps happening.");
     }
-    return what == QLatin1String("remove") ? QStringLiteral("The fingerprint couldn't be removed. Try again.")
-                                           : QStringLiteral("The fingerprint reader couldn't be started. Try again.");
+    return what == QLatin1String("remove") ? tr("The fingerprint couldn't be removed. Try again.")
+                                           : tr("The fingerprint reader couldn't be started. Try again.");
 }
 
 void Fingerprint::dropAgent()
@@ -456,7 +456,7 @@ void Fingerprint::begin(const QString &password)
         return;
     }
     if (nextFinger().isEmpty()) {
-        Q_EMIT failed(QStringLiteral("setup"), QStringLiteral("Every finger is set up already."));
+        Q_EMIT failed(QStringLiteral("setup"), tr("Every finger is set up already."));
         return;
     }
     ++m_attempt;
@@ -475,8 +475,8 @@ void Fingerprint::begin(const QString &password)
         if (reply.isError()) {
             setBusy(QString());
             Q_EMIT failed(QStringLiteral("password"), reply.error().name().endsWith(QLatin1String("WrongPassword"))
-                                                          ? QStringLiteral("That password isn't right.")
-                                                          : QStringLiteral("Wild OS could not check your password. Try again."));
+                                                          ? tr("That password isn't right.")
+                                                          : tr("Wild OS could not check your password. Try again."));
             return;
         }
         dropAgent();
@@ -501,7 +501,7 @@ void Fingerprint::startEnroll()
     if (m_finger.isEmpty()) {
         dropAgent();
         setBusy(QString());
-        Q_EMIT failed(QStringLiteral("enroll"), QStringLiteral("Every finger is set up already."));
+        Q_EMIT failed(QStringLiteral("enroll"), tr("Every finger is set up already."));
         return;
     }
     setBusy(QStringLiteral("auth"));
@@ -528,7 +528,7 @@ void Fingerprint::startEnroll()
             release();
             setBusy(QString());
             if (refused) {
-                Q_EMIT failed(QStringLiteral("password"), QStringLiteral("That password isn't right."));
+                Q_EMIT failed(QStringLiteral("password"), tr("That password isn't right."));
             } else {
                 Q_EMIT failed(QStringLiteral("setup"), interrupted(QStringLiteral("enroll"), reply.error().name()));
             }
@@ -554,11 +554,11 @@ void Fingerprint::onEnrollStatus(const QString &result, bool done)
         m_passed = qMin(m_passed + 1, qMax(m_stages - 1, 0));
         m_retry.clear();
     } else if (result == QLatin1String("enroll-retry-scan") || result == QLatin1String("enroll-remove-and-retry")) {
-        m_retry = QStringLiteral("Clean the sensor and try again");
+        m_retry = tr("Clean the sensor and try again");
     } else if (result == QLatin1String("enroll-swipe-too-short")) {
-        m_retry = QStringLiteral("Too quick, hold it a moment longer");
+        m_retry = tr("Too quick, hold it a moment longer");
     } else if (result == QLatin1String("enroll-finger-not-centered")) {
-        m_retry = QStringLiteral("Only part of your finger touched");
+        m_retry = tr("Only part of your finger touched");
     }
     if (!done) {
         Q_EMIT enrollChanged();
@@ -570,13 +570,13 @@ void Fingerprint::onEnrollStatus(const QString &result, bool done)
         m_passed = m_stages;
         m_retry.clear();
     } else if (result == QLatin1String("enroll-duplicate")) {
-        failure = QStringLiteral("That finger is already set up on this PC. Try a different one.");
+        failure = tr("That finger is already set up on this PC. Try a different one.");
     } else if (result == QLatin1String("enroll-data-full")) {
-        failure = QStringLiteral("The reader has no room for another finger. Remove one first.");
+        failure = tr("The reader has no room for another finger. Remove one first.");
     } else if (result == QLatin1String("enroll-disconnected")) {
-        failure = QStringLiteral("The reader was disconnected. Plug it back in and try again.");
+        failure = tr("The reader was disconnected. Plug it back in and try again.");
     } else {
-        failure = QStringLiteral("The reader couldn't save that finger. Try again.");
+        failure = tr("The reader couldn't save that finger. Try again.");
     }
     Q_EMIT enrollChanged();
     const bool gone = result == QLatin1String("enroll-disconnected");
@@ -689,8 +689,8 @@ void Fingerprint::setUse(const QString &what, bool on)
         readUse();
         Q_EMIT useChanged();
         if (status != QProcess::NormalExit || code != 0) {
-            Q_EMIT failed(QStringLiteral("use"), code == 126 || code == 127 ? QStringLiteral("An administrator's password is needed to change this.")
-                                                  : error.isEmpty()            ? QStringLiteral("Wild OS could not make the change.")
+            Q_EMIT failed(QStringLiteral("use"), code == 126 || code == 127 ? tr("An administrator's password is needed to change this.")
+                                                  : error.isEmpty()            ? tr("Wild OS could not make the change.")
                                                                                : error);
         }
     });
@@ -713,9 +713,9 @@ QString Fingerprint::print() const
 // copied over from the Windows that set it.
 QString Fingerprint::windowsKeyMessage() const
 {
-    return QStringLiteral("This reader still holds a key from Windows Hello, so Wild OS can't use it. Wild OS never changes that key, "
-                          "because a mistake would break the reader for good. If Windows is still on this PC, its key can be brought across: "
-                          "see help.wildos.io/security/fingerprint-dell-xps/. Until then, sign in with your password.");
+    return tr("This reader still holds a key from Windows Hello, so Wild OS can't use it. Wild OS never changes that key, "
+               "because a mistake would break the reader for good. If Windows is still on this PC, its key can be brought across: "
+               "see help.wildos.io/security/fingerprint-dell-xps/. Until then, sign in with your password.");
 }
 
 #include "fingerprint.moc"

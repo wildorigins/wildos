@@ -127,7 +127,7 @@ T.AbstractButton {
                 radius: 14
                 iconName: "more"
                 iconSize: 15
-                tip: "More options"
+                tip: qsTr("More options")
                 onClicked: {
                     const window = row.Window.window;
                     if (window && window.showAppMenu) {

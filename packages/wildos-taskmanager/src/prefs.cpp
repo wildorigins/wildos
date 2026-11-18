@@ -4,6 +4,7 @@
 #include <KConfigGroup>
 #include <KShell>
 
+#include <QCoreApplication>
 #include <QProcess>
 #include <QStandardPaths>
 
@@ -24,6 +25,32 @@ void Prefs::save()
     group.writeEntry("StartPage", m_startPage);
     group.writeEntry("UpdateSpeed", m_updateSpeed);
     group.writeEntry("ShowSystemProcesses", m_showSystem);
+    config.sync();
+}
+
+QString Prefs::sortColumn(const QString &table, const QString &fallback) const
+{
+    KConfig config(QStringLiteral("wildos-taskmanagerrc"));
+    const KConfigGroup group = config.group(QStringLiteral("Sort"));
+    return group.readEntry(table + QStringLiteral("Column"), fallback);
+}
+
+bool Prefs::sortDescending(const QString &table) const
+{
+    KConfig config(QStringLiteral("wildos-taskmanagerrc"));
+    const KConfigGroup group = config.group(QStringLiteral("Sort"));
+    return group.readEntry(table + QStringLiteral("Descending"), false);
+}
+
+void Prefs::setSort(const QString &table, const QString &column, bool descending)
+{
+    KConfig config(QStringLiteral("wildos-taskmanagerrc"));
+    KConfigGroup group = config.group(QStringLiteral("Sort"));
+    if (group.readEntry(table + QStringLiteral("Column"), QString()) == column && group.readEntry(table + QStringLiteral("Descending"), false) == descending) {
+        return;
+    }
+    group.writeEntry(table + QStringLiteral("Column"), column);
+    group.writeEntry(table + QStringLiteral("Descending"), descending);
     config.sync();
 }
 
@@ -73,10 +100,10 @@ QString Prefs::runTask(const QString &command)
     KShell::Errors error = KShell::NoError;
     const QStringList args = KShell::splitArgs(command.trimmed(), KShell::TildeExpand, &error);
     if (error != KShell::NoError || args.isEmpty()) {
-        return QStringLiteral("Check the name and try again.");
+        return QCoreApplication::translate("Prefs", "Check the name and try again.");
     }
     if (QStandardPaths::findExecutable(args.constFirst()).isEmpty() && !args.constFirst().contains(QLatin1Char('/'))) {
-        return QStringLiteral("Wild OS cannot find “%1”. Check the name and try again.").arg(args.constFirst());
+        return QCoreApplication::translate("Prefs", "Wild OS cannot find “%1”. Check the name and try again.").arg(args.constFirst());
     }
     // kstart gives it an app scope of its own, as Start does, so it shows
     // under Apps and can be ended as one.
@@ -85,7 +112,7 @@ QString Prefs::runTask(const QString &command)
             return {};
         }
     }
-    return QProcess::startDetached(args.constFirst(), args.mid(1)) ? QString() : QStringLiteral("That could not be started.");
+    return QProcess::startDetached(args.constFirst(), args.mid(1)) ? QString() : QCoreApplication::translate("Prefs", "That could not be started.");
 }
 
 void Prefs::openSettings(const QString &page)

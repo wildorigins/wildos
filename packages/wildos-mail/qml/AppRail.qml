@@ -37,10 +37,34 @@ Rectangle {
                 readonly property bool active: rail.current === modelData.id
                 width: 52
                 height: 52
-                radius: 8
+                radius: UI.Style.radiusSm
                 color: active ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
-                Accessible.role: Accessible.Button
+                Accessible.role: Accessible.PageTab
                 Accessible.name: modelData.name
+                Accessible.selected: active
+                Behavior on color {
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
+                activeFocusOnTab: true
+                Keys.onPressed: function (event) {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                        if (!item.active) {
+                            rail.picked(modelData.id);
+                        }
+                    } else if (modelData.id === "calendar" && (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier)))) {
+                        railMenu.app = modelData.id;
+                        railMenu.popup(item, item.width + 4, 0);
+                    } else {
+                        return;
+                    }
+                    event.accepted = true;
+                }
+
+                UI.FocusRing {
+                    visible: item.activeFocus
+                    anchors.margins: 0
+                    targetRadius: item.radius - 4
+                }
 
                 Rectangle {
                     visible: item.active

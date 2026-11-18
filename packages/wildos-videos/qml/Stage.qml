@@ -37,6 +37,8 @@ Item {
     signal settingsMenuRequested(Item button)
     signal moveRequested()
     signal panelRequested()
+    signal menuRequested(real x, real y)
+    signal volumeStepRequested(int steps)
 
     function wake() {
         pointerRecently = true;
@@ -139,13 +141,14 @@ Item {
         id: surface
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: stage.chromeShown ? Qt.ArrowCursor : Qt.BlankCursor
         property point origin
         property bool moved: false
+        property real turned: 0
         onPositionChanged: event => {
             stage.wake();
-            if (pressed && stage.pip && !moved && Math.abs(event.x - origin.x) + Math.abs(event.y - origin.y) > 4) {
+            if (pressedButtons === Qt.LeftButton && stage.pip && !moved && Math.abs(event.x - origin.x) + Math.abs(event.y - origin.y) > 4) {
                 moved = true;
                 stage.moveRequested();
             }
@@ -154,15 +157,32 @@ Item {
             origin = Qt.point(event.x, event.y);
             moved = false;
         }
-        onClicked: {
-            if (!moved) {
+        onClicked: event => {
+            if (event.button === Qt.RightButton) {
+                if (!stage.pip) {
+                    stage.menuRequested(event.x, event.y);
+                }
+            } else if (!moved) {
                 clickTimer.restart();
             }
         }
-        onDoubleClicked: {
+        onDoubleClicked: event => {
+            if (event.button !== Qt.LeftButton) {
+                return;
+            }
             clickTimer.stop();
             if (!stage.pip) {
                 stage.fullscreenRequested();
+            }
+        }
+        // A touchpad sends many small turns; a step is a full notch.
+        onWheel: event => {
+            turned += event.angleDelta.y;
+            const steps = Math.trunc(turned / 120);
+            if (steps !== 0) {
+                turned -= steps * 120;
+                stage.wake();
+                stage.volumeStepRequested(steps);
             }
         }
 

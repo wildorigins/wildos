@@ -1,3 +1,156 @@
+wildos-settings (0.1.74) trixie; urgency=medium
+
+  * Themes says keyboard and mouse lighting follows the underglow unless
+    Cooler sets an effect.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 12:50:00 +0000
+
+wildos-settings (0.1.73) trixie; urgency=medium
+
+  * System > Start-up disk, on a PC with the start-up manager: see every
+    system this PC can start, choose which one starts by default and
+    restart straight into Windows or another system. Turn the start-up
+    manager on or off, show it only while Space is held or at every start,
+    set how long it waits, and ask for your password before another system
+    starts.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 14:00:00 +0000
+
+wildos-settings (0.1.72) trixie; urgency=medium
+
+  * After NVIDIA's driver is installed, Store apps such as Steam get the
+    matching graphics runtime, so they start after the restart.
+  * NVIDIA's own text console is switched off outright, which newer
+    drivers no longer do by themselves.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 09:30:00 +0000
+
+wildos-settings (0.1.71) trixie; urgency=medium
+
+  * Keyboard shortcuts, under Bluetooth and devices > Keyboard: see Wild
+    OS's shortcuts, change their keys, give one a second set or take them
+    away, and add your own to open an app or run a command.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 13:00:00 +0000
+
+wildos-settings (0.1.70) trixie; urgency=medium
+
+  * NVIDIA's driver from Settings now starts to a desktop on real hardware.
+    The display part of the driver is loaded before the sign-in screen, and
+    the desktop no longer hangs on a black screen while it starts drawing.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 10:05:00 +0000
+
+wildos-settings (0.1.69) trixie; urgency=medium
+
+  * Installing NVIDIA's driver from Settings installs every part the desktop
+    needs. Before, the parts it draws with were left out and the PC started
+    to a black screen.
+  * The first start-up with NVIDIA's driver is a trial. If the desktop does
+    not appear, Wild OS puts the open driver back and restarts by itself,
+    and keeps a record of what went wrong.
+  * NVIDIA's driver no longer takes over the text console, which crashed
+    the kernel on some start-ups, and its device files are made at start-up.
+  * The driver is checked before a restart is offered, and a failed install
+    is undone instead of being left half done.
+  * Restart now on the Graphics driver page always restarts, and the page
+    says apps may not open until it has. The progress and Secure Boot text
+    is no longer cut off at the edges.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 23:10:00 +0000
+
+wildos-settings (0.1.68) trixie; urgency=medium
+
+  * Changing your password and adding an account take a password of any
+    length. A short one is marked as weak and the choice is yours.
+  * A PIN also signs in on the sign-in screen, and saving one keeps the key
+    that opens saved passwords after a PIN sign-in.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 15:00:00 +0000
+
+wildos-settings (0.1.67) trixie; urgency=medium
+
+  * The firewall goes up faster at start-up: its kernel parts load early
+    with the other modules, and it no longer starts programs it does not
+    need before the network exists.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 12:00:00 +0000
+
+wildos-settings (0.1.66) trixie; urgency=medium
+
+  * Date and time: "Set the time from" chooses between Tor, which stays
+    the default, and a time server, which sets the clock within seconds
+    and can be named.
+  * Sign-in options: a PIN of 4 to 12 digits can unlock the lock screen.
+  * Night light's schedule is read and written the way the quick settings
+    tile and the desktop spell it.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 10:30:00 +0000
+
+wildos-settings (0.1.65) trixie; urgency=medium
+
+  * Opens faster: KDE's module pages and the network and Bluetooth
+    status load only when needed, not before the first frame.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 22:40:00 +0000
+
+wildos-settings (0.1.64) trixie; urgency=medium
+
+  * The shutdown sound has its own switch in Settings > Sound, off by
+    default: shut down and restart no longer wait about 3 seconds for it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 22:00:00 +0000
+
+wildos-settings (0.1.63) trixie; urgency=medium
+
+  * With more than one screen, Identify on the Display page shows each
+    number on its own screen instead of all on one.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 17:10:28 +0000
+
+wildos-settings (0.1.62) trixie; urgency=medium
+
+  * The accessibility shortcuts service uses less memory: it never opens a
+    window, so it no longer connects to the screen.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 16:19:26 +0000
+
+wildos-settings (0.1.61) trixie; urgency=medium
+
+  * Reset to defaults for hot corners turns every corner off.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 15:23:14 +0000
+
+wildos-settings (0.1.60) trixie; urgency=medium
+
+  * Steam and 32-bit apps also lets a game watch the programs it starts
+    itself, which Sober needs to run Roblox. It applies from the next
+    restart.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 10:30:00 +0000
+
+wildos-settings (0.1.59) trixie; urgency=medium
+
+  * Settings > Personalisation > Taskbar has Widgets on the taskbar, off by
+    default, which unlocks the taskbar so widgets like Network Speed can be
+    added to it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 09:30:00 +0000
+
+wildos-settings (0.1.58) trixie; urgency=medium
+
+  * Settings > Personalisation has Widgets on the desktop, off by default,
+    to allow Plasma widgets on the desktop.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 08:30:00 +0000
+
+wildos-settings (0.1.57) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-settings (0.1.56) trixie; urgency=medium
 
   * Settings > Sound: one switch for the start-up and shutdown sounds.

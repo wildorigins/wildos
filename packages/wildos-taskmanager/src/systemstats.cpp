@@ -6,6 +6,7 @@
 #include <KConfigGroup>
 #include <sensors/Sensor.h>
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusMessage>
@@ -52,30 +53,30 @@ QString bytes(double value)
     }
     const double gb = value / (1024.0 * 1024 * 1024);
     if (gb >= 1) {
-        return number(gb, gb >= 100 ? 0 : 1) + QStringLiteral(" GB");
+        return QCoreApplication::translate("SystemStats", "%1 GB").arg(number(gb, gb >= 100 ? 0 : 1));
     }
     const double mb = value / (1024.0 * 1024);
-    return number(mb, 0) + QStringLiteral(" MB");
+    return QCoreApplication::translate("SystemStats", "%1 MB").arg(number(mb, 0));
 }
 
 QString byteRate(double value)
 {
     if (value >= 1024 * 1024) {
-        return number(value / (1024 * 1024), 1) + QStringLiteral(" MB/s");
+        return QCoreApplication::translate("SystemStats", "%1 MB/s").arg(number(value / (1024 * 1024), 1));
     }
-    return number(value / 1024, 0) + QStringLiteral(" KB/s");
+    return QCoreApplication::translate("SystemStats", "%1 KB/s").arg(number(value / 1024, 0));
 }
 
 QString bitRate(double bytesPerSecond)
 {
     const double bits = bytesPerSecond * 8;
     if (bits >= 1000 * 1000 * 1000) {
-        return number(bits / 1e9, 1) + QStringLiteral(" Gbps");
+        return QCoreApplication::translate("SystemStats", "%1 Gbps").arg(number(bits / 1e9, 1));
     }
     if (bits >= 1000 * 1000) {
-        return number(bits / 1e6, 1) + QStringLiteral(" Mbps");
+        return QCoreApplication::translate("SystemStats", "%1 Mbps").arg(number(bits / 1e6, 1));
     }
-    return number(bits / 1e3, 0) + QStringLiteral(" Kbps");
+    return QCoreApplication::translate("SystemStats", "%1 Kbps").arg(number(bits / 1e3, 0));
 }
 
 QString percent(double value)
@@ -259,9 +260,9 @@ void SystemStats::readHardware()
     // carries it ("@ 2.10GHz").
     const qint64 baseKhz = readLine(QStringLiteral("/sys/devices/system/cpu/cpu0/cpufreq/base_frequency")).toLongLong();
     if (baseKhz > 0) {
-        m_baseSpeed = number(baseKhz / 1e6, 2) + QStringLiteral(" GHz");
+        m_baseSpeed = QCoreApplication::translate("SystemStats", "%1 GHz").arg(number(baseKhz / 1e6, 2));
     } else if (const auto match = QRegularExpression(QStringLiteral("@\\s*([0-9.]+)\\s*GHz")).match(modelLine); match.hasMatch()) {
-        m_baseSpeed = number(match.captured(1).toDouble(), 2) + QStringLiteral(" GHz");
+        m_baseSpeed = QCoreApplication::translate("SystemStats", "%1 GHz").arg(number(match.captured(1).toDouble(), 2));
     }
 
     const int logical = m_cores.size();
@@ -278,15 +279,15 @@ void SystemStats::readHardware()
         for (int cpu : pCpus) {
             pCores.insert(readLine(QStringLiteral("/sys/devices/system/cpu/cpu%1/topology/core_cpus_list").arg(cpu)));
         }
-        m_coreText = QStringLiteral("%1 (%2 performance, %3 efficient)").arg(pCores.size() + eCpus.size()).arg(pCores.size()).arg(eCpus.size());
+        m_coreText = QCoreApplication::translate("SystemStats", "%1 (%2 performance, %3 efficient)").arg(pCores.size() + eCpus.size()).arg(pCores.size()).arg(eCpus.size());
     } else {
         m_coreText = QString::number(cores.size());
     }
 
     if (flags.contains(QLatin1String(" vmx")) || flags.contains(QLatin1String(" svm"))) {
-        m_virtualisation = QFileInfo::exists(QStringLiteral("/dev/kvm")) ? QStringLiteral("On") : QStringLiteral("Off");
+        m_virtualisation = QFileInfo::exists(QStringLiteral("/dev/kvm")) ? QCoreApplication::translate("SystemStats", "On") : QCoreApplication::translate("SystemStats", "Off");
     } else {
-        m_virtualisation = QStringLiteral("Unknown");
+        m_virtualisation = QCoreApplication::translate("SystemStats", "Unknown");
     }
 
     // Each cache once, however many processors share it.
@@ -314,7 +315,7 @@ void SystemStats::readHardware()
     QStringList cache;
     for (int level : {2, 3}) {
         if (perLevel.value(level) > 0) {
-            cache << QStringLiteral("L%1 %2 MB").arg(level).arg(number(perLevel.value(level) / 1024.0, 1));
+            cache << QCoreApplication::translate("SystemStats", "L%1 %2 MB").arg(level).arg(number(perLevel.value(level) / 1024.0, 1));
         }
     }
     m_cache = cache.join(QStringLiteral(", "));
@@ -402,11 +403,11 @@ void SystemStats::findDisks()
         system.model = udevProperties(system.parent).value(QStringLiteral("ID_MODEL")).replace(QLatin1Char('_'), QLatin1Char(' '));
     }
     system.id = QStringLiteral("disk-system");
-    system.title = QStringLiteral("Disk (Wild OS)");
+    system.title = QCoreApplication::translate("SystemStats", "Disk (Wild OS)");
     m_disks << system;
     if (!windows.device.isEmpty()) {
         windows.id = QStringLiteral("disk-windows");
-        windows.title = QStringLiteral("Disk (Windows C:)");
+        windows.title = QCoreApplication::translate("SystemStats", "Disk (Windows C:)");
         if (windows.model.isEmpty()) {
             windows.model = udevProperties(windows.parent).value(QStringLiteral("ID_MODEL")).replace(QLatin1Char('_'), QLatin1Char(' '));
         }
@@ -548,10 +549,10 @@ void SystemStats::sampleMemory()
     push(m_memHistory, m_memTotal > 0 ? 100.0 * m_memUsed / m_memTotal : 0);
     if (m_swapKind.isEmpty()) {
         const QString swaps = QString::fromUtf8(readFile(QStringLiteral("/proc/swaps")));
-        m_swapKind = swaps.contains(QLatin1String("zram")) ? QStringLiteral("Compressed in memory")
-            : swaps.contains(QLatin1String("partition"))     ? QStringLiteral("Swap partition")
-            : swaps.contains(QLatin1String("file"))          ? QStringLiteral("Swap file")
-                                                             : QStringLiteral("None");
+        m_swapKind = swaps.contains(QLatin1String("zram")) ? QCoreApplication::translate("SystemStats", "Compressed in memory")
+            : swaps.contains(QLatin1String("partition"))     ? QCoreApplication::translate("SystemStats", "Swap partition")
+            : swaps.contains(QLatin1String("file"))          ? QCoreApplication::translate("SystemStats", "Swap file")
+                                                             : QCoreApplication::translate("SystemStats", "None");
     }
 }
 
@@ -748,16 +749,16 @@ QVariantList SystemStats::resources() const
     const Processes *p = Processes::instance();
     out << QVariantMap{
         {QStringLiteral("id"), QStringLiteral("cpu")},
-        {QStringLiteral("title"), QStringLiteral("CPU")},
-        {QStringLiteral("subtitle"), percent(m_cpu) + QStringLiteral("  ") + number(m_speedMhz / 1000, 1) + QStringLiteral(" GHz")},
+        {QStringLiteral("title"), QCoreApplication::translate("SystemStats", "CPU")},
+        {QStringLiteral("subtitle"), percent(m_cpu) + QStringLiteral("  ") + QCoreApplication::translate("SystemStats", "%1 GHz").arg(number(m_speedMhz / 1000, 1))},
         {QStringLiteral("colour"), QStringLiteral("cpu")},
         {QStringLiteral("history"), toList(m_cpuHistory)},
         {QStringLiteral("max"), 100},
     };
     out << QVariantMap{
         {QStringLiteral("id"), QStringLiteral("memory")},
-        {QStringLiteral("title"), QStringLiteral("Memory")},
-        {QStringLiteral("subtitle"), QStringLiteral("%1/%2 GB (%3)")
+        {QStringLiteral("title"), QCoreApplication::translate("SystemStats", "Memory")},
+        {QStringLiteral("subtitle"), QCoreApplication::translate("SystemStats", "%1/%2 GB (%3)")
                                          .arg(number(m_memUsed / 1073741824.0, 1), number(m_memTotal / 1073741824.0, 0), percent(memoryPercent()))},
         {QStringLiteral("colour"), QStringLiteral("memory")},
         {QStringLiteral("history"), toList(m_memHistory)},
@@ -800,7 +801,7 @@ QVariantList SystemStats::resources() const
     if (m_hasGpu) {
         out << QVariantMap{
             {QStringLiteral("id"), QStringLiteral("gpu")},
-            {QStringLiteral("title"), QStringLiteral("Graphics")},
+            {QStringLiteral("title"), QCoreApplication::translate("SystemStats", "Graphics")},
             {QStringLiteral("subtitle"), (m_gpuName.isEmpty() ? QString() : m_gpuName + QStringLiteral("  ")) + percent(m_gpu)},
             {QStringLiteral("colour"), QStringLiteral("gpu")},
             {QStringLiteral("history"), toList(m_gpuHistory)},
@@ -810,8 +811,8 @@ QVariantList SystemStats::resources() const
     if (m_winInstalled > 0 || !p->winModeStatus().vm.isEmpty()) {
         out << QVariantMap{
             {QStringLiteral("id"), QStringLiteral("winmode")},
-            {QStringLiteral("title"), QStringLiteral("Windows mode")},
-            {QStringLiteral("subtitle"), bytes(p->winModeMemory()) + QStringLiteral("  ") + percent(p->winModeCpu()) + QStringLiteral(" CPU")},
+            {QStringLiteral("title"), QCoreApplication::translate("SystemStats", "Windows mode")},
+            {QStringLiteral("subtitle"), bytes(p->winModeMemory()) + QStringLiteral("  ") + QCoreApplication::translate("SystemStats", "%1 CPU").arg(percent(p->winModeCpu()))},
             {QStringLiteral("colour"), QStringLiteral("winmode")},
             {QStringLiteral("history"), toList(m_winHistory)},
             {QStringLiteral("max"), 100},
@@ -835,61 +836,61 @@ QVariantMap SystemStats::details(const QString &id) const
     const Processes *p = Processes::instance();
     QVariantMap out{{QStringLiteral("id"), id}};
     if (id == QLatin1String("cpu")) {
-        out[QStringLiteral("title")] = QStringLiteral("CPU");
+        out[QStringLiteral("title")] = QCoreApplication::translate("SystemStats", "CPU");
         out[QStringLiteral("subtitle")] = m_cpuModel;
-        out[QStringLiteral("caption")] = QStringLiteral("% utilisation over 60 seconds");
+        out[QStringLiteral("caption")] = QCoreApplication::translate("SystemStats", "% utilisation over 60 seconds");
         out[QStringLiteral("scale")] = QStringLiteral("100%");
         out[QStringLiteral("history")] = toList(m_cpuHistory);
         out[QStringLiteral("max")] = 100;
         out[QStringLiteral("colour")] = QStringLiteral("cpu");
         out[QStringLiteral("stats")] = QVariantList{
-            pair(QStringLiteral("Utilisation"), percent(m_cpu)),
-            pair(QStringLiteral("Speed"), m_speedMhz > 0 ? number(m_speedMhz / 1000, 1) + QStringLiteral(" GHz") : QStringLiteral("Unknown")),
-            pair(QStringLiteral("Temperature"), m_temperature > 0 ? number(m_temperature, 0) + QStringLiteral("°C") : QStringLiteral("Unknown")),
-            pair(QStringLiteral("Processes"), QLocale::system().toString(p->processCount())),
-            pair(QStringLiteral("Threads"), QLocale::system().toString(p->threadCount())),
-            pair(QStringLiteral("Up time"), upTime()),
+            pair(QCoreApplication::translate("SystemStats", "Utilisation"), percent(m_cpu)),
+            pair(QCoreApplication::translate("SystemStats", "Speed"), m_speedMhz > 0 ? QCoreApplication::translate("SystemStats", "%1 GHz").arg(number(m_speedMhz / 1000, 1)) : QCoreApplication::translate("SystemStats", "Unknown")),
+            pair(QCoreApplication::translate("SystemStats", "Temperature"), m_temperature > 0 ? QCoreApplication::translate("SystemStats", "%1°C").arg(number(m_temperature, 0)) : QCoreApplication::translate("SystemStats", "Unknown")),
+            pair(QCoreApplication::translate("SystemStats", "Processes"), QLocale::system().toString(p->processCount())),
+            pair(QCoreApplication::translate("SystemStats", "Threads"), QLocale::system().toString(p->threadCount())),
+            pair(QCoreApplication::translate("SystemStats", "Up time"), upTime()),
         };
         QVariantList specs;
         if (!m_baseSpeed.isEmpty()) {
-            specs << pair(QStringLiteral("Base speed"), m_baseSpeed);
+            specs << pair(QCoreApplication::translate("SystemStats", "Base speed"), m_baseSpeed);
         }
-        specs << pair(QStringLiteral("Cores"), m_coreText);
-        specs << pair(QStringLiteral("Logical processors"), QString::number(m_cores.size()));
-        specs << pair(QStringLiteral("Virtualisation"), m_virtualisation);
+        specs << pair(QCoreApplication::translate("SystemStats", "Cores"), m_coreText);
+        specs << pair(QCoreApplication::translate("SystemStats", "Logical processors"), QString::number(m_cores.size()));
+        specs << pair(QCoreApplication::translate("SystemStats", "Virtualisation"), m_virtualisation);
         if (!m_cache.isEmpty()) {
-            specs << pair(QStringLiteral("Cache"), m_cache);
+            specs << pair(QCoreApplication::translate("SystemStats", "Cache"), m_cache);
         }
         out[QStringLiteral("specs")] = specs;
-        out[QStringLiteral("topTitle")] = QStringLiteral("Using the most CPU");
+        out[QStringLiteral("topTitle")] = QCoreApplication::translate("SystemStats", "Using the most CPU");
         out[QStringLiteral("topMetric")] = QStringLiteral("cpu");
         out[QStringLiteral("topTotal")] = qMax(m_cpu, 1.0);
         return out;
     }
     if (id == QLatin1String("memory")) {
         const double totalGb = m_memTotal / 1073741824.0;
-        out[QStringLiteral("title")] = QStringLiteral("Memory");
-        out[QStringLiteral("subtitle")] = number(totalGb, 1) + QStringLiteral(" GB");
-        out[QStringLiteral("caption")] = QStringLiteral("Memory in use over 60 seconds");
-        out[QStringLiteral("scale")] = number(totalGb, 1) + QStringLiteral(" GB");
+        out[QStringLiteral("title")] = QCoreApplication::translate("SystemStats", "Memory");
+        out[QStringLiteral("subtitle")] = QCoreApplication::translate("SystemStats", "%1 GB").arg(number(totalGb, 1));
+        out[QStringLiteral("caption")] = QCoreApplication::translate("SystemStats", "Memory in use over 60 seconds");
+        out[QStringLiteral("scale")] = QCoreApplication::translate("SystemStats", "%1 GB").arg(number(totalGb, 1));
         out[QStringLiteral("history")] = toList(m_memHistory);
         out[QStringLiteral("max")] = 100;
         out[QStringLiteral("colour")] = QStringLiteral("memory");
         out[QStringLiteral("stats")] = QVariantList{
-            pair(QStringLiteral("In use"), bytes(m_memUsed)),
-            pair(QStringLiteral("Available"), bytes(m_memAvailable)),
-            pair(QStringLiteral("Cached"), bytes(m_memCached)),
-            pair(QStringLiteral("Free"), bytes(m_memFree)),
-            pair(QStringLiteral("Swap in use"), bytes(m_swapUsed)),
-            pair(QStringLiteral("Swap size"), bytes(m_swapTotal)),
+            pair(QCoreApplication::translate("SystemStats", "In use"), bytes(m_memUsed)),
+            pair(QCoreApplication::translate("SystemStats", "Available"), bytes(m_memAvailable)),
+            pair(QCoreApplication::translate("SystemStats", "Cached"), bytes(m_memCached)),
+            pair(QCoreApplication::translate("SystemStats", "Free"), bytes(m_memFree)),
+            pair(QCoreApplication::translate("SystemStats", "Swap in use"), bytes(m_swapUsed)),
+            pair(QCoreApplication::translate("SystemStats", "Swap size"), bytes(m_swapTotal)),
         };
         const double pressure = sensorValue(QStringLiteral("pressure/memory/some10Sec")).toDouble();
         out[QStringLiteral("specs")] = QVariantList{
-            pair(QStringLiteral("Usable"), bytes(m_memTotal)),
-            pair(QStringLiteral("Swap"), m_swapKind),
-            pair(QStringLiteral("Memory pressure"), pressure > 10 ? QStringLiteral("High") : pressure > 1 ? QStringLiteral("Some") : QStringLiteral("Low")),
+            pair(QCoreApplication::translate("SystemStats", "Usable"), bytes(m_memTotal)),
+            pair(QCoreApplication::translate("SystemStats", "Swap"), m_swapKind),
+            pair(QCoreApplication::translate("SystemStats", "Memory pressure"), pressure > 10 ? QCoreApplication::translate("SystemStats", "High") : pressure > 1 ? QCoreApplication::translate("SystemStats", "Some") : QCoreApplication::translate("SystemStats", "Low")),
         };
-        out[QStringLiteral("topTitle")] = QStringLiteral("Using the most memory");
+        out[QStringLiteral("topTitle")] = QCoreApplication::translate("SystemStats", "Using the most memory");
         out[QStringLiteral("topMetric")] = QStringLiteral("memory");
         out[QStringLiteral("topTotal")] = double(qMax<qint64>(m_memUsed, 1));
         return out;
@@ -900,34 +901,34 @@ QVariantMap SystemStats::details(const QString &id) const
         }
         out[QStringLiteral("title")] = d.title;
         out[QStringLiteral("subtitle")] = d.model;
-        out[QStringLiteral("caption")] = QStringLiteral("Active time over 60 seconds");
+        out[QStringLiteral("caption")] = QCoreApplication::translate("SystemStats", "Active time over 60 seconds");
         out[QStringLiteral("scale")] = QStringLiteral("100%");
         out[QStringLiteral("history")] = toList(d.history);
         out[QStringLiteral("max")] = 100;
         out[QStringLiteral("colour")] = QStringLiteral("disk");
         QVariantList stats{
-            pair(QStringLiteral("Active time"), percent(d.active)),
-            pair(QStringLiteral("Read speed"), byteRate(d.readRate)),
-            pair(QStringLiteral("Write speed"), byteRate(d.writeRate)),
-            pair(QStringLiteral("Capacity"), bytes(d.size)),
+            pair(QCoreApplication::translate("SystemStats", "Active time"), percent(d.active)),
+            pair(QCoreApplication::translate("SystemStats", "Read speed"), byteRate(d.readRate)),
+            pair(QCoreApplication::translate("SystemStats", "Write speed"), byteRate(d.writeRate)),
+            pair(QCoreApplication::translate("SystemStats", "Capacity"), bytes(d.size)),
         };
         if (d.used >= 0) {
-            stats << pair(QStringLiteral("Used"), bytes(d.used)) << pair(QStringLiteral("Free"), bytes(d.free));
+            stats << pair(QCoreApplication::translate("SystemStats", "Used"), bytes(d.used)) << pair(QCoreApplication::translate("SystemStats", "Free"), bytes(d.free));
         } else {
-            stats << pair(QStringLiteral("Used"), QStringLiteral("Not open")) << pair(QStringLiteral("Free"), QStringLiteral("Not open"));
+            stats << pair(QCoreApplication::translate("SystemStats", "Used"), QCoreApplication::translate("SystemStats", "Not open")) << pair(QCoreApplication::translate("SystemStats", "Free"), QCoreApplication::translate("SystemStats", "Not open"));
         }
         out[QStringLiteral("stats")] = stats;
         const QString fs = d.fsType == QLatin1String("ntfs") ? QStringLiteral("NTFS") : d.fsType == QLatin1String("vfat") ? QStringLiteral("FAT32") : d.fsType;
         out[QStringLiteral("specs")] = QVariantList{
-            pair(QStringLiteral("Type"), d.ssd ? QStringLiteral("SSD") : QStringLiteral("Hard drive")),
-            pair(QStringLiteral("File system"), fs.isEmpty() ? QStringLiteral("Unknown") : fs),
-            pair(QStringLiteral("System disk"), d.system ? QStringLiteral("Yes") : QStringLiteral("No")),
-            pair(QStringLiteral("Open in Wild OS"), d.mount.isEmpty() ? QStringLiteral("No") : QStringLiteral("Yes")),
+            pair(QCoreApplication::translate("SystemStats", "Type"), d.ssd ? QStringLiteral("SSD") : QCoreApplication::translate("SystemStats", "Hard drive")),
+            pair(QCoreApplication::translate("SystemStats", "File system"), fs.isEmpty() ? QCoreApplication::translate("SystemStats", "Unknown") : fs),
+            pair(QCoreApplication::translate("SystemStats", "System disk"), d.system ? QCoreApplication::translate("SystemStats", "Yes") : QCoreApplication::translate("SystemStats", "No")),
+            pair(QCoreApplication::translate("SystemStats", "Open in Wild OS"), d.mount.isEmpty() ? QCoreApplication::translate("SystemStats", "No") : QCoreApplication::translate("SystemStats", "Yes")),
         };
         // Which program reads which disk is not known per disk, so the list
         // only goes with the disk Wild OS runs from.
         if (d.system) {
-            out[QStringLiteral("topTitle")] = QStringLiteral("Using the disk most");
+            out[QStringLiteral("topTitle")] = QCoreApplication::translate("SystemStats", "Using the disk most");
             out[QStringLiteral("topMetric")] = QStringLiteral("disk");
             out[QStringLiteral("topTotal")] = qMax(d.readRate + d.writeRate, 1.0);
         }
@@ -949,7 +950,7 @@ QVariantMap SystemStats::details(const QString &id) const
         const qint64 link = m_link;
         out[QStringLiteral("title")] = m_wireless ? QStringLiteral("Wi-Fi") : QStringLiteral("Ethernet");
         out[QStringLiteral("subtitle")] = ssid.isEmpty() ? m_iface : ssid;
-        out[QStringLiteral("caption")] = QStringLiteral("Throughput over 60 seconds");
+        out[QStringLiteral("caption")] = QCoreApplication::translate("SystemStats", "Throughput over 60 seconds");
         const double scale = qMax(m_netMax * 1.25, 125000.0);
         out[QStringLiteral("scale")] = bitRate(scale);
         out[QStringLiteral("history")] = toList(m_rxHistory);
@@ -957,29 +958,29 @@ QVariantMap SystemStats::details(const QString &id) const
         out[QStringLiteral("max")] = scale;
         out[QStringLiteral("colour")] = QStringLiteral("network");
         QVariantList stats{
-            pair(QStringLiteral("Send"), bitRate(m_tx)),
-            pair(QStringLiteral("Receive"), bitRate(m_rx)),
-            pair(QStringLiteral("Sent"), bytes(m_txBytes)),
-            pair(QStringLiteral("Received"), bytes(m_rxBytes)),
-            pair(QStringLiteral("Link speed"), link > 0 ? bitRate(link / 8.0) : QStringLiteral("Unknown")),
+            pair(QCoreApplication::translate("SystemStats", "Send"), bitRate(m_tx)),
+            pair(QCoreApplication::translate("SystemStats", "Receive"), bitRate(m_rx)),
+            pair(QCoreApplication::translate("SystemStats", "Sent"), bytes(m_txBytes)),
+            pair(QCoreApplication::translate("SystemStats", "Received"), bytes(m_rxBytes)),
+            pair(QCoreApplication::translate("SystemStats", "Link speed"), link > 0 ? bitRate(link / 8.0) : QCoreApplication::translate("SystemStats", "Unknown")),
         };
         if (m_wireless) {
-            stats << pair(QStringLiteral("Signal"), signal.isValid() ? percent(signal.toDouble()) : QStringLiteral("Unknown"));
+            stats << pair(QCoreApplication::translate("SystemStats", "Signal"), signal.isValid() ? percent(signal.toDouble()) : QCoreApplication::translate("SystemStats", "Unknown"));
         } else {
-            stats << pair(QStringLiteral("Processes"), QString::number(p->top(QStringLiteral("network"), 1000).size()));
+            stats << pair(QCoreApplication::translate("SystemStats", "Processes"), QString::number(p->top(QStringLiteral("network"), 1000).size()));
         }
         out[QStringLiteral("stats")] = stats;
         QVariantList specs{
-            pair(QStringLiteral("Adapter"), m_iface),
-            pair(QStringLiteral("Connection type"), m_wireless ? QStringLiteral("Wi-Fi") : QStringLiteral("Ethernet")),
+            pair(QCoreApplication::translate("SystemStats", "Adapter"), m_iface),
+            pair(QCoreApplication::translate("SystemStats", "Connection type"), m_wireless ? QStringLiteral("Wi-Fi") : QStringLiteral("Ethernet")),
         };
         if (!ssid.isEmpty()) {
-            specs << pair(QStringLiteral("Network name"), ssid);
+            specs << pair(QCoreApplication::translate("SystemStats", "Network name"), ssid);
         }
-        specs << pair(QStringLiteral("IPv4 address"), ipv4.isEmpty() ? QStringLiteral("None") : ipv4);
-        specs << pair(QStringLiteral("IPv6 address"), ipv6.isEmpty() ? QStringLiteral("None") : ipv6);
+        specs << pair(QCoreApplication::translate("SystemStats", "IPv4 address"), ipv4.isEmpty() ? QCoreApplication::translate("SystemStats", "None") : ipv4);
+        specs << pair(QCoreApplication::translate("SystemStats", "IPv6 address"), ipv6.isEmpty() ? QCoreApplication::translate("SystemStats", "None") : ipv6);
         out[QStringLiteral("specs")] = specs;
-        out[QStringLiteral("topTitle")] = QStringLiteral("Using the network most");
+        out[QStringLiteral("topTitle")] = QCoreApplication::translate("SystemStats", "Using the network most");
         out[QStringLiteral("topMetric")] = QStringLiteral("network");
         out[QStringLiteral("topTotal")] = qMax(m_rx + m_tx, 1.0);
         return out;
@@ -990,28 +991,28 @@ QVariantMap SystemStats::details(const QString &id) const
         const double temperature = sensorValue(QStringLiteral("gpu/gpu0/temperature")).toDouble();
         const double clock = sensorValue(QStringLiteral("gpu/gpu0/coreFrequency")).toDouble();
         const double power = sensorValue(QStringLiteral("gpu/gpu0/power")).toDouble();
-        out[QStringLiteral("title")] = QStringLiteral("Graphics");
+        out[QStringLiteral("title")] = QCoreApplication::translate("SystemStats", "Graphics");
         out[QStringLiteral("subtitle")] = m_gpuName;
-        out[QStringLiteral("caption")] = QStringLiteral("% utilisation over 60 seconds");
+        out[QStringLiteral("caption")] = QCoreApplication::translate("SystemStats", "% utilisation over 60 seconds");
         out[QStringLiteral("scale")] = QStringLiteral("100%");
         out[QStringLiteral("history")] = toList(m_gpuHistory);
         out[QStringLiteral("max")] = 100;
         out[QStringLiteral("colour")] = QStringLiteral("gpu");
-        const QString na = QStringLiteral("Unknown");
+        const QString na = QCoreApplication::translate("SystemStats", "Unknown");
         out[QStringLiteral("stats")] = QVariantList{
-            pair(QStringLiteral("Utilisation"), percent(m_gpu)),
-            pair(QStringLiteral("Graphics memory"), totalVram > 0 ? bytes(usedVram) + QStringLiteral(" of ") + bytes(totalVram) : QStringLiteral("Shared")),
-            pair(QStringLiteral("Temperature"), temperature > 0 ? number(temperature, 0) + QStringLiteral("°C") : na),
-            pair(QStringLiteral("Clock speed"), clock > 0 ? number(clock, 0) + QStringLiteral(" MHz") : na),
-            pair(QStringLiteral("Power"), power > 0 ? number(power, 1) + QStringLiteral(" W") : na),
-            pair(QStringLiteral("Apps using it"), QString::number(p->top(QStringLiteral("gpu"), 1000).size())),
+            pair(QCoreApplication::translate("SystemStats", "Utilisation"), percent(m_gpu)),
+            pair(QCoreApplication::translate("SystemStats", "Graphics memory"), totalVram > 0 ? QCoreApplication::translate("SystemStats", "%1 of %2").arg(bytes(usedVram), bytes(totalVram)) : QCoreApplication::translate("SystemStats", "Shared")),
+            pair(QCoreApplication::translate("SystemStats", "Temperature"), temperature > 0 ? QCoreApplication::translate("SystemStats", "%1°C").arg(number(temperature, 0)) : na),
+            pair(QCoreApplication::translate("SystemStats", "Clock speed"), clock > 0 ? QCoreApplication::translate("SystemStats", "%1 MHz").arg(number(clock, 0)) : na),
+            pair(QCoreApplication::translate("SystemStats", "Power"), power > 0 ? QCoreApplication::translate("SystemStats", "%1 W").arg(number(power, 1)) : na),
+            pair(QCoreApplication::translate("SystemStats", "Apps using it"), QString::number(p->top(QStringLiteral("gpu"), 1000).size())),
         };
         out[QStringLiteral("specs")] = QVariantList{
-            pair(QStringLiteral("Driver"), m_gpuDriver.isEmpty() ? QStringLiteral("Unknown") : m_gpuDriver),
-            pair(QStringLiteral("Memory"), totalVram > 0 ? bytes(totalVram) + QStringLiteral(" dedicated") : QStringLiteral("Shared with the system")),
-            pair(QStringLiteral("Device"), m_gpuCard),
+            pair(QCoreApplication::translate("SystemStats", "Driver"), m_gpuDriver.isEmpty() ? QCoreApplication::translate("SystemStats", "Unknown") : m_gpuDriver),
+            pair(QCoreApplication::translate("SystemStats", "Memory"), totalVram > 0 ? QCoreApplication::translate("SystemStats", "%1 dedicated").arg(bytes(totalVram)) : QCoreApplication::translate("SystemStats", "Shared with the system")),
+            pair(QCoreApplication::translate("SystemStats", "Device"), m_gpuCard),
         };
-        out[QStringLiteral("topTitle")] = QStringLiteral("Using the most graphics");
+        out[QStringLiteral("topTitle")] = QCoreApplication::translate("SystemStats", "Using the most graphics");
         out[QStringLiteral("topMetric")] = QStringLiteral("gpu");
         out[QStringLiteral("topTotal")] = qMax(m_gpu, 1.0);
         return out;
@@ -1029,25 +1030,25 @@ QVariantMap SystemStats::details(const QString &id) const
                 open << key;
             }
         }
-        out[QStringLiteral("title")] = QStringLiteral("Windows mode");
-        out[QStringLiteral("subtitle")] = QStringLiteral("Windows apps, in Windows running in the background");
-        out[QStringLiteral("caption")] = QStringLiteral("% CPU used over 60 seconds");
+        out[QStringLiteral("title")] = QCoreApplication::translate("SystemStats", "Windows mode");
+        out[QStringLiteral("subtitle")] = QCoreApplication::translate("SystemStats", "Windows apps, in Windows running in the background");
+        out[QStringLiteral("caption")] = QCoreApplication::translate("SystemStats", "% CPU used over 60 seconds");
         out[QStringLiteral("scale")] = QStringLiteral("100%");
         out[QStringLiteral("history")] = toList(m_winHistory);
         out[QStringLiteral("max")] = 100;
         out[QStringLiteral("colour")] = QStringLiteral("winmode");
         out[QStringLiteral("stats")] = QVariantList{
-            pair(QStringLiteral("CPU"), percent(p->winModeCpu())),
-            pair(QStringLiteral("Memory"), bytes(p->winModeMemory())),
-            pair(QStringLiteral("State"), WinMode::stateText(status.vm)),
-            pair(QStringLiteral("Apps open"), QString::number(open.size())),
-            pair(QStringLiteral("Apps installed"), QString::number(m_winInstalled)),
+            pair(QCoreApplication::translate("SystemStats", "CPU"), percent(p->winModeCpu())),
+            pair(QCoreApplication::translate("SystemStats", "Memory"), bytes(p->winModeMemory())),
+            pair(QCoreApplication::translate("SystemStats", "State"), WinMode::stateText(status.vm)),
+            pair(QCoreApplication::translate("SystemStats", "Apps open"), QString::number(open.size())),
+            pair(QCoreApplication::translate("SystemStats", "Apps installed"), QString::number(m_winInstalled)),
         };
         out[QStringLiteral("specs")] = QVariantList{
-            pair(QStringLiteral("Windows apps"), enabled ? QStringLiteral("On") : QStringLiteral("Off")),
-            pair(QStringLiteral("When none are open"), WinMode::idleText(status.whenIdle, status.idleSeconds)),
+            pair(QCoreApplication::translate("SystemStats", "Windows apps"), enabled ? QCoreApplication::translate("SystemStats", "On") : QCoreApplication::translate("SystemStats", "Off")),
+            pair(QCoreApplication::translate("SystemStats", "When none are open"), WinMode::idleText(status.whenIdle, status.idleSeconds)),
         };
-        out[QStringLiteral("topTitle")] = QStringLiteral("Using the most memory");
+        out[QStringLiteral("topTitle")] = QCoreApplication::translate("SystemStats", "Using the most memory");
         out[QStringLiteral("topMetric")] = QStringLiteral("winmode");
         out[QStringLiteral("topTotal")] = double(qMax<qint64>(p->winModeMemory(), 1));
         return out;

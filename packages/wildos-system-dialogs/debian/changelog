@@ -1,3 +1,43 @@
+wildos-system-dialogs (0.1.21) trixie; urgency=medium
+
+  * The sign-in screen takes the PIN too, in the password box. The encrypted
+    disk, sudo and administrator prompts still take the password, and so
+    does the sign-in screen while Advanced protection asks for the
+    password after a restart.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 15:00:00 +0000
+
+wildos-system-dialogs (0.1.20) trixie; urgency=medium
+
+  * A PIN can unlock the lock screen: 4 to 12 digits, set in Settings >
+    Accounts > Sign-in options and typed in the password box. Signing in
+    after a restart, sudo and administrator prompts still take the
+    password. Five wrong PINs in a row make the next one wait.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 10:30:00 +0000
+
+wildos-system-dialogs (0.1.19) trixie; urgency=medium
+
+  * With more than one screen, the password prompt and the security
+    screen dim the other screens instead of covering the prompt.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 16:42:30 +0000
+
+wildos-system-dialogs (0.1.18) trixie; urgency=medium
+
+  * The permission prompt and the system prompts are loaded the first time
+    one is needed instead of at sign-in, so they use no memory in a session
+    that never shows them. Ctrl+Alt+Del is still ready at once.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 16:38:28 +0000
+
+wildos-system-dialogs (0.1.17) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-system-dialogs (0.1.16) trixie; urgency=medium
 
   * Signing in with your fingerprint in the terminal no longer asks for

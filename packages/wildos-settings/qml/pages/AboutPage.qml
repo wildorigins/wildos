@@ -9,20 +9,20 @@ PageScroll {
     id: page
 
     readonly property var deviceSpecs: [
-        ["Device name", System.hostName],
-        ["Processor", System.processor],
-        ["Installed memory", System.memory],
-        ["System type", System.architecture],
-        ["Secure Boot", System.secureBoot === "on" ? "On" : System.secureBoot === "off" ? "Off" : "Not supported by this computer"],
-        ["Disk encryption", Protection.status.encryption === "on" ? "On"
-            : Protection.status.encryption === "off" ? "Off"
-            : Protection.status.encryption === "na" ? "Not used in the live session" : "Unknown"]
+        [qsTr("Device name"), System.hostName],
+        [qsTr("Processor"), System.processor],
+        [qsTr("Installed memory"), System.memory],
+        [qsTr("System type"), System.architecture],
+        [qsTr("Secure Boot"), System.secureBoot === "on" ? qsTr("On") : System.secureBoot === "off" ? qsTr("Off") : qsTr("Not supported by this computer")],
+        [qsTr("Disk encryption"), Protection.status.encryption === "on" ? qsTr("On")
+            : Protection.status.encryption === "off" ? qsTr("Off")
+            : Protection.status.encryption === "na" ? qsTr("Not used in the live session") : qsTr("Unknown")]
     ].filter(row => row[1] && row[1].length > 0)
 
     readonly property var osSpecs: [
-        ["Edition", System.osName],
-        ["Version", System.osVersion],
-        ["Kernel", System.kernel]
+        [qsTr("Edition"), System.osName],
+        [qsTr("Version"), System.osVersion],
+        [qsTr("Kernel"), System.kernel]
     ].filter(row => row[1] && row[1].length > 0)
 
     function copyText(rows) {
@@ -88,7 +88,7 @@ PageScroll {
             }
 
             UI.Button {
-                text: "Rename this PC"
+                text: qsTr("Rename this PC")
                 onClicked: renameDialog.open()
             }
         }
@@ -96,8 +96,8 @@ PageScroll {
 
     Repeater {
         model: [
-            { title: "Device specifications", rows: page.deviceSpecs },
-            { title: "Wild OS specifications", rows: page.osSpecs }
+            { title: qsTr("Device specifications"), rows: page.deviceSpecs },
+            { title: qsTr("Wild OS specifications"), rows: page.osSpecs }
         ]
 
         ColumnLayout {
@@ -117,7 +117,7 @@ PageScroll {
                 UI.Button {
                     id: copyButton
                     property bool done: false
-                    text: done ? "Copied" : "Copy"
+                    text: done ? qsTr("Copied") : qsTr("Copy")
                     iconName: done ? "check" : "copy"
                     onClicked: {
                         page.copy(section.modelData.rows);
@@ -188,16 +188,16 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "update"
-                title: "Updates"
-                description: "Check for updates and see what was installed"
+                title: qsTr("Updates")
+                description: qsTr("Check for updates and see what was installed")
                 chevron: true
                 onClicked: Navigator.open("update")
             }
 
             UI.SettingRow {
                 iconName: "shield"
-                title: "Privacy and security"
-                description: "Encryption, Secure Boot and app protection"
+                title: qsTr("Privacy and security")
+                description: qsTr("Encryption, Secure Boot and app protection")
                 chevron: true
                 onClicked: Navigator.open("privacy")
             }
@@ -206,7 +206,7 @@ PageScroll {
 
     SectionTitle {
         Layout.fillWidth: true
-        text: "Credits"
+        text: qsTr("Credits")
     }
 
     UI.Card {
@@ -219,8 +219,8 @@ PageScroll {
             // row opens the copy the theme package installs.
             UI.SettingRow {
                 iconName: "folder"
-                title: "Fluent icon theme"
-                description: "Folders, This computer and the Recycle Bin. By vinceliuice, under the GPL-3.0 licence."
+                title: qsTr("Fluent icon theme")
+                description: qsTr("Folders, This computer and the Recycle Bin. By vinceliuice, under the GPL-3.0 licence.")
                 external: true
                 onClicked: Qt.openUrlExternally("file:///usr/share/icons/Fluent-yellow/COPYING")
             }
@@ -231,7 +231,7 @@ PageScroll {
                     size: 20
                 }
                 title: "Fluent UI System Icons"
-                description: "The fingerprint in fingerprint setup. By Microsoft, under the MIT licence."
+                description: qsTr("The fingerprint in fingerprint setup. By Microsoft, under the MIT licence.")
                 external: true
                 onClicked: Qt.openUrlExternally("file:///usr/share/wildos-settings/licences/fluent-ui-system-icons.txt")
             }
@@ -240,8 +240,8 @@ PageScroll {
 
     UI.Dialog {
         id: renameDialog
-        title: "Rename your PC"
-        text: "Use letters, numbers and hyphens, up to 63 characters. Other devices on your network see this name."
+        title: qsTr("Rename your PC")
+        text: qsTr("Use letters, numbers and hyphens, up to 63 characters. Other devices on your network see this name.")
 
         property string error
 
@@ -258,7 +258,7 @@ PageScroll {
         UI.TextField {
             id: nameField
             Layout.fillWidth: true
-            placeholderText: "New name"
+            placeholderText: qsTr("New name")
             error: text.length > 0 && !renameDialog.valid(text)
             onAccepted: if (renameDialog.valid(text)) renameButton.clicked()
         }
@@ -267,7 +267,7 @@ PageScroll {
             Layout.fillWidth: true
             visible: text.length > 0
             text: nameField.text.length > 0 && !renameDialog.valid(nameField.text)
-                ? "Only letters, numbers and hyphens, and no hyphen at the start or end."
+                ? qsTr("Only letters, numbers and hyphens, and no hyphen at the start or end.")
                 : renameDialog.error
             color: UI.Style.warning
             size: 12
@@ -278,7 +278,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: renameButton
-                text: "Rename"
+                text: qsTr("Rename")
                 kind: "primary"
                 enabled: renameDialog.valid(nameField.text) && nameField.text !== System.hostName
                 onClicked: {
@@ -287,7 +287,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: renameDialog.close()
             }
         ]

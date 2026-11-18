@@ -67,7 +67,7 @@ void WindowsUsb::setUse(const QString &port, bool use)
         watcher->deleteLater();
         const QDBusPendingReply<QString> reply = *watcher;
         setBusy({});
-        const QString answer = reply.isError() ? QStringLiteral("Windows mode didn't answer. Restart the PC, then try again.") : reply.value();
+        const QString answer = reply.isError() ? tr("Windows mode didn't answer. Restart the PC, then try again.") : reply.value();
         if (!answer.isEmpty()) {
             Q_EMIT failed(answer);
         }
@@ -88,9 +88,9 @@ void WindowsUsb::allow(const QString &port)
         setBusy({});
         const QString result = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
         if (result == QLatin1String("denied")) {
-            Q_EMIT failed(QStringLiteral("Only an administrator can allow USB devices."));
+            Q_EMIT failed(tr("Only an administrator can allow USB devices."));
         } else if (result != QLatin1String("allowed") && result != QLatin1String("cancelled")) {
-            Q_EMIT failed(QStringLiteral("This device couldn't be allowed. Unplug it and try again."));
+            Q_EMIT failed(tr("This device couldn't be allowed. Unplug it and try again."));
         }
         reload();
     });

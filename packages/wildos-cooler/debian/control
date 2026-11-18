@@ -1,0 +1,54 @@
+Source: wildos-cooler
+Section: utils
+Priority: optional
+Maintainer: Wild OS Developers <dev@wildos.io>
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake,
+ extra-cmake-modules,
+ qt6-base-dev,
+ qt6-declarative-dev,
+ qt6-shadertools-dev,
+ libkf6config-dev,
+ libkf6coreaddons-dev,
+ libkf6idletime-dev,
+ libkf6dbusaddons-dev,
+ libkf6windowsystem-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: wildos-cooler
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ wildos-ui (>= 0.1.16),
+ wildos-lighting (>= 0.2.0),
+ qml6-module-qtcore,
+ qml6-module-qtquick,
+ qml6-module-qtquick-controls,
+ qml6-module-qtquick-templates,
+ qml6-module-qtquick-layouts,
+ qml6-module-qtquick-shapes,
+ qml6-module-qtquick-effects,
+ qml6-module-qtquick-window,
+ qml6-module-qtquick-dialogs,
+ qml6-module-qtqml-workerscript,
+ qml6-module-qtqml,
+ fonts-jetbrains-mono,
+ liquidctl,
+ python3,
+ python3-dbus,
+ python3-gi,
+ dbus,
+ polkitd,
+ udev,
+ libkf6service-bin,
+Description: Wild OS Cooler
+ Cooler looks after a liquid cooler that has a screen (NZXT Kraken): it
+ chooses the face shown on the cooler's screen, sets how fast the pump and
+ fans run, and shows the temperatures and speeds as they change. Settings
+ are kept on this PC. Nothing is sent anywhere: no accounts and no
+ tracking.

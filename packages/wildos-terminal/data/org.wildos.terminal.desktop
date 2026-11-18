@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Terminal
+Name[fr]=Terminal
 GenericName=Terminal
+GenericName[fr]=Terminal
 Comment=Type commands for your computer to run
+Comment[fr]=Tapez des commandes à exécuter par votre ordinateur
 Exec=wildos-terminal
 Icon=utilities-terminal
 Terminal=false

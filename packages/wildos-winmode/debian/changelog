@@ -1,3 +1,10 @@
+wildos-winmode (0.3.21) trixie; urgency=medium
+
+  * The Windows mode setup window follows the display language chosen in
+    Settings, and is in French.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 04:36:28 +0000
+
 wildos-winmode (0.3.20) trixie; urgency=medium
 
   * Windows can be activated with a licence on your Microsoft account,

@@ -68,7 +68,8 @@ public:
     // Plays the songs from `start`; with shuffle on, in a random order
     // starting with that song (or any, when start is -1).
     Q_INVOKABLE void playSongs(const QStringList &paths, int start, bool shuffled);
-    // Songs and playlist files handed over from Files or the command line.
+    // Songs, playlist files and folders of songs handed over from Files,
+    // the command line or a drop on the window.
     Q_INVOKABLE void openFiles(const QStringList &paths);
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void play();
@@ -77,10 +78,17 @@ public:
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
     Q_INVOKABLE void seek(qint64 position);
+    // Forward or back from where the song is, in milliseconds.
+    Q_INVOKABLE void skip(qint64 by);
+    // Up or down in steps of a twentieth; turning it up unmutes.
+    Q_INVOKABLE void stepVolume(int steps);
     Q_INVOKABLE void jump(int index);
     Q_INVOKABLE void playNext(const QStringList &paths);
     Q_INVOKABLE void addToQueue(const QStringList &paths);
     Q_INVOKABLE void removeFromQueue(int index);
+    // Takes the song at `from` to place `to` in the queue; the song that
+    // is playing stays the one playing.
+    Q_INVOKABLE void moveInQueue(int from, int to);
     Q_INVOKABLE void clearUpNext();
     Q_INVOKABLE void cycleRepeat();
 

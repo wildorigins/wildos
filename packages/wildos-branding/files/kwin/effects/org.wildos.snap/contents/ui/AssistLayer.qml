@@ -93,7 +93,7 @@ Item {
             y: panel.padding
             width: panel.width - panel.padding * 2
             text: layer.layout && layer.zone >= 0
-                ? "Fill the " + layer.layout.labels[layer.zone].toLowerCase()
+                ? qsTr("Fill the %1").arg(layer.layout.labels[layer.zone].toLowerCase())
                 : ""
             size: 12
             font.weight: UI.Style.weightSemiBold
@@ -106,7 +106,7 @@ Item {
             x: panel.padding
             y: panel.height - panel.padding - height
             width: panel.width - panel.padding * 2
-            text: "Pick a window, or press Esc to leave the rest empty."
+            text: qsTr("Pick a window, or press Esc to leave the rest empty.")
             size: 12
             wrapMode: Text.Wrap
             color: UI.Style.inkMuted

@@ -21,8 +21,8 @@ StepPage {
     property bool waiting: false
     readonly property bool finishing: FirstBoot.state === "finishing" || FirstBoot.state === "signing-in"
 
-    title: "Your privacy"
-    subtitle: "Here is everything that could leave this computer, in plain English. Change any of it later in Settings."
+    title: qsTr("Your privacy")
+    subtitle: qsTr("Here is everything that could leave this computer, in plain English. Change any of it later in Settings.")
     note: Privacy.error
     noteColor: UI.Style.warning
     Component.onCompleted: focusQuietly(continueButton)
@@ -55,14 +55,14 @@ StepPage {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: "No account, no advertising ID, no tracking"
+                        text: qsTr("No account, no advertising ID, no tracking")
                         size: 14
                         font.weight: UI.Style.weightSemiBold
                     }
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: "Everything below starts off unless it is needed to keep you safe."
+                        text: qsTr("Everything below starts off unless it is needed to keep you safe.")
                         size: 12
                         color: UI.Style.inkMuted
                     }
@@ -78,57 +78,57 @@ StepPage {
             width: parent.width
 
             UI.SettingRow {
-                title: "Check for security updates"
-                description: "Checks for fixes once a day. Nothing about you is sent."
+                title: qsTr("Check for security updates")
+                description: qsTr("Checks for fixes once a day. Nothing about you is sent.")
 
                 UI.Toggle {
-                    text: checked ? "On" : "Off"
+                    text: checked ? qsTr("On") : qsTr("Off")
                     checked: Privacy.updateChecks
                     locked: !Privacy.updateChecksAvailable || Privacy.busy
-                    lockedReason: Privacy.busy ? "Saving your last change" : "The update checker isn't installed on this computer."
-                    Accessible.name: "Check for security updates"
+                    lockedReason: Privacy.busy ? qsTr("Saving your last change") : qsTr("The update checker isn't installed on this computer.")
+                    Accessible.name: qsTr("Check for security updates")
                     onToggled: Privacy.setUpdateChecks(checked)
                 }
             }
 
             UI.SettingRow {
-                title: "Send crash reports"
-                description: "Helps fix bugs. Sent only when an app crashes, with nothing personal in it."
+                title: qsTr("Send crash reports")
+                description: qsTr("Helps fix bugs. Sent only when an app crashes, with nothing personal in it.")
 
                 UI.Toggle {
-                    text: checked ? "On" : "Off"
+                    text: checked ? qsTr("On") : qsTr("Off")
                     checked: Privacy.crashReports
                     locked: !Privacy.crashReportsAvailable
-                    lockedReason: "The crash reporter isn't installed on this computer."
-                    Accessible.name: "Send crash reports"
+                    lockedReason: qsTr("The crash reporter isn't installed on this computer.")
+                    Accessible.name: qsTr("Send crash reports")
                     onToggled: Privacy.setCrashReports(checked)
                 }
             }
 
             UI.SettingRow {
-                title: "Location for weather and maps"
+                title: qsTr("Location for weather and maps")
                 description: Privacy.location
-                    ? "On. Apps must still ask you before using it. Choose which in Settings, Privacy and security."
-                    : "Off. This computer has no location service, so no app can find out where you are."
-                status: Privacy.location ? "On" : "Off"
+                    ? qsTr("On. Apps must still ask you before using it. Choose which in Settings, Privacy and security.")
+                    : qsTr("Off. This computer has no location service, so no app can find out where you are.")
+                status: Privacy.location ? qsTr("On") : qsTr("Off")
             }
 
             UI.SettingRow {
-                title: "Search the web from Start"
-                description: "Start searches this computer only. Nothing you type in Start leaves it."
-                status: "Off"
+                title: qsTr("Search the web from Start")
+                description: qsTr("Start searches this computer only. Nothing you type in Start leaves it.")
+                status: qsTr("Off")
             }
         }
     }
 
     buttons: [
         UI.Button {
-            text: "Back"
+            text: qsTr("Back")
             onClicked: page.back()
         },
         UI.Button {
             id: continueButton
-            text: page.last ? "Finish" : "Continue"
+            text: page.last ? qsTr("Finish") : qsTr("Continue")
             kind: "primary"
             busy: page.waiting || page.finishing
             enabled: !page.waiting && !page.finishing

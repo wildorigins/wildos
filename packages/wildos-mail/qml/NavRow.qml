@@ -17,18 +17,42 @@ Item {
     property bool highlighted: false
 
     signal clicked()
-    signal menuRequested()
+    // `keyboard` is true when the Menu key asked, so the menu can open
+    // beside the row and not wherever the pointer was left.
+    signal menuRequested(bool keyboard)
 
     implicitHeight: 32
+    activeFocusOnTab: true
+    Keys.onPressed: function (event) {
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            row.clicked();
+        } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            row.menuRequested(true);
+        } else {
+            return;
+        }
+        event.accepted = true;
+    }
     Accessible.role: Accessible.ListItem
-    Accessible.name: text
+    Accessible.name: showCount && count > 0 ? qsTr("%1, %2").arg(text).arg(count) : text
+    Accessible.selected: current
 
     Rectangle {
         anchors.fill: parent
         anchors.leftMargin: 6
         anchors.rightMargin: 6
-        radius: 6
+        radius: UI.Style.radiusXs
         color: row.current || row.highlighted ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        Behavior on color {
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
+
+        // Drawn inside the row: the rows touch.
+        UI.FocusRing {
+            visible: row.activeFocus
+            anchors.margins: 0
+            targetRadius: parent.radius - 4
+        }
     }
 
     RowLayout {
@@ -65,7 +89,7 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: function (event) {
             if (event.button === Qt.RightButton) {
-                row.menuRequested();
+                row.menuRequested(false);
             } else {
                 row.clicked();
             }

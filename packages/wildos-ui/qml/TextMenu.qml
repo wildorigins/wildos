@@ -53,24 +53,24 @@ TapHandler {
         const marked = secretCopy(f);
         const entries = [];
         if (editable) {
-            entries.push({ text: "Undo", icon: "undo", shortcut: "Ctrl+Z", enabled: f.canUndo, run: () => handler.undoAction ? handler.undoAction() : f.undo() },
+            entries.push({ text: qsTr("Undo"), icon: "undo", shortcut: "Ctrl+Z", enabled: f.canUndo, run: () => handler.undoAction ? handler.undoAction() : f.undo() },
                 { separator: true });
         }
         if (editable && !secret) {
-            entries.push({ text: "Cut", icon: "menu-cut", shortcut: "Ctrl+X", enabled: f.selectedText.length > 0, run: () => marked ? marked.cut() : f.cut() });
+            entries.push({ text: qsTr("Cut"), icon: "menu-cut", shortcut: "Ctrl+X", enabled: f.selectedText.length > 0, run: () => marked ? marked.cut() : f.cut() });
         }
         if (!secret) {
-            entries.push({ text: "Copy", icon: "menu-copy", shortcut: "Ctrl+C", enabled: f.selectedText.length > 0, run: () => marked ? marked.copy() : f.copy() });
+            entries.push({ text: qsTr("Copy"), icon: "menu-copy", shortcut: "Ctrl+C", enabled: f.selectedText.length > 0, run: () => marked ? marked.copy() : f.copy() });
         }
         if (editable && !pasteBlocked(f)) {
-            entries.push({ text: "Paste", icon: "menu-paste", shortcut: "Ctrl+V", enabled: f.canPaste, run: () => f.paste() });
+            entries.push({ text: qsTr("Paste"), icon: "menu-paste", shortcut: "Ctrl+V", enabled: f.canPaste, run: () => f.paste() });
         }
         if (entries.length > 0 && !entries[entries.length - 1].separator) {
             entries.push({ separator: true });
         }
-        entries.push({ text: "Select all", icon: "select-all", shortcut: "Ctrl+A", enabled: f.length > 0, run: () => f.selectAll() });
+        entries.push({ text: qsTr("Select all"), icon: "select-all", shortcut: "Ctrl+A", enabled: f.length > 0, run: () => f.selectAll() });
         if (editable && !secret && System.canRun("wildos-clipboard")) {
-            entries.push({ text: "Emoji", icon: "emoji", shortcut: "Win+.", run: () => System.run("wildos-clipboard", ["--emoji"]) });
+            entries.push({ text: qsTr("Emoji"), icon: "emoji", shortcut: "Win+.", run: () => System.run("wildos-clipboard", ["--emoji"]) });
         }
         f.forceActiveFocus(Qt.PopupFocusReason);
         menu.entries = entries;

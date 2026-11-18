@@ -5,14 +5,16 @@
 #include <QTimer>
 
 /* org.wildos.WalletKeys1: the root-held wallet key of the account that
- * signs in automatically (see walletkey.h), and the root half of changing
- * your own password, which changes what that key is made from.
+ * signs in automatically and of accounts with a PIN (see walletkey.h), and
+ * the root half of changing your own password, which changes what that key
+ * is made from.
  *
  * Every call acts on the caller's own account, found from its uid on the
  * bus, never from an argument, so no account can reach another's key. The
- * key is handed out only to the account SDDM signs in automatically, once
- * per boot, for wildos-setup-wallet to open the wallet with at the start of
- * that session; anything asking later in the session is refused.
+ * key is handed out for wildos-setup-wallet to open the wallet with at the
+ * start of a session that typed no password: once per boot to the account
+ * SDDM signs in automatically, and once after each sign-in with the right
+ * PIN. Anything asking later in the session is refused.
  */
 class WalletKeys : public QObject, protected QDBusContext
 {
@@ -24,17 +26,23 @@ public:
 
 public Q_SLOTS:
     /* Keeps the key made from the caller's password, after checking it
-     * with PAM. Only for the auto sign-in account: Settings calls it when
-     * that account's password changes. Turning automatic sign-in on keeps
-     * the key through settings-users instead, as root. */
+     * with PAM. Only for the auto sign-in account and accounts with a PIN:
+     * Settings calls it when a PIN is saved and when such an account's
+     * password changes. Turning automatic sign-in on keeps the key through
+     * settings-users instead, as root. */
     void Store(const QString &password);
 
-    /* The caller's key, if it is the auto sign-in account and nothing has
-     * taken the key since the computer started. */
+    /* The caller's key: after a sign-in with the PIN, or for the auto
+     * sign-in account when nothing has taken the key since the computer
+     * started. */
     QByteArray Key();
 
     /* Removes the caller's key, if there is one. */
     void Forget();
+
+    /* Removes keys no setting asks for any more. Settings calls it after a
+     * PIN is removed. */
+    void Tidy();
 
     /* Checks the caller's own password with PAM (the same delays and
      * lockouts as signing in), so Settings can be sure of it before it

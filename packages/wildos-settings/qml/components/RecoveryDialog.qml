@@ -7,8 +7,8 @@ import WildOS.UI as UI
 
 // The dialog of the recovery boards (RecoveryGoBack.dc, RecoveryReset.dc):
 // a 15px title beside an accent icon, the body, and a footer band with the
-// buttons at the right. Narrower and flatter than UI.Dialog's glass, as
-// the boards draw it: #23252d, radius 12, a 0.12 edge.
+// buttons at the right. Narrower than UI.Dialog and with 12px corners, as
+// the boards draw it, on the same dialog glass and edge.
 T.Dialog {
     id: control
 
@@ -31,10 +31,10 @@ T.Dialog {
     }
 
     background: Rectangle {
-        radius: 12
-        color: UI.Style.dark ? "#23252d" : "#ffffff"
+        radius: UI.Style.radiusMd
+        color: UI.Style.glassDialog
         border.width: 1
-        border.color: UI.Style.dark ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(0, 0, 0, 0.12)
+        border.color: UI.Style.borderDialog
         layer.enabled: true
         layer.effect: MultiEffect {
             shadowEnabled: true

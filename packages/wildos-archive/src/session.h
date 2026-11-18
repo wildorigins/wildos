@@ -214,6 +214,11 @@ public:
     // that folder is already there it asks first (alreadyThere), and is
     // called again with "replace" or "both".
     Q_INVOKABLE void extractHere(const QString &whenThere = QString());
+    // Dragging rows out to Files or the desktop: the row dragged, with the
+    // other ticked rows when it is one of them, is extracted to a private
+    // folder Archive clears when it next starts, and dragReady hands the
+    // window the files to drag.
+    Q_INVOKABLE void extractForDrag(int row);
     Q_INVOKABLE void test();
     Q_INVOKABLE void cancel();
 
@@ -228,6 +233,7 @@ Q_SIGNALS:
     void passwordChanged();
     void passwordNeeded(bool wrong);
     void alreadyThere(const QString &name);
+    void dragReady(const QStringList &urls);
     // What came of a job, for the window to say: a short note, or a title
     // with a message and the files concerned.
     void finished(const QString &job, bool ok, const QString &title, const QString &message, const QStringList &details);

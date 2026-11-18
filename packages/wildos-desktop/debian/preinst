@@ -7,6 +7,12 @@ set -e
 if [ "$1" = "install" ] || [ "$1" = "upgrade" ]; then
     dpkg-divert --package wildos-desktop --add --rename \
         --divert /usr/bin/brave-browser-stable.brave /usr/bin/brave-browser-stable >/dev/null
+    # Plasma's portal unit gives way to Wild OS's copy, ordered after the
+    # compositor instead of the desktop (files/systemd/user).
+    mkdir -p /usr/share/wildos/diverted
+    dpkg-divert --package wildos-desktop --add --rename \
+        --divert /usr/share/wildos/diverted/plasma-xdg-desktop-portal-kde.service \
+        /usr/lib/systemd/user/plasma-xdg-desktop-portal-kde.service >/dev/null
 fi
 
 #DEBHELPER#

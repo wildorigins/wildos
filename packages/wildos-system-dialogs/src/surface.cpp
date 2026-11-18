@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 #include <QPainterPath>
 #include <QRegion>
+#include <QScreen>
 
 Surface::Surface(QObject *parent)
     : QObject(parent)
@@ -135,12 +136,18 @@ void Surface::show()
     if (!m_window) {
         return;
     }
+    // A full-screen surface takes its screen's place and size before the
+    // layer surface is set up: that makes the native window, and Qt puts a
+    // new window on the screen that holds its position. Left at 0,0, every
+    // screen's cover went to the first screen, over the dialog.
+    if (fullScreen() && layerShell()) {
+        if (QScreen *screen = m_window->screen()) {
+            m_window->setGeometry(screen->geometry());
+        }
+    }
     prepare();
     if (fullScreen()) {
         if (layerShell()) {
-            if (QScreen *screen = m_window->screen()) {
-                m_window->resize(screen->size());
-            }
             m_window->show();
         } else {
             m_window->showFullScreen();

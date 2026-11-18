@@ -50,7 +50,7 @@ install(FILES
 # The setup window itself.
 qt_add_executable(wildos-winmode-setup src/main.cpp)
 
-file(GLOB QML_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} qml/*.qml)
+file(GLOB QML_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} qml/*.qml qml/*.js)
 foreach(file ${QML_SOURCES})
     get_filename_component(name ${file} NAME)
     set_source_files_properties(${file} PROPERTIES QT_RESOURCE_ALIAS ${name})
@@ -69,3 +69,21 @@ target_link_libraries(wildos-winmode-setup PRIVATE
 add_dependencies(wildos-winmode-setup wildoswinmodesetup)
 
 install(TARGETS wildos-winmode-setup RUNTIME DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/wildos)
+
+# Translations: ../i18n/wildos-winmode_<lang>.ts, compiled to .qm and loaded
+# by WildOS.UI for the language chosen in Settings. They cover the setup
+# window, the pages first run shares and the system service's own lines.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

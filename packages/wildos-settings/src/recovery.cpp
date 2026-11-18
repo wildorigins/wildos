@@ -155,7 +155,7 @@ void Recovery::run(const QStringList &args, const QString &text, const QString &
         m_process = nullptr;
         // 126 and 127: the password prompt was dismissed.
         if (status != QProcess::NormalExit || (code != 0 && code != 126 && code != 127)) {
-            m_error = output.section(QLatin1Char('\n'), -1).isEmpty() ? QStringLiteral("Something went wrong. Nothing was changed.")
+            m_error = output.section(QLatin1Char('\n'), -1).isEmpty() ? tr("Something went wrong. Nothing was changed.")
                                                                        : output.section(QLatin1Char('\n'), -1);
         }
         setBusy(false);
@@ -169,7 +169,7 @@ void Recovery::run(const QStringList &args, const QString &text, const QString &
 
 void Recovery::create()
 {
-    run({QStringLiteral("create"), QStringLiteral("Restore point you made")}, QStringLiteral("Making a restore point"), QStringLiteral("create"));
+    run({QStringLiteral("create"), tr("Restore point you made")}, tr("Making a restore point"), QStringLiteral("create"));
 }
 
 void Recovery::goBack(int id, bool hold)
@@ -178,23 +178,23 @@ void Recovery::goBack(int id, bool hold)
     if (hold) {
         args << QStringLiteral("hold");
     }
-    run(args, QStringLiteral("Getting the earlier version ready"), QStringLiteral("go-back"));
+    run(args, tr("Getting the earlier version ready"), QStringLiteral("go-back"));
 }
 
 void Recovery::remove(int id)
 {
-    run({QStringLiteral("delete"), QString::number(id)}, QStringLiteral("Deleting the restore point"), QStringLiteral("delete"));
+    run({QStringLiteral("delete"), QString::number(id)}, tr("Deleting the restore point"), QStringLiteral("delete"));
 }
 
 void Recovery::setLimits(int keep, int gb, bool on)
 {
     run({QStringLiteral("limits"), QString::number(keep), QString::number(gb), on ? QStringLiteral("on") : QStringLiteral("off")},
-        QStringLiteral("Saving"), QStringLiteral("limits"));
+        tr("Saving"), QStringLiteral("limits"));
 }
 
 void Recovery::restartToRecovery()
 {
-    run({QStringLiteral("restart-recovery")}, QStringLiteral("Getting start-up options ready"), QStringLiteral("startup"));
+    run({QStringLiteral("restart-recovery")}, tr("Getting start-up options ready"), QStringLiteral("startup"));
 }
 
 void Recovery::reset(const QString &how)
@@ -202,7 +202,7 @@ void Recovery::reset(const QString &how)
     if (how != QLatin1String("keep") && how != QLatin1String("everything")) {
         return;
     }
-    run({QStringLiteral("reset"), how}, QStringLiteral("Getting the reset ready"), QStringLiteral("reset"));
+    run({QStringLiteral("reset"), how}, tr("Getting the reset ready"), QStringLiteral("reset"));
 }
 
 void Recovery::openBackup()

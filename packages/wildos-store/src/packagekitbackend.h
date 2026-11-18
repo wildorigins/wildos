@@ -56,6 +56,7 @@ Q_SIGNALS:
     void detailsReady(const QString &key, qint64 downloadSize, qint64 installedSize, const QString &version);
 
 private:
+    static qint64 secondsSinceSourcesChanged();
     void resolveThen(const QStringList &packages, PackageKit::Transaction::Filters filters, int job,
                      std::function<PackageKit::Transaction *(const QStringList &ids)> next);
     void watch(int job, PackageKit::Transaction *transaction, bool removing);

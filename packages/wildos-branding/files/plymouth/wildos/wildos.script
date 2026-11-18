@@ -1,23 +1,23 @@
-# Wild OS start-up animation, from design/BootIntro.dc.html and
-# BootStory.dc.html, with the disk unlock prompt from Boot.dc.html and the
-# glide out of it from AfterUnlockD.dc.html.
+# Wild OS start-up animation, from design/BootPace.dc.html (the keyframes are
+# BootPaceTarget.dc.html's), with the disk unlock prompt from Boot.dc.html and
+# the glide out of it from AfterUnlockD.dc.html.
 #
-# A spark flashes into being and the W draws itself on a fixed 1.5 s timeline,
-# then the W fills and "Wild OS" settles in. Then the W dims to glass and a
-# point of light runs round its outline while the spark breathes and
-# "Starting securely" rises into place: that loop is the loading indicator,
-# and simply keeps going until the system is ready.
+# Open, always 0.9 s: the spark flashes, and the W draws and fills while
+# "Wild OS" settles. Wait, as long as the system needs: the W dims to glass
+# and a point of light laps its outline once every 1.2 s, with "Starting
+# securely" under the name. The wait can stop at any moment.
 #
-# With an encrypted disk the unlock prompt comes up once the name has settled.
-# When the password is entered the prompt fades, the W glides out of its tile
-# down to the middle of the screen and dims to glass, and the same loop runs
-# there, smaller.
+# With an encrypted disk the unlock prompt takes the place of the wait once
+# the opening has played. When the password is entered the prompt fades, the
+# W glides out of its tile down to the middle of the screen and dims to
+# glass, and the same wait runs there, smaller.
 #
-# On quit the screen is left on a fixed frame of the loop (plymouth quit
-# --retain-splash): the light at the start of the outline, the spark at full
-# strength. The sign-in screen opens on exactly that picture and plays the
-# rest: the final trace, the W filling and the flight through it into the
-# wallpaper (sddm/wildos/components/BootHandoff.qml).
+# Plymouth keeps playing the wait until it quits, never before the opening
+# has played. After a moment of black while KWin takes the display over,
+# the sign-in screen or the session splash carries the same wait on, the W
+# in the same place and at the same size, and plays the finish: the W
+# lights up, the spark flashes and the screen flies through the W
+# (sddm/wildos/components/BootHandoff.qml).
 #
 # Every image is pre-rendered by tools/render-boot-assets.py, one folder per
 # screen scale. Positions are in the design's 1440x900 CSS pixels, measured
@@ -30,15 +30,17 @@ Window.SetBackgroundTopColor(INTRO_BG_R, INTRO_BG_G, INTRO_BG_B);
 Window.SetBackgroundBottomColor(INTRO_BG_R, INTRO_BG_G, INTRO_BG_B);
 
 FPS = 50;
-SPARK_FRAMES = 26;
-STROKE_FRAMES = 54;
+SPARK_FRAMES = 14;
+STROKE_FRAMES = 46;
 WORD_FRAMES = 41;
 BULLET_MAX = 25;
 GLIDE_FRAMES = 50;
-# One lap of the light, and the frames it is drawn in, for the W in the
-# start-up animation (i) and after unlocking (u).
-LAP_I = 1.75; LAP_I_FRAMES = 88;
-LAP_U = 1.6; LAP_U_FRAMES = 80;
+# One lap of the light, and the frames it is drawn in, wherever the W is.
+LAP = 1.2; LAP_FRAMES = 60;
+# The opening's length: the wait, or the unlock prompt, starts after it.
+OPEN = 0.9;
+# The flash is drawn at 1.9 times the board's circle (render-boot-assets.py).
+FLASH_GROW = 1.9;
 
 # The artboard is scaled to the screen height (or width, on a narrow screen)
 # and drawn with the nearest pre-rendered scale, so artwork is never resampled.
@@ -106,29 +108,6 @@ fun cycle(d, length) {
     return (d - Math.Int(d / length) * length) / length;
 }
 
-# The spark's breathing in the loop: from full strength down to low and back
-# once per period.
-fun breath(d, period, low) {
-    u = cycle(d, period);
-    if (u < 0.5)
-        return 1 - (1 - low) * ease(u * 2);
-    return low + (1 - low) * ease(u * 2 - 1);
-}
-
-# The splash clock t against the design's time d: the spark and the W drawing
-# itself (design 0.7 s to 3.1 s) take 1.5 s, the rest plays at design speed.
-fun design_time(t) {
-    if (t <= 1.5)
-        return 0.7 + 1.6 * t;
-    return t + 1.6;
-}
-
-fun splash_time(d) {
-    if (d <= 3.1)
-        return (d - 0.7) / 1.6;
-    return d - 1.6;
-}
-
 fun frame(name, k) {
     return Image(dir + name + "-" + pad(k) + ".png");
 }
@@ -176,7 +155,7 @@ spark = place("", 35, -195, 8);
 spark_k = -1;
 word = place("", -150, 45, 9);
 word_k = -1;
-status_i = place("status-i.png", -100, 50, 9);
+status_i = place("status-i.png", -100, 100, 9);
 
 # The unlock prompt.
 tile = place("tile.png", -45, -200, 20);
@@ -260,86 +239,73 @@ fun show_frame(sp, name, k, last) {
     return k;
 }
 
-# The start-up animation's W at design time d. On shutdown and other modes
-# only the finished logo and wordmark show, without the loop.
-fun draw_intro(d, alpha) {
-    if (!global.booting)
-        d = 4.9;
+# A frame from a set drawn per step of eased progress (the W's outline, the
+# name), for progress e from 0 to 1.
+fun progress_frame(e, n) {
+    return Math.Int(e * (n - 1) + 0.5);
+}
 
-    # The spark: flashing in, settled, then breathing in the loop.
-    if (d < 0.7) {
-        spark.SetOpacity(0);
-    } else if (d < 1.5) {
-        k = Math.Int((splash_time(d) - splash_time(0.7)) / (splash_time(1.5) - splash_time(0.7)) * (SPARK_FRAMES - 1) + 0.5);
-        global.spark_k = show_frame(spark, "spark", k, global.spark_k);
-        spark.SetOpacity(alpha);
-    } else {
-        global.spark_k = show_frame(spark, "spark", SPARK_FRAMES - 1, global.spark_k);
-        if (d < 5.32 || !global.booting)
-            spark.SetOpacity(alpha);
-        else
-            spark.SetOpacity(breath(d - 5.32, 1.68, 0.4) * alpha);
+# The flash behind the spark at grow (its size against the board's circle)
+# and strength glow.
+fun draw_flash(grow, glow) {
+    edge = Math.Int(210 * s * grow / FLASH_GROW + 0.5);
+    if (edge < 2)
+        edge = 2;
+    if (edge != global.flash_size) {
+        flash.SetImage(flash_image.Scale(edge, edge));
+        global.flash_size = edge;
     }
+    flash.SetX(cx + px(88.8) - Math.Int(edge / 2));
+    flash.SetY(cy + px(-139.2) - Math.Int(edge / 2));
+    flash.SetOpacity(glow);
+}
 
-    if (d > 0.8 && d < 2.2) {
-        if (d < 1.2) {
-            e = segment(d, 0.8, 1.2);
-            size = 0.2 + 0.8 * e;
-            glow = 0.9 * e;
+# The start-up animation's W, t seconds after it began. On shutdown and other
+# modes only the finished logo and name show, without the wait.
+fun draw_intro(t, alpha) {
+    if (!global.booting)
+        t = OPEN;
+
+    # The spark: in from nothing, past full size, settled by 0.26 s.
+    k = Math.Int(t * FPS + 0.5);
+    if (k >= SPARK_FRAMES)
+        k = SPARK_FRAMES - 1;
+    global.spark_k = show_frame(spark, "spark", k, global.spark_k);
+    spark.SetOpacity(alpha);
+
+    if (t < 0.42 && global.booting) {
+        if (t < 0.12) {
+            e = segment(t, 0, 0.12);
+            draw_flash(0.2 + 0.8 * e, 0.9 * e * alpha);
         } else {
-            e = segment(d, 1.2, 2.2);
-            size = 1 + 0.8 * e;
-            glow = 0.9 * (1 - e);
+            e = segment(t, 0.12, 0.42);
+            draw_flash(1 + 0.8 * e, 0.9 * (1 - e) * alpha);
         }
-        edge = Math.Int(200 * s * size / 1.8 + 0.5);
-        if (edge < 2)
-            edge = 2;
-        if (edge != global.flash_size) {
-            flash.SetImage(flash_image.Scale(edge, edge));
-            global.flash_size = edge;
-        }
-        flash.SetX(cx + px(89) - Math.Int(edge / 2));
-        flash.SetY(cy + px(-139) - Math.Int(edge / 2));
-        flash.SetOpacity(glow * alpha);
     } else if (global.flash_size >= 0) {
         flash.SetOpacity(0);
         global.flash_size = -1;
     }
 
-    # The W drawing itself.
-    if (d >= 1.4 && d < 3.8) {
-        if (d < 3.1) {
-            k = Math.Int((splash_time(d) - splash_time(1.4)) / (splash_time(3.1) - splash_time(1.4)) * (STROKE_FRAMES - 1) + 0.5);
-            line = 1;
-        } else {
-            k = STROKE_FRAMES - 1;
-            line = 1 - segment(d, 3.1, 3.8);
-        }
-        global.stroke_k = show_frame(stroke, "stroke", k, global.stroke_k);
-        stroke.SetOpacity(line * alpha);
+    # The W drawing itself, then its line giving way to the fill.
+    if (t >= 0.12 && t < 0.9 && global.booting) {
+        global.stroke_k = show_frame(stroke, "stroke", progress_frame(segment(t, 0.12, 0.66), STROKE_FRAMES), global.stroke_k);
+        stroke.SetOpacity((1 - segment(t, 0.66, 0.9)) * alpha);
     } else {
         stroke.SetOpacity(0);
     }
 
-    # Filled, then dimmed to glass for the loop.
-    if (d < 5.04)
-        fill.SetOpacity(segment(d, 2.9, 3.7) * alpha);
+    # Filled, then dimmed to glass for the wait.
+    if (t < 0.9 || !global.booting)
+        fill.SetOpacity(segment(t, 0.4, 0.85) * alpha);
     else
-        fill.SetOpacity((1 - 0.9 * segment(d, 5.04, 5.67)) * alpha);
+        fill.SetOpacity((1 - 0.86 * segment(t, 0.9, 1.2)) * alpha);
 
-    # "Wild OS" settles in, and makes way for the status line.
-    if (d < 3.6) {
+    # "Wild OS" settles in from wide spacing, and stays.
+    global.word_k = show_frame(word, "word", progress_frame(segment(t, 0.45, 0.88), WORD_FRAMES), global.word_k);
+    if (t < 0.45)
         word.SetOpacity(0);
-    } else if (d < 4.4) {
-        global.word_k = show_frame(word, "word", Math.Int((splash_time(d) - splash_time(3.6)) / (splash_time(4.4) - splash_time(3.6)) * (WORD_FRAMES - 1) + 0.5), global.word_k);
+    else
         word.SetOpacity(alpha);
-    } else {
-        global.word_k = show_frame(word, "word", WORD_FRAMES - 1, global.word_k);
-        if (global.booting)
-            word.SetOpacity((1 - segment(d, 5.04, 5.6)) * alpha);
-        else
-            word.SetOpacity(alpha);
-    }
 
     if (!global.booting) {
         base_i.SetOpacity(0);
@@ -348,20 +314,18 @@ fun draw_intro(d, alpha) {
         return;
     }
 
-    # The loop: the glass outline, the light running round it, the status.
-    base_i.SetOpacity(segment(d, 5.18, 5.74) * alpha);
-    if (d < 5.46) {
+    # The wait: the glass outline, the light lapping it, the status line.
+    base_i.SetOpacity(segment(t, 0.9, 1.2) * alpha);
+    if (t < 0.95) {
         light_i.SetOpacity(0);
     } else {
-        k = Math.Int(cycle(d - 5.46, LAP_I) * LAP_I_FRAMES);
-        if (k >= LAP_I_FRAMES)
+        k = Math.Int(cycle(t, LAP) * LAP_FRAMES);
+        if (k >= LAP_FRAMES)
             k = 0;
         global.light_i_k = show_frame(light_i, "light-i", k, global.light_i_k);
-        light_i.SetOpacity(segment(d, 5.46, 5.88) * alpha);
+        light_i.SetOpacity(segment(t, 0.95, 1.15) * alpha);
     }
-    e = segment(d, 5.32, 5.88);
-    shift(status_i, -100, 50, 56 * (1 - e));
-    status_i.SetOpacity(0.75 * e * alpha);
+    status_i.SetOpacity(0.75 * segment(t, 1.0, 1.3) * alpha);
 }
 
 fun draw_unlock(alpha) {
@@ -440,11 +404,11 @@ fun draw_after_unlock(a) {
         return;
     }
     glide.SetOpacity(0);
-    fill_u.SetOpacity(0.1);
+    fill_u.SetOpacity(0.14);
     base_u.SetOpacity(1);
-    spark_u.SetOpacity(breath(a - 2.4, 1.6, 0.35));
-    k = Math.Int(cycle(a - 2.6, LAP_U) * LAP_U_FRAMES);
-    if (k >= LAP_U_FRAMES)
+    spark_u.SetOpacity(1);
+    k = Math.Int(cycle(a - 2.6, LAP) * LAP_FRAMES);
+    if (k >= LAP_FRAMES)
         k = 0;
     global.light_u_k = show_frame(light_u, "light-u", k, global.light_u_k);
     light_u.SetOpacity(segment(a, 2.6, 2.8));
@@ -469,15 +433,15 @@ fun refresh_callback() {
         return;
     }
 
-    # The prompt comes up once the name has settled (storyboard step 3);
-    # keys typed before then still count.
-    if (global.want_unlock && global.t >= splash_time(4.4))
+    # The prompt takes the wait's place once the opening has played; keys
+    # typed before then still count.
+    if (global.want_unlock && global.t >= OPEN)
         global.unlock_alpha = approach(global.unlock_alpha, 1, step / 0.25);
     else
         global.unlock_alpha = approach(global.unlock_alpha, 0, step / 0.25);
 
     shown = global.brand * (1 - global.unlock_alpha);
-    draw_intro(design_time(global.t), shown);
+    draw_intro(global.t, shown);
     if (global.unlock_alpha > 0 || global.unlock_bg > 0)
         draw_unlock(global.unlock_alpha);
 }
@@ -557,54 +521,16 @@ fun question_callback(prompt_text, entry) {
 }
 Plymouth.SetDisplayQuestionFunction(question_callback);
 
-# Plymouth draws once more after this, and with --retain-splash that frame
-# stays on screen until the sign-in screen replaces it. It is always the same
-# frame of the loop, the light at the start of the outline and the spark at
-# full strength, so the sign-in screen can start from it without being told
-# how far the boot got. Only which W it is, the start-up animation's or the
-# one after unlocking, depends on the boot; the helper that quits Plymouth
-# tells the sign-in screen (files/libexec/boot-handoff).
+# With --retain-splash the last frame drawn stays on screen until KWin takes
+# the display over, a lap of the wait like any other: the next screen
+# carries the laps on (sddm/wildos/components/BootHandoff.qml).
 fun quit_callback() {
     if (Window.GetWidth() != global.screen_w || Window.GetHeight() != global.screen_h)
         relayout();
     clear_question();
-    global.unlock_alpha = 0;
-    global.brand = 1;
-    if (global.unlocked) {
-        for (i = 0; i < BULLET_MAX; i++)
-            bullets[i].SetOpacity(0);
-        name.SetOpacity(0);
-        prompt.SetOpacity(0);
-        field.SetOpacity(0);
-        hint.SetOpacity(0);
-        caps.SetOpacity(0);
-        tile.SetOpacity(0);
-        glide.SetOpacity(0);
-        fill_u.SetOpacity(0.1);
-        base_u.SetOpacity(1);
-        spark_u.SetOpacity(1);
-        global.light_u_k = show_frame(light_u, "light-u", 0, global.light_u_k);
-        light_u.SetOpacity(1);
-        shift(status_u, -100, 95, 0);
-        status_u.SetOpacity(0.75);
-    } else if (global.booting) {
-        global.typed = 0;
+    if (!global.booting) {
         draw_unlock(0);
-        set_background(0);
-        flash.SetOpacity(0);
-        stroke.SetOpacity(0);
-        word.SetOpacity(0);
-        fill.SetOpacity(0.1);
-        base_i.SetOpacity(1);
-        global.spark_k = show_frame(spark, "spark", SPARK_FRAMES - 1, global.spark_k);
-        spark.SetOpacity(1);
-        global.light_i_k = show_frame(light_i, "light-i", 0, global.light_i_k);
-        light_i.SetOpacity(1);
-        shift(status_i, -100, 50, 0);
-        status_i.SetOpacity(0.75);
-    } else {
-        draw_unlock(0);
-        draw_intro(4.9, 1);
+        draw_intro(OPEN, 1);
     }
     global.quitting = 1;
 }

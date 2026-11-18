@@ -7,7 +7,9 @@ import WildOS.UI as UI
 
 // The places column of DialogSave.dc: 190 wide, 32px rows with a 16px line
 // icon and the name in 13px, the folder you are in lit with weight 600.
-// The same places as the Files sidebar, in the same order.
+// The same places as the Files sidebar, in the same order: the Home
+// folders and the folders pinned there, This computer, then the USB sticks
+// and other disks that are mounted.
 Item {
     id: places
 
@@ -15,20 +17,28 @@ Item {
 
     readonly property var entries: {
         const home = StandardPaths.writableLocation(StandardPaths.HomeLocation);
-        const list = [{ name: "Home", icon: "home", url: home }];
+        const list = [{ name: qsTr("Home"), icon: "home", url: home }];
         const add = (name, icon, location) => {
             const url = StandardPaths.writableLocation(location);
             if (url.toString().length > 0 && url.toString() !== home.toString()) {
                 list.push({ name: name, icon: icon, url: url });
             }
         };
-        add("Desktop", "desktop", StandardPaths.DesktopLocation);
-        add("Documents", "document", StandardPaths.DocumentsLocation);
-        add("Downloads", "download", StandardPaths.DownloadLocation);
-        add("Pictures", "pictures", StandardPaths.PicturesLocation);
-        add("Music", "music", StandardPaths.MusicLocation);
-        add("Videos", "videos", StandardPaths.MoviesLocation);
-        list.push({ name: "This computer", icon: "computer", url: "wildos-computer:/" });
+        add(qsTr("Desktop"), "desktop", StandardPaths.DesktopLocation);
+        add(qsTr("Documents"), "document", StandardPaths.DocumentsLocation);
+        add(qsTr("Downloads"), "download", StandardPaths.DownloadLocation);
+        add(qsTr("Pictures"), "pictures", StandardPaths.PicturesLocation);
+        add(qsTr("Music"), "music", StandardPaths.MusicLocation);
+        add(qsTr("Videos"), "videos", StandardPaths.MoviesLocation);
+        for (const pin of places.folder.pinned()) {
+            if (!list.some(p => places.same(p.url, pin.url))) {
+                list.push(pin);
+            }
+        }
+        list.push({ name: qsTr("This computer"), icon: "computer", url: "wildos-computer:/" });
+        for (const drive of places.folder.drives) {
+            list.push({ name: drive.name, icon: drive.icon, url: drive.url });
+        }
         return list;
     }
 
@@ -64,6 +74,9 @@ Item {
                     height: 32
                     radius: UI.Style.radiusXs
                     color: placeMouse.pressed ? UI.Style.surfacePressed : current || placeMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                    Behavior on color {
+                        ColorAnimation { duration: UI.Style.hoverDuration }
+                    }
                     activeFocusOnTab: true
                     Accessible.role: Accessible.Button
                     Accessible.name: modelData.name

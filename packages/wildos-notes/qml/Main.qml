@@ -11,6 +11,8 @@ UI.AppWindow {
 
     property string selectedPath
 
+    // Named, since a quick note can be the first window Notes makes.
+    stateKey: "main"
     width: 1384
     height: 802
     minimumWidth: 900
@@ -57,7 +59,7 @@ UI.AppWindow {
             doc.close();
         }
         if (NoteStore.trashNote(path)) {
-            say(qsTr("Moved to the bin"));
+            say(qsTr("Moved to the bin"), qsTr("Undo"));
         } else {
             say(NoteStore.lastError);
         }
@@ -89,9 +91,17 @@ UI.AppWindow {
         }
         select(NoteStore.pathAt(0));
     }
-    function say(message) {
+    function say(message, action) {
         if (message.length > 0) {
-            toast.show(message);
+            toast.show(message, action);
+        }
+    }
+    function undoDelete() {
+        const path = NoteStore.restoreTrashed();
+        if (path.length === 0) {
+            say(NoteStore.lastError);
+        } else if (NoteStore.indexOfPath(path) >= 0) {
+            select(path);
         }
     }
 
@@ -155,9 +165,20 @@ UI.AppWindow {
         sequence: "Ctrl+N"
         onActivated: window.newNote()
     }
+    // Ctrl+F looks through the note being written in, and through every
+    // note from anywhere else; Ctrl+Shift+F is always every note.
     Shortcut {
         sequence: "Ctrl+F"
+        onActivated: editor.editing ? editor.startFind() : list.startSearch()
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+F"
         onActivated: list.startSearch()
+    }
+    Shortcut {
+        sequence: StandardKey.Print
+        enabled: doc.open
+        onActivated: editor.print()
     }
 
     ColumnLayout {
@@ -167,10 +188,9 @@ UI.AppWindow {
 
         UI.TitleBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
+            tall: true
             frame: window.frame
             showTitle: false
-            buttons.buttonHeight: 44
 
             // The title bar puts its content 16px in; the board's icon is 14.
             Row {
@@ -218,6 +238,7 @@ UI.AppWindow {
                 selectedPath: window.selectedPath
                 onSelected: path => window.select(path)
                 onNewNote: window.newNote()
+                onDeleteRequested: path => window.deleteNote(path)
                 onNoteMenu: (path, row, x, y) => {
                     noteMenu.path = path;
                     noteMenu.popup(row, x, y);
@@ -251,6 +272,9 @@ UI.AppWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 24
+        // Later, because the toast hides itself once this returns and
+        // would take a message saying why it didn't work with it.
+        onActionClicked: Qt.callLater(window.undoDelete)
     }
 
     UI.Menu {
@@ -371,7 +395,7 @@ UI.AppWindow {
                         doc.close();
                     }
                     if (NoteStore.trashNotebook(name)) {
-                        window.say(qsTr("%1 moved to the bin").arg(name));
+                        window.say(qsTr("%1 moved to the bin").arg(name), qsTr("Undo"));
                     } else {
                         window.say(NoteStore.lastError);
                     }

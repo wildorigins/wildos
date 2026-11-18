@@ -18,9 +18,16 @@ Depends:
  udev,
 Suggests:
  openrgb (>= 1.0),
-Description: Wild OS keyboard and mouse lighting
+Description: Wild OS lighting
  Sets RGB keyboards, mice and other USB lighting to the colour and effect
  of the taskbar underglow, through OpenRGB, when Settings has it turned on.
+ .
+ It also runs the effects chosen on Cooler's Lighting page: one effect
+ across every part or one for a part on its own, with each zone's name,
+ shape and number of lights kept on this PC. Cooler asks for these over the
+ session bus (io.wildos.Lighting); this program is the only one that sets a
+ light, and it sends moving effects only to a part's Direct mode, which is
+ not saved to the part.
  .
  OpenRGB's server runs only while the lighting is on and the session is in
  front, and listens on the loopback only. OpenRGB's own udev rules are

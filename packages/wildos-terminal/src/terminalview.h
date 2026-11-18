@@ -4,6 +4,8 @@
 #include <QUrl>
 #include <qtermwidget.h>
 
+class TermLinks;
+
 // One shell: QTermWidget, the emulator LXQt's terminal is built on, set up
 // from the profile and the appearance settings, with the Windows Terminal
 // clipboard habits layered on top (Ctrl+C copies a selection, Ctrl+V
@@ -55,6 +57,7 @@ private:
     QString m_icon;
     QPointer<QWidget> m_display;
     QWidget *m_outline = nullptr;
+    TermLinks *m_links = nullptr;
     int m_zoom = 0;
     // The selection Ctrl+C last copied: pressing it again with the same
     // selection still in place sends the interrupt, as in Windows Terminal

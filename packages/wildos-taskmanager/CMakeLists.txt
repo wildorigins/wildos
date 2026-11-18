@@ -48,3 +48,20 @@ install(TARGETS wildos-taskmanager RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.taskmanager.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/org.wildos.taskmanager.svg data/wildos-process.svg data/wildos-windows-mode.svg
     DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+
+# Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
+# WildOS.UI for the language chosen in Settings.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

@@ -21,6 +21,7 @@ fi
 
 if [ "$1" = purge ]; then
     rm -f /var/lib/wildos/package-sources /var/lib/wildos/package-sources.new
+    rm -rf /var/lib/wildos/pin
 fi
 
 #DEBHELPER#

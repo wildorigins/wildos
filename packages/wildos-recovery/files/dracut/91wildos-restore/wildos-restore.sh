@@ -16,13 +16,20 @@ wildos_snapshot() {
     [ -n "$id" ] || return 0
     base=/run/wildos-snapshot
     mkdir -p "$base/lower" "$base/rw"
-    mount --move /sysroot "$base/lower" || return 0
+    # The restore point is mounted a second time for the layer to stand on.
+    # Moving /sysroot there is refused: it sits under a shared mount, and
+    # every restore point then started read-only with no layer at all.
+    dev=$(findmnt -no SOURCE /sysroot | sed 's/\[.*$//')
+    if ! mount -t btrfs -o "ro,subvol=@snapshots/$id/snapshot" "$dev" "$base/lower"; then
+        warn "wildos: could not layer restore point $id; starting it read-only"
+        return 0
+    fi
     mount -t tmpfs -o mode=0755 tmpfs "$base/rw"
     mkdir -p "$base/rw/upper" "$base/rw/work"
     if ! mount -t overlay overlay \
         -o "lowerdir=$base/lower,upperdir=$base/rw/upper,workdir=$base/rw/work" /sysroot; then
         warn "wildos: could not layer restore point $id; starting it read-only"
-        mount --move "$base/lower" /sysroot
+        umount "$base/rw" "$base/lower"
     fi
 }
 

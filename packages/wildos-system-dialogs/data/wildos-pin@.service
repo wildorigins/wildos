@@ -1,0 +1,23 @@
+[Unit]
+Description=Check or change a PIN
+CollectMode=inactive-or-failed
+
+[Service]
+ExecStart=/usr/libexec/wildos/wildos-pin --serve
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+# Reads /etc/shadow through unix_chkpwd when a PIN is set and writes only
+# its own folders: /var/lib/wildos/pin, and /run/wildos-pin, where a PIN
+# sign-in is noted for wildos-wallet-keys until the session takes its key.
+StateDirectory=wildos/pin
+StateDirectoryMode=0755
+RuntimeDirectory=wildos-pin
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateNetwork=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX

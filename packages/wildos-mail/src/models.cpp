@@ -55,6 +55,16 @@ QHash<int, QByteArray> FolderModel::roleNames() const
     };
 }
 
+int FolderModel::headerRow(const QString &accountId) const
+{
+    for (int i = 0; i < m_entries.size(); ++i) {
+        if (m_entries.at(i).kind == FolderEntry::Header && m_entries.at(i).accountId == accountId) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void FolderModel::reset(const QList<FolderEntry> &entries)
 {
     // Only the counts changed: update in place so the pane doesn't flicker.

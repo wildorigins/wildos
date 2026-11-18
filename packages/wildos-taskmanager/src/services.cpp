@@ -1,5 +1,6 @@
 #include "services.h"
 
+#include <QCoreApplication>
 #include <QCollator>
 #include <QDBusArgument>
 #include <QDBusConnection>
@@ -86,56 +87,56 @@ QDBusMessage manager(const QString &method)
 const QHash<QString, QString> &friendly()
 {
     static const QHash<QString, QString> names = {
-        {QStringLiteral("NetworkManager"), QStringLiteral("Network")},
-        {QStringLiteral("NetworkManager-wait-online"), QStringLiteral("Wait for the network at start-up")},
-        {QStringLiteral("wpa_supplicant"), QStringLiteral("Wi-Fi security")},
-        {QStringLiteral("ModemManager"), QStringLiteral("Mobile broadband")},
+        {QStringLiteral("NetworkManager"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Network"))},
+        {QStringLiteral("NetworkManager-wait-online"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Wait for the network at start-up"))},
+        {QStringLiteral("wpa_supplicant"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Wi-Fi security"))},
+        {QStringLiteral("ModemManager"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Mobile broadband"))},
         {QStringLiteral("bluetooth"), QStringLiteral("Bluetooth")},
-        {QStringLiteral("cups"), QStringLiteral("Printing")},
-        {QStringLiteral("cups-browsed"), QStringLiteral("Printer discovery")},
-        {QStringLiteral("avahi-daemon"), QStringLiteral("Network discovery")},
-        {QStringLiteral("ssh"), QStringLiteral("Remote sign-in (SSH)")},
+        {QStringLiteral("cups"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Printing"))},
+        {QStringLiteral("cups-browsed"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Printer discovery"))},
+        {QStringLiteral("avahi-daemon"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Network discovery"))},
+        {QStringLiteral("ssh"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Remote sign-in (SSH)"))},
         {QStringLiteral("tor"), QStringLiteral("Tor")},
         {QStringLiteral("tor@default"), QStringLiteral("Tor")},
-        {QStringLiteral("unattended-upgrades"), QStringLiteral("Security updates")},
-        {QStringLiteral("apt-daily"), QStringLiteral("Update check")},
-        {QStringLiteral("apt-daily-upgrade"), QStringLiteral("Install updates")},
-        {QStringLiteral("packagekit"), QStringLiteral("Software updates")},
-        {QStringLiteral("firewalld"), QStringLiteral("Firewall")},
-        {QStringLiteral("ufw"), QStringLiteral("Firewall")},
-        {QStringLiteral("sdwdate"), QStringLiteral("Secure time")},
-        {QStringLiteral("apparmor"), QStringLiteral("App protection")},
-        {QStringLiteral("accounts-daemon"), QStringLiteral("Accounts")},
-        {QStringLiteral("upower"), QStringLiteral("Battery and power")},
-        {QStringLiteral("power-profiles-daemon"), QStringLiteral("Power modes")},
-        {QStringLiteral("udisks2"), QStringLiteral("Drives")},
-        {QStringLiteral("fwupd"), QStringLiteral("Firmware updates")},
-        {QStringLiteral("fwupd-refresh"), QStringLiteral("Firmware update check")},
-        {QStringLiteral("cron"), QStringLiteral("Scheduled tasks")},
-        {QStringLiteral("anacron"), QStringLiteral("Scheduled tasks catch-up")},
-        {QStringLiteral("sddm"), QStringLiteral("Sign-in screen")},
-        {QStringLiteral("thermald"), QStringLiteral("Temperature control")},
-        {QStringLiteral("colord"), QStringLiteral("Colour profiles")},
-        {QStringLiteral("rtkit-daemon"), QStringLiteral("Sound timing")},
-        {QStringLiteral("switcheroo-control"), QStringLiteral("Graphics switching")},
-        {QStringLiteral("smartmontools"), QStringLiteral("Disk health")},
-        {QStringLiteral("flatpak-system-helper"), QStringLiteral("Sandboxed app installs")},
-        {QStringLiteral("wildos-launch-preload"), QStringLiteral("Faster app starts")},
-        {QStringLiteral("pipewire"), QStringLiteral("Sound and video")},
-        {QStringLiteral("pipewire-pulse"), QStringLiteral("Sound for older apps")},
-        {QStringLiteral("wireplumber"), QStringLiteral("Sound devices")},
-        {QStringLiteral("plasma-ksystemstats"), QStringLiteral("System monitor service")},
-        {QStringLiteral("plasma-plasmashell"), QStringLiteral("Wild OS desktop")},
-        {QStringLiteral("plasma-kwin_wayland"), QStringLiteral("Window manager")},
-        {QStringLiteral("plasma-powerdevil"), QStringLiteral("Power management")},
-        {QStringLiteral("plasma-kglobalaccel"), QStringLiteral("Keyboard shortcuts")},
-        {QStringLiteral("plasma-polkit-agent"), QStringLiteral("Permission prompts")},
-        {QStringLiteral("plasma-xdg-desktop-portal-kde"), QStringLiteral("App permissions portal")},
-        {QStringLiteral("xdg-desktop-portal"), QStringLiteral("App permissions portal")},
-        {QStringLiteral("xdg-document-portal"), QStringLiteral("File sharing portal")},
-        {QStringLiteral("xdg-permission-store"), QStringLiteral("App permissions store")},
-        {QStringLiteral("baloo"), QStringLiteral("File search")},
-        {QStringLiteral("kde-baloo"), QStringLiteral("File search")},
+        {QStringLiteral("unattended-upgrades"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Security updates"))},
+        {QStringLiteral("apt-daily"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Update check"))},
+        {QStringLiteral("apt-daily-upgrade"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Install updates"))},
+        {QStringLiteral("packagekit"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Software updates"))},
+        {QStringLiteral("firewalld"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Firewall"))},
+        {QStringLiteral("ufw"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Firewall"))},
+        {QStringLiteral("sdwdate"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Secure time"))},
+        {QStringLiteral("apparmor"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "App protection"))},
+        {QStringLiteral("accounts-daemon"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Accounts"))},
+        {QStringLiteral("upower"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Battery and power"))},
+        {QStringLiteral("power-profiles-daemon"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Power modes"))},
+        {QStringLiteral("udisks2"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Drives"))},
+        {QStringLiteral("fwupd"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Firmware updates"))},
+        {QStringLiteral("fwupd-refresh"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Firmware update check"))},
+        {QStringLiteral("cron"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Scheduled tasks"))},
+        {QStringLiteral("anacron"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Scheduled tasks catch-up"))},
+        {QStringLiteral("sddm"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Sign-in screen"))},
+        {QStringLiteral("thermald"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Temperature control"))},
+        {QStringLiteral("colord"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Colour profiles"))},
+        {QStringLiteral("rtkit-daemon"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Sound timing"))},
+        {QStringLiteral("switcheroo-control"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Graphics switching"))},
+        {QStringLiteral("smartmontools"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Disk health"))},
+        {QStringLiteral("flatpak-system-helper"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Sandboxed app installs"))},
+        {QStringLiteral("wildos-launch-preload"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Faster app starts"))},
+        {QStringLiteral("pipewire"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Sound and video"))},
+        {QStringLiteral("pipewire-pulse"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Sound for older apps"))},
+        {QStringLiteral("wireplumber"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Sound devices"))},
+        {QStringLiteral("plasma-ksystemstats"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "System monitor service"))},
+        {QStringLiteral("plasma-plasmashell"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Wild OS desktop"))},
+        {QStringLiteral("plasma-kwin_wayland"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Window manager"))},
+        {QStringLiteral("plasma-powerdevil"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Power management"))},
+        {QStringLiteral("plasma-kglobalaccel"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Keyboard shortcuts"))},
+        {QStringLiteral("plasma-polkit-agent"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "Permission prompts"))},
+        {QStringLiteral("plasma-xdg-desktop-portal-kde"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "App permissions portal"))},
+        {QStringLiteral("xdg-desktop-portal"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "App permissions portal"))},
+        {QStringLiteral("xdg-document-portal"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "File sharing portal"))},
+        {QStringLiteral("xdg-permission-store"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "App permissions store"))},
+        {QStringLiteral("baloo"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "File search"))},
+        {QStringLiteral("kde-baloo"), QStringLiteral(QT_TRANSLATE_NOOP("Services", "File search"))},
     };
     return names;
 }
@@ -285,17 +286,19 @@ QVariantList Services::list(bool user) const
         if (description.isEmpty() || description == name) {
             description = descriptionFromFile(filePath.value(name));
         }
-        const QString plain = friendly().value(base, description.isEmpty() ? base : description);
+        // The plain names are English in the table and translated here.
+        const QString plain = friendly().contains(base) ? QCoreApplication::translate("Services", friendly().value(base).toUtf8().constData())
+                                                        : description.isEmpty() ? base : description;
         const QString active = u.activeState.isEmpty() ? QStringLiteral("inactive") : u.activeState;
         const QString shown = active == QLatin1String("active") ? QStringLiteral("Running")
             : active == QLatin1String("activating")             ? QStringLiteral("Starting")
             : active == QLatin1String("deactivating")           ? QStringLiteral("Stopping")
             : active == QLatin1String("failed")                 ? QStringLiteral("Failed")
                                                                 : QStringLiteral("Stopped");
-        const QString starts = state.startsWith(QLatin1String("enabled")) ? QStringLiteral("Automatically")
-            : state == QLatin1String("masked")                            ? QStringLiteral("Never")
-            : state == QLatin1String("disabled")                          ? QStringLiteral("Manually")
-                                                                          : QStringLiteral("When needed");
+        const QString starts = state.startsWith(QLatin1String("enabled")) ? QCoreApplication::translate("Services", "Automatically")
+            : state == QLatin1String("masked")                            ? QCoreApplication::translate("Services", "Never")
+            : state == QLatin1String("disabled")                          ? QCoreApplication::translate("Services", "Manually")
+                                                                          : QCoreApplication::translate("Services", "When needed");
         out << QVariantMap{
             {QStringLiteral("key"), (user ? QStringLiteral("user:") : QStringLiteral("system:")) + name},
             {QStringLiteral("unit"), name},
@@ -305,7 +308,7 @@ QVariantList Services::list(bool user) const
             {QStringLiteral("running"), active == QLatin1String("active") || active == QLatin1String("activating")},
             {QStringLiteral("starts"), starts},
             {QStringLiteral("user"), user},
-            {QStringLiteral("owner"), user ? QStringLiteral("You") : QStringLiteral("System")},
+            {QStringLiteral("owner"), user ? QCoreApplication::translate("Services", "You") : QCoreApplication::translate("Services", "System")},
             {QStringLiteral("masked"), state == QLatin1String("masked")},
             {QStringLiteral("plumbing"), plumbing(base, state) || state == QLatin1String("masked")},
             {QStringLiteral("known"), friendly().contains(base)},
@@ -363,9 +366,9 @@ void Services::act(const QString &unit, bool user, const QString &action)
         if (watcher->isError()) {
             const QString name = watcher->error().name();
             if (name == QLatin1String("org.freedesktop.DBus.Error.AccessDenied") || name.endsWith(QLatin1String("InteractiveAuthorizationRequired"))) {
-                Q_EMIT failed(QStringLiteral("Wild OS needs an administrator's permission to change this service."));
+                Q_EMIT failed(QCoreApplication::translate("Services", "Wild OS needs an administrator's permission to change this service."));
             } else {
-                Q_EMIT failed(QStringLiteral("The service could not be changed. ") + watcher->error().message());
+                Q_EMIT failed(QCoreApplication::translate("Services", "The service could not be changed. %1").arg(watcher->error().message()));
             }
         }
         QTimer::singleShot(400, this, &Services::reload);

@@ -40,7 +40,13 @@ Window {
     readonly property rect area: dragKind.length > 0 ? selection
         : CaptureApp.pickedScreen === screenName ? CaptureApp.pickedArea : Qt.rect(0, 0, 0, 0)
 
-    screen: screenInfo
+    // The screen, and its position: on first show Qt moves a window to the
+    // screen that holds its position, so at 0,0 every screen's overlay went
+    // to the first screen. Given once the window exists rather than bound,
+    // as Qt can reset a bound screen while the window is being made.
+    Component.onCompleted: screen = screenInfo
+    x: screenInfo ? screenInfo.virtualX : 0
+    y: screenInfo ? screenInfo.virtualY : 0
     width: screenInfo ? screenInfo.width : 0
     height: screenInfo ? screenInfo.height : 0
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint

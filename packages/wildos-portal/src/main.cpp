@@ -1,6 +1,7 @@
 #include "clash.h"
 #include "dbustypes.h"
 #include "filechooser.h"
+#include "windows.h"
 
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
@@ -8,6 +9,7 @@
 #include <QIcon>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QTimer>
 
 int main(int argc, char *argv[])
 {
@@ -38,5 +40,15 @@ int main(int argc, char *argv[])
         qWarning("wildos-portal: already running");
         return 1;
     }
+    // Windows quits the service a while after its last dialog closes. When
+    // something starts it without asking for a dialog, which happens at
+    // sign-in, nothing would start that wait, and it stayed for the whole
+    // session (38 MB). The same wait runs from start-up; D-Bus starts it
+    // again for the next dialog.
+    QTimer::singleShot(Windows::idleQuitMs, &app, [] {
+        if (!Windows::started()) {
+            QCoreApplication::quit();
+        }
+    });
     return app.exec();
 }

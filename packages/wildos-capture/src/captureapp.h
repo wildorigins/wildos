@@ -108,6 +108,9 @@ public:
     // keeps all of it.
     Q_INVOKABLE bool copyImage(const QVariant &image, const QRectF &crop);
     Q_INVOKABLE bool saveImage(const QVariant &image, const QRectF &crop, const QString &path);
+    // Save as: asks where, starting from where the picture is saved now.
+    // Empty when the dialog was cancelled.
+    Q_INVOKABLE QString chooseSavePath(const QString &current);
     Q_INVOKABLE void openEditorFor(const QUrl &file);
     Q_INVOKABLE void openShare(const QUrl &file);
     Q_INVOKABLE void openFile(const QUrl &file);

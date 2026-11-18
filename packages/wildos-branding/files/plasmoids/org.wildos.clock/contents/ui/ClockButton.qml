@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Templates as T
 import WildOS.UI as UI
 import org.wildos.shell as WildOS
 import "Formats.js" as Formats
@@ -20,15 +21,47 @@ MouseArea {
     Layout.minimumHeight: 44
 
     hoverEnabled: true
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
     Accessible.role: Accessible.Button
-    Accessible.name: "Date, time and notifications"
+    Accessible.name: qsTr("Date, time and notifications")
     Accessible.description: clock.toolTipMainText + ", " + time.text
         + (clock.toolTipSubText.length > 0 ? ". " + clock.toolTipSubText.replace(/\n/g, ". ") : "")
 
     // Remembering the state at press time stops a click that closes the popup
     // (it loses focus first) from opening it again straight away.
-    onPressed: wasExpanded = clock.expanded
-    onClicked: clock.expanded = !wasExpanded
+    onPressed: mouse => {
+        if (mouse.button === Qt.LeftButton) {
+            wasExpanded = clock.expanded;
+        }
+    }
+    onClicked: mouse => {
+        if (mouse.button === Qt.RightButton) {
+            openMenu(mouse.x);
+        } else {
+            clock.expanded = !wasExpanded;
+        }
+    }
+
+    // A right click gives what Windows' clock does: where to set the date
+    // and time, and where to choose what may notify.
+    function openMenu(px: real): void {
+        menu.entries = [
+            { text: qsTr("Adjust date and time"), icon: "clock", run: () => clock.openSettings("datetime") },
+            { text: qsTr("Notification settings"), icon: "bell", run: () => clock.openSettings("notifications") }
+        ];
+        const scene = button.mapToItem(null, 0, 0);
+        // The clock sits at the end of the taskbar, so the menu never
+        // reaches past the button's right edge.
+        menu.x = Math.round(Math.min(px - menu.implicitWidth / 2, button.width - menu.implicitWidth));
+        menu.y = Math.round(-scene.y - 12 - menu.implicitHeight);
+        menu.open();
+    }
+
+    UI.Menu {
+        id: menu
+        popupType: T.Popup.Window
+        minimumWidth: 220
+    }
 
     Rectangle {
         anchors.centerIn: parent

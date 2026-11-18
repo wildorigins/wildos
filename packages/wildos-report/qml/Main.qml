@@ -63,10 +63,9 @@ UI.AppWindow {
 
         UI.TitleBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
+            tall: true
             frame: window.frame
             showTitle: false
-            buttons.buttonHeight: 44
 
             // The title bar puts its content 16px in; the board's icon is 14.
             Row {

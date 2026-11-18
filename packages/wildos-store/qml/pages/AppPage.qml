@@ -100,7 +100,7 @@ PageFlick {
                 visible: page.app && page.app.developer.length > 0
                 enabled: page.app && page.app.homepage.length > 0
                 text: page.app ? page.app.developer : ""
-                Accessible.description: "Opens the website"
+                Accessible.description: qsTr("Opens the website")
                 onClicked: Qt.openUrlExternally(page.app.homepage)
             }
 
@@ -134,13 +134,13 @@ PageFlick {
                             id: stepLabel
                             text: {
                                 switch (page.step) {
-                                case "waiting": return "Waiting";
-                                case "preparing": return "Getting ready";
-                                case "installing": return "Installing";
-                                case "removing": return "Uninstalling";
-                                case "paused": return "Paused";
+                                case "waiting": return qsTr("Waiting");
+                                case "preparing": return qsTr("Getting ready");
+                                case "installing": return qsTr("Installing");
+                                case "removing": return qsTr("Uninstalling");
+                                case "paused": return qsTr("Paused");
                                 }
-                                return page.app && page.app.action === "update" ? "Downloading the update" : "Downloading";
+                                return page.app && page.app.action === "update" ? qsTr("Downloading the update") : qsTr("Downloading");
                             }
                             size: 13
                             font.weight: UI.Style.weightSemiBold
@@ -203,13 +203,13 @@ PageFlick {
                         width: parent.width
                         text: {
                             if (page.step === "waiting") {
-                                return "It starts when the apps before it finish.";
+                                return qsTr("It starts when the apps before it finish.");
                             }
                             if (page.step === "paused") {
-                                return "Press play to carry on.";
+                                return qsTr("Press play to carry on.");
                             }
                             const left = page.app ? page.app.timeLeftText : "";
-                            return left.length > 0 ? left + ". You can keep browsing." : "You can keep browsing.";
+                            return left.length > 0 ? qsTr("%1. You can keep browsing.").arg(left) : qsTr("You can keep browsing.");
                         }
                         size: 12
                         color: Metrics.inkTertiary
@@ -239,7 +239,7 @@ PageFlick {
                         if (page.step === "nospace") {
                             return page.app.statusLine;
                         }
-                        return page.step === "get" ? "Free" : "";
+                        return page.step === "get" ? qsTr("Free") : "";
                     }
                     size: 12.5
                     color: page.app && page.app.error.length > 0 ? Metrics.danger : Metrics.inkTertiary
@@ -252,7 +252,7 @@ PageFlick {
                     radius: 14
                     iconName: "close"
                     iconSize: 12
-                    tip: "Dismiss"
+                    tip: qsTr("Dismiss")
                     onClicked: page.app.clearError()
                 }
 
@@ -271,7 +271,7 @@ PageFlick {
             iconSize: 18
             iconColor: Metrics.inkSecondary
             enabled: page.app && page.app.appstreamId.length > 0
-            tip: "Copy link"
+            tip: qsTr("Copy link")
             onClicked: page.store.copyLink(page.app)
         }
     }
@@ -284,20 +284,20 @@ PageFlick {
             if (!a) {
                 return [];
             }
-            const out = [{ label: "Price", value: "Free", sub: "" }];
+            const out = [{ label: qsTr("Price"), value: qsTr("Free"), sub: "" }];
             const size = a.installed ? a.sizeText : a.downloadText;
             if (size.length > 0) {
-                out.push({ label: "Size", value: size, sub: a.installed ? "Installed" : "Download" });
+                out.push({ label: qsTr("Size"), value: size, sub: a.installed ? qsTr("Installed") : qsTr("Download") });
             }
             if (a.categoryLabel.length > 0) {
-                out.push({ label: "Category", value: a.categoryLabel, sub: "" });
+                out.push({ label: qsTr("Category"), value: a.categoryLabel, sub: "" });
             }
             if (a.developer.length > 0) {
-                out.push({ label: "Made by", value: a.developer, sub: "" });
+                out.push({ label: qsTr("Made by"), value: a.developer, sub: "" });
             }
-            out.push(a.openSource ? { label: "Licence", value: "Open source", sub: a.licence } : { label: "Licence", value: "Free to use", sub: "" });
+            out.push(a.openSource ? { label: qsTr("Licence"), value: qsTr("Open source"), sub: a.licence } : { label: qsTr("Licence"), value: qsTr("Free to use"), sub: "" });
             if (page.sandboxed) {
-                out.push({ label: "Safety", value: "", icon: "shield-check", sub: a.checked ? "Checked and sandboxed" : "Sandboxed" });
+                out.push({ label: qsTr("Safety"), value: "", icon: "shield-check", sub: a.checked ? qsTr("Checked and sandboxed") : qsTr("Sandboxed") });
             }
             return out;
         }
@@ -332,7 +332,7 @@ PageFlick {
             hoverEnabled: true
             focusPolicy: Qt.TabFocus
             Accessible.role: Accessible.Button
-            Accessible.name: modelData.caption || ("Screenshot " + (index + 1))
+            Accessible.name: modelData.caption || qsTr("Screenshot %1").arg(index + 1)
             onClicked: viewer.show(page.app.screenshots, index)
 
             background: Rectangle {
@@ -384,8 +384,8 @@ PageFlick {
         spacing: 14
 
         SectionHeader {
-            title: "What it can reach"
-            linkText: page.sandboxed && page.app && page.app.permissions.length > 0 ? "Details" : ""
+            title: qsTr("What it can reach")
+            linkText: page.sandboxed && page.app && page.app.permissions.length > 0 ? qsTr("Details") : ""
             onLinkClicked: permissionsDialog.open()
         }
 
@@ -398,7 +398,7 @@ PageFlick {
 
             ReachCard {
                 visible: page.app && page.app.canReach.length > 0
-                title: "Can reach"
+                title: qsTr("Can reach")
                 iconName: "tick"
                 tint: Metrics.success
                 rows: page.app ? page.app.canReach : []
@@ -406,7 +406,7 @@ PageFlick {
 
             ReachCard {
                 visible: page.app && page.app.cantReach.length > 0
-                title: "Can't reach"
+                title: qsTr("Can't reach")
                 iconName: "close"
                 tint: Metrics.danger
                 rows: page.app ? page.app.cantReach : []
@@ -414,28 +414,28 @@ PageFlick {
 
             ReachCard {
                 visible: page.app && page.app.worksOffline
-                title: "Good to know"
+                title: qsTr("Good to know")
                 iconName: "info"
                 tint: UI.Style.accent
-                rows: [{ tick: true, label: "Works fully offline" }]
+                rows: [{ tick: true, label: qsTr("Works fully offline") }]
             }
         }
 
         ReachCard {
             visible: page.sandboxed && page.app && !page.app.reachKnown
             readonly property bool failed: page.app && (page.app.permissionsUnknown || page.checkGaveUp)
-            title: failed ? "Couldn't check what it asks for" : "Checking what it asks for"
+            title: failed ? qsTr("Couldn't check what it asks for") : qsTr("Checking what it asks for")
             iconName: "info"
             tint: UI.Style.accent
-            text: failed ? "The app library can't be reached right now. Try again when you're online." : ""
+            text: failed ? qsTr("The app library can't be reached right now. Try again when you're online.") : ""
         }
 
         ReachCard {
             visible: page.app && !page.sandboxed && page.app.source.length > 0
-            title: "Runs without a sandbox"
+            title: qsTr("Runs without a sandbox")
             iconName: "info"
             tint: UI.Style.accent
-            text: page.app ? page.app.name + " runs like any program on your computer, so it can open any of your files. It is updated along with the rest of Wild OS." : ""
+            text: page.app ? qsTr("%1 runs like any program on your computer, so it can open any of your files. It is updated along with the rest of Wild OS.").arg(page.app.name) : ""
         }
     }
 
@@ -445,7 +445,7 @@ PageFlick {
         visible: page.app && page.app.description.length > 0
 
         SectionHeader {
-            title: "About"
+            title: qsTr("About")
         }
 
         Item {
@@ -501,7 +501,7 @@ PageFlick {
             visible: about.truncatedText
             Layout.leftMargin: -4
             Layout.topMargin: -8
-            text: page.expanded ? "Show less" : "Read more"
+            text: page.expanded ? qsTr("Show less") : qsTr("Read more")
             onClicked: page.expanded = !page.expanded
         }
     }
@@ -573,20 +573,20 @@ PageFlick {
 
         StoreLink {
             visible: page.app && page.app.homepage.length > 0
-            text: "Website"
+            text: qsTr("Website")
             onClicked: Qt.openUrlExternally(page.app.homepage)
         }
 
         StoreLink {
             visible: page.app && page.app.installed && !page.working
-            text: "Uninstall"
+            text: qsTr("Uninstall")
             onClicked: page.store.askRemove(page.app)
         }
 
         UI.Label {
             visible: page.app && page.app.version.length > 0
             height: 26
-            text: page.app ? "Version " + page.app.version : ""
+            text: page.app ? qsTr("Version %1").arg(page.app.version) : ""
             size: 13
             color: Metrics.inkTertiary
         }
@@ -602,7 +602,7 @@ PageFlick {
 
         UI.Label {
             width: parent.width
-            text: page.sandboxed ? "Installing the sandboxed version, from Flathub" : "Installing the Wild OS version, from Debian"
+            text: page.sandboxed ? qsTr("Installing the sandboxed version, from Flathub") : qsTr("Installing the Wild OS version, from Debian")
             size: 13.5
             font.weight: UI.Style.weightSemiBold
         }
@@ -610,8 +610,8 @@ PageFlick {
         UI.Label {
             width: parent.width
             text: page.sandboxed
-                ? "Usually the newest release. It runs in a sandbox, so it only reaches what you allow. It updates on its own, separately from Wild OS."
-                : "Tested with Wild OS and updated with the rest of your system. It isn't sandboxed, so it can reach everything your account can. Often an older release."
+                ? qsTr("Usually the newest release. It runs in a sandbox, so it only reaches what you allow. It updates on its own, separately from Wild OS.")
+                : qsTr("Tested with Wild OS and updated with the rest of your system. It isn't sandboxed, so it can reach everything your account can. Often an older release.")
             size: 13
             lineHeight: 1.45
             color: Metrics.inkSecondary
@@ -620,17 +620,17 @@ PageFlick {
         }
 
         StoreLink {
-            text: page.sandboxed ? "Install the Wild OS version instead" : "Install the sandboxed version instead"
+            text: page.sandboxed ? qsTr("Install the Wild OS version instead") : qsTr("Install the sandboxed version instead")
             onClicked: page.app.useSource(page.sandboxed ? "apt" : "flatpak")
         }
     }
 
     UI.Dialog {
         id: permissionsDialog
-        title: page.app ? "What " + page.app.name + " can reach" : ""
+        title: page.app ? qsTr("What %1 can reach").arg(page.app.name) : ""
         text: !page.app ? ""
-            : page.app.installed ? "Changes apply the next time " + page.app.name + " opens. " + page.app.name + " will ask if it ever needs something new."
-            : "This is what " + page.app.name + " asks for. You can change it once it's installed."
+            : page.app.installed ? qsTr("Changes apply the next time %1 opens. %1 will ask if it ever needs something new.").arg(page.app.name)
+            : qsTr("This is what %1 asks for. You can change it once it's installed.").arg(page.app.name)
 
         Repeater {
             model: page.sandboxed && page.app ? page.app.permissions : []
@@ -659,7 +659,7 @@ PageFlick {
 
                     UI.Label {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: permission.modelData.fixed ? "Always" : permission.modelData.allowed ? "On" : "Off"
+                        text: permission.modelData.fixed ? qsTr("Always") : permission.modelData.allowed ? qsTr("On") : qsTr("Off")
                         size: 12
                         color: Metrics.inkSecondary
                     }
@@ -669,7 +669,7 @@ PageFlick {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: permission.modelData.allowed
                         locked: !permission.modelData.editable
-                        lockedReason: "Change this once the app is installed"
+                        lockedReason: qsTr("Change this once the app is installed")
                         Accessible.name: permission.modelData.label
                         onToggled: page.app.setPermission(permission.modelData.token, checked)
                     }
@@ -680,7 +680,7 @@ PageFlick {
         buttons: [
             UI.Button {
                 kind: "primary"
-                text: "Done"
+                text: qsTr("Done")
                 onClicked: permissionsDialog.close()
             }
         ]

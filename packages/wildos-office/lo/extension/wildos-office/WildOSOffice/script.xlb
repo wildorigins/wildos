@@ -3,4 +3,5 @@
 <library:library xmlns:library="http://openoffice.org/2000/library" library:name="WildOSOffice" library:readonly="true" library:passwordprotected="false">
  <library:element library:name="Title"/>
  <library:element library:name="Icons"/>
+ <library:element library:name="Slides"/>
 </library:library>

@@ -8,6 +8,8 @@ import QtQuick.Templates as T
 T.TextArea {
     id: control
 
+    // What the box is for, when the placeholder does not say it.
+    property string accessibleName
     property bool error: false
     property bool previewFocus: false
     // Off for a field that brings its own right-click menu.
@@ -34,8 +36,8 @@ T.TextArea {
     font.family: Style.fontFamily
     font.letterSpacing: Style.tracking(Style.px(13))
     font.pixelSize: Style.px(13)
-    opacity: enabled ? 1 : 0.5
-    Accessible.name: placeholderText
+    opacity: enabled ? 1 : Style.disabledOpacity
+    Accessible.name: accessibleName.length > 0 ? accessibleName : placeholderText
 
     function openTextMenu(px: real, py: real): void {
         menu.open(px, py);

@@ -44,6 +44,28 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     T.ScrollBar.vertical: UI.ScrollBar {}
 
+    // Tab can reach a cover that is scrolled out of sight.
+    Connections {
+        target: page.Window.window
+        function onActiveFocusItemChanged() {
+            const tile = page.Window.window.activeFocusItem;
+            let inside = false;
+            for (let up = tile; up && !inside; up = up.parent) {
+                inside = up === column;
+            }
+            if (!inside) {
+                return;
+            }
+            const top = tile.mapToItem(column, 0, 0).y - 12;
+            const bottom = top + tile.height + 24;
+            if (top < page.contentY) {
+                page.contentY = Math.max(0, top);
+            } else if (bottom > page.contentY + page.height) {
+                page.contentY = bottom - page.height;
+            }
+        }
+    }
+
     Column {
         id: column
         width: page.width

@@ -1,0 +1,23 @@
+# Runs once in the start-up files, ahead of the boot screen and the disk
+# unlock prompt. On an ordinary start it sees that nothing asked for the
+# manager and Space is not held, and is gone in a few milliseconds.
+
+[Unit]
+Description=Wild OS start-up manager
+DefaultDependencies=no
+ConditionPathExists=/etc/initrd-release
+After=systemd-udev-trigger.service systemd-modules-load.service systemd-vconsole-setup.service
+Before=plymouth-start.service systemd-ask-password-plymouth.path systemd-ask-password-console.path cryptsetup-pre.target sysinit.target
+
+[Service]
+Type=oneshot
+# The PC's own graphics driver, when the start-up files carry it
+# (wildos-branding's 92wildos-gpu-early), so the manager is drawn at the
+# screen's full size. The boot screen waits for the same thing next.
+ExecStartPre=-/usr/lib/wildos/gpu-wait
+ExecStart=/usr/lib/wildos/startup-manager --boot
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+# A person may sit at the manager as long as they like.
+TimeoutStartSec=infinity

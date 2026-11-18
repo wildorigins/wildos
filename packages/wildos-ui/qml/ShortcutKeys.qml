@@ -9,7 +9,7 @@ Row {
 
     spacing: 4
     Accessible.role: Accessible.StaticText
-    Accessible.name: "Shortcut: " + shortcut.keys.join(" plus ")
+    Accessible.name: qsTr("Shortcut: %1").arg(shortcut.keys.join(qsTr(" plus ")))
 
     Repeater {
         model: shortcut.keys

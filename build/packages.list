@@ -79,7 +79,6 @@ librsvg2-common
 at-spi2-core
 kde-config-screenlocker
 plasma-disks
-plasma-browser-integration
 avahi-daemon
 libnss-mdns
 libnss-systemd

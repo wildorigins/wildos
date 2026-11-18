@@ -13,6 +13,8 @@ Build-Depends:
  libpackagekitqt6-dev,
  libappstreamqt-dev,
  libflatpak-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 

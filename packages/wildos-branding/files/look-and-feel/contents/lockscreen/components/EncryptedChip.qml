@@ -54,7 +54,7 @@ Item {
         UI.Label {
             id: label
             anchors.verticalCenter: parent.verticalCenter
-            text: "Encrypted and locked"
+            text: qsTr("Encrypted and locked")
             color: UI.Style.inkOnWallpaper
         }
     }

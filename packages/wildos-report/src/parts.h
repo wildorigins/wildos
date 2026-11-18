@@ -24,6 +24,9 @@ const QList<Part> &all();
 const Part &byId(const QString &id);
 // The part a program belongs to, by process name or path; "other" if none.
 const Part &byProgram(const QString &program);
+// The name in the person's language; Part::name stays English for the
+// report itself.
+QString shownName(const Part &part);
 // [{ value, text }] for the drop-down.
 QVariantList choices();
 bool known(const QString &id);

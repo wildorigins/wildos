@@ -22,6 +22,14 @@ UI.AppWindow {
     property string pendingId: ""
     property bool pendingBack: false
     readonly property var searchFound: Pages.find(search.text)
+    // What the results list shows: the last results stay while the list
+    // fades out, so it does not collapse on its way.
+    property var shownResults: ({ ids: [], partial: false })
+    onSearchFoundChanged: {
+        if (search.text.trim().length > 0) {
+            shownResults = searchFound;
+        }
+    }
     property int resultIndex: 0
     readonly property var current: Pages.page(currentId)
     property string currentKcm: ""
@@ -34,7 +42,7 @@ UI.AppWindow {
     minimumWidth: 880
     minimumHeight: 560
     visible: true
-    title: "Settings"
+    title: qsTr("Settings")
     deep: true
     transparency: System.transparency
 
@@ -95,6 +103,7 @@ UI.AppWindow {
         }
         currentId = id;
         pageLoader.sourceComponent = null;
+        pageLoader.source = "";
         // A Wild OS page that cannot load says so, rather than quietly
         // showing KDE's module for the same setting in its place.
         let page = p.component ? Qt.createComponent("WildOS.Settings", p.component) : null;
@@ -105,7 +114,14 @@ UI.AppWindow {
             page = null;
         }
         currentKcm = page ? "" : (p.kcm || "");
-        pageLoader.sourceComponent = page || (currentKcm.length > 0 ? kcmComponent : errorComponent);
+        // KDE's modules bring Kirigami and the desktop style with them, which
+        // took about 150 ms of every start when this page was declared here.
+        // Loaded by address, they come only when such a page is opened.
+        if (!page && currentKcm.length > 0) {
+            pageLoader.setSource(Qt.resolvedUrl("components/KcmPage.qml"), { pluginId: currentKcm });
+        } else {
+            pageLoader.sourceComponent = page || errorComponent;
+        }
         search.text = "";
     }
 
@@ -191,6 +207,35 @@ UI.AppWindow {
         onActivated: search.forceActiveFocus()
     }
 
+    // Page Up, Page Down, Home and End scroll the page when the keyboard is
+    // on nothing at all. A control that has the keyboard gets the keys
+    // first and passes on the ones it does not use.
+    readonly property bool pageKeys: activeFocusItem === contentItem && pageLoader.item !== null && pageLoader.item.scrollByKey !== undefined
+
+    Shortcut {
+        sequence: "PgUp"
+        enabled: window.pageKeys
+        onActivated: pageLoader.item.scrollByKey(Qt.Key_PageUp)
+    }
+
+    Shortcut {
+        sequence: "PgDown"
+        enabled: window.pageKeys
+        onActivated: pageLoader.item.scrollByKey(Qt.Key_PageDown)
+    }
+
+    Shortcut {
+        sequence: "Home"
+        enabled: window.pageKeys
+        onActivated: pageLoader.item.scrollByKey(Qt.Key_Home)
+    }
+
+    Shortcut {
+        sequence: "End"
+        enabled: window.pageKeys
+        onActivated: pageLoader.item.scrollByKey(Qt.Key_End)
+    }
+
     Component {
         id: errorComponent
         PageError {
@@ -199,17 +244,10 @@ UI.AppWindow {
         }
     }
 
-    Component {
-        id: kcmComponent
-        KcmPage {
-            pluginId: window.currentKcm
-        }
-    }
-
     UI.TitleBar {
         id: titleBar
         width: parent.width
-        title: "Settings"
+        title: qsTr("Settings")
         showBack: true
         backEnabled: window.canGoBack
         frame: window.frame
@@ -225,6 +263,13 @@ UI.AppWindow {
         boundsBehavior: Flickable.StopAtBounds
         clip: true
         T.ScrollBar.vertical: UI.ScrollBar {}
+        // The page list has no use for the page keys, so they scroll the
+        // page beside it.
+        Keys.onPressed: event => {
+            if (pageLoader.item && pageLoader.item.keyPressed) {
+                pageLoader.item.keyPressed(event);
+            }
+        }
 
         Column {
             id: navColumn
@@ -241,7 +286,7 @@ UI.AppWindow {
                 hoverEnabled: true
                 focusPolicy: Qt.StrongFocus
                 Accessible.role: Accessible.Button
-                Accessible.name: "Account, " + System.userFullName
+                Accessible.name: qsTr("Account, %1").arg(System.userFullName)
                 onClicked: window.openPage("accounts")
 
                 background: Rectangle {
@@ -283,8 +328,8 @@ UI.AppWindow {
             UI.SearchField {
                 id: search
                 width: parent.width
-                placeholderText: "Find a setting"
-                Accessible.name: "Find a setting"
+                placeholderText: qsTr("Find a setting")
+                Accessible.name: qsTr("Find a setting")
                 // Typing stays in the box while Up and Down pick a result,
                 // as in Windows Settings; Enter opens the one picked.
                 onTextChanged: window.resultIndex = 0
@@ -323,6 +368,13 @@ UI.AppWindow {
         visible: search.text.trim().length > 0 && search.activeFocus
         closePolicy: T.Popup.NoAutoClose
 
+        enter: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: UI.Style.motionFast; easing.type: Easing.OutCubic }
+        }
+        exit: Transition {
+            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: UI.Style.motionFast; easing.type: UI.Style.easeExit }
+        }
+
         background: Rectangle {
             radius: UI.Style.radiusLg
             color: UI.Style.glassMenu
@@ -343,14 +395,14 @@ UI.AppWindow {
 
             UI.Label {
                 id: partialNote
-                visible: window.searchFound.partial
+                visible: window.shownResults.partial
                 width: parent.width
                 topPadding: 4
                 bottomPadding: 4
                 leftPadding: 10
                 rightPadding: 10
                 wrapMode: Text.Wrap
-                text: "Nothing matches every word, so here are the closest"
+                text: qsTr("Nothing matches every word, so here are the closest")
                 size: 12
                 color: UI.Style.inkMuted
             }
@@ -366,7 +418,7 @@ UI.AppWindow {
                 interactive: contentHeight > height
                 boundsBehavior: Flickable.StopAtBounds
                 spacing: 2
-                model: window.searchFound.ids
+                model: window.shownResults.ids
                 T.ScrollBar.vertical: UI.ScrollBar {}
 
                 delegate: T.AbstractButton {
@@ -382,7 +434,7 @@ UI.AppWindow {
                     hoverEnabled: true
                     focusPolicy: Qt.NoFocus
                     Accessible.role: Accessible.ListItem
-                    Accessible.name: place.length > 0 ? info.title + ", in " + place : info.title
+                    Accessible.name: place.length > 0 ? qsTr("%1, in %2").arg(info.title).arg(place) : info.title
                     Accessible.description: info.description || ""
                     Accessible.selected: lit
                     onHoveredChanged: {
@@ -449,7 +501,7 @@ UI.AppWindow {
                     width: parent.width
                     leftPadding: 10
                     rightPadding: 10
-                    text: "No settings match “" + search.text.trim() + "”"
+                    text: qsTr("No settings match “%1”").arg(search.text.trim())
                 }
 
                 UI.Label {
@@ -457,7 +509,7 @@ UI.AppWindow {
                     leftPadding: 10
                     rightPadding: 10
                     wrapMode: Text.Wrap
-                    text: "Check the spelling, or try fewer or more general words, such as display, sound or wifi."
+                    text: qsTr("Check the spelling, or try fewer or more general words, such as display, sound or wifi.")
                     size: 12
                     color: UI.Style.inkMuted
                 }
@@ -602,11 +654,11 @@ UI.AppWindow {
 
     UI.Dialog {
         id: unsavedDialog
-        title: "Apply your changes?"
-        text: "Some changes on this page are not applied yet."
+        title: qsTr("Apply your changes?")
+        text: qsTr("Some changes on this page are not applied yet.")
         buttons: [
             UI.Button {
-                text: "Apply"
+                text: qsTr("Apply")
                 kind: "primary"
                 onClicked: {
                     pageLoader.item.apply();
@@ -614,14 +666,14 @@ UI.AppWindow {
                 }
             },
             UI.Button {
-                text: "Discard changes"
+                text: qsTr("Discard changes")
                 onClicked: {
                     pageLoader.item.discard();
                     unsavedDialog.leave();
                 }
             },
             UI.Button {
-                text: "Stay on this page"
+                text: qsTr("Stay on this page")
                 onClicked: unsavedDialog.close()
             }
         ]

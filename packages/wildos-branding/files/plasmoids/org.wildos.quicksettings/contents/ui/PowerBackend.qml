@@ -78,7 +78,7 @@ Item {
 
     function setKeepAwake(on: bool): void {
         if (on && !inhibition.isManuallyInhibited) {
-            inhibition.inhibit("Keep awake is on in quick settings");
+            inhibition.inhibit(qsTr("Keep awake is on in quick settings"));
         } else if (!on && inhibition.isManuallyInhibited) {
             inhibition.uninhibit();
         }

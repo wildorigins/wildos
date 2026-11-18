@@ -26,9 +26,9 @@ PageScroll {
                     required property var modelData
                     iconName: modelData.icon
                     title: modelData.name
-                    description: (modelData.command.length > 0 ? modelData.command : Config.defaultShell)
-                                 + ", starts in " + (modelData.directory.length > 0 ? modelData.directory : "your home folder")
-                    status: modelData.id === Config.defaultProfile ? "Default" : ""
+                    description: qsTr("%1, starts in %2", "a command, then a folder").arg(modelData.command.length > 0 ? modelData.command : Config.defaultShell)
+                                 .arg(modelData.directory.length > 0 ? modelData.directory : qsTr("your home folder"))
+                    status: modelData.id === Config.defaultProfile ? qsTr("Default") : ""
                     chevron: true
                     onClicked: page.openProfile(modelData.id)
                 }
@@ -40,7 +40,7 @@ PageScroll {
         spacing: 8
 
         UI.Button {
-            text: "New profile"
+            text: qsTr("New profile")
             iconName: "plus"
             onClicked: page.openProfile(Config.addProfile())
         }

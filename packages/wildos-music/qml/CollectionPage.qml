@@ -14,6 +14,8 @@ TrackList {
     property string sort: "title"
 
     readonly property bool isPlaylist: kind === "playlist" || kind === "liked"
+    // The playlist's file name, or "" on a page that is not a playlist.
+    readonly property string playlist: !isPlaylist ? "" : kind === "liked" ? "Liked songs" : key
     readonly property var info: {
         Library.revision;
         if (page.isPlaylist) {
@@ -88,7 +90,19 @@ TrackList {
     showAlbum: kind !== "album"
 
     onPlayAt: index => app.play(paths, index, false)
-    onMenuAt: (index, row, x, y) => app.trackMenu(tracks[index], isPlaylist ? (kind === "liked" ? "Liked songs" : key) : "", row, x, y)
+    onMenuAt: (index, row, x, y) => {
+        if (selectedCount > 1) {
+            app.tracksMenu(picked(), playlist, row, x, y);
+        } else {
+            app.trackMenu(tracks[index], playlist, row, x, y);
+        }
+    }
+    // Delete takes songs out of a playlist; it never deletes a song's file.
+    onDeleteRequested: {
+        if (isPlaylist) {
+            app.removeFromPlaylist(playlist, picked().map(t => t.path));
+        }
+    }
 
     heading: kind === "songs" ? songsTop : collectionTop
 

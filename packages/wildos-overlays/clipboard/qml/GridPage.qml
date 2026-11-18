@@ -22,17 +22,21 @@ Item {
     readonly property string query: search.text.trim()
 
     readonly property var tones: ["", "\u{1F3FB}", "\u{1F3FC}", "\u{1F3FD}", "\u{1F3FE}", "\u{1F3FF}"]
-    readonly property var toneNames: ["Default", "Light", "Medium light", "Medium", "Medium dark", "Dark"]
+    readonly property var toneNames: [qsTr("Default"), qsTr("Light"), qsTr("Medium light"), qsTr("Medium"), qsTr("Medium dark"), qsTr("Dark")]
 
     readonly property var symbolGroups: [
-        { name: "Punctuation", emoji: chars("‘ ’ “ ” ‚ „ « » ‹ › … • · ¡ ¿ § ¶ † ‡ ′ ″ ‰ ‽ ⁂ ※ © ® ™ ℗ № ° ℃ ℉ ℓ ℮") },
-        { name: "Currency", emoji: chars("£ € $ ¢ ¥ ₹ ₽ ₩ ₪ ₺ ₫ ₴ ₦ ₱ ₿ ฿ ₣ ₡ ₲ ₵ ₸ ₼ ₾ ¤") },
-        { name: "Maths", emoji: chars("± × ÷ = ≠ ≈ ≡ < > ≤ ≥ ∞ √ ∛ ∑ ∏ ∫ ∂ ∆ ∇ ∈ ∉ ∩ ∪ ⊂ ⊃ ⊆ ⊇ ∧ ∨ ¬ ∀ ∃ ∅ ∝ ∠ ⊥ ∥ ‱ ½ ⅓ ⅔ ¼ ¾ ⅕ ⅛ ⅜ ⅝ ⅞ ⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ ⁿ ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉") },
-        { name: "Arrows", emoji: chars("← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙ ⇐ ⇑ ⇒ ⇓ ⇔ ⇕ ↩ ↪ ↺ ↻ ⤴ ⤵ ➜ ➔ ▸ ◂ ▴ ▾") },
-        { name: "Shapes and signs", emoji: chars("■ □ ▪ ▫ ▲ △ ▼ ▽ ◆ ◇ ○ ● ◎ ◉ ★ ☆ ♠ ♣ ♥ ♦ ♤ ♧ ♡ ♢ ✓ ✔ ✗ ✘ ☐ ☑ ☒ ♪ ♫ ☀ ☁ ☂ ☎ ✉ ✂ ✎ ⌘ ⌥ ⇧ ⌫ ⏎ ⌂ ⚠ ♻ ⚑") },
-        { name: "Latin letters", emoji: chars("à á â ä ã å ā æ ç ć č ď è é ê ë ē ė ę ě ğ ì í î ï ī ı ł ľ ñ ń ň ò ó ô ö õ ø ō œ ŕ ř ß ś š ş ť ù ú û ü ū ů ý ÿ ž ź ż ð þ À Á Â Ä Ã Å Ā Æ Ç Ć Č Ď È É Ê Ë Ē Ė Ę Ě Ğ Ì Í Î Ï Ī İ Ł Ľ Ñ Ń Ň Ò Ó Ô Ö Õ Ø Ō Œ Ŕ Ř Ś Š Ş Ť Ù Ú Û Ü Ū Ů Ý Ÿ Ž Ź Ż Ð Þ") },
-        { name: "Greek", emoji: chars("α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ σ ς τ υ φ χ ψ ω Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω") }
+        { name: qsTr("Punctuation"), emoji: chars("‘ ’ “ ” ‚ „ « » ‹ › … • · ¡ ¿ § ¶ † ‡ ′ ″ ‰ ‽ ⁂ ※ © ® ™ ℗ № ° ℃ ℉ ℓ ℮") },
+        { name: qsTr("Currency"), emoji: chars("£ € $ ¢ ¥ ₹ ₽ ₩ ₪ ₺ ₫ ₴ ₦ ₱ ₿ ฿ ₣ ₡ ₲ ₵ ₸ ₼ ₾ ¤") },
+        { name: qsTr("Maths"), emoji: chars("± × ÷ = ≠ ≈ ≡ < > ≤ ≥ ∞ √ ∛ ∑ ∏ ∫ ∂ ∆ ∇ ∈ ∉ ∩ ∪ ⊂ ⊃ ⊆ ⊇ ∧ ∨ ¬ ∀ ∃ ∅ ∝ ∠ ⊥ ∥ ‱ ½ ⅓ ⅔ ¼ ¾ ⅕ ⅛ ⅜ ⅝ ⅞ ⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ ⁿ ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉") },
+        { name: qsTr("Arrows"), emoji: chars("← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙ ⇐ ⇑ ⇒ ⇓ ⇔ ⇕ ↩ ↪ ↺ ↻ ⤴ ⤵ ➜ ➔ ▸ ◂ ▴ ▾") },
+        { name: qsTr("Shapes and signs"), emoji: chars("■ □ ▪ ▫ ▲ △ ▼ ▽ ◆ ◇ ○ ● ◎ ◉ ★ ☆ ♠ ♣ ♥ ♦ ♤ ♧ ♡ ♢ ✓ ✔ ✗ ✘ ☐ ☑ ☒ ♪ ♫ ☀ ☁ ☂ ☎ ✉ ✂ ✎ ⌘ ⌥ ⇧ ⌫ ⏎ ⌂ ⚠ ♻ ⚑") },
+        { name: qsTr("Latin letters"), emoji: chars("à á â ä ã å ā æ ç ć č ď è é ê ë ē ė ę ě ğ ì í î ï ī ı ł ľ ñ ń ň ò ó ô ö õ ø ō œ ŕ ř ß ś š ş ť ù ú û ü ū ů ý ÿ ž ź ż ð þ À Á Â Ä Ã Å Ā Æ Ç Ć Č Ď È É Ê Ë Ē Ė Ę Ě Ğ Ì Í Î Ï Ī İ Ł Ľ Ñ Ń Ň Ò Ó Ô Ö Õ Ø Ō Œ Ŕ Ř Ś Š Ş Ť Ù Ú Û Ü Ū Ů Ý Ÿ Ž Ź Ż Ð Þ") },
+        { name: qsTr("Greek"), emoji: chars("α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ σ ς τ υ φ χ ψ ω Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω") }
     ]
+    // The emoji group names tools/make-emoji.py writes into emoji.json,
+    // listed so they reach the translations; they are shown with qsTr().
+    readonly property var groupNames: [QT_TR_NOOP("Smileys and people"), QT_TR_NOOP("Animals and nature"), QT_TR_NOOP("Food and drink"),
+        QT_TR_NOOP("Travel and places"), QT_TR_NOOP("Activities"), QT_TR_NOOP("Objects"), QT_TR_NOOP("Symbols"), QT_TR_NOOP("Flags")]
     // One emoji standing for each group, for the jump buttons.
     readonly property var groupFaces: ["\u{1F600}", "\u{1F43B}", "\u{1F354}", "\u{2708}\u{FE0F}", "\u{26BD}", "\u{1F4A1}", "\u{2764}\u{FE0F}", "\u{1F3F3}\u{FE0F}"]
 
@@ -79,7 +83,7 @@ Item {
         };
         if (query.length > 0) {
             if (emoji) {
-                add("Results", EmojiData.search(query));
+                add(qsTr("Results"), EmojiData.search(query));
             } else {
                 const q = query.toLowerCase();
                 const hits = [];
@@ -90,13 +94,13 @@ Item {
                         }
                     }
                 }
-                add("Results", hits);
+                add(qsTr("Results"), hits);
             }
         } else if (emoji) {
-            add("Recently used", EmojiData.find(PanelApp.recentEmoji));
+            add(qsTr("Recently used"), EmojiData.find(PanelApp.recentEmoji));
             const groups = EmojiData.groups;
             for (const g of groups) {
-                add(g.name, g.emoji);
+                add(qsTr(g.name), g.emoji);
             }
         } else {
             for (const g of symbolGroups) {
@@ -175,7 +179,7 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: 34
                 iconLeading: true
-                placeholderText: page.emoji ? "Search emoji" : "Search symbols"
+                placeholderText: page.emoji ? qsTr("Search emoji") : qsTr("Search symbols")
                 onDownPressed: {
                     page.forceActiveFocus();
                     page.move(0);
@@ -194,7 +198,7 @@ Item {
                 visible: page.emoji
                 width: 34
                 height: 34
-                tip: "Skin tone: " + page.toneNames[PanelApp.skinTone]
+                tip: qsTr("Skin tone: %1").arg(page.toneNames[PanelApp.skinTone])
                 onClicked: toneMenu.popup(toneButton, toneButton.width - toneMenu.width, toneButton.height + 4)
 
                 Text {
@@ -297,7 +301,7 @@ Item {
             UI.Label {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
-                text: page.emoji ? "No emoji found" : "No symbols found"
+                text: page.emoji ? qsTr("No emoji found") : qsTr("No symbols found")
                 font.weight: UI.Style.weightSemiBold
             }
             UI.Label {
@@ -306,13 +310,13 @@ Item {
                 wrapMode: Text.Wrap
                 size: 12
                 color: UI.Style.inkMuted
-                text: page.emoji ? "Try another word, like smile, heart or cat." : "Type the symbol itself, or a group such as maths or currency."
+                text: page.emoji ? qsTr("Try another word, like smile, heart or cat.") : qsTr("Type the symbol itself, or a group such as maths or currency.")
             }
             UI.Button {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: 8
                 size: "small"
-                text: "Clear search"
+                text: qsTr("Clear search")
                 onClicked: {
                     search.clear();
                     page.focusSearch();
@@ -330,11 +334,11 @@ Item {
             UI.IconButton {
                 width: 34
                 height: 32
-                tip: "Recently used"
+                tip: qsTr("Recently used")
                 iconName: "clock"
                 iconSize: 16
                 enabled: PanelApp.recentEmoji.length > 0
-                onClicked: page.jumpTo("Recently used")
+                onClicked: page.jumpTo(qsTr("Recently used"))
             }
 
             Repeater {
@@ -346,8 +350,8 @@ Item {
                     required property int index
                     width: 34
                     height: 32
-                    tip: modelData.name
-                    onClicked: page.jumpTo(modelData.name)
+                    tip: qsTr(modelData.name)
+                    onClicked: page.jumpTo(qsTr(modelData.name))
 
                     Text {
                         anchors.centerIn: parent

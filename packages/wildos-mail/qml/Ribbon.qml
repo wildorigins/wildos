@@ -60,7 +60,7 @@ ColumnLayout {
         id: card
         Layout.fillWidth: true
         implicitHeight: 46
-        radius: 10
+        radius: UI.Style.radiusPanel
         color: UI.Style.surfaceRest
         border.width: 1
         border.color: UI.Style.borderSubtle

@@ -16,12 +16,12 @@ PageScroll {
 
     function batteryText(level) {
         switch (level) {
-        case "full": return "Battery full";
-        case "medium": return "Battery half full";
-        case "low": return "Battery low";
-        case "empty": return "Battery almost empty";
-        case "wired": return "Connected by cable";
-        default: return "Connected";
+        case "full": return qsTr("Battery full");
+        case "medium": return qsTr("Battery half full");
+        case "low": return qsTr("Battery low");
+        case "empty": return qsTr("Battery almost empty");
+        case "wired": return qsTr("Connected by cable");
+        default: return qsTr("Connected");
         }
     }
 
@@ -29,8 +29,8 @@ PageScroll {
         visible: page.controllers.length === 0
         iconName: "games"
         warning: true
-        title: "No game controller connected"
-        description: "Plug in a controller, or pair one in Bluetooth, and it appears here."
+        title: qsTr("No game controller connected")
+        description: qsTr("Plug in a controller, or pair one in Bluetooth, and it appears here.")
 
         UI.Button {
             visible: Pages.exists("bluetooth")
@@ -67,8 +67,8 @@ PageScroll {
 
                     UI.SettingRow {
                         visible: controller.modelData.buttons.length > 0
-                        title: "Buttons"
-                        description: "Press a button and it lights up"
+                        title: qsTr("Buttons")
+                        description: qsTr("Press a button and it lights up")
 
                         below: Repeater {
                             model: controller.modelData.buttons.length

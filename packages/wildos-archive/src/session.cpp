@@ -10,6 +10,7 @@
 #include <QFileInfo>
 #include <QStandardPaths>
 #include <QUuid>
+#include <QCoreApplication>
 
 namespace
 {
@@ -99,15 +100,15 @@ QString Archive::jobText() const
     }
     const QString name = m_progress->currentName();
     if (m_job == QLatin1String("extract")) {
-        return name.isEmpty() ? QStringLiteral("Extracting") : QStringLiteral("Extracting %1").arg(name);
+        return name.isEmpty() ? QCoreApplication::translate("Archive", "Extracting") : QCoreApplication::translate("Archive", "Extracting %1").arg(name);
     }
     if (m_job == QLatin1String("test")) {
-        return name.isEmpty() ? QStringLiteral("Testing") : QStringLiteral("Testing %1").arg(name);
+        return name.isEmpty() ? QCoreApplication::translate("Archive", "Testing") : QCoreApplication::translate("Archive", "Testing %1").arg(name);
     }
     if (m_job == QLatin1String("open")) {
-        return QStringLiteral("Opening %1").arg(name);
+        return QCoreApplication::translate("Archive", "Opening %1").arg(name);
     }
-    return QStringLiteral("Reading the archive");
+    return QCoreApplication::translate("Archive", "Reading the archive");
 }
 
 QString Archive::fileName() const
@@ -130,8 +131,8 @@ QString Archive::summary() const
     if (!m_listing || m_state != QLatin1String("ready")) {
         return QString();
     }
-    return QStringLiteral("%1 · %2 unpacked, %3 packed")
-        .arg(m_listing->format.isEmpty() ? QStringLiteral("Archive") : m_listing->format, Format::size(m_listing->totalSize),
+    return QCoreApplication::translate("Archive", "%1 · %2 unpacked, %3 packed")
+        .arg(m_listing->format.isEmpty() ? QCoreApplication::translate("Archive", "Archive") : m_listing->format, Format::size(m_listing->totalSize),
              Format::size(m_listing->packedSize));
 }
 
@@ -564,7 +565,7 @@ void Archive::updatePane()
 {
     m_paneThumbs.clear();
     if (!m_listing) {
-        m_paneTitle = QStringLiteral("Extract everything");
+        m_paneTitle = QCoreApplication::translate("Archive", "Extract everything");
         m_paneSize.clear();
     } else {
         const QSet<int> &checked = m_model->checked();
@@ -583,11 +584,11 @@ void Archive::updatePane()
         }
         const int n = int(files.size());
         if (chosen.isEmpty()) {
-            m_paneTitle = QStringLiteral("Extract everything");
+            m_paneTitle = QCoreApplication::translate("Archive", "Extract everything");
         } else if (allImages) {
-            m_paneTitle = n == 1 ? QStringLiteral("Extract 1 photo") : QStringLiteral("Extract %1 photos").arg(n);
+            m_paneTitle = n == 1 ? QCoreApplication::translate("Archive", "Extract 1 photo") : QCoreApplication::translate("Archive", "Extract %1 photos").arg(n);
         } else {
-            m_paneTitle = n == 1 ? QStringLiteral("Extract 1 file") : QStringLiteral("Extract %1 files").arg(n);
+            m_paneTitle = n == 1 ? QCoreApplication::translate("Archive", "Extract 1 file") : QCoreApplication::translate("Archive", "Extract %1 files").arg(n);
         }
         m_paneSize = Format::size(bytes) + QStringLiteral(" · ") + Format::duration(bytes / rate() + n * 0.004);
         for (int i : chosen.isEmpty() ? QList<int>() : files) {
@@ -695,7 +696,7 @@ void Archive::extract(bool everything)
         }
     }
     if (chosen.isEmpty()) {
-        what = QStringLiteral("Extract everything");
+        what = QCoreApplication::translate("Archive", "Extract everything");
     } else {
         for (int entry : chosen) {
             collectOrders(entry, &options.orders);
@@ -754,7 +755,7 @@ void Archive::extractHere(const QString &whenThere)
     }
     m_destination = options.destination;
     Q_EMIT destinationChanged();
-    runExtract(options, QStringLiteral("Extract everything"), false);
+    runExtract(options, QCoreApplication::translate("Archive", "Extract everything"), false);
 }
 
 void Archive::runExtract(Reader::ExtractOptions options, const QString &what, bool openAfter)
@@ -778,37 +779,121 @@ void Archive::runExtract(Reader::ExtractOptions options, const QString &what, bo
             }
             if (result.cancelled) {
                 Q_EMIT finished(QStringLiteral("extract"), false, QString(),
-                                result.written > 0 ? QStringLiteral("Stopped. The files already extracted are in %1.").arg(where)
-                                                   : QStringLiteral("Stopped. Nothing was extracted."),
+                                result.written > 0 ? QCoreApplication::translate("Archive", "Stopped. The files already extracted are in %1.").arg(where)
+                                                   : QCoreApplication::translate("Archive", "Stopped. Nothing was extracted."),
                                 {});
                 return;
             }
             if (!result.error.isEmpty()) {
-                Q_EMIT finished(QStringLiteral("extract"), false, QStringLiteral("Couldn't finish extracting"), result.error, result.failed);
+                Q_EMIT finished(QStringLiteral("extract"), false, QCoreApplication::translate("Archive", "Couldn't finish extracting"), result.error, result.failed);
                 return;
             }
             if (openAfter && result.written > 0) {
                 ArchiveApp::instance()->showFolder(destination);
             }
             if (!result.unsafe.isEmpty()) {
-                Q_EMIT finished(QStringLiteral("extract"), false, QStringLiteral("Some items were skipped"),
-                                QStringLiteral("These would have been written outside %1, so Archive didn't extract them. Everything else is there.")
+                Q_EMIT finished(QStringLiteral("extract"), false, QCoreApplication::translate("Archive", "Some items were skipped"),
+                                QCoreApplication::translate("Archive", "These would have been written outside %1, so Archive didn't extract them. Everything else is there.")
                                     .arg(where),
                                 result.unsafe);
                 return;
             }
             if (!result.failed.isEmpty()) {
-                Q_EMIT finished(QStringLiteral("extract"), false, QStringLiteral("Some files couldn't be extracted"),
-                                QStringLiteral("The rest are in %1.").arg(where), result.failed);
+                Q_EMIT finished(QStringLiteral("extract"), false, QCoreApplication::translate("Archive", "Some files couldn't be extracted"),
+                                QCoreApplication::translate("Archive", "The rest are in %1.").arg(where), result.failed);
                 return;
             }
-            QString note = result.written == 1 ? QStringLiteral("Extracted 1 file to %1").arg(where)
-                                               : QStringLiteral("Extracted %1 files to %2").arg(result.written).arg(where);
+            QString note = result.written == 1 ? QCoreApplication::translate("Archive", "Extracted 1 file to %1").arg(where)
+                                               : QCoreApplication::translate("Archive", "Extracted %1 files to %2").arg(result.written).arg(where);
             if (result.kept > 0) {
-                note += result.kept == 1 ? QStringLiteral(". 1 file with the same name was already there and was kept.")
-                                         : QStringLiteral(". %1 files with the same names were already there and were kept.").arg(result.kept);
+                note += result.kept == 1 ? QCoreApplication::translate("Archive", ". 1 file with the same name was already there and was kept.")
+                                         : QCoreApplication::translate("Archive", ". %1 files with the same names were already there and were kept.").arg(result.kept);
             }
             Q_EMIT finished(QStringLiteral("extract"), true, QString(), note, {});
+        };
+    });
+}
+
+void Archive::extractForDrag(int row)
+{
+    const int entry = m_model->entryAt(row);
+    if (!m_listing || !m_job.isEmpty() || entry < 0) {
+        return;
+    }
+    // Once the password has been typed the drag is over, so nothing is
+    // carried on afterwards: the rows are dragged again.
+    if (needPassword([] {})) {
+        return;
+    }
+    QList<int> chosen;
+    if (m_model->checked().contains(entry)) {
+        for (int e : m_model->rows()) {
+            if (m_model->checked().contains(e)) {
+                chosen.append(e);
+            }
+        }
+    } else {
+        chosen.append(entry);
+    }
+    Reader::ExtractOptions options;
+    options.archive = m_path;
+    options.password = m_password;
+    options.keepStructure = true;
+    options.replace = true;
+    // From a folder of the archive the rows land by their own names; search
+    // results come from all over it and keep their paths.
+    const bool flat = m_search.isEmpty();
+    if (flat) {
+        options.stripPrefix = m_folder;
+    }
+    QStringList paths;
+    for (int e : std::as_const(chosen)) {
+        const Entry &item = m_listing->entries[e];
+        if (item.unsafe) {
+            continue;
+        }
+        collectOrders(e, &options.orders);
+        paths.append(flat ? item.name : item.path);
+    }
+    // No orders would mean the whole archive.
+    if (options.orders.isEmpty()) {
+        return;
+    }
+    const QString dir = ArchiveApp::instance()->openingFolder();
+    if (dir.isEmpty()) {
+        return;
+    }
+    options.destination = dir;
+    const auto listing = m_listing;
+    start(QStringLiteral("extract"), [this, options, listing, dir, paths](Progress *progress) -> Done {
+        const Reader::Result result = Reader::extract(options, *listing, progress);
+        return [this, result, dir, paths] {
+            if (result.password != Reader::PasswordState::Fine) {
+                m_password.clear();
+                m_pending = nullptr;
+                Q_EMIT passwordChanged();
+                Q_EMIT passwordNeeded(result.password == Reader::PasswordState::Wrong);
+                return;
+            }
+            if (result.cancelled) {
+                return;
+            }
+            QStringList urls;
+            for (const QString &path : paths) {
+                const QFileInfo info(dir + QLatin1Char('/') + path);
+                if (info.exists() || info.isSymLink()) {
+                    urls.append(QUrl::fromLocalFile(info.absoluteFilePath()).toString());
+                }
+            }
+            if (urls.isEmpty()) {
+                Q_EMIT finished(QStringLiteral("extract"), false, QCoreApplication::translate("Archive", "Couldn't get those ready to drag"),
+                                result.error.isEmpty() ? QCoreApplication::translate("Archive", "Nothing could be read from the archive. Try Extract instead.") : result.error,
+                                result.failed);
+                return;
+            }
+            // On the next turn of the event loop: the drag runs a loop of
+            // its own until the drop, and the job has to be over first.
+            QMetaObject::invokeMethod(this, [this, urls] { Q_EMIT dragReady(urls); }, Qt::QueuedConnection);
         };
     });
 }
@@ -839,23 +924,23 @@ void Archive::test()
                 return;
             }
             if (result.cancelled) {
-                Q_EMIT finished(QStringLiteral("test"), false, QString(), QStringLiteral("Test stopped."), {});
+                Q_EMIT finished(QStringLiteral("test"), false, QString(), QCoreApplication::translate("Archive", "Test stopped."), {});
                 return;
             }
             if (!result.error.isEmpty()) {
-                Q_EMIT finished(QStringLiteral("test"), false, QStringLiteral("This archive is damaged"),
-                                QStringLiteral("%1 files checked out before the damage. %2").arg(result.written).arg(result.error), result.failed);
+                Q_EMIT finished(QStringLiteral("test"), false, QCoreApplication::translate("Archive", "This archive is damaged"),
+                                QCoreApplication::translate("Archive", "%1 files checked out before the damage. %2").arg(result.written).arg(result.error), result.failed);
                 return;
             }
             if (!result.failed.isEmpty()) {
                 Q_EMIT finished(QStringLiteral("test"), false,
-                                result.failed.size() == 1 ? QStringLiteral("1 file is damaged") : QStringLiteral("%1 files are damaged").arg(result.failed.size()),
-                                QStringLiteral("The other %1 are OK.").arg(result.written), result.failed);
+                                result.failed.size() == 1 ? QCoreApplication::translate("Archive", "1 file is damaged") : QCoreApplication::translate("Archive", "%1 files are damaged").arg(result.failed.size()),
+                                QCoreApplication::translate("Archive", "The other %1 are OK.").arg(result.written), result.failed);
                 return;
             }
-            Q_EMIT finished(QStringLiteral("test"), true, QStringLiteral("Everything is OK"),
-                            result.written == 1 ? QStringLiteral("The 1 file in this archive is intact.")
-                                                : QStringLiteral("All %1 files in this archive are intact.").arg(result.written),
+            Q_EMIT finished(QStringLiteral("test"), true, QCoreApplication::translate("Archive", "Everything is OK"),
+                            result.written == 1 ? QCoreApplication::translate("Archive", "The 1 file in this archive is intact.")
+                                                : QCoreApplication::translate("Archive", "All %1 files in this archive are intact.").arg(result.written),
                             {});
         };
     });
@@ -896,7 +981,7 @@ void Archive::openEntry(int entry)
             }
             if (!result.ok) {
                 if (!result.cancelled) {
-                    Q_EMIT finished(QStringLiteral("open"), false, QStringLiteral("Couldn't open %1").arg(name), result.error, {});
+                    Q_EMIT finished(QStringLiteral("open"), false, QCoreApplication::translate("Archive", "Couldn't open %1").arg(name), result.error, {});
                 }
                 return;
             }

@@ -8,6 +8,7 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QCoreApplication>
 
 namespace
 {
@@ -80,7 +81,7 @@ QString ArchiveMaker::totalText() const
     if (count == 0) {
         return QString();
     }
-    return count == 1 ? QStringLiteral("1 item, %1").arg(Format::size(total)) : QStringLiteral("%1 items, %2").arg(count).arg(Format::size(total));
+    return count == 1 ? QCoreApplication::translate("ArchiveMaker", "1 item, %1").arg(Format::size(total)) : QCoreApplication::translate("ArchiveMaker", "%1 items, %2").arg(count).arg(Format::size(total));
 }
 
 QString ArchiveMaker::sourceName() const
@@ -134,20 +135,20 @@ QString ArchiveMaker::problem() const
 {
     const QString name = m_name.trimmed();
     if (name.isEmpty()) {
-        return QStringLiteral("Give the archive a name.");
+        return QCoreApplication::translate("ArchiveMaker", "Give the archive a name.");
     }
     if (name.contains(QLatin1Char('/')) || name == QLatin1String(".") || name == QLatin1String("..")) {
-        return QStringLiteral("A name can't contain a /.");
+        return QCoreApplication::translate("ArchiveMaker", "A name can't contain a /.");
     }
     if (m_items.isEmpty() && m_source.isEmpty()) {
-        return QStringLiteral("Add the files and folders to put in it.");
+        return QCoreApplication::translate("ArchiveMaker", "Add the files and folders to put in it.");
     }
     const QFileInfo target(targetPath());
     if (target.exists() || target.isSymLink()) {
-        return QStringLiteral("There's already a file called %1 in this folder.").arg(target.fileName());
+        return QCoreApplication::translate("ArchiveMaker", "There's already a file called %1 in this folder.").arg(target.fileName());
     }
     if (!QFileInfo(m_folder).isDir() || !QFileInfo(m_folder).isWritable()) {
-        return QStringLiteral("You can't save in this folder. Choose another.");
+        return QCoreApplication::translate("ArchiveMaker", "You can't save in this folder. Choose another.");
     }
     return QString();
 }
@@ -163,7 +164,7 @@ QString ArchiveMaker::progressText() const
         return QString();
     }
     const QString name = m_progress->currentName();
-    return name.isEmpty() ? QStringLiteral("Compressing") : QStringLiteral("Compressing %1").arg(name);
+    return name.isEmpty() ? QCoreApplication::translate("ArchiveMaker", "Compressing") : QCoreApplication::translate("ArchiveMaker", "Compressing %1").arg(name);
 }
 
 void ArchiveMaker::suggestName()
@@ -181,7 +182,7 @@ void ArchiveMaker::suggestName()
         base = QFileInfo(QFileInfo(m_items.first().path).absolutePath()).fileName();
     }
     if (base.isEmpty()) {
-        base = QStringLiteral("New archive");
+        base = QCoreApplication::translate("ArchiveMaker", "New archive");
     }
     const QString unique = Format::uniqueName(folder, base, suffix());
     m_name = unique.left(unique.size() - suffix().size());
@@ -315,7 +316,7 @@ void ArchiveMaker::create()
                 } else if (!result.ok) {
                     Q_EMIT done(false, QString(), result.error, result.failed);
                 } else {
-                    Q_EMIT done(true, options.target, QStringLiteral("Made %1").arg(QFileInfo(options.target).fileName()), result.failed);
+                    Q_EMIT done(true, options.target, QCoreApplication::translate("ArchiveMaker", "Made %1").arg(QFileInfo(options.target).fileName()), result.failed);
                 }
             },
             Qt::QueuedConnection);

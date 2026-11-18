@@ -1,3 +1,20 @@
+wildos-setup (0.1.7) trixie; urgency=medium
+
+  * First-start setup takes a password of any length; the screen says when
+    it is weak.
+  * Saved passwords open after signing in with a PIN: the system keeps the
+    key for an account with a PIN, as it does for automatic sign-in, and
+    hands it over once after each sign-in with the right PIN.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 15:00:00 +0000
+
+wildos-setup (0.1.6) trixie; urgency=medium
+
+  * The saved passwords notice follows the display language chosen in
+    Settings, and is in French.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 03:40:00 +0000
+
 wildos-setup (0.1.5) trixie; urgency=medium
 
   * Try Wild OS no longer says saved passwords need your password: the

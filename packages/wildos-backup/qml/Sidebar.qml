@@ -53,7 +53,7 @@ Rectangle {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 12
         height: cardRow.implicitHeight + 22
-        radius: 10
+        radius: UI.Style.radiusPanel
         color: BackupStyle.card
         border.width: 1
         border.color: BackupStyle.hairline

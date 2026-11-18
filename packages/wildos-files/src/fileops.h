@@ -78,6 +78,8 @@ class FileOps : public QObject
     Q_PROPERTY(int binCount READ binCount NOTIFY binCountChanged)
     Q_PROPERTY(QVariantMap prompt READ prompt NOTIFY promptChanged)
     Q_PROPERTY(QObject *activeWindow READ activeWindow WRITE setActiveWindow NOTIFY activeWindowChanged)
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY undoChanged)
+    Q_PROPERTY(QString undoText READ undoText NOTIFY undoChanged)
 
 public:
     static FileOps *instance();
@@ -89,6 +91,9 @@ public:
     QVariantMap prompt() const { return m_prompts.isEmpty() ? QVariantMap() : m_prompts.constFirst(); }
     QObject *activeWindow() const { return m_activeWindow; }
     void setActiveWindow(QObject *window);
+    bool canUndo() const { return !m_undo.isEmpty(); }
+    // "Undo move", "Undo delete": names the last thing done, as on Windows.
+    QString undoText() const;
 
     Q_INVOKABLE void open(const QList<QUrl> &urls);
     Q_INVOKABLE QVariantList appsFor(const QUrl &url) const;
@@ -108,6 +113,10 @@ public:
     Q_INVOKABLE void deleteForGood(const QList<QUrl> &urls);
     Q_INVOKABLE void restore(const QList<QUrl> &urls);
     Q_INVOKABLE void emptyBin();
+    // Takes back the last move, copy, rename, delete to the Recycle Bin or
+    // new folder made in any Files window. Copies and new folders go to
+    // the Recycle Bin rather than being deleted for good.
+    Q_INVOKABLE void undo();
 
     // Rename takes the name as shown: with extensions hidden, the hidden
     // extension is kept, as on Windows.
@@ -163,7 +172,11 @@ Q_SIGNALS:
     void binCountChanged();
     void promptChanged();
     void activeWindowChanged();
+    void undoChanged();
     void failed(const QString &message);
+    // A failure Files has no plain words of its own for: a sentence anyone
+    // can read, with what the system reported kept for "Details".
+    void failedInDetail(const QString &message, const QString &detail);
     void notice(const QString &message);
     void needsFormat(const QString &udi, const QString &name);
     // Items that just appeared in a folder because of the user, to select
@@ -184,11 +197,21 @@ private:
     void putNew(const QUrl &folder, const QUrl &url, const QByteArray &data, bool rename);
     void updateCut();
 
+    struct UndoStep {
+        enum Kind { Move, Copy, Rename, Trash, NewFolder };
+        Kind kind;
+        // Where each item was, and where it is now. A copy or a new folder
+        // was nowhere before.
+        QList<QPair<QUrl, QUrl>> items;
+    };
+    void remember(UndoStep::Kind kind, const QList<QPair<QUrl, QUrl>> &items);
+    void bin(const QList<QUrl> &urls, bool undoable);
 
     Sharer *m_sharer;
     KCoreDirLister *m_bin;
     int m_binCount = 0;
     QSet<QUrl> m_cut;
+    QList<UndoStep> m_undo;
     QList<QVariantMap> m_prompts;
     QList<std::function<void(const QString &, bool)>> m_replies;
     QPointer<QObject> m_activeWindow;

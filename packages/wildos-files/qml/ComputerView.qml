@@ -19,12 +19,12 @@ FocusScope {
     required property var view
 
     readonly property var folders: [
-        { name: "Desktop", location: StandardPaths.DesktopLocation },
-        { name: "Documents", location: StandardPaths.DocumentsLocation },
-        { name: "Downloads", location: StandardPaths.DownloadLocation },
-        { name: "Music", location: StandardPaths.MusicLocation },
-        { name: "Pictures", location: StandardPaths.PicturesLocation },
-        { name: "Videos", location: StandardPaths.MoviesLocation }
+        { name: qsTr("Desktop"), location: StandardPaths.DesktopLocation },
+        { name: qsTr("Documents"), location: StandardPaths.DocumentsLocation },
+        { name: qsTr("Downloads"), location: StandardPaths.DownloadLocation },
+        { name: qsTr("Music"), location: StandardPaths.MusicLocation },
+        { name: qsTr("Pictures"), location: StandardPaths.PicturesLocation },
+        { name: qsTr("Videos"), location: StandardPaths.MoviesLocation }
     ]
 
     // Up and Down move a row of drive cards, Left and Right one card.
@@ -84,7 +84,7 @@ FocusScope {
             spacing: 14
 
             UI.Label {
-                text: "Folders"
+                text: qsTr("Folders")
                 font.weight: UI.Style.weightSemiBold
                 color: UI.Style.inkStatus
                 Accessible.role: Accessible.Heading
@@ -167,7 +167,7 @@ FocusScope {
 
             UI.Label {
                 topPadding: 8
-                text: "Drives"
+                text: qsTr("Drives")
                 font.weight: UI.Style.weightSemiBold
                 color: UI.Style.inkStatus
                 Accessible.role: Accessible.Heading
@@ -218,9 +218,14 @@ FocusScope {
                             radius: UI.Style.radiusMd
                             color: card.selected ? UI.Style.accentSelected : card.down ? UI.Style.surfacePressed : card.hovered ? UI.Style.surfaceHover : UI.Style.surfaceRaised
                             border.width: 1
-                            border.color: card.selected ? UI.Style.accentBorderStrong : card.current ? Metrics.rule : UI.Style.borderSubtle
+                            border.color: card.selected ? UI.Style.accentBorderStrong : UI.Style.borderSubtle
                             Behavior on color {
                                 ColorAnimation { duration: UI.Style.hoverDuration }
+                            }
+
+                            UI.FocusRing {
+                                visible: card.current
+                                targetRadius: UI.Style.radiusMd
                             }
                         }
 
@@ -299,7 +304,7 @@ FocusScope {
                                 anchors.rightMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
                                 iconName: "eject"
-                                tip: "Eject " + card.name
+                                tip: qsTr("Eject %1").arg(card.name)
                                 focusPolicy: Qt.NoFocus
                                 onClicked: FileOps.ejectDrive(computer.folder.udiAt(card.index))
                             }

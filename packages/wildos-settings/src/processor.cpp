@@ -137,11 +137,11 @@ void Processor::run(const QStringList &args)
         process->deleteLater();
         m_busy = false;
         if (code == 126 || code == 127) {
-            Q_EMIT failed(QStringLiteral("Nothing was changed because the password was not given."));
+            Q_EMIT failed(tr("Nothing was changed because the password was not given."));
         } else if (code == 3) {
-            Q_EMIT failed(QStringLiteral("Strict and Maximum protection keep every processor protection on."));
+            Q_EMIT failed(tr("Strict and Maximum protection keep every processor protection on."));
         } else if (code != 0) {
-            Q_EMIT failed(QStringLiteral("The setting could not be changed."));
+            Q_EMIT failed(tr("The setting could not be changed."));
         }
         Q_EMIT changed();
     });

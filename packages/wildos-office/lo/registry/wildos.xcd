@@ -1,28 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Wild OS defaults for Write and Tables. A bundled layer: everything here
-     is a default the user can still change in Tools > Options. -->
+<!-- Wild OS defaults for Write, Tables and Slides. A bundled layer: everything here
+     is a default the user can still change in Tools > Options. Only what
+     LibreOffice's core defines belongs here. An app's default format,
+     template and shortcuts sit in wildos-write.xcd, wildos-tables.xcd and
+     wildos-slides.xcd, each shipped with its app: LibreOffice does not start
+     at all if a file here names a part that is not installed. -->
 <oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
   <dependency file="main"/>
-  <dependency file="writer"/>
-  <dependency file="calc"/>
 
   <oor:component-data oor:package="org.openoffice" oor:name="Setup">
-    <node oor:name="Office">
-      <node oor:name="Factories">
-        <node oor:name="com.sun.star.text.TextDocument">
-          <prop oor:name="ooSetupFactoryWindowAttributes"><value>,,,;4;</value></prop>
-          <prop oor:name="ooSetupFactoryTemplateFile"><value>file:///usr/share/wildos-office/templates/default/Default.ott</value></prop>
-          <prop oor:name="ooSetupFactoryDefaultFilter"><value>MS Word 2007 XML</value></prop>
-          <prop oor:name="ooSetupFactoryUIName"><value xml:lang="en-US">Write</value></prop>
-        </node>
-        <node oor:name="com.sun.star.sheet.SpreadsheetDocument">
-          <prop oor:name="ooSetupFactoryWindowAttributes"><value>,,,;4;</value></prop>
-          <prop oor:name="ooSetupFactoryTemplateFile"><value>file:///usr/share/wildos-office/templates/default/Default.ots</value></prop>
-          <prop oor:name="ooSetupFactoryDefaultFilter"><value>Calc MS Excel 2007 XML</value></prop>
-          <prop oor:name="ooSetupFactoryUIName"><value xml:lang="en-US">Tables</value></prop>
-        </node>
-      </node>
-    </node>
     <node oor:name="Product">
       <prop oor:name="ooSetupLastVersion"><value>99.0</value></prop>
       <prop oor:name="LastTimeDonateShown"><value>9999999999</value></prop>
@@ -48,13 +34,18 @@
         <prop oor:name="IsSystemIconsInMenus"><value>false</value></prop>
         <prop oor:name="ShowIconsInMenues"><value>true</value></prop>
       </node>
+      <!-- A click of the mouse wheel starts scrolling by moving the mouse,
+           as on Windows (1), instead of pasting the selection (2). -->
+      <node oor:name="Dialog">
+        <prop oor:name="MiddleMouseButton"><value>1</value></prop>
+      </node>
     </node>
     <node oor:name="Save">
       <node oor:name="Document">
         <prop oor:name="WarnAlienFormat"><value>false</value></prop>
       </node>
     </node>
-    <!-- File > Recent lists Write and Tables files together, each with its
+    <!-- File > Recent lists Write, Tables and Slides files together, each with its
          app's icon, as on the board. -->
     <node oor:name="History">
       <prop oor:name="ShowCurrentModuleOnly"><value>false</value></prop>
@@ -141,6 +132,25 @@
     </node>
   </oor:component-data>
 
+  <!-- A new presentation opens straight on its first slide, with no
+       template picker in the way. -->
+  <oor:component-data oor:package="org.openoffice.Office" oor:name="Impress">
+    <node oor:name="Misc">
+      <node oor:name="NewDoc">
+        <prop oor:name="AutoPilot"><value>false</value></prop>
+      </node>
+    </node>
+    <!-- The notes strip sits under the slide, as on the Slides board;
+         View > Notes hides it. -->
+    <node oor:name="MultiPaneGUI">
+      <node oor:name="NotesPane">
+        <node oor:name="Visible">
+          <prop oor:name="ImpressView"><value>true</value></prop>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+
   <!-- Window titles: see the WildOSOffice Basic library in the bundled
        wildos-office extension. -->
   <oor:component-data oor:package="org.openoffice.Office" oor:name="Events">
@@ -192,6 +202,7 @@
   <oor:component-data oor:package="org.openoffice.Office.UI" oor:name="ToolbarMode">
     <prop oor:name="ActiveWriter"><value>notebookbar_wildos.ui</value></prop>
     <prop oor:name="ActiveCalc"><value>notebookbar_wildos.ui</value></prop>
+    <prop oor:name="ActiveImpress"><value>notebookbar_wildos.ui</value></prop>
     <node oor:name="Applications">
       <node oor:name="Writer">
         <prop oor:name="Active"><value>notebookbar_wildos.ui</value></prop>
@@ -248,22 +259,31 @@
           <node oor:name="ContextualGroups"><prop oor:name="IsExperimental"><value>true</value></prop></node>
         </node>
       </node>
-    </node>
-  </oor:component-data>
-
-  <!-- Alt+Q opens Find a command, as in Word; the search field shows it. -->
-  <oor:component-data oor:package="org.openoffice.Office" oor:name="Accelerators">
-    <node oor:name="PrimaryKeys">
-      <node oor:name="Modules">
-        <node oor:name="com.sun.star.text.TextDocument">
-          <node oor:name="Q_MOD2" oor:op="replace">
-            <prop oor:name="Command"><value xml:lang="en-US">.uno:CommandPopup</value></prop>
+      <node oor:name="Impress">
+        <prop oor:name="Active"><value>notebookbar_wildos.ui</value></prop>
+        <node oor:name="Modes">
+          <node oor:name="WildOS" oor:op="replace">
+            <prop oor:name="Label"><value xml:lang="en-US">Wild OS ribbon</value></prop>
+            <prop oor:name="CommandArg"><value>notebookbar_wildos.ui</value></prop>
+            <prop oor:name="MenuPosition"><value>0</value></prop>
+            <prop oor:name="IsExperimental"><value>false</value></prop>
+            <prop oor:name="HasNotebookbar"><value>true</value></prop>
+            <prop oor:name="HasMenubar"><value>false</value></prop>
+            <prop oor:name="Toolbars"><value/></prop>
+            <prop oor:name="UserToolbars"><value/></prop>
+            <prop oor:name="Sidebar"><value>Tabs</value></prop>
           </node>
-        </node>
-        <node oor:name="com.sun.star.sheet.SpreadsheetDocument">
-          <node oor:name="Q_MOD2" oor:op="replace">
-            <prop oor:name="Command"><value xml:lang="en-US">.uno:CommandPopup</value></prop>
+          <node oor:name="Default">
+            <prop oor:name="Label"><value xml:lang="en-US">Classic menus and toolbars</value></prop>
+            <prop oor:name="MenuPosition"><value>1</value></prop>
           </node>
+          <node oor:name="Single"><prop oor:name="IsExperimental"><value>true</value></prop></node>
+          <node oor:name="Sidebar"><prop oor:name="IsExperimental"><value>true</value></prop></node>
+          <node oor:name="Tabbed"><prop oor:name="IsExperimental"><value>true</value></prop></node>
+          <node oor:name="TabbedCompact"><prop oor:name="IsExperimental"><value>true</value></prop></node>
+          <node oor:name="GroupedbarCompact"><prop oor:name="IsExperimental"><value>true</value></prop></node>
+          <node oor:name="GroupedbarFull"><prop oor:name="IsExperimental"><value>true</value></prop></node>
+          <node oor:name="ContextualGroups"><prop oor:name="IsExperimental"><value>true</value></prop></node>
         </node>
       </node>
     </node>

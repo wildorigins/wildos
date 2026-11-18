@@ -40,7 +40,7 @@ Window {
     visible: true
     color: preview ? UI.Style.lakeNavy : "transparent"
     flags: Qt.Window | Qt.FramelessWindowHint
-    title: Bridge.state === "done" ? Bridge.appName + " is ready" : "Install " + Bridge.appName
+    title: Bridge.state === "done" ? qsTr("%1 is ready").arg(Bridge.appName) : qsTr("Install %1").arg(Bridge.appName)
 
     function updateRegion() {
         if (!preview) {
@@ -191,17 +191,17 @@ Window {
                         Layout.fillWidth: true
                         size: 22
                         font.weight: UI.Style.weightSemiBold
-                        text: root.state === "done" ? Bridge.appName + " is ready"
-                            : root.state === "installing" ? "Installing " + Bridge.appName
-                            : root.notWindows ? "This file can't be opened"
-                            : root.state === "failed" ? "Couldn't install " + Bridge.appName
-                            : "Install " + Bridge.appName + "?"
+                        text: root.state === "done" ? qsTr("%1 is ready").arg(Bridge.appName)
+                            : root.state === "installing" ? qsTr("Installing %1").arg(Bridge.appName)
+                            : root.notWindows ? qsTr("This file can't be opened")
+                            : root.state === "failed" ? qsTr("Couldn't install %1").arg(Bridge.appName)
+                            : qsTr("Install %1?").arg(Bridge.appName)
                         Accessible.role: Accessible.Heading
                     }
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: root.callsRoute ? Bridge.fileName + (Bridge.publisherState === "verified" ? " · signed by " + Bridge.signer : "") : Bridge.fromText
+                        text: root.callsRoute ? (Bridge.publisherState === "verified" ? qsTr("%1 · signed by %2").arg(Bridge.fileName).arg(Bridge.signer) : Bridge.fileName) : Bridge.fromText
                         size: root.callsRoute ? 12 : 13
                         color: root.callsRoute ? UI.Style.inkMuted : UI.Style.inkStatus
                     }
@@ -212,8 +212,8 @@ Window {
                 Layout.fillWidth: true
                 visible: root.state === "ask" && !root.callsRoute && !root.callsRoute
                 text: Bridge.compat === "no" ? Bridge.compatReason
-                    : Bridge.needsSetup ? "This is a Windows app. It runs in Windows mode, which needs setting up first."
-                    : "This is a Windows app. It installs in Windows mode, and then opens in its own window like any other app."
+                    : Bridge.needsSetup ? qsTr("This is a Windows app. It runs in Windows mode, which needs setting up first.")
+                    : qsTr("This is a Windows app. It installs in Windows mode, and then opens in its own window like any other app.")
                 size: 14
                 // CSS line-height 1.55 is of the font size; Qt's proportional
                 // height would be of the taller line box.
@@ -240,14 +240,14 @@ Window {
                     Layout.fillHeight: true
                     iconName: Bridge.compat === "well" ? "checkmark" : Bridge.compat === "unknown" ? "question" : Bridge.compat === "no" ? "cross" : "exclamation"
                     tone: Bridge.compat === "well" ? "good" : Bridge.compat === "unknown" ? "neutral" : Bridge.compat === "no" ? "danger" : "warning"
-                    title: Bridge.compat === "well" ? "Should run well"
-                         : Bridge.compat === "some" ? "May not run perfectly"
-                         : Bridge.compat === "no" ? "Won't run on Wild OS"
-                         : "Not tested yet"
-                    description: Bridge.compat === "well" ? "Wild OS has tested this app"
-                               : Bridge.compat === "some" ? "Some parts of it may not work"
-                               : Bridge.compat === "no" ? "It can't run on this PC"
-                               : "Wild OS hasn't tested this app yet"
+                    title: Bridge.compat === "well" ? qsTr("Should run well")
+                         : Bridge.compat === "some" ? qsTr("May not run perfectly")
+                         : Bridge.compat === "no" ? qsTr("Won't run on Wild OS")
+                         : qsTr("Not tested yet")
+                    description: Bridge.compat === "well" ? qsTr("Wild OS has tested this app")
+                               : Bridge.compat === "some" ? qsTr("Some parts of it may not work")
+                               : Bridge.compat === "no" ? qsTr("It can't run on this PC")
+                               : qsTr("Wild OS hasn't tested this app yet")
                 }
 
                 StatusCard {
@@ -257,8 +257,8 @@ Window {
                     readonly property bool verified: Bridge.publisherState === "verified"
                     iconName: verified ? "checkmark" : "exclamation"
                     tone: verified ? "good" : "warning"
-                    title: verified ? "Verified publisher" : Bridge.publisherState === "checking" ? "Checking the publisher" : "Unknown publisher"
-                    description: verified ? "Signed by " + Bridge.signer : "Only install apps you trust"
+                    title: verified ? qsTr("Verified publisher") : Bridge.publisherState === "checking" ? qsTr("Checking the publisher") : qsTr("Unknown publisher")
+                    description: verified ? qsTr("Signed by %1").arg(Bridge.signer) : qsTr("Only install apps you trust")
                 }
             }
 
@@ -269,7 +269,7 @@ Window {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: Bridge.appName + " works best as a Wild OS app. Calls, screen sharing and notifications work natively, and it starts instantly without Windows mode."
+                    text: qsTr("%1 works best as a Wild OS app. Calls, screen sharing and notifications work natively, and it starts instantly without Windows mode.").arg(Bridge.appName)
                     size: 13
                     color: UI.Style.inkAlpha(0.82, 0.76)
                     wrapMode: Text.WordWrap
@@ -282,8 +282,8 @@ Window {
                     Layout.fillWidth: true
                     showIndicator: true
                     checked: true
-                    title: "Install " + Bridge.appName.replace("Microsoft ", "") + " as a Wild OS app (recommended)"
-                    description: "The full " + Bridge.appName.replace("Microsoft ", "") + ", with video calls, sharing your whole screen and your normal camera and microphone."
+                    title: qsTr("Install %1 as a Wild OS app (recommended)").arg(Bridge.appName.replace("Microsoft ", ""))
+                    description: qsTr("The full %1, with video calls, sharing your whole screen and your normal camera and microphone.").arg(Bridge.appName.replace("Microsoft ", ""))
                 }
 
                 UI.ChoiceCard {
@@ -291,8 +291,8 @@ Window {
                     Layout.fillWidth: true
                     showIndicator: true
                     enabled: Bridge.windowsModeReady
-                    title: "Install in Windows mode instead"
-                    description: "Only if your organisation needs a " + Bridge.appName.replace("Microsoft ", "") + " add-in that runs on Windows. Screen sharing can only show Windows apps."
+                    title: qsTr("Install in Windows mode instead")
+                    description: qsTr("Only if your organisation needs a %1 add-in that runs on Windows. Screen sharing can only show Windows apps.").arg(Bridge.appName.replace("Microsoft ", ""))
                         + (Bridge.windowsModeReady ? "" : " " + Bridge.windowsModeReason)
                 }
 
@@ -344,9 +344,9 @@ Window {
                             UI.Label {
                                 Layout.fillWidth: true
                                 font.weight: UI.Style.weightSemiBold
-                                text: root.state === "done" ? "It's in Start"
-                                    : root.state === "disabled" ? "Windows apps are turned off"
-                                    : root.state === "failed" ? "That didn't work"
+                                text: root.state === "done" ? qsTr("It's in Start")
+                                    : root.state === "disabled" ? qsTr("Windows apps are turned off")
+                                    : root.state === "failed" ? qsTr("That didn't work")
                                     : Bridge.progressText
                                 wrapMode: Text.WordWrap
                                 elide: Text.ElideRight
@@ -360,9 +360,9 @@ Window {
                                 wrapMode: Text.WordWrap
                                 elide: Text.ElideRight
                                 maximumLineCount: 3
-                                text: root.state === "disabled" ? "Turn on Windows apps in Settings to install this."
+                                text: root.state === "disabled" ? qsTr("Turn on Windows apps in Settings to install this.")
                                     : root.state === "failed" ? Bridge.message
-                                    : "Its installer opens in a window of its own."
+                                    : qsTr("Its installer opens in a window of its own.")
                             }
                         }
                     }
@@ -383,7 +383,7 @@ Window {
                         spacing: 6
 
                         UI.Label {
-                            text: "It added these to Start"
+                            text: qsTr("It added these to Start")
                             size: 12
                             color: UI.Style.inkMuted
                         }
@@ -400,7 +400,7 @@ Window {
                                     required property int index
                                     size: "small"
                                     text: modelData
-                                    Accessible.name: "Open " + modelData
+                                    Accessible.name: qsTr("Open %1").arg(modelData)
                                     onClicked: Bridge.openApp(index)
                                 }
                             }
@@ -433,7 +433,7 @@ Window {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: "Prefer a native app? " + Bridge.nativeText
+                        text: qsTr("Prefer a native app? %1").arg(Bridge.nativeText)
                         lineHeight: 13 * 1.45 * UI.Style.textScale
                         lineHeightMode: Text.FixedHeight
                         wrapMode: Text.WordWrap
@@ -442,7 +442,7 @@ Window {
 
                     UI.LinkButton {
                         visible: Bridge.canOpenStore
-                        text: "Show me"
+                        text: qsTr("Show me")
                         onClicked: Bridge.openStore()
                     }
                 }
@@ -486,14 +486,14 @@ Window {
                         x: -4
                         anchors.verticalCenter: parent.verticalCenter
                         visible: !root.callsRoute && (root.state === "ask" || (root.state === "failed" && !root.notWindows))
-                        text: "Other ways to run it"
+                        text: qsTr("Other ways to run it")
                         onClicked: Bridge.openSettings()
                     }
                 }
 
                 UI.Button {
                     size: "large"
-                    text: root.busy ? "Stop" : root.state === "done" ? "Done" : root.state === "failed" || (Bridge.compat === "no" && !root.callsRoute) ? "Close" : "Cancel"
+                    text: root.busy ? qsTr("Stop") : root.state === "done" ? qsTr("Done") : root.state === "failed" || (Bridge.compat === "no" && !root.callsRoute) ? qsTr("Close") : qsTr("Cancel")
                     onClicked: root.busy ? Bridge.stop() : Bridge.close()
                 }
 
@@ -502,12 +502,12 @@ Window {
                     visible: !root.busy && !(root.state === "ask" && Bridge.compat === "no" && !root.callsRoute) && !root.notWindows
                     size: "large"
                     kind: "primary"
-                    text: root.state === "done" ? "Open " + Bridge.appName
-                        : root.state === "disabled" ? "Open Settings"
-                        : root.state === "failed" ? "Try again"
-                        : root.callsRoute ? "Install"
-                        : Bridge.needsSetup ? "Set up Windows mode"
-                        : "Install in Windows mode"
+                    text: root.state === "done" ? qsTr("Open %1").arg(Bridge.appName)
+                        : root.state === "disabled" ? qsTr("Open Settings")
+                        : root.state === "failed" ? qsTr("Try again")
+                        : root.callsRoute ? qsTr("Install")
+                        : Bridge.needsSetup ? qsTr("Set up Windows mode")
+                        : qsTr("Install in Windows mode")
                     onClicked: {
                         if (root.callsRoute) {
                             if (nativeChoice.checked) {

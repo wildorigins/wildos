@@ -1,0 +1,26 @@
+#!/bin/sh
+# Before start-up recovery's counting (15_wildos_recovery): note the counts
+# as they stand, and what a one-off start asked for.
+#
+# 15_wildos_recovery counts every start and gives a new kernel its one try,
+# on the understanding that each start is a start of Wild OS. A start that
+# goes to Windows, a USB stick or the start-up manager's own restart is not
+# one, so 16_wildos_startup (and the manager) put these values back.
+set -e
+
+[ -x /usr/lib/wildos/startup-manager ] || exit 0
+
+cat <<'EOF'
+if [ "${wsm_t0}" != "${wildos_tries}" ]; then
+	set wsm_t0="${wildos_tries}"
+	save_env wsm_t0
+fi
+if [ "${wsm_k0}" != "${wildos_kernel_tried}" ]; then
+	set wsm_k0="${wildos_kernel_tried}"
+	save_env wsm_k0
+fi
+set wsm_once=
+if [ "${boot_once}" = true ]; then
+	set wsm_once="${default}"
+fi
+EOF

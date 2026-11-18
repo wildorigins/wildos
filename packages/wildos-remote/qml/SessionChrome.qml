@@ -26,7 +26,7 @@ Item {
     Binding {
         target: host
         property: "chromeFull"
-        value: tabMenu.opened || plusMenu.opened || runAllDialog.opened || forwardMenu.opened || signInDialog.opened || questionDialog.opened
+        value: tabMenu.opened || terminalMenu.opened || plusMenu.opened || runAllDialog.opened || forwardMenu.opened || signInDialog.opened || questionDialog.opened || pasteDialog.opened
     }
 
     // The terminal's ssh asking for a password, a code or a passphrase:
@@ -565,6 +565,39 @@ Item {
     UI.Menu {
         id: tabMenu
     }
+    // Right click in the terminal: a link's Open and Copy, then Copy, Paste
+    // and Clear, as in Terminal.
+    UI.Menu {
+        id: terminalMenu
+        minimumWidth: 200
+    }
+    Connections {
+        target: root.tab
+        ignoreUnknownSignals: true
+        function onContextMenuRequested(x, y, canCopy, hasLink) {
+            const tab = root.tab;
+            const entries = [];
+            if (hasLink) {
+                entries.push({ text: qsTr("Open link"), icon: "external", run: () => tab.openLink() });
+                entries.push({ text: qsTr("Copy link"), icon: "link", run: () => tab.copyLink() });
+                entries.push({ separator: true });
+            }
+            entries.push({ text: qsTr("Copy"), icon: "menu-copy", shortcut: "Ctrl+Shift+C", enabled: canCopy, run: () => tab.copy() });
+            entries.push({ text: qsTr("Paste"), icon: "menu-paste", shortcut: "Ctrl+V", run: () => tab.paste() });
+            entries.push({ separator: true });
+            entries.push({ text: qsTr("Clear"), icon: "delete", run: () => tab.clear() });
+            entries.push({ separator: true });
+            entries.push({ text: qsTr("Settings"), icon: "cog", shortcut: "Ctrl+,", run: () => host.showSettings() });
+            terminalMenu.entries = entries;
+            terminalMenu.popup(root, root.area.x + x, root.area.y + y);
+        }
+        // Terminal's "Check before pasting more than one line".
+        function onPasteConfirmationNeeded(lines) {
+            pasteDialog.forTab = root.tab;
+            pasteDialog.lines = lines;
+            pasteDialog.open();
+        }
+    }
     UI.Menu {
         id: plusMenu
         minimumWidth: 230
@@ -590,6 +623,42 @@ Item {
                 onClicked: {
                     host.runEverywhere(runAllDialog.command);
                     runAllDialog.close();
+                }
+            }
+        ]
+    }
+
+    // As Terminal asks it: the main action on the right, and Enter takes it.
+    UI.Dialog {
+        id: pasteDialog
+        property var forTab: null
+        property int lines: 0
+        property bool answered: false
+        title: qsTr("Paste %1 lines?").arg(lines)
+        text: qsTr("Each line may run as a command as soon as it is pasted. Check the text is what you meant to copy.")
+        onAboutToShow: answered = false
+        onClosed: {
+            if (!answered && forTab) {
+                forTab.answerPaste(false);
+            }
+        }
+        buttons: [
+            UI.Button {
+                text: qsTr("Cancel")
+                onClicked: pasteDialog.close()
+            },
+            UI.Button {
+                kind: "primary"
+                text: qsTr("Paste anyway")
+                focus: true
+                Keys.onReturnPressed: clicked()
+                Keys.onEnterPressed: clicked()
+                onClicked: {
+                    pasteDialog.answered = true;
+                    pasteDialog.close();
+                    if (pasteDialog.forTab) {
+                        pasteDialog.forTab.answerPaste(true);
+                    }
                 }
             }
         ]

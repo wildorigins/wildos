@@ -1,5 +1,6 @@
 #include "firstboot.h"
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
@@ -88,7 +89,7 @@ QString errorText(const QDBusError &error)
     if (error.name().startsWith(QLatin1String("org.wildos.Setup1."))) {
         return error.message();
     }
-    return QStringLiteral("Wild OS could not reach its setup service. Restart the computer to try again.");
+    return QCoreApplication::translate("FirstBoot", "Wild OS could not reach its setup service. Restart the computer to try again.");
 }
 }
 
@@ -249,13 +250,13 @@ QVariantMap FirstBoot::preview() const
     QString measurement;
     switch (locale.measurementSystem()) {
     case QLocale::ImperialUKSystem:
-        measurement = QStringLiteral("Metric, with miles for distance");
+        measurement = tr("Metric, with miles for distance");
         break;
     case QLocale::ImperialUSSystem:
-        measurement = QStringLiteral("US customary: inches, pounds and miles");
+        measurement = tr("US customary: inches, pounds and miles");
         break;
     default:
-        measurement = QStringLiteral("Metric");
+        measurement = tr("Metric");
     }
     return {
         {QStringLiteral("date"), locale.toString(now.date(), QLocale::LongFormat) + QStringLiteral(" · ") + locale.toString(now.date(), QLocale::ShortFormat)},
@@ -329,7 +330,7 @@ void FirstBoot::applyZone()
         const QDBusPendingReply<> reply = *watcher;
         if (reply.isError()) {
             qWarning("could not set the time zone: %s", qPrintable(reply.error().message()));
-            Q_EMIT regionApplied(false, QStringLiteral("Wild OS could not set the time zone. You can set it later in Settings > Time and language."));
+            Q_EMIT regionApplied(false, tr("Wild OS could not set the time zone. You can set it later in Settings > Time and language."));
         } else {
             Q_EMIT regionApplied(true, QString());
         }
@@ -417,7 +418,7 @@ void FirstBoot::finish(const QVariantMap &plan)
         // The sign-in screen restarts now and takes this session with it.
         setState(QStringLiteral("signing-in"));
         QTimer::singleShot(90000, this, [this] {
-            setState(QStringLiteral("failed"), QStringLiteral("Signing in is taking longer than it should. Restart the computer and sign in with your new password."));
+            setState(QStringLiteral("failed"), tr("Signing in is taking longer than it should. Restart the computer and sign in with your new password."));
         });
     });
 }

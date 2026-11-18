@@ -1,0 +1,201 @@
+#!/usr/bin/python3 -I
+"""Settings > System > Start-up disk's root helper.
+
+Runs as root through pkexec and takes only these requests:
+
+    status                       everything the page shows, as JSON
+    default ID                   what this PC starts by default
+    mode hold|always|off         when the start-up manager shows
+    wait SECONDS                 the countdown at every start
+    restore on|off               offer restore points in the manager
+    password on|off              ask before starting another system
+    restart ID                   restart into that system, once
+    firmware                     restart into the PC firmware settings
+    sync                         bring /boot's copy of the settings up to
+                                 date (package installs, language changes)
+
+What starts by default and when the manager shows live in GRUB's environment
+block, because GRUB acts on them before anything else runs. The rest is in
+/boot/wildos-startup/config, which the manager reads before the disk is
+unlocked. See /etc/grub.d/16_wildos_startup.
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+
+MANAGER = "/usr/lib/wildos/startup-manager"
+ENV = "/boot/grub/grubenv"
+DIR = "/boot/wildos-startup"
+CONFIG = DIR + "/config"
+DEFAULTS = {"mode": "hold", "wait": "5", "restore": "1", "password": "0"}
+WAITS = ("3", "5", "10", "15", "30")
+
+
+def run(*cmd):
+    return subprocess.run(cmd, check=False, capture_output=True, text=True).stdout.strip()
+
+
+def env_list():
+    out = {}
+    for row in run("grub-editenv", ENV, "list").splitlines():
+        key, _, value = row.partition("=")
+        out[key] = value
+    return out
+
+
+def env_set(**values):
+    if not os.path.isdir("/boot/grub"):
+        return
+    for key, value in values.items():
+        if value:
+            subprocess.run(["grub-editenv", ENV, "set", f"{key}={value}"], check=True)
+        else:
+            subprocess.run(["grub-editenv", ENV, "unset", key], check=True)
+
+
+def read_config():
+    config = dict(DEFAULTS)
+    try:
+        with open(CONFIG) as f:
+            for row in f:
+                key, eq, value = row.strip().partition("=")
+                if eq:
+                    config[key] = value
+    except OSError:
+        pass
+    return config
+
+
+def write_config(config):
+    os.makedirs(DIR, exist_ok=True)
+    lang = re.search(r"^LANG=\"?([^.\"\n]*)", open_text("/etc/default/locale"), re.M)
+    config["lang"] = lang.group(1) if lang else ""
+    # The same test 15_wildos_recovery makes before offering start-up recovery.
+    config["recovery"] = "1" if all(os.path.exists(p) for p in (
+        "/boot/wildos-recovery/vmlinuz", "/boot/wildos-recovery/initrd.img",
+        "/var/lib/wildos/reset/LiveOS/squashfs.img")) else "0"
+    tmp = CONFIG + ".new"
+    with open(tmp, "w") as f:
+        for key in sorted(config):
+            f.write(f"{key}={config[key]}\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, CONFIG)
+
+
+def open_text(path):
+    try:
+        with open(path) as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def systems():
+    boot = run("findmnt", "-no", "UUID", "-T", "/boot")
+    esp = run("findmnt", "-no", "UUID", "/boot/efi")
+    found = json.loads(run(MANAGER, "--scan", "--boot-uuid", boot, "--esp-uuid", esp) or "[]")
+    env = env_list()
+    default = "wildos"
+    for s in found:
+        if env.get("wsm_def_uuid") and s["fs_uuid"] == env["wsm_def_uuid"] \
+                and s["path"] == env.get("wsm_def_path"):
+            default = s["id"]
+    for s in found:
+        s["default"] = s["id"] == default
+        s["current"] = s["id"] == "wildos"
+    return found
+
+
+def find(ident):
+    for s in systems():
+        if s["id"] == ident:
+            return s
+    sys.exit(f"not something this PC can start: {ident}")
+
+
+def status():
+    config = read_config()
+    env = env_list()
+    points = open_text(DIR + "/points").strip()
+    print(json.dumps({
+        "efi": os.path.isdir("/sys/firmware/efi"),
+        "mode": "always" if env.get("wsm_mode") == "always"
+                else "off" if env.get("wsm_mode") == "off" else "hold",
+        "wait": int(config["wait"]) if config["wait"].isdigit() else 5,
+        "restore": config["restore"] == "1",
+        "restore_available": bool(points) or config.get("recovery") == "1",
+        "password": env.get("wsm_lock") == "1",
+        "encrypted": os.path.exists("/etc/wildos/encrypted"),
+        "systems": systems(),
+    }))
+
+
+def set_default(ident):
+    s = find(ident)
+    if s["removable"]:
+        sys.exit("a USB stick cannot be the default")
+    other = s["kind"] != "wildos"
+    env_set(wsm_def_uuid=s["fs_uuid"] if other else "",
+            wsm_def_path=s["path"] if other else "",
+            wsm_def_kind=s["loader"] if other else "",
+            # Windows with BitLocker asks for its recovery key unless the
+            # PC's firmware starts it, which only a running Wild OS can
+            # ask for (16_wildos_startup).
+            wsm_def_linux="1" if other and s["bitlocker"] and s["boot_num"] >= 0 else "")
+
+
+def restart(ident):
+    s = find(ident)
+    if s["kind"] == "wildos":
+        sys.exit("already running")
+    done = s["boot_num"] >= 0 and subprocess.run(
+        [MANAGER, "--boot-next", str(s["boot_num"])], check=False).returncode == 0
+    if not done:
+        env_set(wsm_once_uuid=s["fs_uuid"], wsm_once_path=s["path"], wsm_once_kind=s["loader"],
+                next_entry="wildos-start-once")
+    subprocess.run(["systemctl", "reboot"], check=True)
+
+
+def main():
+    args = sys.argv[1:]
+    what = args[0] if args else ""
+    value = args[1] if len(args) > 1 else ""
+    if what == "status":
+        status()
+    elif what == "default":
+        set_default(value)
+    elif what == "mode" and value in ("hold", "always", "off"):
+        env_set(wsm_mode="" if value == "hold" else value)
+        config = read_config()
+        config["mode"] = value
+        write_config(config)
+    elif what == "wait" and value in WAITS:
+        config = read_config()
+        config["wait"] = value
+        write_config(config)
+    elif what == "restore" and value in ("on", "off"):
+        config = read_config()
+        config["restore"] = "1" if value == "on" else "0"
+        write_config(config)
+    elif what == "password" and value in ("on", "off"):
+        env_set(wsm_lock="1" if value == "on" else "")
+        config = read_config()
+        config["password"] = "1" if value == "on" else "0"
+        write_config(config)
+    elif what == "restart":
+        restart(value)
+    elif what == "firmware":
+        subprocess.run(["systemctl", "reboot", "--firmware-setup"], check=True)
+    elif what == "sync":
+        if os.path.isdir("/boot/grub"):
+            write_config(read_config())
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()

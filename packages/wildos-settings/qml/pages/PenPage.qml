@@ -13,7 +13,7 @@ PageScroll {
 
     ScreenChoices {
         id: screenChoices
-        automaticText: "The screen the pointer is on"
+        automaticText: qsTr("The screen the pointer is on")
         allScreens: true
     }
 
@@ -28,8 +28,8 @@ PageScroll {
         visible: page.pens.length === 0
         iconName: "pencil"
         warning: true
-        title: "No pen or tablet connected"
-        description: "Plug in a drawing tablet, or use the pen of a touchscreen PC, and its settings appear here."
+        title: qsTr("No pen or tablet connected")
+        description: qsTr("Plug in a drawing tablet, or use the pen of a touchscreen PC, and its settings appear here.")
     }
 
     Repeater {
@@ -54,13 +54,13 @@ PageScroll {
                     UI.SettingRow {
                         visible: pen.modelData.supportsLeftHanded === true
                         iconName: "pencil"
-                        title: "Which hand do you write with?"
-                        description: "A tablet held for the left hand is turned round"
+                        title: qsTr("Which hand do you write with?")
+                        description: qsTr("A tablet held for the left hand is turned round")
 
                         UI.ComboBox {
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "Which hand do you write with?"
-                            model: [{ value: false, text: "Right hand" }, { value: true, text: "Left hand" }]
+                            Accessible.name: qsTr("Which hand do you write with?")
+                            model: [{ value: false, text: qsTr("Right hand") }, { value: true, text: qsTr("Left hand") }]
                             readonly property bool choice: pen.modelData.leftHanded === true
                             currentIndex: model.findIndex(o => o.value === choice)
                             onActivated: index => InputDevices.setDevice(pen.modelData.sysName, "leftHanded", model[index].value)
@@ -68,12 +68,12 @@ PageScroll {
                     }
 
                     UI.SettingRow {
-                        title: "Screen"
-                        description: "Where the pen points when it touches the tablet"
+                        title: qsTr("Screen")
+                        description: qsTr("Where the pen points when it touches the tablet")
 
                         UI.ComboBox {
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "Screen for " + pen.modelData.name
+                            Accessible.name: qsTr("Screen for %1").arg(pen.modelData.name)
                             model: screenChoices.model
                             currentIndex: screenChoices.indexOf(pen.modelData.mapToWorkspace === true ? "*" : (pen.modelData.outputName || ""))
                             onActivated: index => page.setScreen(pen.modelData, model[index].value)

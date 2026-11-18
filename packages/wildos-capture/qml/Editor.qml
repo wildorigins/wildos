@@ -68,6 +68,10 @@ UI.AppWindow {
     property bool typing: false
     property point textAt: Qt.point(0, 0)
     property bool closingNow: false
+    // 1 shows the whole picture; above that it is zoomed in, and `pan` is
+    // how far it has been moved from the middle.
+    property real zoom: 1
+    property point pan: Qt.point(0, 0)
     property string status: key.length > 0 ? qsTr("Copied to the clipboard") : ""
 
     // The colours marks are drawn in become part of the picture, so they
@@ -101,6 +105,10 @@ UI.AppWindow {
     }
 
     deep: true
+    stateKey: "editor"
+    // The window is sized to the picture it opens; a remembered size would
+    // put a small capture in the last large window and the other way round.
+    rememberSize: false
     title: shownName
     width: Math.round(Math.min(Math.max(900, imageWidth / unit + 200), Screen.desktopAvailableWidth - 80))
     height: Math.round(Math.min(Math.max(560, imageHeight / unit + 266), Screen.desktopAvailableHeight - 80))
@@ -292,6 +300,43 @@ UI.AppWindow {
             }
         });
     }
+    function saveAs(): void {
+        finishText();
+        const chosen = CaptureApp.chooseSavePath(path);
+        if (chosen.length === 0) {
+            return;
+        }
+        render(image => {
+            if (CaptureApp.saveImage(image, cropArgument(), chosen)) {
+                path = chosen;
+                saved = true;
+                dirty = false;
+                status = qsTr("Saved to %1").arg(placeName);
+                win.wrote(path);
+            } else {
+                status = qsTr("Couldn't save there. Try another folder, such as Pictures.");
+            }
+        });
+    }
+    // Zooms with the picture pixel at a point of the stage staying put.
+    function zoomAbout(at: point, to: real): void {
+        const next = Math.max(1, Math.min(Math.max(1, 8 / view.whole), to));
+        if (Math.abs(next - zoom) < 0.0001) {
+            return;
+        }
+        const px = (at.x - view.x) / view.fit;
+        const py = (at.y - view.y) / view.fit;
+        zoom = next;
+        pan = Qt.point(at.x - px * view.fit - (stage.width - view.width) / 2, at.y - py * view.fit - (stage.height - view.height) / 2);
+        // Kept within reach, so the next move starts from where it shows.
+        panBy(0, 0);
+    }
+    function zoomTo(to: real): void {
+        zoomAbout(Qt.point(stage.width / 2, stage.height / 2), to);
+    }
+    function panBy(dx: real, dy: real): void {
+        pan = Qt.point(Math.max(-view.reachX, Math.min(view.reachX, view.shiftX + dx)), Math.max(-view.reachY, Math.min(view.reachY, view.shiftY + dy)));
+    }
     function share(): void {
         const file = "file://" + path;
         if (saved && !dirty) {
@@ -322,6 +367,10 @@ UI.AppWindow {
     Shortcut { sequences: [StandardKey.Undo]; enabled: !win.typing; onActivated: win.undo() }
     Shortcut { sequences: [StandardKey.Redo, "Ctrl+Y"]; enabled: !win.typing; onActivated: win.redo() }
     Shortcut { sequences: [StandardKey.Save]; onActivated: win.save(null) }
+    Shortcut { sequence: "Ctrl+Shift+S"; enabled: !win.scanPage; onActivated: win.saveAs() }
+    Shortcut { sequences: [StandardKey.ZoomIn, "Ctrl+="]; onActivated: win.zoomTo(win.zoom * 1.25) }
+    Shortcut { sequences: [StandardKey.ZoomOut]; onActivated: win.zoomTo(win.zoom / 1.25) }
+    Shortcut { sequence: "Ctrl+0"; onActivated: win.zoomTo(1) }
     Shortcut { sequences: [StandardKey.Copy]; enabled: !win.typing; onActivated: win.copy() }
     Shortcut { sequences: [StandardKey.Delete, "Backspace"]; enabled: !win.typing && win.selectedIndex >= 0; onActivated: win.removeSelected() }
     Shortcut { sequences: [StandardKey.Close]; onActivated: win.close() }
@@ -517,6 +566,7 @@ UI.AppWindow {
                     primary: true
                     iconName: "save"
                     text: qsTr("Save")
+                    tip: win.scanPage ? "" : qsTr("Save (Ctrl+S). Ctrl+Shift+S lets you choose where.")
                     onClicked: win.save(null)
                 }
             }
@@ -552,11 +602,59 @@ UI.AppWindow {
                 autoPaddingEnabled: true
             }
 
+            // Ctrl and the wheel zooms about the pointer, as in PDF. Once
+            // zoomed in, the wheel alone moves the picture up and down,
+            // with Shift sideways, and the middle button drags it.
+            WheelHandler {
+                id: zoomWheel
+                target: null
+                acceptedModifiers: Qt.ControlModifier
+                onWheel: event => win.zoomAbout(zoomWheel.point.position, win.zoom * (event.angleDelta.y > 0 ? 1.1 : 1 / 1.1))
+            }
+            WheelHandler {
+                target: null
+                enabled: win.zoom > 1
+                acceptedModifiers: Qt.NoModifier
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: event => win.panBy(event.angleDelta.x / 2, event.angleDelta.y / 2)
+            }
+            WheelHandler {
+                target: null
+                enabled: win.zoom > 1
+                acceptedModifiers: Qt.ShiftModifier
+                onWheel: event => win.panBy((event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x) / 2, 0)
+            }
+            DragHandler {
+                target: null
+                enabled: win.zoom > 1
+                acceptedButtons: Qt.MiddleButton
+                property point from
+                onActiveChanged: {
+                    if (active) {
+                        from = Qt.point(view.shiftX, view.shiftY);
+                    }
+                }
+                onActiveTranslationChanged: {
+                    if (active) {
+                        win.pan = Qt.point(from.x, from.y);
+                        win.panBy(activeTranslation.x, activeTranslation.y);
+                    }
+                }
+            }
+
             Item {
                 id: view
-                readonly property real fit: Math.max(0.01, Math.min(1 / win.unit, (stage.width - 96) / win.region.width, (stage.height - 96) / win.region.height))
-                x: Math.round((stage.width - width) / 2)
-                y: Math.round((stage.height - height) / 2)
+                // The scale that shows the whole picture, and the one in use.
+                readonly property real whole: Math.max(0.01, Math.min(1 / win.unit, (stage.width - 96) / win.region.width, (stage.height - 96) / win.region.height))
+                readonly property real fit: whole * win.zoom
+                // How far a picture larger than the stage may be moved: to
+                // its edge and the stage's usual 48px beyond.
+                readonly property real reachX: Math.max(0, (width - stage.width) / 2 + 48)
+                readonly property real reachY: Math.max(0, (height - stage.height) / 2 + 48)
+                readonly property real shiftX: Math.max(-reachX, Math.min(reachX, win.pan.x))
+                readonly property real shiftY: Math.max(-reachY, Math.min(reachY, win.pan.y))
+                x: Math.round((stage.width - width) / 2 + shiftX)
+                y: Math.round((stage.height - height) / 2 + shiftY)
                 width: Math.round(win.region.width * fit)
                 height: Math.round(win.region.height * fit)
                 clip: win.tool !== "crop"
@@ -947,6 +1045,14 @@ UI.AppWindow {
                     font.features: { "tnum": 1 }
                     text: Math.round(win.cropRect ? win.cropRect.width : win.imageWidth) + " × "
                         + Math.round(win.cropRect ? win.cropRect.height : win.imageHeight)
+                }
+                UI.Label {
+                    visible: win.zoom > 1
+                    size: 12
+                    color: UI.Style.inkMuted
+                    font.features: { "tnum": 1 }
+                    text: Math.round(view.fit * win.unit * 100) + "%"
+                    Accessible.name: qsTr("Zoom, %1").arg(text)
                 }
                 UI.Label {
                     size: 12

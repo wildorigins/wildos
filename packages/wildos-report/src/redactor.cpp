@@ -1,5 +1,6 @@
 #include "redactor.h"
 
+#include <QCoreApplication>
 #include <QRegularExpression>
 #include <QSet>
 
@@ -103,21 +104,21 @@ QString Redactor::categoryLabel(Category category)
 {
     switch (category) {
     case Names:
-        return QStringLiteral("Your name and username");
+        return QCoreApplication::translate("Redactor", "Your name and username");
     case PcName:
-        return QStringLiteral("PC name");
+        return QCoreApplication::translate("Redactor", "PC name");
     case Wifi:
-        return QStringLiteral("Wi-Fi names");
+        return QCoreApplication::translate("Redactor", "Wi-Fi names");
     case Addresses:
-        return QStringLiteral("IP and MAC addresses");
+        return QCoreApplication::translate("Redactor", "IP and MAC addresses");
     case Serials:
-        return QStringLiteral("Serial numbers");
+        return QCoreApplication::translate("Redactor", "Serial numbers");
     case Emails:
-        return QStringLiteral("Email addresses");
+        return QCoreApplication::translate("Redactor", "Email addresses");
     case Files:
-        return QStringLiteral("File and folder names");
+        return QCoreApplication::translate("Redactor", "File and folder names");
     case Custom:
-        return QStringLiteral("Words you added");
+        return QCoreApplication::translate("Redactor", "Words you added");
     case CategoryCount:
         break;
     }

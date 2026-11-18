@@ -1,0 +1,7 @@
+wildos-startup (0.1.0) trixie; urgency=medium
+
+  * The start-up manager: hold Space while the PC starts to choose between
+    Wild OS, Windows or another system on any disk, a USB stick and restore
+    points. Settings > System > Start-up disk sets what starts by default.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 12:00:00 +0000

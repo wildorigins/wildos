@@ -19,10 +19,6 @@ namespace
 {
 const QString openrgb = QStringLiteral("/usr/bin/openrgb");
 const QString serverUnit = QStringLiteral("wildos-openrgb.service");
-// OpenRGB's own default, which its command line looks for when it joins a
-// running server. wildos-openrgb.service binds it on 127.0.0.1 only.
-constexpr quint16 serverPort = 6742;
-
 const QString login1 = QStringLiteral("org.freedesktop.login1");
 const QString upower = QStringLiteral("org.freedesktop.UPower");
 const QString properties = QStringLiteral("org.freedesktop.DBus.Properties");
@@ -73,6 +69,16 @@ Lighting::Lighting(QObject *parent)
     // Devices come back from suspend in their own default lighting.
     system.connect(login1, QStringLiteral("/org/freedesktop/login1"), QStringLiteral("org.freedesktop.login1.Manager"),
                    QStringLiteral("PrepareForSleep"), this, SLOT(prepareForSleep(bool)));
+
+    connect(&m_lights, &Lights::legacyWanted, this, &Lighting::apply);
+    // Cooler's "Turn on" is the same switch as the one in Settings.
+    connect(&m_lights, &Lights::onRequested, this, [this](bool on) {
+        KSharedConfigPtr wildos = KSharedConfig::openConfig(QStringLiteral("wildosrc"));
+        wildos->reparseConfiguration();
+        wildos->group(QStringLiteral("Lighting")).writeEntry("Rgb", on, KConfig::Notify);
+        wildos->sync();
+        readSettings();
+    });
 
     readSettings();
     readBattery();
@@ -177,7 +183,10 @@ void Lighting::sessionChanged(const QString &interface, const QVariantMap &chang
 void Lighting::prepareForSleep(bool sleeping)
 {
     if (!sleeping && m_serverReady) {
-        QTimer::singleShot(2000, this, &Lighting::apply);
+        QTimer::singleShot(2000, this, [this] {
+            m_lights.sendAgain();
+            apply();
+        });
     }
 }
 
@@ -185,9 +194,21 @@ void Lighting::sync()
 {
     const bool wanted = m_rgb && m_sessionActive;
     setServer(wanted);
+    tellLights();
     if (wanted && m_serverReady) {
         apply();
     }
+}
+
+void Lighting::tellLights()
+{
+    m_lights.setUnderglow(Plan::look(m_colour, m_effect, m_onBattery, m_reducedMotion), Plan::colourFor(m_colour, m_custom, Plan::parseAccent(m_accent)),
+                          Plan::parseAccent(m_accent), m_onBattery || m_reducedMotion);
+    m_lights.setServer(!m_rgb ? Lights::Server::Off
+                           : !m_sessionActive ? Lights::Server::Away
+                           : m_serverReady ? Lights::Server::Ready
+                           : m_retry.isActive() || !m_serverKnown ? Lights::Server::Starting
+                           : Lights::Server::Failed);
 }
 
 void Lighting::setServer(bool on)
@@ -220,11 +241,12 @@ void Lighting::waitForServer()
     // A refused connection on the loopback answers at once, so this never
     // holds the event loop for long.
     QTcpSocket probe;
-    probe.connectToHost(QHostAddress::LocalHost, serverPort);
+    probe.connectToHost(QHostAddress::LocalHost, Lights::port());
     if (probe.waitForConnected(250)) {
         probe.abort();
         m_retry.stop();
         m_serverReady = true;
+        tellLights();
         // Detection can still be running when the server starts listening;
         // a second pass catches devices it found after the first.
         QTimer::singleShot(2000, this, &Lighting::apply);
@@ -233,6 +255,7 @@ void Lighting::waitForServer()
     }
     if (++m_waits >= 120) {
         m_retry.stop();
+        tellLights();
         qWarning("The OpenRGB server did not start listening within a minute");
     }
 }
@@ -272,6 +295,11 @@ void Lighting::run(const QStringList &arguments, std::function<void(const QStrin
 void Lighting::apply()
 {
     if (!m_serverReady) {
+        return;
+    }
+    // From the first choice made in Cooler the lights are set by Lights,
+    // and the openrgb command is left out of it.
+    if (m_lights.inCharge()) {
         return;
     }
     if (m_running) {

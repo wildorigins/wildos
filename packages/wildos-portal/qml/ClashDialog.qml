@@ -177,14 +177,14 @@ UI.AppWindow {
             Choice {
                 visible: win.clash.canKeepBoth
                 value: "both"
-                title: "Keep both"
+                title: qsTr("Keep both")
                 description: win.clash.keepBothText
             }
 
             UI.CheckBox {
                 id: every
                 visible: win.clash.multiple
-                text: "Do this for every clash in this copy"
+                text: qsTr("Do this for every clash in this copy")
             }
         }
 
@@ -207,13 +207,13 @@ UI.AppWindow {
 
             UI.Button {
                 id: cancelButton
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: win.clash.answer("cancel", false)
             }
 
             UI.Button {
                 kind: "primary"
-                text: "Continue"
+                text: qsTr("Continue")
                 onClicked: win.go()
             }
         }

@@ -6,17 +6,24 @@
 override_dh_auto_configure:
 	dh_auto_configure -- -Wno-dev -DCMAKE_BUILD_TYPE=Release
 
-# Everything goes in wildos-office, the shared part, except the two
-# launchers: each is its app's own package, so Write and Tables can be
-# removed one at a time.
+# Everything goes in wildos-office, the shared part, except each app's
+# launcher and its own LibreOffice settings: those are the app's own
+# package, so Write, Tables and Slides can be removed one at a time.
 L = usr/share/wildos/launchers
+R = usr/lib/libreoffice/share/registry
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/wildos-office
-	mkdir -p debian/wildos-write/$(L) debian/wildos-tables/$(L)
+	mkdir -p debian/wildos-write/$(L) debian/wildos-tables/$(L) debian/wildos-slides/$(L)
+	mkdir -p debian/wildos-write/$(R) debian/wildos-tables/$(R) debian/wildos-slides/$(R)
+	mv debian/wildos-office/$(R)/wildos-write.xcd debian/wildos-write/$(R)/
+	mv debian/wildos-office/$(R)/wildos-tables.xcd debian/wildos-tables/$(R)/
+	mv debian/wildos-office/$(R)/wildos-slides.xcd debian/wildos-slides/$(R)/
 	mv debian/wildos-office/$(L)/libreoffice-writer.desktop debian/wildos-write/$(L)/
 	mv debian/wildos-office/$(L)/libreoffice-calc.desktop debian/wildos-tables/$(L)/
+	mv debian/wildos-office/$(L)/libreoffice-impress.desktop debian/wildos-slides/$(L)/
 	rmdir debian/wildos-office/$(L)
 
 # Started by postinst once dpkg has finished, never during the install.
 override_dh_installsystemd:
 	dh_installsystemd --name=wildos-office-split --no-start
+	dh_installsystemd --name=wildos-office-slides --no-start

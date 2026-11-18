@@ -78,6 +78,8 @@ MouseArea {
         });
     }
 
+    onPressed: label.hideImmediately()
+
     onClicked: mouse => {
         if (mouse.button === Qt.RightButton) {
             openMenu(mouse.x, mouse.y);
@@ -147,22 +149,9 @@ MouseArea {
         fallback: "application-x-executable"
     }
 
-    // The hover label has to leave the taskbar's window, which only Plasma's
-    // tooltip can, so it carries a Wild OS label: the name and what the app
-    // says about itself on one plain line, as Windows shows.
-    PlasmaCore.ToolTipArea {
-        anchors.fill: parent
-        mainText: icon.title
-        subText: icon.model.ToolTipSubTitle || ""
-        textFormat: Text.PlainText
-        location: PlasmaCore.Types.BottomEdge
-        mainItem: UI.Label {
-            leftPadding: 8
-            rightPadding: 8
-            topPadding: 6
-            bottomPadding: 6
-            size: 12
-            text: icon.title + (icon.model.ToolTipSubTitle ? ", " + icon.model.ToolTipSubTitle : "")
-        }
+    TaskbarTip {
+        id: label
+        text: icon.title.length > 0 && icon.model.ToolTipSubTitle ? icon.title + ", " + icon.model.ToolTipSubTitle
+            : icon.title || icon.model.ToolTipSubTitle || ""
     }
 }

@@ -18,6 +18,7 @@ find_package(KF6Sonnet REQUIRED)
 find_package(KF6Screen REQUIRED)
 find_package(KF6NetworkManagerQt REQUIRED)
 find_package(KF6GlobalAccel REQUIRED)
+find_package(KF6GuiAddons REQUIRED)
 find_package(KF6WindowSystem REQUIRED)
 find_package(packagekitqt6 REQUIRED)
 find_package(Cups REQUIRED)
@@ -65,6 +66,7 @@ qt_add_qml_module(wildos-settings
         src/printers.cpp src/printers.h
         src/users.cpp src/users.h
         src/fingerprint.cpp src/fingerprint.h
+        src/pin.cpp src/pin.h
         src/passwordcheck.cpp src/passwordcheck.h
         src/language.cpp src/language.h
         src/appaccess.cpp src/appaccess.h
@@ -72,6 +74,7 @@ qt_add_qml_module(wildos-settings
         src/appnotifications.cpp src/appnotifications.h
         src/desktops.cpp src/desktops.h
         src/gestures.cpp src/gestures.h
+        src/shortcuts.cpp src/shortcuts.h
         src/autoplay.cpp src/autoplay.h
         src/gamecontrollers.cpp src/gamecontrollers.h
         src/thunderbolt.cpp src/thunderbolt.h
@@ -85,6 +88,7 @@ qt_add_qml_module(wildos-settings
         src/soundtheme.cpp src/soundtheme.h
         src/accessibility.cpp src/accessibility.h
         src/recovery.cpp src/recovery.h
+        src/startupdisk.cpp src/startupdisk.h
         src/freespace.cpp src/freespace.h
         src/firewall.cpp src/firewall.h
         src/advanced.cpp src/advanced.h
@@ -107,6 +111,7 @@ target_link_libraries(wildos-settings PRIVATE
     Qt6::Widgets Qt6::DBus Qt6::Network Qt6::Qml Qt6::Quick Qt6::QuickControls2
     KF6::KCMUtils KF6::KCMUtilsQuick KF6::ConfigCore KF6::CoreAddons KF6::Service KF6::I18n KF6::ColorScheme KF6::SonnetCore
     KF6::WindowSystem
+    KF6::GlobalAccel KF6::GuiAddons
     KF6::Screen
     KF6::NetworkManagerQt
     PK::packagekitqt6
@@ -123,7 +128,7 @@ install(TARGETS wildos-settings RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.settings.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 # The helpers are looked up by these exact paths (polkit pins the update
 # helper to it), so they do not follow the distribution's libexec layout.
-install(PROGRAMS data/settings-update-policy data/settings-users data/settings-locale data/settings-protection data/settings-firewall data/settings-firewall-off data/settings-history data/settings-devices data/settings-network data/settings-cpu-threads data/settings-32bit data/settings-game-overlay data/settings-graphics-driver data/settings-brave-spelling data/settings-fingerprint data/settings-free-space data/settings-advanced data/advanced-protection-apply DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+install(PROGRAMS data/settings-update-policy data/settings-users data/settings-locale data/settings-protection data/settings-firewall data/settings-firewall-off data/settings-history data/settings-devices data/settings-network data/settings-cpu-threads data/settings-32bit data/settings-game-overlay data/settings-graphics-driver data/graphics-driver-trial data/settings-brave-spelling data/settings-fingerprint data/settings-free-space data/settings-advanced data/advanced-protection-apply data/settings-time-source DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
 install(FILES data/org.wildos.settings.policy DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/actions)
 # Privacy and security > Advanced protection: the hooks settings-advanced
 # runs for the choices Settings carries out itself, and the services behind
@@ -168,6 +173,7 @@ install(FILES data/wildos-mono-audio.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/p
 install(FILES data/wildos-mono-audio.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
 # Loads the firewall for a Strict or Maximum protection level at start-up.
 install(FILES data/wildos-protection.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
+install(FILES data/wildos-firewall-modules.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/modules-load.d RENAME wildos-firewall.conf)
 # System > History's records: brought up to date every hour and whenever
 # the page opens (settings-history).
 install(FILES data/wildos-history.socket data/wildos-history@.service data/wildos-history.service data/wildos-history.timer
@@ -176,6 +182,9 @@ install(FILES data/wildos-history.socket data/wildos-history@.service data/wildo
 # Settings with systemctl --user.
 install(FILES data/wildos-free-space.service data/wildos-free-space.timer
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
+# The first start-up after NVIDIA's driver is installed: back to the open
+# driver when no desktop appears (graphics-driver-trial).
+install(FILES data/wildos-graphics-driver-trial.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
 # System > Devices: the kernel's firmware complaints and the drives' own
 # health checks, which only root can read (settings-devices).
 install(FILES data/wildos-devices.socket data/wildos-devices@.service
@@ -195,3 +204,20 @@ install(FILES data/wildos-network.service DESTINATION ${CMAKE_INSTALL_PREFIX}/li
 install(FILES data/org.wildos.Network.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/system.d)
 install(FILES data/90-wildos-network.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/NetworkManager/conf.d)
 install(FILES data/60-wildos-resolved.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/resolved.conf.d)
+
+# Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
+# WildOS.UI for the language chosen in Settings.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

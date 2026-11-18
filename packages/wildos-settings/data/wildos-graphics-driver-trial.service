@@ -1,0 +1,21 @@
+[Unit]
+Description=Check that the desktop appears with a newly installed graphics driver
+Documentation=file:///usr/libexec/wildos/graphics-driver-trial
+# Only on the start-ups after Settings installs NVIDIA's driver, until a
+# desktop has drawn once. The count is taken before the sign-in screen
+# starts, so a start-up that is switched off on a black screen is known
+# about at the next one.
+ConditionPathExists=/var/lib/wildos/graphics-driver/trial
+ConditionKernelCommandLine=!wildos.mode=recovery
+ConditionKernelCommandLine=!wildos.snapshot
+After=systemd-logind.service local-fs.target
+Before=display-manager.service
+
+[Service]
+Type=simple
+ExecStartPre=/usr/libexec/wildos/graphics-driver-trial early
+ExecStart=/usr/libexec/wildos/graphics-driver-trial watch
+TimeoutStartSec=15min
+
+[Install]
+WantedBy=multi-user.target

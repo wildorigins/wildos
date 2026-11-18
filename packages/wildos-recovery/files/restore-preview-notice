@@ -1,0 +1,49 @@
+#!/bin/sh
+# Runs at sign-in. When the start-up menu started a restore point
+# (wildos.snapshot=<id>), the PC is only trying it: the point runs under a
+# layer in memory and the installed system is untouched. Nothing on screen
+# said so, and it passed for a finished restore. This says it, and offers
+# the two ways on: keep this version (go back to it for good) or restart
+# into the system as it was.
+
+id=$(sed -n 's/^\(.* \)\{0,1\}wildos\.snapshot=\([0-9][0-9]*\)\( .*\)\{0,1\}$/\2/p' /proc/cmdline)
+[ -n "$id" ] || exit 0
+
+notice() {
+    notify-send --app-name="Wild OS" --icon=document-revert --urgency=critical "$@"
+}
+
+ask() {
+    notice --action=keep="Keep this version" --action=restart="Restart" \
+        "You're trying a restore point" \
+        "This is your PC as it was at an earlier restore point. Nothing has changed yet. Keep this version, or restart to return to your PC as it was."
+}
+
+# The desktop's notification service starts a moment after sign-in.
+tries=0
+while :; do
+    if choice=$(ask); then
+        case "$choice" in
+        keep)
+            if pkexec /usr/libexec/wildos/settings-recovery go-back "$id"; then
+                systemctl reboot
+                exit 0
+            fi
+            notice "Wild OS could not go back" \
+                "Nothing was changed. You can try again, or restart and hold Shift for start-up recovery, which can also go back."
+            sleep 5
+            ;;
+        restart)
+            systemctl reboot
+            exit 0
+            ;;
+        *)
+            exit 0
+            ;;
+        esac
+    else
+        tries=$((tries + 1))
+        [ "$tries" -lt 30 ] || exit 1
+        sleep 2
+    fi
+done

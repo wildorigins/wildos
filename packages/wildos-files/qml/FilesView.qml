@@ -1,6 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
+import QtQuick.Layouts
 import QtCore
 import WildOS.Files
 import WildOS.UI as UI
@@ -19,8 +21,10 @@ Item {
     property var tabs: []
     property int currentIndex: 0
     readonly property var folder: tabs.length > 0 ? tabs[Math.min(currentIndex, tabs.length - 1)] : null
-    readonly property string title: folder ? folder.title : "Files"
+    readonly property string title: folder ? folder.title : qsTr("Files")
     property bool keyboardUsed: false
+    // Whether the keyboard is in the files, not the address bar or a menu.
+    readonly property bool contentFocused: content.item !== null && content.item.activeFocus
     property alias menu: menu
     readonly property url home: StandardPaths.writableLocation(StandardPaths.HomeLocation)
 
@@ -53,6 +57,44 @@ Item {
         return model;
     }
 
+    // The folders of the tabs closed in this window, latest last, for
+    // Ctrl+Shift+T.
+    property var closedTabs: []
+
+    function reopenTab() {
+        if (closedTabs.length === 0) {
+            return;
+        }
+        const closed = closedTabs.slice();
+        const url = closed.pop();
+        closedTabs = closed;
+        newTab(url);
+    }
+
+    function moveTab(from, to) {
+        if (from === to || from < 0 || to < 0 || from >= tabs.length || to >= tabs.length) {
+            return;
+        }
+        const current = tabs[currentIndex];
+        const list = tabs.slice();
+        list.splice(to, 0, list.splice(from, 1)[0]);
+        tabs = list;
+        currentIndex = list.indexOf(current);
+    }
+
+    function showTab(index) {
+        if (index >= 0 && index < tabs.length) {
+            currentIndex = index;
+            focusContent();
+        }
+    }
+
+    // With "Reopen tabs next time" on, the window's tabs are kept when it
+    // closes; Settings ignores this otherwise.
+    function saveTabs() {
+        Settings.saveTabs(tabs.map(tab => tab.url), currentIndex);
+    }
+
     function closeTab(index) {
         if (tabs.length <= 1) {
             closeWindow();
@@ -60,12 +102,40 @@ Item {
         }
         const list = tabs.slice();
         const removed = list.splice(index, 1)[0];
+        const closed = closedTabs.concat([removed.url]);
+        closedTabs = closed.slice(-10);
         if (index < currentIndex || (index === currentIndex && currentIndex === list.length)) {
             currentIndex = Math.max(0, currentIndex - 1);
         }
         tabs = list;
         removed.destroy();
         focusContent();
+    }
+
+    function closeOtherTabs(index) {
+        const keep = tabs[index];
+        if (!keep) {
+            return;
+        }
+        for (let i = tabs.length - 1; i >= 0; --i) {
+            if (tabs[i] !== keep) {
+                closeTab(i);
+            }
+        }
+    }
+
+    function closeTabsToRight(index) {
+        for (let i = tabs.length - 1; i > index && i > 0; --i) {
+            closeTab(i);
+        }
+    }
+
+    // The copy opens beside its tab and takes over, as in File Explorer.
+    function duplicateTab(index) {
+        if (index >= 0 && index < tabs.length) {
+            currentIndex = index;
+            newTab(tabs[index].url);
+        }
     }
 
     // Takes the keyboard from whatever inside the view holds it first, so a
@@ -85,7 +155,14 @@ Item {
         view.forceActiveFocus();
     }
 
-    function showError(message) {
+    function showError(message, detail) {
+        if (detail && detail.length > 0) {
+            detailDialog.text = message;
+            detailDialog.detail = detail;
+            detailDialog.shown = false;
+            detailDialog.open();
+            return;
+        }
         errorDialog.text = message;
         errorDialog.open();
     }
@@ -95,11 +172,19 @@ Item {
     }
 
     Component.onCompleted: {
-        const urls = startUrls && startUrls.length > 0 ? startUrls : [home];
+        let urls = startUrls && startUrls.length > 0 ? startUrls : [];
+        let first = 0;
+        if (urls.length === 0 && formatUdi.length === 0) {
+            urls = Array.from(Settings.takeSavedTabs());
+            first = Math.max(0, Math.min(urls.length - 1, Settings.savedTab()));
+        }
+        if (urls.length === 0) {
+            urls = [home];
+        }
         for (const url of urls) {
             newTab(url);
         }
-        currentIndex = 0;
+        currentIndex = first;
         if (formatUdi.length > 0) {
             Qt.callLater(() => root.formatDrive(root.formatUdi, ""));
         }
@@ -107,11 +192,11 @@ Item {
 
     function formatDrive(udi, name) {
         if (!DriveFormat.canFormat(udi)) {
-            showError("Files only formats removable drives, such as USB sticks and SD cards, and never the drive Wild OS runs from.");
+            showError(qsTr("Files only formats removable drives, such as USB sticks and SD cards, and never the drive Wild OS runs from."));
             return;
         }
         // A blank drive is named for what it needs; the dialog says it.
-        formatDialog.show(udi, name.replace(" (needs formatting)", ""));
+        formatDialog.show(udi, name.replace(qsTr(" (needs formatting)"), ""));
     }
 
     Connections {
@@ -129,10 +214,15 @@ Item {
                 root.showError(message);
             }
         }
+        function onFailedInDetail(message, detail) {
+            if (FileOps.activeWindow === root.Window.window) {
+                root.showError(message, detail);
+            }
+        }
         function onNeedsFormat(udi, name) {
             if (FileOps.activeWindow === root.Window.window) {
                 needsFormatDialog.udi = udi;
-                needsFormatDialog.kind = name.replace(" (needs formatting)", "");
+                needsFormatDialog.kind = name.replace(qsTr(" (needs formatting)"), "");
                 needsFormatDialog.open();
             }
         }
@@ -259,19 +349,43 @@ Item {
 
     // The layouts in the order and with the keys Windows uses.
     readonly property var layouts: [
-        { mode: "xlarge", text: "Extra large icons", icon: "view-xlarge" },
-        { mode: "large", text: "Large icons", icon: "view-large" },
-        { mode: "icons", text: "Medium icons", icon: "view-medium" },
-        { mode: "small", text: "Small icons", icon: "view-small" },
-        { mode: "list", text: "List", icon: "view-list" },
-        { mode: "details", text: "Details", icon: "list" },
-        { mode: "tiles", text: "Tiles", icon: "view-tiles" },
-        { mode: "content", text: "Content", icon: "view-content" }
+        { mode: "xlarge", text: qsTr("Extra large icons"), icon: "view-xlarge" },
+        { mode: "large", text: qsTr("Large icons"), icon: "view-large" },
+        { mode: "icons", text: qsTr("Medium icons"), icon: "view-medium" },
+        { mode: "small", text: qsTr("Small icons"), icon: "view-small" },
+        { mode: "list", text: qsTr("List"), icon: "view-list" },
+        { mode: "details", text: qsTr("Details"), icon: "list" },
+        { mode: "tiles", text: qsTr("Tiles"), icon: "view-tiles" },
+        { mode: "content", text: qsTr("Content"), icon: "view-content" }
     ]
 
     function setLayout(index) {
         if (folder && folder.kind !== "computer" && index >= 0 && index < layouts.length) {
             folder.viewMode = layouts[index].mode;
+        }
+    }
+
+    // Ctrl and the mouse wheel step through the layouts, larger as the
+    // wheel rolls away from you, as in File Explorer. A touchpad sends many
+    // small movements, so they add up to a notch first. The change waits
+    // for the wheel event to finish, because it replaces the view the
+    // event came through.
+    property real wheelTravel: 0
+
+    function wheelLayout(delta) {
+        if (!folder || folder.kind === "computer") {
+            return;
+        }
+        wheelTravel += delta;
+        if (Math.abs(wheelTravel) < 120) {
+            return;
+        }
+        const step = wheelTravel > 0 ? -1 : 1;
+        wheelTravel = 0;
+        const at = layouts.findIndex(l => l.mode === folder.viewMode);
+        const next = Math.max(0, Math.min(layouts.length - 1, at + step));
+        if (at >= 0 && next !== at) {
+            Qt.callLater(() => root.setLayout(next));
         }
     }
 
@@ -286,16 +400,16 @@ Item {
             radio: true,
             enabled: !fixed,
             checked: !fixed && mode === l.mode,
-            shortcut: "Ctrl+Shift+" + (i + 1),
+            shortcut: qsTr("Ctrl+Shift+%1").arg(i + 1),
             run: () => root.setLayout(i)
         }));
     }
 
     function showEntries() {
         return [
-            { text: "Details pane", icon: "pane", checked: Settings.detailsPane, run: () => Settings.detailsPane = !Settings.detailsPane },
-            { text: "File name extensions", icon: "extension", checked: Settings.showExtensions, run: () => Settings.showExtensions = !Settings.showExtensions },
-            { text: "Hidden items", icon: "hidden", shortcut: "Ctrl+H", checked: Settings.showHidden, run: () => Settings.showHidden = !Settings.showHidden }
+            { text: qsTr("Details pane"), icon: "pane", checked: Settings.detailsPane, run: () => Settings.detailsPane = !Settings.detailsPane },
+            { text: qsTr("File name extensions"), icon: "extension", checked: Settings.showExtensions, run: () => Settings.showExtensions = !Settings.showExtensions },
+            { text: qsTr("Hidden items"), icon: "hidden", shortcut: "Ctrl+H", checked: Settings.showHidden, run: () => Settings.showHidden = !Settings.showHidden }
         ];
     }
 
@@ -307,15 +421,15 @@ Item {
             entries.push({ text: titles[i], radio: true, checked: folder.sortColumn === i, run: () => root.folder.sortColumn = column });
         }
         entries.push({ separator: true });
-        entries.push({ text: "Ascending", radio: true, checked: !folder.sortDescending, run: () => root.folder.sortDescending = false });
-        entries.push({ text: "Descending", radio: true, checked: folder.sortDescending, run: () => root.folder.sortDescending = true });
+        entries.push({ text: qsTr("Ascending"), radio: true, checked: !folder.sortDescending, run: () => root.folder.sortDescending = false });
+        entries.push({ text: qsTr("Descending"), radio: true, checked: folder.sortDescending, run: () => root.folder.sortDescending = true });
         return entries;
     }
 
     function newEntries() {
         const entries = [
-            { text: "Folder", icon: "new-folder", shortcut: "Ctrl+Shift+N", run: () => FileOps.newFolder(root.folder.url) },
-            { text: "Shortcut", icon: "link", run: () => shortcutDialog.show(root.folder.url) },
+            { text: qsTr("Folder"), icon: "new-folder", shortcut: qsTr("Ctrl+Shift+N"), run: () => FileOps.newFolder(root.folder.url) },
+            { text: qsTr("Shortcut"), icon: "link", run: () => shortcutDialog.show(root.folder.url) },
             { separator: true }
         ];
         for (const type of FileOps.newFileTypes()) {
@@ -363,27 +477,44 @@ Item {
     function openViewMenu(anchorItem) {
         const entries = viewEntries();
         entries.push({ separator: true });
-        entries.push({ text: "Show", icon: "hidden", submenu: showEntries() });
+        entries.push({ text: qsTr("Show"), icon: "hidden", submenu: showEntries() });
         openMenu(entries, anchorItem, true, 0, 0, 296);
     }
 
     function openMoreMenu(anchorItem) {
         const entries = [
-            { text: "Select all", icon: "select-all", shortcut: "Ctrl+A", run: () => root.folder.selectAll() },
-            { text: "Select none", icon: "select-none", enabled: folder.selectedCount > 0, run: () => root.folder.clearSelection() },
-            { text: "Invert selection", icon: "invert", run: () => root.folder.invertSelection() },
+            { text: qsTr("Select all"), icon: "select-all", shortcut: "Ctrl+A", run: () => root.folder.selectAll() },
+            { text: qsTr("Select none"), icon: "select-none", enabled: folder.selectedCount > 0, run: () => root.folder.clearSelection() },
+            { text: qsTr("Invert selection"), icon: "invert", run: () => root.folder.invertSelection() },
             { separator: true },
-            { text: "Copy as path", icon: "link", enabled: folder.kind === "folder", run: () => FileOps.copyPaths(root.folder.selectedCount > 0 ? root.selection() : [root.folder.url]) }
+            { text: qsTr("Copy as path"), icon: "link", enabled: folder.kind === "folder", run: () => FileOps.copyPaths(root.folder.selectedCount > 0 ? root.selection() : [root.folder.url]) }
         ];
         if (folder.url.toString().startsWith("file:")) {
-            entries.push({ text: "Open in Terminal", icon: "terminal", run: () => FileOps.openTerminal(root.folder.url) });
+            entries.push({ text: qsTr("Open in Terminal"), icon: "terminal", run: () => FileOps.openTerminal(root.folder.url) });
         }
-        entries.push({ text: "Open new window", icon: "new-window", shortcut: "Ctrl+N", run: () => App.openWindow([root.folder.url]) });
+        entries.push({ text: qsTr("Open new window"), icon: "new-window", shortcut: "Ctrl+N", run: () => App.openWindow([root.folder.url]) });
         entries.push({ separator: true });
-        entries.push({ text: "Properties", icon: "info", shortcut: "Alt+Enter", enabled: folder.kind !== "computer" || folder.selectedCount > 0, run: () => root.properties() });
+        entries.push({ text: qsTr("Properties"), icon: "info", shortcut: qsTr("Alt+Enter"), enabled: folder.kind !== "computer" || folder.selectedCount > 0, run: () => root.properties() });
         entries.push({ separator: true });
-        entries.push({ text: "Report a problem", icon: "warning", run: () => Qt.openUrlExternally("wildos-report:files") });
+        entries.push({ text: qsTr("Reopen closed tab"), icon: "restore", shortcut: "Ctrl+Shift+T", enabled: closedTabs.length > 0, run: () => root.reopenTab() });
+        entries.push({ text: qsTr("Reopen tabs next time"), icon: "new-tab", checked: Settings.restoreTabs, run: () => Settings.restoreTabs = !Settings.restoreTabs });
+        entries.push({ separator: true });
+        entries.push({ text: qsTr("Report a problem"), icon: "warning", run: () => Qt.openUrlExternally("wildos-report:files") });
         openMenu(entries, anchorItem, true, 0, 0, 252);
+    }
+
+    function openTabMenu(index, anchorItem, x, y) {
+        if (index < 0 || index >= tabs.length) {
+            return;
+        }
+        openMenu([
+            { text: qsTr("Close tab"), icon: "close", shortcut: "Ctrl+W", run: () => root.closeTab(index) },
+            { text: qsTr("Close other tabs"), enabled: tabs.length > 1, run: () => root.closeOtherTabs(index) },
+            { text: qsTr("Close tabs to the right"), enabled: index < tabs.length - 1, run: () => root.closeTabsToRight(index) },
+            { separator: true },
+            { text: qsTr("Duplicate tab"), icon: "duplicate", run: () => root.duplicateTab(index) },
+            { text: qsTr("Reopen closed tab"), icon: "restore", shortcut: "Ctrl+Shift+T", enabled: closedTabs.length > 0, run: () => root.reopenTab() }
+        ], anchorItem, false, x, y, 260);
     }
 
     function openShareMenu(anchorItem) {
@@ -392,7 +523,7 @@ Item {
         if (entries.length > 0) {
             entries.push({ separator: true });
         }
-        entries.push({ text: "Copy as path", icon: "link", run: () => FileOps.copyPaths(root.selection()) });
+        entries.push({ text: qsTr("Copy as path"), icon: "link", run: () => FileOps.copyPaths(root.selection()) });
         openMenu(entries, anchorItem, true, 0, 0, 240);
     }
 
@@ -405,10 +536,10 @@ Item {
         const entries = [];
 
         if (f.kind === "bin") {
-            entries.push({ text: "Restore", icon: "restore", run: () => FileOps.restore(urls) });
-            entries.push({ text: "Delete for good", icon: "delete", danger: true, shortcut: "Delete", run: () => FileOps.deleteForGood(urls) });
+            entries.push({ text: qsTr("Restore"), icon: "restore", run: () => FileOps.restore(urls) });
+            entries.push({ text: qsTr("Delete for good"), icon: "delete", danger: true, shortcut: qsTr("Delete"), run: () => FileOps.deleteForGood(urls) });
             entries.push({ separator: true });
-            entries.push({ text: "Properties", icon: "info", shortcut: "Alt+Enter", run: () => root.properties(urls) });
+            entries.push({ text: qsTr("Properties"), icon: "info", shortcut: qsTr("Alt+Enter"), run: () => root.properties(urls) });
             openMenu(entries, item, false, x, y, 236);
             return;
         }
@@ -419,17 +550,17 @@ Item {
             const udi = f.udiAt(at);
             const driveUrl = f.urlAt(at);
             const opened = driveUrl.toString().length > 0;
-            entries.push({ text: "Open", icon: "open", run: () => f.activate(at) });
-            entries.push({ text: "Open in new tab", icon: "new-tab", enabled: opened, run: () => root.newTab(driveUrl, false) });
+            entries.push({ text: qsTr("Open"), icon: "open", run: () => f.activate(at) });
+            entries.push({ text: qsTr("Open in new tab"), icon: "new-tab", enabled: opened, run: () => root.newTab(driveUrl, false) });
             if (udi.length > 0 && f.isRemovableAt(at)) {
-                entries.push({ text: "Eject", icon: "eject", enabled: opened, run: () => FileOps.ejectDrive(udi) });
+                entries.push({ text: qsTr("Eject"), icon: "eject", enabled: opened, run: () => FileOps.ejectDrive(udi) });
                 if (DriveFormat.canFormat(udi)) {
                     const name = f.nameAt(at);
-                    entries.push({ text: "Format…", icon: "drive", run: () => root.formatDrive(udi, name) });
+                    entries.push({ text: qsTr("Format…"), icon: "drive", run: () => root.formatDrive(udi, name) });
                 }
             }
             entries.push({ separator: true });
-            entries.push({ text: "Properties", icon: "info", enabled: opened, run: () => root.properties([driveUrl]) });
+            entries.push({ text: qsTr("Properties"), icon: "info", enabled: opened, run: () => root.properties([driveUrl]) });
             openMenu(entries, item, false, x, y, 236);
             return;
         }
@@ -440,47 +571,55 @@ Item {
         // Send to, Copy as path, Pin to Start and Properties.
         const local = urls.length > 0 && urls.every(u => u.toString().startsWith("file:"));
         const quick = [
-            { icon: "cut", tip: "Cut (Ctrl+X)", enabled: f.writable, run: () => root.cut() },
-            { icon: "copy", tip: "Copy (Ctrl+C)", run: () => root.copy() },
-            { icon: "rename", tip: "Rename (F2)", enabled: one && f.writable, run: () => root.rename() },
-            { icon: "share", tip: "Share", enabled: !f.selectionHasFolders(), run: () => root.openShareMenuAt(item, x, y) },
-            { icon: "delete", tip: "Delete (Delete)", enabled: f.writable, run: () => root.remove(false) }
+            { icon: "cut", tip: qsTr("Cut (Ctrl+X)"), enabled: f.writable, run: () => root.cut() },
+            { icon: "copy", tip: qsTr("Copy (Ctrl+C)"), run: () => root.copy() },
+            { icon: "rename", tip: qsTr("Rename (F2)"), enabled: one && f.writable, run: () => root.rename() },
+            { icon: "share", tip: qsTr("Share"), enabled: !f.selectionHasFolders(), run: () => root.openShareMenuAt(item, x, y) },
+            { icon: "delete", tip: qsTr("Delete (Delete)"), enabled: f.writable, run: () => root.remove(false) }
         ];
-        entries.push({ text: "Open", icon: one && !isDir ? "" : "open", themeIcon: one && !isDir ? f.iconAt(row) : undefined, shortcut: "Enter", run: () => root.openSelection() });
+        entries.push({ text: qsTr("Open"), icon: one && !isDir ? "" : "open", themeIcon: one && !isDir ? f.iconAt(row) : undefined, shortcut: qsTr("Enter"), run: () => root.openSelection() });
         if (isDir) {
-            entries.push({ text: "Open in new tab", icon: "new-tab", run: () => root.newTab(urls[0], false) });
-            entries.push({ text: "Open in new window", icon: "new-window", run: () => App.openWindow(urls) });
+            entries.push({ text: qsTr("Open in new tab"), icon: "new-tab", run: () => root.newTab(urls[0], false) });
+            entries.push({ text: qsTr("Open in new window"), icon: "new-window", run: () => App.openWindow(urls) });
         } else if (one) {
             // The default app first, Windows apps from App Bridge labelled as
             // such, as the board shows.
             const apps = FileOps.appsFor(urls[0]).map(a => ({
                 text: a.name,
                 themeIcon: a.icon + ",application-x-executable",
-                shortcut: a.isDefault ? "Default" : a.windows ? "Windows app" : "",
+                shortcut: a.isDefault ? qsTr("Default") : a.windows ? qsTr("Windows app") : "",
                 run: () => FileOps.openWith(urls, a.id, false)
             }));
             if (apps.length > 0) {
                 apps.push({ separator: true });
             }
-            apps.push({ text: "Choose another app…", run: () => root.chooseApp(urls) });
-            entries.push({ text: "Open with", icon: "open-with", submenu: apps });
+            apps.push({ text: qsTr("Choose another app…"), run: () => root.chooseApp(urls) });
+            entries.push({ text: qsTr("Open with"), icon: "open-with", submenu: apps });
+            // An app shortcut or a program such as an AppImage, on a PC with
+            // two graphics cards.
+            const target = urls[0].toString();
+            if (local && UI.System.twoGraphicsCards() && UI.System.canChooseGraphics(target)) {
+                const dedicated = UI.System.dedicatedGraphics(target);
+                entries.push({ text: qsTr("Dedicated graphics card"), checked: dedicated,
+                    run: () => UI.System.setDedicatedGraphics(target, !dedicated) });
+            }
             // Advanced protection's Safe box, while it is switched on.
             if (local && FileOps.safeBoxPlan(urls[0]).ok) {
-                entries.push({ text: "Open in safe box", icon: "sandbox", run: () => FileOps.openInSafeBox(urls[0]) });
+                entries.push({ text: qsTr("Open in safe box"), icon: "sandbox", run: () => FileOps.openInSafeBox(urls[0]) });
             }
         }
         if (local && FileOps.areArchives(urls)) {
-            entries.push({ text: "Extract here", icon: "zip", enabled: FileOps.canWriteIn(f.url), run: () => FileOps.extractHere(urls) });
+            entries.push({ text: qsTr("Extract here"), icon: "zip", enabled: FileOps.canWriteIn(f.url), run: () => FileOps.extractHere(urls) });
         }
         if (local) {
-            entries.push({ text: "Compress to ZIP file", icon: "zip", enabled: FileOps.canWriteIn(f.url), run: () => FileOps.compress(urls) });
+            entries.push({ text: qsTr("Compress to ZIP file"), icon: "zip", enabled: FileOps.canWriteIn(f.url), run: () => FileOps.compress(urls) });
             if (FileOps.canUseArchive()) {
-                entries.push({ text: "Compress…", icon: "zip", run: () => FileOps.compressWith(urls) });
+                entries.push({ text: qsTr("Compress…"), icon: "zip", run: () => FileOps.compressWith(urls) });
             }
             // Advanced protection's Remove personal details, while it is
             // switched on, for the kinds of file it can clean.
             if (FileOps.canRemoveDetails(urls)) {
-                entries.push({ text: "Remove personal details", icon: "eye-off", run: () => FileOps.removeDetails(urls) });
+                entries.push({ text: qsTr("Remove personal details"), icon: "eye-off", run: () => FileOps.removeDetails(urls) });
             }
             const targets = FileOps.sendTargets(urls).map(t => ({
                 text: t.text,
@@ -489,18 +628,26 @@ Item {
                 run: () => FileOps.sendTo(urls, t.kind, t.target ?? "")
             }));
             if (targets.length > 0) {
-                entries.push({ text: "Send to", icon: "send", submenu: targets });
+                entries.push({ text: qsTr("Send to"), icon: "send", submenu: targets });
             }
         }
-        entries.push({ text: "Copy as path", icon: "link", shortcut: "Ctrl+Shift+C", run: () => FileOps.copyPaths(urls) });
+        entries.push({ text: qsTr("Copy as path"), icon: "link", shortcut: qsTr("Ctrl+Shift+C"), run: () => FileOps.copyPaths(urls) });
         if (local && FileOps.canPinToStart()) {
-            entries.push({ text: "Pin to Start", icon: "pin", run: () => FileOps.pinToStart(urls) });
+            entries.push({ text: qsTr("Pin to Start"), icon: "pin", run: () => FileOps.pinToStart(urls) });
+        }
+        // Network folders (a NAS share) pin too; canPin says which.
+        if (isDir) {
+            if (PlacesModel.isPinned(urls[0])) {
+                entries.push({ text: qsTr("Unpin from sidebar"), icon: "unpin", run: () => PlacesModel.unpin(urls[0]) });
+            } else if (PlacesModel.canPin(urls[0])) {
+                entries.push({ text: qsTr("Pin to sidebar"), icon: "pin", run: () => PlacesModel.pin(urls[0]) });
+            }
         }
         if (isDir && local) {
-            entries.push({ text: "Open in Terminal", icon: "terminal", run: () => FileOps.openTerminal(urls[0]) });
+            entries.push({ text: qsTr("Open in Terminal"), icon: "terminal", run: () => FileOps.openTerminal(urls[0]) });
         }
         entries.push({ separator: true });
-        entries.push({ text: "Properties", icon: "properties", shortcut: "Alt+Enter", run: () => root.properties(urls) });
+        entries.push({ text: qsTr("Properties"), icon: "properties", shortcut: qsTr("Alt+Enter"), run: () => root.properties(urls) });
         openMenu(entries, item, false, x, y, 270, quick);
     }
 
@@ -510,7 +657,7 @@ Item {
         if (entries.length > 0) {
             entries.push({ separator: true });
         }
-        entries.push({ text: "Copy as path", icon: "link", run: () => FileOps.copyPaths(root.selection()) });
+        entries.push({ text: qsTr("Copy as path"), icon: "link", run: () => FileOps.copyPaths(root.selection()) });
         openMenu(entries, item, false, x, y, 240);
     }
 
@@ -527,33 +674,39 @@ Item {
             if (types.length > 0) {
                 types.push({ separator: true });
             }
-            types.push({ text: "Shortcut", icon: "link", run: () => shortcutDialog.show(root.folder.url) });
+            types.push({ text: qsTr("Shortcut"), icon: "link", run: () => shortcutDialog.show(root.folder.url) });
             const local = f.url.toString().startsWith("file:");
             const rows = [
-                { text: "New folder", icon: "new-folder", shortcut: "Ctrl+Shift+N", enabled: f.writable, run: () => FileOps.newFolder(root.folder.url) },
-                { text: "New", icon: "plus", enabled: f.writable, submenu: types, submenuWidth: 168 },
-                { text: "Paste", icon: "menu-paste", shortcut: "Ctrl+V", enabled: FileOps.canPaste && f.writable, run: () => root.paste() },
+                { text: qsTr("New folder"), icon: "new-folder", shortcut: qsTr("Ctrl+Shift+N"), enabled: f.writable, run: () => FileOps.newFolder(root.folder.url) },
+                { text: qsTr("New"), icon: "plus", enabled: f.writable, submenu: types, submenuWidth: 168 },
+                { text: qsTr("Paste"), icon: "menu-paste", shortcut: "Ctrl+V", enabled: FileOps.canPaste && f.writable, run: () => root.paste() },
+                { text: FileOps.undoText, icon: "undo", shortcut: "Ctrl+Z", enabled: FileOps.canUndo, run: () => FileOps.undo() },
                 { separator: true },
-                { text: "View", icon: "desktop-view", submenu: viewEntries() },
-                { text: "Sort by", icon: "menu-sort", submenu: sortEntries() },
+                { text: qsTr("View"), icon: "desktop-view", submenu: viewEntries() },
+                { text: qsTr("Sort by"), icon: "menu-sort", submenu: sortEntries() },
                 { separator: true }
             ];
             if (local) {
-                rows.push({ text: "Open in Terminal", icon: "terminal", run: () => FileOps.openTerminal(root.folder.url) });
+                rows.push({ text: qsTr("Open in Terminal"), icon: "terminal", run: () => FileOps.openTerminal(root.folder.url) });
             }
-            rows.push({ text: "Properties", icon: "properties", shortcut: "Alt+Enter", run: () => root.properties([root.folder.url]) });
+            if (PlacesModel.isPinned(f.url)) {
+                rows.push({ text: qsTr("Unpin from sidebar"), icon: "unpin", run: () => PlacesModel.unpin(root.folder.url) });
+            } else if (PlacesModel.canPin(f.url)) {
+                rows.push({ text: qsTr("Pin to sidebar"), icon: "pin", run: () => PlacesModel.pin(root.folder.url) });
+            }
+            rows.push({ text: qsTr("Properties"), icon: "properties", shortcut: qsTr("Alt+Enter"), run: () => root.properties([root.folder.url]) });
             openMenu(rows, item, false, x, y, 236);
             return;
         }
         const entries = [
-            { text: "View", icon: "view", enabled: f.kind !== "computer", submenu: viewEntries() },
-            { text: "Sort by", icon: "sort", enabled: f.kind !== "computer", submenu: sortEntries() },
-            { text: "Refresh", icon: "refresh", shortcut: "F5", run: () => root.folder.refresh() },
+            { text: qsTr("View"), icon: "view", enabled: f.kind !== "computer", submenu: viewEntries() },
+            { text: qsTr("Sort by"), icon: "sort", enabled: f.kind !== "computer", submenu: sortEntries() },
+            { text: qsTr("Refresh"), icon: "refresh", shortcut: "F5", run: () => root.folder.refresh() },
             { separator: true }
         ];
         if (f.kind === "bin") {
-            entries.push({ text: "Empty Recycle Bin", icon: "bin", enabled: FileOps.binCount > 0, run: () => FileOps.emptyBin() });
-            entries.push({ text: "Restore all", icon: "restore", enabled: f.count > 0, run: () => root.restore() });
+            entries.push({ text: qsTr("Empty Recycle Bin"), icon: "bin", enabled: FileOps.binCount > 0, run: () => FileOps.emptyBin() });
+            entries.push({ text: qsTr("Restore all"), icon: "restore", enabled: f.count > 0, run: () => root.restore() });
         }
         if (entries[entries.length - 1].separator) {
             entries.pop();
@@ -561,37 +714,42 @@ Item {
         openMenu(entries, item, false, x, y, 280);
     }
 
-    // MenusApps.dc "Files, sidebar folder" and MenusShell.dc "Bin". The
-    // sidebar's folders are the fixed Home folders, so the board's "Unpin
-    // from sidebar" has nothing to unpin yet and is left out; the Recycle
-    // Bin has no Properties of its own.
+    // MenusApps.dc "Files, sidebar folder" and MenusShell.dc "Bin". Only
+    // a folder you pinned yourself has "Unpin from sidebar"; the Home
+    // folders stay. The Recycle Bin has no Properties of its own.
     function openPlaceMenu(item, x, y, place) {
         const entries = [];
         const hasUrl = place.url.toString().length > 0;
-        entries.push({ text: "Open", icon: "open", bold: true, run: () => sidebar.open(place, false) });
+        entries.push({ text: qsTr("Open"), icon: "open", bold: true, run: () => sidebar.open(place, false) });
         if (place.kind === "bin") {
             entries.push({ separator: true });
-            entries.push({ text: "Empty Recycle Bin", icon: "menu-uninstall", danger: true, enabled: FileOps.binCount > 0, run: () => FileOps.emptyBin() });
+            entries.push({ text: qsTr("Empty Recycle Bin"), icon: "menu-uninstall", danger: true, enabled: FileOps.binCount > 0, run: () => FileOps.emptyBin() });
             openMenu(entries, item, false, x, y, 280);
             return;
         }
         if (hasUrl) {
-            entries.push({ text: "Open in new window", icon: "menu-window", run: () => App.openWindow([place.url]) });
+            entries.push({ text: qsTr("Open in new window"), icon: "menu-window", run: () => App.openWindow([place.url]) });
         }
-        entries.push({ text: "Open in new tab", icon: "plus", run: () => sidebar.open(place, true) });
+        entries.push({ text: qsTr("Open in new tab"), icon: "plus", run: () => sidebar.open(place, true) });
         const formattable = place.removable && place.udi.length > 0 && DriveFormat.canFormat(place.udi);
         if ((place.removable && hasUrl) || formattable) {
             entries.push({ separator: true });
         }
         if (place.removable && hasUrl) {
-            entries.push({ text: "Eject", icon: "eject", run: () => FileOps.ejectDrive(place.udi) });
+            entries.push({ text: qsTr("Eject"), icon: "eject", run: () => FileOps.ejectDrive(place.udi) });
         }
         if (formattable) {
-            entries.push({ text: "Format…", icon: "drive", run: () => root.formatDrive(place.udi, place.name) });
+            entries.push({ text: qsTr("Format…"), icon: "drive", run: () => root.formatDrive(place.udi, place.name) });
         }
-        if (place.kind === "place" || (place.kind === "drive" && hasUrl)) {
+        if (place.kind === "pinned") {
+            const pinned = place.url;
             entries.push({ separator: true });
-            entries.push({ text: "Properties", icon: "properties", run: () => root.properties([place.url]) });
+            entries.push({ text: qsTr("Unpin from sidebar"), icon: "unpin", run: () => PlacesModel.unpin(pinned) });
+        }
+        if (place.kind === "place" || place.kind === "pinned" || (place.kind === "drive" && hasUrl)) {
+            const target = place.url;
+            entries.push({ separator: true });
+            entries.push({ text: qsTr("Properties"), icon: "properties", run: () => root.properties([target]) });
         }
         openMenu(entries, item, false, x, y, 280);
     }
@@ -602,7 +760,7 @@ Item {
         const p = anchorItem.mapToItem(root, anchorItem.width, anchorItem.height + 6);
         scopeCard.anchorX = p.x;
         scopeCard.anchorY = p.y;
-        scopeCard.visible = true;
+        scopeCard.shown = true;
         scopeCard.forceActiveFocus();
     }
 
@@ -744,6 +902,13 @@ Item {
                 typeAhead(event.text);
             }
             break;
+        case Qt.Key_Z:
+            if (ctrl) {
+                FileOps.undo();
+            } else {
+                typeAhead(event.text);
+            }
+            break;
         default:
             if (ctrl || alt || event.text.length === 0 || event.text.charCodeAt(0) < 32) {
                 return;
@@ -849,6 +1014,9 @@ Item {
             Sidebar {
                 id: sidebar
                 height: parent.height
+                // Above the files, so the grip on its edge can be caught
+                // from either side of the line.
+                z: 1
                 folder: root.folder
                 view: root
             }
@@ -965,6 +1133,56 @@ Item {
         onActivated: root.currentIndex = (root.currentIndex + root.tabs.length - 1) % root.tabs.length
     }
     Shortcut {
+        sequences: ["Ctrl+Shift+T"]
+        onActivated: root.reopenTab()
+    }
+    // Ctrl+Shift+Page Up and Page Down move the tab along the bar, and
+    // Ctrl+1 to 8 pick a tab by its place, Ctrl+9 the last, as browsers do.
+    Shortcut {
+        sequences: ["Ctrl+Shift+PgUp"]
+        onActivated: root.moveTab(root.currentIndex, root.currentIndex - 1)
+    }
+    Shortcut {
+        sequences: ["Ctrl+Shift+PgDown"]
+        onActivated: root.moveTab(root.currentIndex, root.currentIndex + 1)
+    }
+    Shortcut {
+        sequences: ["Ctrl+1"]
+        onActivated: root.showTab(0)
+    }
+    Shortcut {
+        sequences: ["Ctrl+2"]
+        onActivated: root.showTab(1)
+    }
+    Shortcut {
+        sequences: ["Ctrl+3"]
+        onActivated: root.showTab(2)
+    }
+    Shortcut {
+        sequences: ["Ctrl+4"]
+        onActivated: root.showTab(3)
+    }
+    Shortcut {
+        sequences: ["Ctrl+5"]
+        onActivated: root.showTab(4)
+    }
+    Shortcut {
+        sequences: ["Ctrl+6"]
+        onActivated: root.showTab(5)
+    }
+    Shortcut {
+        sequences: ["Ctrl+7"]
+        onActivated: root.showTab(6)
+    }
+    Shortcut {
+        sequences: ["Ctrl+8"]
+        onActivated: root.showTab(7)
+    }
+    Shortcut {
+        sequences: ["Ctrl+9"]
+        onActivated: root.showTab(root.tabs.length - 1)
+    }
+    Shortcut {
         sequences: ["Ctrl+N"]
         onActivated: App.openWindow([root.folder.url])
     }
@@ -1007,6 +1225,12 @@ Item {
         sequences: ["Ctrl+H"]
         onActivated: Settings.showHidden = !Settings.showHidden
     }
+    // F6 moves the keyboard between the places and the files, as in
+    // File Explorer.
+    Shortcut {
+        sequences: ["F6", "Shift+F6"]
+        onActivated: sidebar.focused ? root.focusContent() : sidebar.takeFocus()
+    }
 
     // Mouse back and forward buttons.
     MouseArea {
@@ -1028,15 +1252,18 @@ Item {
         property string detail
         property real anchorX
         property real anchorY
+        property bool shown: false
         anchors.fill: parent
-        visible: false
+        // Stays until it has faded out.
+        visible: shown || scopeFade.running
         z: 950
-        Keys.onEscapePressed: visible = false
-        onVisibleChanged: if (!visible) root.focusContent()
+        Keys.onEscapePressed: shown = false
+        onShownChanged: if (!shown) root.focusContent()
 
         MouseArea {
             anchors.fill: parent
-            onPressed: scopeCard.visible = false
+            enabled: scopeCard.shown
+            onPressed: scopeCard.shown = false
         }
 
         Rectangle {
@@ -1044,10 +1271,26 @@ Item {
             y: scopeCard.anchorY
             width: 300
             height: scopeColumn.implicitHeight + 32
-            radius: 12
+            radius: UI.Style.radiusMd
             color: UI.Style.glassMenu
             border.width: 1
             border.color: UI.Style.borderMenu
+            opacity: scopeCard.shown ? 1 : 0
+            Behavior on opacity {
+                NumberAnimation {
+                    id: scopeFade
+                    duration: UI.Style.motionFast
+                    easing.type: Easing.OutCubic
+                }
+            }
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: UI.Style.shadowMenu
+                shadowVerticalOffset: 12
+                shadowBlur: 1.0
+                blurMax: 32
+            }
 
             Column {
                 id: scopeColumn
@@ -1085,13 +1328,49 @@ Item {
 
     UI.Dialog {
         id: errorDialog
-        title: "That did not work"
+        title: qsTr("That did not work")
         onClosed: root.focusContent()
         buttons: [
             UI.Button {
                 kind: "primary"
-                text: "Close"
+                text: qsTr("Close")
                 onClicked: errorDialog.close()
+            }
+        ]
+    }
+
+    // A failure Files has only a general sentence for: what the system
+    // reported waits behind "Details", for whoever is asked to help.
+    UI.Dialog {
+        id: detailDialog
+        property string detail
+        property bool shown: false
+        title: qsTr("That did not work")
+        onClosed: root.focusContent()
+
+        UI.LinkButton {
+            Layout.alignment: Qt.AlignLeft
+            Layout.leftMargin: -4
+            visible: !detailDialog.shown
+            text: qsTr("Details")
+            onClicked: detailDialog.shown = true
+        }
+
+        UI.Label {
+            Layout.fillWidth: true
+            visible: detailDialog.shown
+            text: detailDialog.detail
+            size: 12
+            color: UI.Style.inkMuted
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+        }
+
+        buttons: [
+            UI.Button {
+                kind: "primary"
+                text: qsTr("Close")
+                onClicked: detailDialog.close()
             }
         ]
     }
@@ -1120,17 +1399,17 @@ Item {
         property string udi
         property string kind
         readonly property string lower: /^(USB|SD) /.test(kind) ? kind : kind.charAt(0).toLowerCase() + kind.slice(1)
-        title: "Format this " + lower + "?"
-        text: "This " + lower + " has nothing on it Wild OS can read, so it needs formatting before it can be used. Formatting erases anything on it."
+        title: qsTr("Format this %1?").arg(lower)
+        text: qsTr("This %1 has nothing on it Wild OS can read, so it needs formatting before it can be used. Formatting erases anything on it.").arg(lower)
         onClosed: root.focusContent()
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: needsFormatDialog.close()
             },
             UI.Button {
                 kind: "primary"
-                text: "Format…"
+                text: qsTr("Format…")
                 onClicked: {
                     needsFormatDialog.close();
                     root.formatDrive(needsFormatDialog.udi, needsFormatDialog.kind);

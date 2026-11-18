@@ -100,7 +100,7 @@ Column {
             height: 28
             radius: 7
             baseColor: UI.Style.tone(0.07)
-            accessibleName: "Windows mode: " + progressText.text
+            accessibleName: qsTr("Windows mode: %1").arg(progressText.text)
             onClicked: {
                 section.call("ShowSetupProgress");
                 section.launcher.close();
@@ -141,7 +141,7 @@ Column {
                     id: progressText
                     anchors.verticalCenter: parent.verticalCenter
                     size: 12
-                    text: (section.status && section.status.paused ? "Setup paused · " : "Setting up · ") + section.percent + "%"
+                    text: (section.status && section.status.paused ? qsTr("Setup paused · %1%") : qsTr("Setting up · %1%")).arg(section.percent)
                 }
             }
         }
@@ -164,7 +164,7 @@ Column {
                 Layout.preferredHeight: 56
                 spacing: 14
                 Accessible.role: Accessible.StaticText
-                Accessible.name: modelData.name + ", getting ready"
+                Accessible.name: qsTr("%1, getting ready").arg(modelData.name)
 
                 Kirigami.Icon {
                     Layout.leftMargin: 12
@@ -187,7 +187,7 @@ Column {
 
                     UI.Label {
                         size: 12
-                        text: "Getting ready"
+                        text: qsTr("Getting ready")
                         color: UI.Style.inkAlpha(0.5, 0.5)
                     }
                 }

@@ -46,13 +46,13 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Time zone: " + System.timeZone
+                    text: qsTr("Time zone: %1").arg(System.timeZone)
                     color: UI.Style.inkMuted
                 }
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Language: " + System.region
+                    text: qsTr("Language: %1").arg(System.region)
                     color: UI.Style.inkMuted
                 }
             }
@@ -68,8 +68,8 @@ PageScroll {
             UI.SettingRow {
                 visible: Pages.exists("datetime")
                 iconName: "clock"
-                title: "Date and time"
-                description: "Change the date, time and time zone"
+                title: qsTr("Date and time")
+                description: qsTr("Change the date, time and time zone")
                 chevron: true
                 onClicked: Navigator.open("datetime")
             }
@@ -77,8 +77,8 @@ PageScroll {
             UI.SettingRow {
                 visible: Pages.exists("language")
                 iconName: "language"
-                title: "Language and region"
-                description: "Display language, formats and region"
+                title: qsTr("Language and region")
+                description: qsTr("Display language, formats and region")
                 chevron: true
                 onClicked: Navigator.open("language")
             }
@@ -86,8 +86,8 @@ PageScroll {
             UI.SettingRow {
                 visible: Pages.exists("typing")
                 iconName: "pencil"
-                title: "Typing"
-                description: "Spell checking and your dictionary"
+                title: qsTr("Typing")
+                description: qsTr("Spell checking and your dictionary")
                 chevron: true
                 onClicked: Navigator.open("typing")
             }
@@ -95,8 +95,8 @@ PageScroll {
             UI.SettingRow {
                 visible: Pages.exists("keyboard")
                 iconName: "keyboard"
-                title: "Keyboard layouts"
-                description: "Add a layout and switch between them"
+                title: qsTr("Keyboard layouts")
+                description: qsTr("Add a layout and switch between them")
                 chevron: true
                 onClicked: Navigator.open("keyboard")
             }

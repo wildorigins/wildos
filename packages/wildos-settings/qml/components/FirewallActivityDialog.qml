@@ -21,22 +21,24 @@ RecoveryDialog {
     signal allowRequested(var entry)
 
     function who(kind) {
-        return kind === "router" ? "Your router"
-            : kind === "local" ? "Another PC on this network"
-            : kind === "internet" ? "The internet"
-            : "Another local network";
+        return kind === "router" ? qsTr("Your router")
+            : kind === "local" ? qsTr("Another PC on this network")
+            : kind === "internet" ? qsTr("The internet")
+            : qsTr("Another local network");
     }
 
     function countLine() {
         const n = entries.length;
-        const when = range === "week" ? "in 7 days" : "today";
         if (n === 0) {
             return "";
         }
-        return n > shownMax ? n + " " + when + " · showing the latest " + shownMax : n + " " + when;
+        if (range === "week") {
+            return n > shownMax ? qsTr("%1 in 7 days · showing the latest %2").arg(n).arg(shownMax) : qsTr("%1 in 7 days").arg(n);
+        }
+        return n > shownMax ? qsTr("%1 today · showing the latest %2").arg(n).arg(shownMax) : qsTr("%1 today").arg(n);
     }
 
-    title: "What the firewall blocked"
+    title: qsTr("What the firewall blocked")
     iconName: "shield-round-check"
     dialogWidth: 680
 
@@ -48,7 +50,7 @@ RecoveryDialog {
 
     UI.Label {
         Layout.fillWidth: true
-        text: "Each of these tried to connect to this PC and was turned away. Allow one only if you recognise it and meant it to connect."
+        text: qsTr("Each of these tried to connect to this PC and was turned away. Allow one only if you recognise it and meant it to connect.")
         size: 13
         lineHeightMode: Text.FixedHeight
         lineHeight: 19.5
@@ -62,7 +64,7 @@ RecoveryDialog {
         spacing: 12
 
         Segmented {
-            options: [{ value: "today", text: "Today" }, { value: "week", text: "7 days" }]
+            options: [{ value: "today", text: qsTr("Today") }, { value: "week", text: qsTr("7 days") }]
             value: dialog.range
             onPicked: v => dialog.range = v
         }
@@ -163,14 +165,14 @@ RecoveryDialog {
 
                             UI.Label {
                                 Layout.fillWidth: true
-                                text: entryRow.service.length > 0 ? entryRow.service : (entryRow.modelData.proto === "udp" ? "UDP port " : "Port ") + entryRow.modelData.port
+                                text: entryRow.service.length > 0 ? entryRow.service : (entryRow.modelData.proto === "udp" ? qsTr("UDP port %1") : qsTr("Port %1")).arg(entryRow.modelData.port)
                                 size: 13
                                 elide: Text.ElideRight
                             }
 
                             UI.Label {
                                 Layout.fillWidth: true
-                                text: entryRow.service.length > 0 ? (entryRow.modelData.proto === "udp" ? "UDP port " : "Port ") + entryRow.modelData.port : "Nothing on this PC is known to use it"
+                                text: entryRow.service.length > 0 ? (entryRow.modelData.proto === "udp" ? qsTr("UDP port %1") : qsTr("Port %1")).arg(entryRow.modelData.port) : qsTr("Nothing on this PC is known to use it")
                                 size: 12
                                 color: UI.Style.inkMuted
                                 elide: Text.ElideRight
@@ -186,9 +188,9 @@ RecoveryDialog {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: entryRow.canAllow
                                 implicitHeight: 32
-                                text: "Allow"
+                                text: qsTr("Allow")
                                 enabled: Firewall.enabled && !Firewall.busy
-                                Accessible.name: "Allow " + dialog.who(entryRow.modelData.kind).toLowerCase() + " on port " + entryRow.modelData.port
+                                Accessible.name: qsTr("Allow %1 on port %2").arg(dialog.who(entryRow.modelData.kind).toLowerCase()).arg(entryRow.modelData.port)
                                 onClicked: {
                                     const entry = entryRow.modelData;
                                     dialog.close();
@@ -200,7 +202,7 @@ RecoveryDialog {
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: !entryRow.canAllow
-                                text: "Blocked"
+                                text: qsTr("Blocked")
                                 size: 12.5
                                 color: UI.Style.inkSubtle
                             }
@@ -218,7 +220,7 @@ RecoveryDialog {
                     anchors.left: parent.left
                     anchors.leftMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    text: dialog.range === "week" ? "Nothing has tried to connect in the last 7 days." : "Nothing has tried to connect today."
+                    text: dialog.range === "week" ? qsTr("Nothing has tried to connect in the last 7 days.") : qsTr("Nothing has tried to connect today.")
                     size: 13
                     color: UI.Style.inkMuted
                 }
@@ -239,7 +241,7 @@ RecoveryDialog {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Kept on this PC for 7 days, then deleted. Nothing is sent anywhere."
+            text: qsTr("Kept on this PC for 7 days, then deleted. Nothing is sent anywhere.")
             size: 12.5
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -250,14 +252,14 @@ RecoveryDialog {
     buttons: [
         UI.Button {
             implicitHeight: 32
-            text: "Clear the list"
+            text: qsTr("Clear the list")
             enabled: Firewall.blocked.length > 0
             onClicked: Firewall.clearBlocked()
         },
         UI.Button {
             implicitHeight: 32
             kind: "primary"
-            text: "Close"
+            text: qsTr("Close")
             onClicked: dialog.close()
         }
     ]

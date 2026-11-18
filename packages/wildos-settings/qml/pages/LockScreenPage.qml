@@ -26,14 +26,14 @@ PageScroll {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Lock screen picture"
+                text: qsTr("Lock screen picture")
                 size: 15
                 font.weight: UI.Style.weightSemiBold
             }
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Shown behind the clock when your computer is locked."
+                text: qsTr("Shown behind the clock when your computer is locked.")
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
                 elide: Text.ElideNone
@@ -42,7 +42,7 @@ PageScroll {
             UI.Button {
                 Layout.topMargin: 6
                 visible: System.lockWallpaper !== System.wallpaper
-                text: "Use my desktop background"
+                text: qsTr("Use my desktop background")
                 onClicked: System.setLockWallpaper(System.wallpaper)
             }
         }
@@ -53,7 +53,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Pictures"
+            text: qsTr("Pictures")
         }
 
         WallpaperGrid {
@@ -70,8 +70,8 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "lock"
-                title: "Screen lock"
-                description: "When the screen locks and asks for your password"
+                title: qsTr("Screen lock")
+                description: qsTr("When the screen locks and asks for your password")
                 chevron: true
                 onClicked: Navigator.open("screenlock")
             }

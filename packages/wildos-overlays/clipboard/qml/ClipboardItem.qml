@@ -27,7 +27,7 @@ T.AbstractButton {
     hoverEnabled: true
     focusPolicy: Qt.NoFocus
     Accessible.role: Accessible.Button
-    Accessible.name: (item.kind === "image" ? "Picture" : shownText) + ", " + meta + (pinned ? ", pinned" : "")
+    Accessible.name: (item.kind === "image" ? qsTr("Picture") : shownText) + ", " + meta + (pinned ? qsTr(", pinned") : "")
 
     onClicked: pasteRequested()
 
@@ -103,7 +103,7 @@ T.AbstractButton {
             iconSize: 14
             stroke: 1.8
             iconColor: card.pinned ? UI.Style.accentText : UI.Style.inkPlaceholder
-            tip: card.pinned ? "Unpin" : "Pin, to keep it after a restart"
+            tip: card.pinned ? qsTr("Unpin") : qsTr("Pin, to keep it after a restart")
             focusPolicy: Qt.NoFocus
             onClicked: card.pinToggled()
         }
@@ -116,7 +116,7 @@ T.AbstractButton {
             iconName: "more-vertical"
             iconSize: 14
             iconColor: UI.Style.inkAlpha(0.7, 0.66)
-            tip: "More"
+            tip: qsTr("More")
             focusPolicy: Qt.NoFocus
             onClicked: menu.popup(moreButton, moreButton.width - menu.width, moreButton.height + 4)
 
@@ -125,18 +125,18 @@ T.AbstractButton {
                 minimumWidth: 180
 
                 UI.MenuItem {
-                    text: "Copy only"
+                    text: qsTr("Copy only")
                     iconName: "copy"
                     onTriggered: card.copyRequested()
                 }
                 UI.MenuItem {
-                    text: card.pinned ? "Unpin" : "Pin"
+                    text: card.pinned ? qsTr("Unpin") : qsTr("Pin")
                     iconName: card.pinned ? "unpin" : "pin"
                     onTriggered: card.pinToggled()
                 }
                 UI.MenuSeparator {}
                 UI.MenuItem {
-                    text: "Delete"
+                    text: qsTr("Delete")
                     iconName: "delete"
                     danger: true
                     onTriggered: card.removeRequested()

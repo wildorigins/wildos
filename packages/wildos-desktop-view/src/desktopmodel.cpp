@@ -8,6 +8,7 @@
 #include <KIO/PreviewJob>
 #include <KUser>
 #include <QCollator>
+#include <QCoreApplication>
 #include <QDir>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -50,7 +51,7 @@ QString homeLabel()
     const KUser user;
     const QString full = user.property(KUser::FullName).toString().section(QLatin1Char(','), 0, 0).trimmed();
     const QString first = full.section(QLatin1Char(' '), 0, 0);
-    return first.isEmpty() ? QStringLiteral("My files") : first + QStringLiteral("'s files");
+    return first.isEmpty() ? QCoreApplication::translate("DesktopModel", "My files") : QCoreApplication::translate("DesktopModel", "%1's files").arg(first);
 }
 
 QUrl stripped(const QUrl &url)
@@ -123,8 +124,8 @@ void DesktopModel::makeSystemEntries()
     computer.key = computerKey;
     computer.kind = QStringLiteral("computer");
     computer.url = QUrl(QStringLiteral("wildos:computer"));
-    computer.name = QStringLiteral("This computer");
-    computer.type = QStringLiteral("System folder");
+    computer.name = QCoreApplication::translate("DesktopModel", "This computer");
+    computer.type = QCoreApplication::translate("DesktopModel", "System folder");
 
     Entry home;
     home.key = homeKey;
@@ -133,14 +134,14 @@ void DesktopModel::makeSystemEntries()
     home.name = homeLabel();
     home.fileName = home.name;
     home.isDir = true;
-    home.type = QStringLiteral("System folder");
+    home.type = QCoreApplication::translate("DesktopModel", "System folder");
 
     Entry bin;
     bin.key = binKey;
     bin.kind = QStringLiteral("bin");
     bin.url = QUrl(QStringLiteral("trash:/"));
-    bin.name = QStringLiteral("Recycle Bin");
-    bin.type = QStringLiteral("System folder");
+    bin.name = QCoreApplication::translate("DesktopModel", "Recycle Bin");
+    bin.type = QCoreApplication::translate("DesktopModel", "System folder");
 
     beginResetModel();
     m_entries = {computer, home, bin};

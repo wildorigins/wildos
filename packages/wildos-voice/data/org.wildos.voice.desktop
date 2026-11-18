@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Voice
+Name[fr]=Voice
 GenericName=Voice recorder
+GenericName[fr]=Enregistreur vocal
 Comment=Record voice notes and meetings, with markers and transcripts made on this PC
+Comment[fr]=Enregistrez des notes vocales et des réunions, avec des repères et des transcriptions faites sur ce PC
 Exec=wildos-voice %F
 Icon=wildos-voice
 Terminal=false

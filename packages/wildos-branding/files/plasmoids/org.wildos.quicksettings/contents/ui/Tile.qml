@@ -27,9 +27,13 @@ Item {
     property bool hasPage: false
     property string description
     property string pageName
-    // Edit mode shows every tile with a badge that adds or removes it.
+    // Edit mode shows every tile with a badge that adds or removes it, and
+    // lets a tile be dragged to another's place (or moved with Alt+Shift
+    // and the left or right arrow).
     property bool editing: false
     property bool shown: true
+    property bool dragging: false
+    property bool dropTarget: false
 
     readonly property bool on: checked && !editing
     readonly property color inkColor: on ? UI.Style.textOnAccent : UI.Style.ink
@@ -43,10 +47,35 @@ Item {
     // A right click or a press and hold opens the tile's menu
     // (MenusApps.dc "Quick settings tile").
     signal menuRequested(real x, real y)
+    // A drag in edit mode, in this tile's coordinates; `drop` is false when
+    // it was called off.
+    signal dragStarted()
+    signal dragMoved(real x, real y)
+    signal dragEnded(bool drop)
+    signal moveRequested(int step)
 
     // Grows with the text size so a larger name still fits under the icon.
     implicitHeight: Math.max(Metrics.tileButtonHeight, content.implicitHeight + 2 * 14)
-    opacity: editing && !shown ? 0.55 : 1
+    opacity: dragging ? 0.4 : editing && !shown ? 0.55 : 1
+
+    DragHandler {
+        id: drag
+        enabled: tile.editing
+        target: null
+        onActiveChanged: {
+            if (active) {
+                tile.dragStarted();
+            } else {
+                tile.dragEnded(true);
+            }
+        }
+        onCentroidChanged: {
+            if (active) {
+                tile.dragMoved(centroid.position.x, centroid.position.y);
+            }
+        }
+        onCanceled: tile.dragEnded(false)
+    }
 
     function activate(): void {
         if (editing) {
@@ -86,6 +115,16 @@ Item {
             visible: toggle.visualFocus || (toggle.activeFocus && Nav.keyboard)
             targetRadius: Metrics.tileRadius
         }
+
+        // Where a dragged tile would land.
+        Rectangle {
+            visible: tile.dropTarget
+            anchors.fill: parent
+            radius: Metrics.tileRadius
+            color: "transparent"
+            border.width: 2
+            border.color: UI.Style.accent
+        }
     }
 
     T.AbstractButton {
@@ -100,6 +139,13 @@ Item {
         Accessible.checkable: tile.switchable && !tile.editing
         Accessible.checked: tile.checked
         onClicked: tile.activate()
+        Keys.onPressed: event => {
+            const step = event.key === Qt.Key_Left ? -1 : event.key === Qt.Key_Right ? 1 : 0;
+            if (tile.editing && step !== 0 && (event.modifiers & Qt.AltModifier) && (event.modifiers & Qt.ShiftModifier)) {
+                tile.moveRequested(step);
+                event.accepted = true;
+            }
+        }
         onPressAndHold: {
             if (!tile.editing) {
                 tile.menuRequested(width / 2, height / 2);

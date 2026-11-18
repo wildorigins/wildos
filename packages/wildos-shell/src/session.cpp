@@ -11,6 +11,7 @@
 #include <QDBusServiceWatcher>
 #include <QDBusVariant>
 #include <QGuiApplication>
+#include <QMouseEvent>
 #include <QSaveFile>
 #include <QScreen>
 #include <QStandardPaths>
@@ -47,6 +48,8 @@ Session::Session(QObject *parent)
         setScreenOff(screen->name(), false);
     });
 
+    qGuiApp->installEventFilter(this);
+
     // KSplash leaves the bus as the splash closes; it never comes back in
     // the same session.
     auto splash = new QDBusServiceWatcher(splashService, QDBusConnection::sessionBus(), QDBusServiceWatcher::WatchForUnregistration, this);
@@ -74,6 +77,29 @@ void Session::desktopReady()
     // desktop once it appears. It goes with plasmashell, so it never counts
     // for a later one.
     QDBusConnection::sessionBus().registerService(QStringLiteral("org.wildos.shell.DesktopReady"));
+}
+
+bool Session::windowWithin(QWindow *window, QWindow *ancestor) const
+{
+    for (; window; window = window->transientParent()) {
+        if (window == ancestor) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Session::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::TouchBegin) {
+        if (auto window = qobject_cast<QWindow *>(watched)) {
+            const QPointF place = event->type() == QEvent::MouseButtonPress
+                ? static_cast<QMouseEvent *>(event)->position()
+                : static_cast<QTouchEvent *>(event)->points().value(0).position();
+            Q_EMIT pressed(window, place.x(), place.y());
+        }
+    }
+    return false;
 }
 
 void Session::readLocked()

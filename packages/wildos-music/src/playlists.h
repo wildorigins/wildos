@@ -51,9 +51,14 @@ public:
     Q_INVOKABLE bool create(const QString &name, const QStringList &paths);
     Q_INVOKABLE bool rename(const QString &name, const QString &newName);
     Q_INVOKABLE bool remove(const QString &name);
+    // Undoes the last remove(): the playlist's file comes back out of the
+    // bin, or is written again if the bin no longer has it.
+    Q_INVOKABLE bool restore(const QString &name);
     Q_INVOKABLE bool add(const QString &name, const QStringList &paths);
     // Takes one copy of the song out; a song can be in a playlist twice.
     Q_INVOKABLE bool removeSong(const QString &name, const QString &path);
+    // Puts a playlist's songs back as they were, to undo taking some out.
+    Q_INVOKABLE bool setSongs(const QString &name, const QStringList &paths);
     Q_INVOKABLE QString fileOf(const QString &name) const;
 
     // Songs listed in any .m3u or .m3u8 file, for one opened from Files.
@@ -68,7 +73,18 @@ private:
     bool validName(const QString &name);
     void touched();
 
+    // The playlist remove() took away last: its name, its file, where
+    // that went in the bin and the songs it held.
+    struct Removed
+    {
+        QString name;
+        QString file;
+        QString binned;
+        QStringList songs;
+    };
+
     QHash<QString, QStringList> m_lists;
+    Removed m_removed;
     QStringList m_liked;
     QSet<QString> m_likedSet;
     QString m_error;

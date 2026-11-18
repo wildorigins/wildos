@@ -17,6 +17,7 @@
 #include <KIO/MkdirJob>
 #include <KIO/OpenUrlJob>
 #include <KIO/Paste>
+#include <KIO/RestoreJob>
 #include <KIO/StoredTransferJob>
 #include <KJobTrackerInterface>
 #include <KJobUiDelegate>
@@ -28,6 +29,7 @@
 #include <KWindowSystem>
 #include <KX11Extras>
 #include <QClipboard>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -46,14 +48,14 @@ QString folderName(const QUrl &url)
     if (url.isLocalFile()) {
         const QString path = QDir::cleanPath(url.toLocalFile());
         if (path == QDir::homePath()) {
-            return QStringLiteral("Home");
+            return QCoreApplication::translate("DeskOps", "Home");
         }
         if (path == QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation))) {
-            return QStringLiteral("The desktop");
+            return QCoreApplication::translate("DeskOps", "The desktop");
         }
     }
     const QString name = url.adjusted(QUrl::StripTrailingSlash).fileName();
-    return name.isEmpty() ? QStringLiteral("This folder") : name;
+    return name.isEmpty() ? QCoreApplication::translate("DeskOps", "This folder") : name;
 }
 
 // Whether an ELF file asks for a program loader (PT_INTERP). Programs
@@ -172,16 +174,16 @@ void DeskAsker::askUserRename(KJob *job, const QString &, const QUrl &, const QU
     prompt[QStringLiteral("kind")] = QStringLiteral("conflict");
     prompt[QStringLiteral("multiple")] = multiple;
     if (folders) {
-        prompt[QStringLiteral("title")] = QStringLiteral("Merge folders?");
-        prompt[QStringLiteral("text")] = QStringLiteral("%1 already has a folder called \"%2\". Merging puts what you are copying inside it; files with the same name will be asked about one by one.").arg(where, name);
-        prompt[QStringLiteral("replace")] = QStringLiteral("Merge folders");
+        prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "Merge folders?");
+        prompt[QStringLiteral("text")] = QCoreApplication::translate("DeskOps", "%1 already has a folder called \"%2\". Merging puts what you are copying inside it; files with the same name will be asked about one by one.").arg(where, name);
+        prompt[QStringLiteral("replace")] = QCoreApplication::translate("DeskOps", "Merge folders");
     } else if (itself) {
-        prompt[QStringLiteral("title")] = QStringLiteral("This is the same file");
-        prompt[QStringLiteral("text")] = QStringLiteral("\"%1\" is already here. Keep both to make a copy next to it.").arg(name);
+        prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "This is the same file");
+        prompt[QStringLiteral("text")] = QCoreApplication::translate("DeskOps", "\"%1\" is already here. Keep both to make a copy next to it.").arg(name);
     } else {
-        prompt[QStringLiteral("title")] = QStringLiteral("Replace or skip files");
-        prompt[QStringLiteral("text")] = QStringLiteral("%1 already has a file called \"%2\".").arg(where, name);
-        prompt[QStringLiteral("replace")] = QStringLiteral("Replace the file");
+        prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "Replace or skip files");
+        prompt[QStringLiteral("text")] = QCoreApplication::translate("DeskOps", "%1 already has a file called \"%2\".").arg(where, name);
+        prompt[QStringLiteral("replace")] = QCoreApplication::translate("DeskOps", "Replace the file");
         prompt[QStringLiteral("incoming")] = Format::size(qint64(sizeSrc)) + QStringLiteral(", ") + Format::date(mtimeSrc);
         prompt[QStringLiteral("existing")] = Format::size(qint64(sizeDest)) + QStringLiteral(", ") + Format::date(mtimeDest);
     }
@@ -218,7 +220,7 @@ void DeskAsker::askUserSkip(KJob *job, KIO::SkipDialog_Options options, const QS
 {
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("skip");
-    prompt[QStringLiteral("title")] = QStringLiteral("A file could not be copied");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "A file could not be copied");
     prompt[QStringLiteral("text")] = errorText;
     prompt[QStringLiteral("multiple")] = bool(options & KIO::SkipDialog_MultipleItems);
     QPointer<KJob> guard(job);
@@ -244,9 +246,9 @@ void DeskAsker::askUserDelete(const QList<QUrl> &urls, DeletionType deletionType
     }
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = deletionType == EmptyTrash ? QStringLiteral("Empty the Recycle Bin?") : QStringLiteral("Delete for good?");
-    prompt[QStringLiteral("text")] = QStringLiteral("You cannot undo this.");
-    prompt[QStringLiteral("primary")] = deletionType == EmptyTrash ? QStringLiteral("Empty Recycle Bin") : QStringLiteral("Delete for good");
+    prompt[QStringLiteral("title")] = deletionType == EmptyTrash ? QCoreApplication::translate("DeskOps", "Empty the Recycle Bin?") : QCoreApplication::translate("DeskOps", "Delete for good?");
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("DeskOps", "You cannot undo this.");
+    prompt[QStringLiteral("primary")] = deletionType == EmptyTrash ? QCoreApplication::translate("DeskOps", "Empty Recycle Bin") : QCoreApplication::translate("DeskOps", "Delete for good");
     DeskOps::instance()->ask(prompt, [this, urls, deletionType, parent](const QString &choice, bool) {
         Q_EMIT askUserDeleteResult(choice == QStringLiteral("primary"), urls, deletionType, parent);
     });
@@ -260,7 +262,7 @@ void DeskAsker::requestUserMessageBox(MessageDialogType type, const QString &tex
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
     prompt[QStringLiteral("title")] = title;
     prompt[QStringLiteral("text")] = text;
-    prompt[QStringLiteral("primary")] = primaryActionText.isEmpty() ? QStringLiteral("Continue") : primaryActionText;
+    prompt[QStringLiteral("primary")] = primaryActionText.isEmpty() ? QCoreApplication::translate("DeskOps", "Continue") : primaryActionText;
     if (type == QuestionTwoActions || type == WarningTwoActions || !secondaryActionText.isEmpty()) {
         prompt[QStringLiteral("secondary")] = secondaryActionText;
     }
@@ -276,10 +278,11 @@ void DeskAsker::askIgnoreSslErrors(const QVariantMap &sslErrorData, QWidget *)
     const QString host = sslErrorData.value(QStringLiteral("hostname")).toString();
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("This connection may not be safe");
-    prompt[QStringLiteral("text")] = (host.isEmpty() ? QStringLiteral("The server's") : host + QStringLiteral("'s"))
-        + QStringLiteral(" security certificate cannot be checked, so someone could be listening in. Only carry on if you trust this place.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Connect anyway");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "This connection may not be safe");
+    prompt[QStringLiteral("text")] = host.isEmpty()
+        ? QCoreApplication::translate("DeskOps", "The server's security certificate cannot be checked, so someone could be listening in. Only carry on if you trust this place.")
+        : QCoreApplication::translate("DeskOps", "%1's security certificate cannot be checked, so someone could be listening in. Only carry on if you trust this place.").arg(host);
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("DeskOps", "Connect anyway");
     DeskOps::instance()->ask(prompt, [this](const QString &choice, bool) {
         Q_EMIT askIgnoreSslErrorsResult(choice == QStringLiteral("primary") ? 1 : 0);
     });
@@ -305,9 +308,9 @@ void DeskUntrustedAsker::showUntrustedProgramWarning(KJob *, const QString &prog
 {
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Run %1?").arg(programName);
-    prompt[QStringLiteral("text")] = QStringLiteral("This shortcut starts a program and did not come with Wild OS or the Store. Only run it if you know where it came from.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Run");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "Run %1?").arg(programName);
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("DeskOps", "This shortcut starts a program and did not come with Wild OS or the Store. Only run it if you know where it came from.");
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("DeskOps", "Run");
     DeskOps::instance()->ask(prompt, [this](const QString &choice, bool) {
         Q_EMIT result(choice == QStringLiteral("primary"));
     });
@@ -357,6 +360,10 @@ DeskOps::DeskOps(QObject *parent)
         if (n != m_binCount) {
             m_binCount = n;
             Q_EMIT binCountChanged();
+            // An emptied bin has nothing left to put back.
+            if (n == 0 && m_undoKind == QLatin1String("delete")) {
+                clearUndo();
+            }
         }
     };
     connect(m_bin, &KCoreDirLister::newItems, this, recount);
@@ -414,13 +421,13 @@ void DeskOps::watchJob(KJob *job, const QString &verb)
         case KIO::ERR_ACCESS_DENIED:
         case KIO::ERR_WRITE_ACCESS_DENIED:
         case KIO::ERR_CANNOT_WRITE:
-            message = QStringLiteral("You do not have permission to %1 here.").arg(verb);
+            message = QCoreApplication::translate("DeskOps", "You do not have permission to %1 here.").arg(verb);
             break;
         case KIO::ERR_DISK_FULL:
-            message = QStringLiteral("There is not enough free space to %1 this.").arg(verb);
+            message = QCoreApplication::translate("DeskOps", "There is not enough free space to %1 this.").arg(verb);
             break;
         case KIO::ERR_DOES_NOT_EXIST:
-            message = QStringLiteral("The item is no longer there. It may have been moved or deleted.");
+            message = QCoreApplication::translate("DeskOps", "The item is no longer there. It may have been moved or deleted.");
             break;
         default:
             break;
@@ -480,16 +487,16 @@ void DeskOps::askToRun(const QUrl &url)
     const QString name = url.fileName();
     const quint16 machine = elfMachine(path);
     if (machine != 0 && hostMachine != 0 && machine != hostMachine) {
-        Q_EMIT failed(QStringLiteral("%1 is made for a different type of processor, so it cannot run on this PC. "
+        Q_EMIT failed(QCoreApplication::translate("DeskOps", "%1 is made for a different type of processor, so it cannot run on this PC. "
                                      "Download the version marked x86_64 or amd64 instead.").arg(name));
         return;
     }
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Run %1?").arg(name);
-    prompt[QStringLiteral("text")] = QStringLiteral("This is a program that did not come with Wild OS or the Store, and nothing has checked it. "
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "Run %1?").arg(name);
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("DeskOps", "This is a program that did not come with Wild OS or the Store, and nothing has checked it. "
                                                     "It can open and change any of your files. Only run it if you trust where it came from.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Run");
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("DeskOps", "Run");
     prompt[QStringLiteral("cancelDefault")] = true;
     ask(prompt, [this, path, name](const QString &choice, bool) {
         if (choice != QLatin1String("primary")) {
@@ -502,7 +509,7 @@ void DeskOps::askToRun(const QUrl &url)
             file.setPermissions(file.permissions() | QFileDevice::ExeOwner);
         }
         if (!QFileInfo(path).isExecutable()) {
-            Q_EMIT failed(QStringLiteral("%1 cannot run from here. Copy it to a folder in Home, such as Downloads, and try again.").arg(name));
+            Q_EMIT failed(QCoreApplication::translate("DeskOps", "%1 cannot run from here. Copy it to a folder in Home, such as Downloads, and try again.").arg(name));
             return;
         }
         // The executable and arguments overload quotes the path. A bare {}
@@ -636,7 +643,7 @@ void DeskOps::openSettings(const QString &page)
     job->setDesktopName(QStringLiteral("org.wildos.settings"));
     connect(job, &KJob::result, this, [this, job] {
         if (job->error()) {
-            Q_EMIT failed(QStringLiteral("Settings could not be opened. It may not be installed."));
+            Q_EMIT failed(QCoreApplication::translate("DeskOps", "Settings could not be opened. It may not be installed."));
         }
     });
     job->start();
@@ -770,13 +777,23 @@ void DeskOps::transfer(const QList<QUrl> &urls, const QUrl &folder, bool move)
     }
     job->setAutoRename(sameFolder);
     auto made = std::make_shared<QList<QUrl>>();
-    connect(job, &KIO::CopyJob::copyingDone, this, [made](KIO::Job *, const QUrl &, const QUrl &to, const QDateTime &, bool, bool) {
+    auto moved = std::make_shared<QList<std::pair<QUrl, QUrl>>>();
+    connect(job, &KIO::CopyJob::copyingDone, this, [made, moved, urls](KIO::Job *, const QUrl &from, const QUrl &to, const QDateTime &, bool, bool) {
         made->append(to);
+        // What is inside a moved folder goes back with the folder.
+        if (urls.contains(from)) {
+            moved->append(std::make_pair(to, from));
+        }
     });
     connect(job, &KIO::CopyJob::copyingLinkDone, this, [made](KIO::Job *, const QUrl &, const QString &, const QUrl &to) {
         made->append(to);
     });
-    connect(job, &KJob::result, this, [this, made, folder] {
+    connect(job, &KJob::result, this, [this, made, moved, move, folder] {
+        if (move && !moved->isEmpty()) {
+            setUndo(QStringLiteral("move"), *moved);
+        } else if (!made->isEmpty()) {
+            clearUndo();
+        }
         QList<QUrl> top;
         for (const QUrl &url : std::as_const(*made)) {
             if (KIO::upUrl(url).adjusted(QUrl::StripTrailingSlash) == folder.adjusted(QUrl::StripTrailingSlash)) {
@@ -787,7 +804,7 @@ void DeskOps::transfer(const QList<QUrl> &urls, const QUrl &folder, bool move)
             Q_EMIT created(folder, top, false);
         }
     });
-    watchJob(job, move ? QStringLiteral("move files") : QStringLiteral("copy files"));
+    watchJob(job, move ? QCoreApplication::translate("DeskOps", "move files") : QCoreApplication::translate("DeskOps", "copy files"));
 }
 
 void DeskOps::trash(const QList<QUrl> &urls)
@@ -806,21 +823,33 @@ void DeskOps::trash(const QList<QUrl> &urls)
         if (auto tracker = KIO::getJobTracker()) {
             tracker->registerJob(job);
         }
-        connect(job, &KJob::result, this, [this, job, local] {
+        // The job says where in the Recycle Bin each item went, which is
+        // what putting it back needs.
+        auto binned = std::make_shared<QList<std::pair<QUrl, QUrl>>>();
+        connect(job, &KIO::CopyJob::copyingDone, this, [binned](KIO::Job *trashing, const QUrl &from, const QUrl &, const QDateTime &, bool, bool) {
+            const QString now = trashing->metaData().value(QStringLiteral("trashURL-") + from.path());
+            if (!now.isEmpty()) {
+                binned->append(std::make_pair(QUrl(now), from));
+            }
+        });
+        connect(job, &KJob::result, this, [this, job, local, binned] {
+            if (!binned->isEmpty()) {
+                setUndo(QStringLiteral("delete"), *binned);
+            }
             if (!job->error() || job->error() == KIO::ERR_USER_CANCELED) {
                 return;
             }
             QVariantMap prompt;
             prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-            prompt[QStringLiteral("title")] = QStringLiteral("Delete for good?");
+            prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "Delete for good?");
             prompt[QStringLiteral("text")] = local.size() == 1
-                ? QStringLiteral("This item cannot go to the Recycle Bin, so it would be deleted for good. You cannot undo this.")
-                : QStringLiteral("These items cannot go to the Recycle Bin, so they would be deleted for good. You cannot undo this.");
-            prompt[QStringLiteral("primary")] = QStringLiteral("Delete for good");
+                ? QCoreApplication::translate("DeskOps", "This item cannot go to the Recycle Bin, so it would be deleted for good. You cannot undo this.")
+                : QCoreApplication::translate("DeskOps", "These items cannot go to the Recycle Bin, so they would be deleted for good. You cannot undo this.");
+            prompt[QStringLiteral("primary")] = QCoreApplication::translate("DeskOps", "Delete for good");
             ask(prompt, [this, local](const QString &choice, bool) {
                 if (choice == QStringLiteral("primary")) {
                     auto del = KIO::del(local);
-                    watchJob(del, QStringLiteral("delete files"));
+                    watchJob(del, QCoreApplication::translate("DeskOps", "delete files"));
                 }
             });
         });
@@ -837,13 +866,14 @@ void DeskOps::deleteForGood(const QList<QUrl> &urls)
     }
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = urls.size() == 1 ? QStringLiteral("Delete this item for good?") : QStringLiteral("Delete %1 items for good?").arg(urls.size());
-    prompt[QStringLiteral("text")] = QStringLiteral("It will not go to the Recycle Bin, and you cannot undo this.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Delete for good");
+    prompt[QStringLiteral("title")] = urls.size() == 1 ? QCoreApplication::translate("DeskOps", "Delete this item for good?") : QCoreApplication::translate("DeskOps", "Delete %1 items for good?").arg(urls.size());
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("DeskOps", "It will not go to the Recycle Bin, and you cannot undo this.");
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("DeskOps", "Delete for good");
     ask(prompt, [this, urls](const QString &choice, bool) {
         if (choice == QStringLiteral("primary")) {
+            clearUndo();
             auto job = KIO::del(urls);
-            watchJob(job, QStringLiteral("delete files"));
+            watchJob(job, QCoreApplication::translate("DeskOps", "delete files"));
         }
     });
 }
@@ -852,14 +882,14 @@ void DeskOps::emptyBin()
 {
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Empty the Recycle Bin?");
-    prompt[QStringLiteral("text")] = m_binCount == 1 ? QStringLiteral("The item in the Recycle Bin will be deleted for good. You cannot undo this.")
-                                                     : QStringLiteral("All %1 items in the Recycle Bin will be deleted for good. You cannot undo this.").arg(m_binCount);
-    prompt[QStringLiteral("primary")] = QStringLiteral("Empty Recycle Bin");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("DeskOps", "Empty the Recycle Bin?");
+    prompt[QStringLiteral("text")] = m_binCount == 1 ? QCoreApplication::translate("DeskOps", "The item in the Recycle Bin will be deleted for good. You cannot undo this.")
+                                                     : QCoreApplication::translate("DeskOps", "All %1 items in the Recycle Bin will be deleted for good. You cannot undo this.").arg(m_binCount);
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("DeskOps", "Empty Recycle Bin");
     ask(prompt, [this](const QString &choice, bool) {
         if (choice == QStringLiteral("primary")) {
             auto job = KIO::emptyTrash();
-            watchJob(job, QStringLiteral("empty the Recycle Bin"));
+            watchJob(job, QCoreApplication::translate("DeskOps", "empty the Recycle Bin"));
         }
     });
 }
@@ -880,11 +910,17 @@ void DeskOps::rename(const QUrl &url, const QString &fileName, bool isDir, const
             return;
         }
         if (!QFileInfo(url.toLocalFile()).isWritable()) {
-            Q_EMIT failed(QStringLiteral("You do not have permission to rename this shortcut."));
+            Q_EMIT failed(QCoreApplication::translate("DeskOps", "You do not have permission to rename this shortcut."));
             return;
         }
+        const QString before = desktop.readName();
         desktop.desktopGroup().writeEntry("Name", name);
         desktop.sync();
+        if (!before.isEmpty()) {
+            setUndo(QStringLiteral("rename"), {std::make_pair(url, url)}, before);
+        } else {
+            clearUndo();
+        }
         Q_EMIT created(KIO::upUrl(url), {url}, false);
         return;
     }
@@ -894,7 +930,7 @@ void DeskOps::rename(const QUrl &url, const QString &fileName, bool isDir, const
         return;
     }
     if (name.contains(QLatin1Char('/')) || name == QStringLiteral(".") || name == QStringLiteral("..")) {
-        Q_EMIT failed(QStringLiteral("A name cannot contain / or be just dots. Try a different name."));
+        Q_EMIT failed(QCoreApplication::translate("DeskOps", "A name cannot contain / or be just dots. Try a different name."));
         return;
     }
     // The extension hidden from view stays on the file.
@@ -902,17 +938,85 @@ void DeskOps::rename(const QUrl &url, const QString &fileName, bool isDir, const
     const QUrl folder = KIO::upUrl(url);
     const QUrl target = childUrl(folder, name);
     if (target.isLocalFile() && QFileInfo::exists(target.toLocalFile()) && target.toLocalFile().compare(url.toLocalFile(), Qt::CaseSensitive) != 0) {
-        Q_EMIT failed(QStringLiteral("There is already an item called \"%1\" here. Pick a different name.").arg(typed.trimmed()));
+        Q_EMIT failed(QCoreApplication::translate("DeskOps", "There is already an item called \"%1\" here. Pick a different name.").arg(typed.trimmed()));
         return;
     }
     auto job = KIO::moveAs(url, target, KIO::HideProgressInfo);
     job->setUiDelegate(delegate());
-    connect(job, &KJob::result, this, [this, job, folder, target] {
+    connect(job, &KJob::result, this, [this, job, folder, target, url] {
         if (!job->error()) {
+            setUndo(QStringLiteral("rename"), {std::make_pair(target, url)});
             Q_EMIT created(folder, {target}, false);
         }
     });
-    watchJob(job, QStringLiteral("rename this"));
+    watchJob(job, QCoreApplication::translate("DeskOps", "rename this"));
+}
+
+void DeskOps::setUndo(const QString &kind, const QList<std::pair<QUrl, QUrl>> &steps, const QString &name)
+{
+    m_undoKind = kind;
+    m_undoSteps = steps;
+    m_undoName = name;
+    Q_EMIT undoChanged();
+}
+
+void DeskOps::clearUndo()
+{
+    if (!m_undoKind.isEmpty()) {
+        setUndo(QString(), {});
+    }
+}
+
+void DeskOps::undo()
+{
+    if (m_undoKind.isEmpty()) {
+        return;
+    }
+    const QString kind = m_undoKind;
+    const QList<std::pair<QUrl, QUrl>> steps = m_undoSteps;
+    const QString name = m_undoName;
+    clearUndo();
+
+    if (kind == QLatin1String("delete")) {
+        QList<QUrl> binned;
+        QList<QUrl> back;
+        for (const auto &step : steps) {
+            binned.append(step.first);
+            back.append(step.second);
+        }
+        auto job = KIO::restoreFromTrash(binned);
+        job->setUiDelegate(delegate());
+        connect(job, &KJob::result, this, [this, job, back] {
+            if (!job->error()) {
+                Q_EMIT created(KIO::upUrl(back.constFirst()), back, false);
+            }
+        });
+        watchJob(job, QCoreApplication::translate("DeskOps", "move files"));
+        return;
+    }
+    if (!name.isEmpty()) {
+        const QUrl url = steps.constFirst().first;
+        if (!QFileInfo(url.toLocalFile()).isWritable()) {
+            Q_EMIT failed(QCoreApplication::translate("DeskOps", "You do not have permission to rename this shortcut."));
+            return;
+        }
+        KDesktopFile desktop(url.toLocalFile());
+        desktop.desktopGroup().writeEntry("Name", name);
+        desktop.sync();
+        Q_EMIT created(KIO::upUrl(url), {url}, false);
+        return;
+    }
+    for (const auto &step : steps) {
+        const QUrl was = step.second;
+        auto job = KIO::moveAs(step.first, was, KIO::HideProgressInfo);
+        job->setUiDelegate(delegate());
+        connect(job, &KJob::result, this, [this, job, was] {
+            if (!job->error()) {
+                Q_EMIT created(KIO::upUrl(was), {was}, false);
+            }
+        });
+        watchJob(job, kind == QLatin1String("rename") ? QCoreApplication::translate("DeskOps", "rename this") : QCoreApplication::translate("DeskOps", "move files"));
+    }
 }
 
 QString DeskOps::uniqueName(const QUrl &folder, const QString &base, const QString &suffix) const
@@ -930,14 +1034,15 @@ QString DeskOps::uniqueName(const QUrl &folder, const QString &base, const QStri
 
 void DeskOps::newFolder(const QUrl &folder)
 {
-    const QUrl url = childUrl(folder, uniqueName(folder, QStringLiteral("New folder"), QString()));
+    const QUrl url = childUrl(folder, uniqueName(folder, QCoreApplication::translate("DeskOps", "New folder"), QString()));
     auto job = KIO::mkdir(url);
     connect(job, &KJob::result, this, [this, job, folder, url] {
         if (!job->error()) {
+            clearUndo();
             Q_EMIT created(folder, {url}, true);
         }
     });
-    watchJob(job, QStringLiteral("make a folder"));
+    watchJob(job, QCoreApplication::translate("DeskOps", "make a folder"));
 }
 
 KJobUiDelegate *DeskOps::delegate()
@@ -958,9 +1063,9 @@ void DeskOps::reportLaunch(KJob *job)
         }
         QString message = job->errorString();
         if (job->error() == KIO::ERR_DOES_NOT_EXIST) {
-            message = QStringLiteral("The item is no longer there. It may have been moved or deleted.");
+            message = QCoreApplication::translate("DeskOps", "The item is no longer there. It may have been moved or deleted.");
         } else if (message.isEmpty()) {
-            message = QStringLiteral("Wild OS could not open this.");
+            message = QCoreApplication::translate("DeskOps", "Wild OS could not open this.");
         }
         Q_EMIT failed(message);
     });

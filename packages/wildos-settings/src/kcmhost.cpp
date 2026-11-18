@@ -57,7 +57,7 @@ QObject *KcmHost::load(const QString &pluginId)
 {
     const KPluginMetaData data = KPluginMetaData::findPluginById(quickNamespace, pluginId);
     if (!data.isValid()) {
-        m_lastError = QStringLiteral("%1 is not installed").arg(pluginId);
+        m_lastError = tr("%1 is not installed").arg(pluginId);
         return nullptr;
     }
 

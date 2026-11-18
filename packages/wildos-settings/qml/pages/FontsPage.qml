@@ -16,7 +16,7 @@ PageScroll {
     readonly property string query: search.text.trim().toLowerCase()
     readonly property var matches: query.length === 0 ? Fonts.families
         : Fonts.families.filter(f => f.family.toLowerCase().includes(query))
-    readonly property string sample: "The quick brown fox jumps over the lazy dog"
+    readonly property string sample: qsTr("The quick brown fox jumps over the lazy dog")
 
     onQueryChanged: shown = pageSize
 
@@ -41,8 +41,8 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "font"
-                title: "Add fonts"
-                description: "Install a font file (.ttf or .otf) for your account"
+                title: qsTr("Add fonts")
+                description: qsTr("Install a font file (.ttf or .otf) for your account")
 
                 UI.Spinner {
                     anchors.verticalCenter: parent.verticalCenter
@@ -51,7 +51,7 @@ PageScroll {
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Browse and install fonts"
+                    text: qsTr("Browse and install fonts")
                     enabled: !Fonts.busy
                     onClicked: fontDialog.open()
                 }
@@ -69,19 +69,19 @@ PageScroll {
 
             SectionTitle {
                 Layout.fillWidth: true
-                text: "Available fonts"
+                text: qsTr("Available fonts")
             }
 
             UI.SearchField {
                 id: search
                 Layout.preferredWidth: 260
-                placeholderText: "Search fonts"
+                placeholderText: qsTr("Search fonts")
             }
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: page.matches.length === 1 ? "1 font" : page.matches.length + " fonts"
+            text: page.matches.length === 1 ? qsTr("1 font") : qsTr("%1 fonts").arg(page.matches.length)
             size: 12
             color: UI.Style.inkMuted
         }
@@ -94,7 +94,7 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.matches.length === 0
-                    title: Fonts.families.length === 0 ? "Looking for fonts" : "No fonts match"
+                    title: Fonts.families.length === 0 ? qsTr("Looking for fonts") : qsTr("No fonts match")
                 }
 
                 Repeater {
@@ -104,8 +104,8 @@ PageScroll {
                         id: fontRow
                         required property var modelData
                         title: modelData.family
-                        description: (modelData.styles === 1 ? "1 style" : modelData.styles + " styles")
-                            + (modelData.removable ? ", installed by you" : "")
+                        description: modelData.removable ? (modelData.styles === 1 ? qsTr("1 style, installed by you") : qsTr("%1 styles, installed by you").arg(modelData.styles))
+                            : (modelData.styles === 1 ? qsTr("1 style") : qsTr("%1 styles").arg(modelData.styles))
 
                         below: UI.Label {
                             width: fontRow.width - 120
@@ -120,7 +120,7 @@ PageScroll {
                             visible: fontRow.modelData.removable
                             enabled: !Fonts.busy
                             iconName: "delete"
-                            tip: "Remove " + fontRow.modelData.family
+                            tip: qsTr("Remove %1").arg(fontRow.modelData.family)
                             onClicked: {
                                 confirm.family = fontRow.modelData.family;
                                 confirm.open();
@@ -133,16 +133,16 @@ PageScroll {
 
         UI.Button {
             visible: page.matches.length > page.shown
-            text: "Show more fonts"
+            text: qsTr("Show more fonts")
             onClicked: page.shown += page.pageSize
         }
     }
 
     FileDialog {
         id: fontDialog
-        title: "Choose fonts to install"
+        title: qsTr("Choose fonts to install")
         fileMode: FileDialog.OpenFiles
-        nameFilters: ["Fonts (*.ttf *.otf *.ttc *.otc *.TTF *.OTF)"]
+        nameFilters: [qsTr("Fonts (*.ttf *.otf *.ttc *.otc *.TTF *.OTF)")]
         currentFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
         onAccepted: Fonts.install(selectedFiles)
     }
@@ -152,11 +152,11 @@ PageScroll {
 
         property string family
 
-        title: "Remove " + family + "?"
-        text: "Apps you open from now on will not have " + family + ". Documents that use it will show another font."
+        title: qsTr("Remove %1?").arg(family)
+        text: qsTr("Apps you open from now on will not have %1. Documents that use it will show another font.").arg(family)
         buttons: [
             UI.Button {
-                text: "Remove"
+                text: qsTr("Remove")
                 kind: "primary"
                 onClicked: {
                     confirm.close();
@@ -164,7 +164,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Keep it"
+                text: qsTr("Keep it")
                 onClicked: confirm.close()
             }
         ]

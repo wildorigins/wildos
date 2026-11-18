@@ -6,7 +6,7 @@ import QtQuick.Layouts
 import WildOS.UI as UI
 
 // DialogSave.dc (8.1): the one Open and Save dialog every app gets. A 920
-// by 620 glass window: title bar, a 52px tool row (back, forward, up, the
+// by 620 glass window (or the size it was last left at): title bar, a 52px tool row (back, forward, up, the
 // path bar, search, New folder, the view switch), places on the left, the
 // details list or Large icons, then the name and type fields on a darker band and the buttons, the main
 // one at the right.
@@ -22,13 +22,27 @@ UI.AppWindow {
     // What the name field held before it was used to type a folder name,
     // so going into that folder does not lose the file's name.
     property string fileName: chooser.initialName
+    // Each extra choice an app adds (a check box, a drop-down) makes room
+    // for itself rather than squeezing the list. Held as a number of its
+    // own so that ticking a choice does not put the height back.
+    readonly property int choicesHeight: 46 * chooser.choices.length
+    property bool sizeTracked: false
 
     title: chooser.title
     deep: true
-    width: 920
-    // Each extra choice an app adds (a check box, a drop-down) makes room
-    // for itself rather than squeezing the list.
-    height: 620 + 46 * chooser.choices.length
+    // The picker keeps its own size, per chooser, without the extra choices.
+    rememberSize: false
+    width: chooser.windowWidth
+    height: chooser.windowHeight + choicesHeight
+
+    function trackSize() {
+        if (sizeTracked && !collapsed && visibility === Window.Windowed) {
+            chooser.setWindowSize(width, height - choicesHeight);
+        }
+    }
+
+    onWidthChanged: trackSize()
+    onHeightChanged: trackSize()
     minimumWidth: 640
     minimumHeight: collapsed ? content.implicitHeight : 420
     maximumHeight: collapsed ? content.implicitHeight : 16777215
@@ -58,6 +72,43 @@ UI.AppWindow {
         accept(nameField.text);
     }
 
+    // Files' item menu, cut down to what picking a file needs. Delete only
+    // ever sends to the Recycle Bin.
+    function openItemMenu(row, x, y, keyboard) {
+        const f = folder;
+        const entries = [];
+        if (row >= 0) {
+            const one = f.selectedCount === 1;
+            const local = f.selectedUrls().every(u => u.toString().startsWith("file:"));
+            if (f.isDirAt(row) || !saving) {
+                entries.push({ text: qsTr("Open"), icon: "open", bold: true, shortcut: qsTr("Enter"), run: () => win.activate(row) });
+                entries.push({ separator: true });
+            }
+            if (!f.isComputer) {
+                entries.push({ text: qsTr("Rename"), icon: "rename", shortcut: "F2", enabled: one && f.writable, run: () => list.startRename(row) });
+                entries.push({ text: qsTr("Delete"), icon: "delete", shortcut: qsTr("Del"), enabled: f.writable && local, run: () => f.trashSelected() });
+                entries.push({ separator: true });
+            }
+            entries.push({ text: qsTr("Copy as path"), icon: "link", shortcut: qsTr("Ctrl+Shift+C"), run: () => f.copyPaths() });
+        } else {
+            if (!f.isComputer) {
+                entries.push({ text: qsTr("New folder"), icon: "new-folder", shortcut: qsTr("Ctrl+Shift+N"), enabled: f.writable, run: () => f.newFolder() });
+            }
+            entries.push({ text: qsTr("Refresh"), icon: "refresh", shortcut: "F5", run: () => f.refresh() });
+            if (!f.isComputer) {
+                entries.push({ separator: true });
+                entries.push({ text: qsTr("Copy as path"), icon: "link", shortcut: qsTr("Ctrl+Shift+C"), run: () => f.copyPaths() });
+            }
+        }
+        itemMenu.close();
+        itemMenu.entries = entries;
+        itemMenu.popup(list, x, y);
+        // A menu opened from the keyboard starts on its first row.
+        if (keyboard) {
+            itemMenu.currentIndex = entries.findIndex(e => !e.separator && e.enabled !== false);
+        }
+    }
+
     function setCollapsed(on) {
         if (on === collapsed) {
             return;
@@ -74,6 +125,7 @@ UI.AppWindow {
     }
 
     Component.onCompleted: {
+        sizeTracked = true;
         nameField.text = chooser.initialName;
         nameField.forceActiveFocus();
         if (saving) {
@@ -140,7 +192,7 @@ UI.AppWindow {
     }
     Shortcut {
         sequence: "Escape"
-        enabled: !message.visible && !replaceDialog.visible && !pathBar.editing && list.renameRow < 0
+        enabled: !message.visible && !replaceDialog.visible && !itemMenu.visible && !pathBar.editing && list.renameRow < 0
         onActivated: win.chooser.cancel()
     }
 
@@ -196,7 +248,7 @@ UI.AppWindow {
                 implicitWidth: 32
                 implicitHeight: 32
                 iconName: "back"
-                tip: "Back"
+                tip: qsTr("Back")
                 enabled: win.folder.canGoBack
                 onClicked: win.folder.back()
             }
@@ -204,7 +256,7 @@ UI.AppWindow {
                 implicitWidth: 32
                 implicitHeight: 32
                 iconName: "forward"
-                tip: "Forward"
+                tip: qsTr("Forward")
                 enabled: win.folder.canGoForward
                 onClicked: win.folder.forward()
             }
@@ -212,7 +264,7 @@ UI.AppWindow {
                 implicitWidth: 32
                 implicitHeight: 32
                 iconName: "up"
-                tip: "Up to the folder above"
+                tip: qsTr("Up to the folder above")
                 enabled: win.folder.canGoUp
                 onClicked: win.folder.up()
             }
@@ -228,7 +280,7 @@ UI.AppWindow {
                 id: search
                 Layout.preferredWidth: 220
                 implicitHeight: 34
-                placeholderText: "Search " + win.folder.title
+                placeholderText: qsTr("Search %1").arg(win.folder.title)
                 onTextChanged: win.folder.searchText = text
                 onEscapePressed: list.forceActiveFocus()
                 onDownPressed: list.forceActiveFocus()
@@ -241,7 +293,7 @@ UI.AppWindow {
             }
 
             UI.Button {
-                text: "New folder"
+                text: qsTr("New folder")
                 iconName: "new-folder"
                 implicitHeight: 34
                 visible: !win.folder.isComputer
@@ -259,7 +311,7 @@ UI.AppWindow {
                     enabled: !win.folder.isComputer
                     iconName: "list"
                     iconSize: 14
-                    tip: "Details"
+                    tip: qsTr("Details")
                     checked: win.chooser.viewMode === "details" || win.folder.isComputer
                     Accessible.checkable: true
                     Accessible.checked: checked
@@ -271,7 +323,7 @@ UI.AppWindow {
                     enabled: !win.folder.isComputer
                     iconName: "grid"
                     iconSize: 14
-                    tip: "Large icons"
+                    tip: qsTr("Large icons")
                     checked: win.chooser.viewMode === "icons" && !win.folder.isComputer
                     Accessible.checkable: true
                     Accessible.checked: checked
@@ -317,6 +369,7 @@ UI.AppWindow {
                 mode: win.chooser.viewMode
                 focus: true
                 onActivated: row => win.activate(row)
+                onMenuRequested: (row, x, y, keyboard) => win.openItemMenu(row, x, y, keyboard)
                 emptyText: {
                     if (win.folder.loading) {
                         return "";
@@ -325,22 +378,22 @@ UI.AppWindow {
                         return win.folder.errorText;
                     }
                     if (win.folder.searchText.length > 0) {
-                        return "Nothing in " + win.folder.title + " matches \"" + win.folder.searchText + "\".";
+                        return qsTr("Nothing in %1 matches \"%2\".").arg(win.folder.title).arg(win.folder.searchText);
                     }
                     if (win.choosingFolder) {
-                        return "There are no folders in " + win.folder.title + ".";
+                        return qsTr("There are no folders in %1.").arg(win.folder.title);
                     }
-                    return !win.saving && win.chooser.filters.length > 1 ? "There are no files of this type in " + win.folder.title + "."
-                                                          : "This folder is empty.";
+                    return !win.saving && win.chooser.filters.length > 1 ? qsTr("There are no files of this type in %1.").arg(win.folder.title)
+                                                          : qsTr("This folder is empty.");
                 }
-                emptyButton: win.folder.errorText.length > 0 ? "Try again"
-                    : win.folder.searchText.length > 0 ? "Clear search"
-                    : (!win.choosingFolder && !win.saving && win.chooser.filters.length > 1 && win.chooser.allFilesIndex() >= 0 && win.chooser.currentFilter !== win.chooser.allFilesIndex()) ? "Show all types" : ""
+                emptyButton: win.folder.errorText.length > 0 ? qsTr("Try again")
+                    : win.folder.searchText.length > 0 ? qsTr("Clear search")
+                    : (!win.choosingFolder && !win.saving && win.chooser.filters.length > 1 && win.chooser.allFilesIndex() >= 0 && win.chooser.currentFilter !== win.chooser.allFilesIndex()) ? qsTr("Show all types") : ""
                 emptyActionName: emptyButton
                 onEmptyAction: action => {
-                    if (action === "Try again") {
+                    if (action === qsTr("Try again")) {
                         win.folder.refresh();
-                    } else if (action === "Clear search") {
+                    } else if (action === qsTr("Clear search")) {
                         search.text = "";
                     } else {
                         win.chooser.currentFilter = win.chooser.allFilesIndex();
@@ -489,7 +542,7 @@ UI.AppWindow {
 
                 UI.LinkButton {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: win.collapsed ? "Browse folders" : "Hide folders"
+                    text: win.collapsed ? qsTr("Browse folders") : qsTr("Hide folders")
                     onClicked: win.setCollapsed(!win.collapsed)
                 }
             }
@@ -499,7 +552,7 @@ UI.AppWindow {
             }
 
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: win.chooser.cancel()
             }
 
@@ -513,16 +566,21 @@ UI.AppWindow {
         }
     }
 
+    UI.Menu {
+        id: itemMenu
+        minimumWidth: 236
+    }
+
     UI.Dialog {
         id: replaceDialog
         property string what
         readonly property bool count: /^[0-9]+$/.test(what)
-        title: count ? "Replace " + what + " files?" : "Replace \"" + what + "\"?"
-        text: count ? "Files with these names are already in " + win.folder.title + ". Replacing them overwrites what is in them."
-                    : "There is already a file called \"" + what + "\" in " + win.folder.title + ". Replacing it overwrites what is in it."
+        title: count ? qsTr("Replace %1 files?").arg(what) : qsTr("Replace \"%1\"?").arg(what)
+        text: count ? qsTr("Files with these names are already in %1. Replacing them overwrites what is in them.").arg(win.folder.title)
+                    : qsTr("There is already a file called \"%1\" in %2. Replacing it overwrites what is in it.").arg(what).arg(win.folder.title)
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: {
                     replaceDialog.close();
                     nameField.forceActiveFocus();
@@ -530,7 +588,7 @@ UI.AppWindow {
             },
             UI.Button {
                 kind: "primary"
-                text: "Replace"
+                text: qsTr("Replace")
                 onClicked: {
                     replaceDialog.close();
                     win.chooser.confirmReplace();
@@ -545,7 +603,7 @@ UI.AppWindow {
         buttons: [
             UI.Button {
                 kind: "primary"
-                text: "OK"
+                text: qsTr("OK")
                 onClicked: {
                     message.close();
                     nameField.forceActiveFocus();

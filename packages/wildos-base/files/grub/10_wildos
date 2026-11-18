@@ -55,12 +55,17 @@ use_kernel() {
     fi
 }
 
-# entry TITLE CLASS ID KERNEL_ARGUMENTS, for the kernel use_kernel last chose.
+# entry TITLE CLASS ID KERNEL_ARGUMENTS [OPTIONS], for the kernel use_kernel
+# last chose.
+#
+# Every Wild OS entry is --unrestricted: when "Ask for my password before
+# starting another system" closes GRUB's menu (wildos-startup's
+# 16_wildos_startup), these are the ones that still start without asking.
 #
 # No "Loading Linux" lines: GRUB would print them over the menu's background
 # for the second before the boot splash appears.
 entry() {
-    echo "menuentry '$(echo "$1" | grub_quote)' --class $2 --class gnu-linux --class gnu --class os \$menuentry_id_option '$3' {"
+    echo "menuentry '$(echo "$1" | grub_quote)' --class $2 --class gnu-linux --class gnu --class os --unrestricted ${5:-} \$menuentry_id_option '$3' {"
     save_default_entry | grub_add_tab
     echo "	load_video"
     if [ -n "$GRUB_GFXPAYLOAD_LINUX" ]; then
@@ -110,4 +115,18 @@ if [ -n "$previous" ]; then
     # The way back when an update leaves Wild OS unable to start. The id
     # leaves the version out, so it stays the same as kernels come and go.
     entry "Wild OS (previous version)" wildos-previous "wildos-previous-$device_id" "$args"
+fi
+
+# The start-up manager (wildos-startup): the same start of Wild OS, which
+# stops before the boot screen to show everything this PC can start. Space
+# held while the PC starts picks it, as a key press GRUB acts on even with
+# its menu hidden. wsm_how says why GRUB itself sent the start here, if it
+# did (16_wildos_startup). With the manager switched off in Settings the
+# entry starts Wild OS as usual.
+if [ -x /usr/lib/wildos/startup-manager ]; then
+    if [ -n "$previous" ]; then
+        entry "Start-up manager (previous version)" wildos-manager "wildos-manager-previous-$device_id" "$args wildos.manager=\${wsm_how}"
+    fi
+    use_kernel "$(echo "$kernels" | sed -n 1p)"
+    entry "Start-up manager" wildos-manager "wildos-manager-$device_id" "$args wildos.manager=\${wsm_how}" "--hotkey=' '"
 fi

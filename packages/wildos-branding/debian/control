@@ -2,7 +2,7 @@ Source: wildos-branding
 Section: x11
 Priority: optional
 Maintainer: Wild OS Developers <dev@wildos.io>
-Build-Depends: debhelper-compat (= 13), imagemagick, librsvg2-bin, python3, breeze-cursor-theme
+Build-Depends: debhelper-compat (= 13), imagemagick, librsvg2-bin, python3, breeze-cursor-theme, qt6-l10n-tools
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -11,8 +11,8 @@ Architecture: all
 Depends:
  ${misc:Depends},
  wildos-fonts,
- wildos-ui (>= 0.1.12),
- wildos-overlays,
+ wildos-ui (>= 0.1.19),
+ wildos-overlays (>= 0.1.5),
  wildos-desktop-view,
  wildos-fluent-icons,
  breeze,

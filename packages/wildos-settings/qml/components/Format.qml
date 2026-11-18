@@ -21,12 +21,15 @@ QtObject {
         return /a/i.test(UI.TimeFormat.shortFormat.replace(/'[^']*'/g, ""));
     }
 
-    readonly property var days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    readonly property var months: ["January", "February", "March", "April", "May", "June", "July", "August",
-        "September", "October", "November", "December"]
+    readonly property var days: [qsTr("Sunday"), qsTr("Monday"), qsTr("Tuesday"), qsTr("Wednesday"), qsTr("Thursday"),
+        qsTr("Friday"), qsTr("Saturday")]
+    readonly property var months: [qsTr("January"), qsTr("February"), qsTr("March"), qsTr("April"), qsTr("May"),
+        qsTr("June"), qsTr("July"), qsTr("August"), qsTr("September"), qsTr("October"), qsTr("November"),
+        qsTr("December")]
 
+    // "Tuesday 21 October"
     function longDate(date) {
-        return days[date.getDay()] + " " + date.getDate() + " " + months[date.getMonth()];
+        return qsTr("%1 %2 %3").arg(days[date.getDay()]).arg(date.getDate()).arg(months[date.getMonth()]);
     }
 
     function shortDate(date) {
@@ -38,6 +41,8 @@ QtObject {
     }
 
     // "today", "yesterday", "Tuesday" within the week, then "21 October".
+    // "today" and "yesterday" stay in English because callers compare
+    // them; dayText() and dayTitle() are the words to show.
     function day(date) {
         if (!isValid(date)) {
             return "";
@@ -55,7 +60,28 @@ QtObject {
         if (diff < 7) {
             return days[date.getDay()];
         }
-        return date.getDate() + " " + months[date.getMonth()] + (date.getFullYear() === now.getFullYear() ? "" : " " + date.getFullYear());
+        return date.getFullYear() === now.getFullYear() ? qsTr("%1 %2").arg(date.getDate()).arg(months[date.getMonth()])
+            : qsTr("%1 %2 %3").arg(date.getDate()).arg(months[date.getMonth()]).arg(date.getFullYear());
+    }
+
+    // day() for the middle of a sentence: "today", "yesterday", "Tuesday".
+    function dayText(date) {
+        const d = day(date);
+        return d === "today" ? qsTr("today") : d === "yesterday" ? qsTr("yesterday") : d;
+    }
+
+    // day() at the start of a line: "Today", "Yesterday", "Tuesday".
+    function dayTitle(date) {
+        const d = day(date);
+        return d === "today" ? qsTr("Today") : d === "yesterday" ? qsTr("Yesterday") : d.charAt(0).toUpperCase() + d.slice(1);
+    }
+
+    // "today at 13:10", "yesterday at 13:10", "on Tuesday at 13:10".
+    function dayAndTime(date) {
+        const d = day(date);
+        return d === "today" ? qsTr("today at %1").arg(time(date))
+            : d === "yesterday" ? qsTr("yesterday at %1").arg(time(date))
+            : qsTr("on %1 at %2").arg(d).arg(time(date));
     }
 
     function isValid(date) {
@@ -70,19 +96,19 @@ QtObject {
         const now = new Date();
         const minutes = Math.floor((now - date) / 60000);
         if (minutes < 1) {
-            return "just now";
+            return qsTr("just now");
         }
         if (minutes < 60) {
-            return plural(minutes, "minute", "minutes") + " ago";
+            return minutes === 1 ? qsTr("1 minute ago") : qsTr("%1 minutes ago").arg(minutes);
         }
         const sameDay = now.toDateString() === date.toDateString();
         if (sameDay) {
-            return "today at " + time(date);
+            return qsTr("today at %1").arg(time(date));
         }
         const yesterday = new Date(now.getTime() - 86400000);
         if (yesterday.toDateString() === date.toDateString()) {
-            return "yesterday at " + time(date);
+            return qsTr("yesterday at %1").arg(time(date));
         }
-        return shortDate(date) + " at " + time(date);
+        return qsTr("%1 at %2").arg(shortDate(date)).arg(time(date));
     }
 }

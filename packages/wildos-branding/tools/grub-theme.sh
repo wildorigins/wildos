@@ -16,7 +16,7 @@
 #
 # The measurements are the UsbMenu artboard's (1440x900). Everything is placed
 # from the middle of the screen, as the artboard's centred column is, and the
-# glow and footer from the bottom edge.
+# footer from the bottom edge.
 set -euo pipefail
 # bash 5.2 expands & in ${var//pattern/replacement}; the XML escaping needs it
 # literal.
@@ -73,10 +73,9 @@ text() {
         "$1" "$2" "$3" "$4" "$5" "$6" "$s"
 }
 
-# The dawn glow: the artboard's 1000x760 radial ellipse reaches 520px past
-# the bottom edge, so only its top 240px show. The last stop keeps the purple
-# at zero opacity so the fade matches the browser's premultiplied gradient.
-svg "$out/glow.png" 1000 240 "<defs><radialGradient id='g' gradientUnits='userSpaceOnUse' cx='500' cy='380' r='500' gradientTransform='translate(0 91.2) scale(1 0.76)'><stop offset='0' stop-color='#f6baaa' stop-opacity='0.35'/><stop offset='0.45' stop-color='#9680d2' stop-opacity='0.18'/><stop offset='1' stop-color='#9680d2' stop-opacity='0'/></radialGradient></defs><ellipse cx='500' cy='380' rx='500' ry='380' fill='url(#g)'/>" "$bg"
+# The artboard's dawn glow along the bottom edge is left out: GRUB cannot
+# move things by screen height, and on screens 800px tall or less the menu
+# and the countdown's solid frames sit inside it and cut it off.
 
 # The logo tile and the wordmark, 16px apart, as one centred row.
 rsvg-convert -w 56 -h 56 "$logo" -o "$work/logo.png"
@@ -127,6 +126,10 @@ else
     item wildos-safe-graphics 480 "Wild OS (safe graphics)" "Use this if the screen stays black or garbled"
     item wildos-previous 480 "Wild OS (previous version)" "Use this if Wild OS stopped starting after an update"
     item windows 480 "Windows" "Start Windows on this computer"
+    # wildos-startup's entries: its picture menu, and the other system it
+    # or Settings chose to start.
+    item wildos-manager 480 "Start-up manager" "Choose what this computer starts"
+    item wildos-other 480 "Another system" "Start the other system on this computer"
     item wildos-firmware 480 "UEFI firmware settings" "Restart into this computer's UEFI settings"
 fi
 
@@ -166,10 +169,9 @@ for part in n s e w ne nw se sw c; do
 done
 magick -size 64x64 xc:"$bg" "PNG32:$out/background.png"
 
-# menu HEIGHT: the boot menu, with the header above it and the glow
-# beneath everything. GRUB paints a theme's components from the last one
-# listed to the first, so a theme file lists them from the top layer down
-# and these come last.
+# menu HEIGHT: the boot menu, with the header above it. GRUB paints a
+# theme's components from the last one listed to the first, so a theme file
+# lists them from the top layer down and these come last.
 menu() {
     cat <<EOF
 
@@ -197,12 +199,6 @@ menu() {
     left = 50%-93
     top = 50%-300
     file = "header.png"
-}
-
-+ image {
-    left = 50%-500
-    top = 100%-240
-    file = "glow.png"
 }
 EOF
 }

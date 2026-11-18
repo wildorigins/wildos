@@ -12,6 +12,7 @@ UI.AppWindow {
     property string messageKey
     property var main: null
 
+    stateKey: "message"
     width: 900
     height: 760
     minimumWidth: 560
@@ -45,7 +46,7 @@ UI.AppWindow {
             Layout.rightMargin: 12
             Layout.topMargin: 8
             implicitHeight: 46
-            radius: 10
+            radius: UI.Style.radiusPanel
             color: UI.Style.surfaceRest
             border.width: 1
             border.color: UI.Style.borderSubtle
@@ -99,6 +100,12 @@ UI.AppWindow {
                     iconName: "flag"
                     onClicked: MailEngine.toggleFlag(window.messageKey)
                 }
+                CommandButton {
+                    text: qsTr("Print")
+                    iconName: "printer"
+                    enabled: pane.hasMessage
+                    onClicked: pane.print()
+                }
                 Item {
                     Layout.fillWidth: true
                 }
@@ -119,7 +126,22 @@ UI.AppWindow {
                     window.main.openLink(url);
                 }
             }
+            onPrintFailed: printToast.show(qsTr("The printer couldn't be reached."))
         }
+    }
+
+    UI.Toast {
+        id: printToast
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 24
+        z: 60
+    }
+
+    Shortcut {
+        sequence: StandardKey.Print
+        enabled: pane.hasMessage
+        onActivated: pane.print()
     }
 
     Component.onCompleted: {

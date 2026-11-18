@@ -19,7 +19,7 @@ Rectangle {
     signal openLink(string url)
     signal saved(string path)
 
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRest
     border.width: 1
     border.color: UI.Style.borderSubtle
@@ -34,6 +34,14 @@ Rectangle {
     }
 
     readonly property bool hasMessage: message.key.length > 0 && !message.loading && message.error.length === 0
+
+    signal printFailed()
+
+    function print() {
+        if (hasMessage && !html.print()) {
+            pane.printFailed();
+        }
+    }
 
     // Nothing selected (MailMsStates.dc).
     ColumnLayout {
@@ -152,7 +160,7 @@ Rectangle {
                 Layout.leftMargin: 14
                 Layout.rightMargin: 14
                 implicitHeight: senderRow.implicitHeight + 24
-                radius: 8
+                radius: UI.Style.radiusSm
                 color: UI.Style.surfaceRaised
 
                 RowLayout {
@@ -268,7 +276,7 @@ Rectangle {
                 Layout.rightMargin: 14
                 Layout.topMargin: 10
                 implicitHeight: notice.implicitHeight + 16
-                radius: 6
+                radius: UI.Style.radiusXs
                 color: message.showPictures ? UI.Style.successSoft : UI.Style.warningSoft
                 border.width: 1
                 border.color: message.showPictures ? Qt.alpha(UI.Style.success, 0.3) : Qt.alpha(UI.Style.warning, 0.3)
@@ -319,7 +327,7 @@ Rectangle {
                         required property var modelData
                         width: 250
                         height: 52
-                        radius: 6
+                        radius: UI.Style.radiusXs
                         color: tileMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
                         border.width: 1
                         border.color: UI.Style.borderSubtle
@@ -342,7 +350,7 @@ Rectangle {
                             Rectangle {
                                 implicitWidth: 34
                                 implicitHeight: 34
-                                radius: 6
+                                radius: UI.Style.radiusXs
                                 color: UI.Style.successSoft
 
                                 MailIcon {
@@ -400,7 +408,7 @@ Rectangle {
             y: header.height - 6
             width: flick.width - 28
             height: html.contentHeight + 32
-            radius: 8
+            radius: UI.Style.radiusSm
             color: "#ffffff"
         }
 
@@ -476,7 +484,7 @@ Rectangle {
         anchors.margins: 8
         width: Math.min(linkText.implicitWidth + 16, parent.width - 16)
         height: 26
-        radius: 6
+        radius: UI.Style.radiusXs
         color: UI.Style.windowOpaque
         border.width: 1
         border.color: UI.Style.borderMenu

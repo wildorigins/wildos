@@ -13,6 +13,9 @@ GridView {
     property var keys: []
     // Rows get a button for the app's menu (Library, where Uninstall is).
     property bool showMore: false
+    // Rows say what the app takes up instead of what it is (Library, when
+    // it is sorted by size).
+    property bool showSizes: false
     // The header's width, inside the page's 44px sides.
     readonly property real innerWidth: width - 2 * Metrics.sidePadding
 
@@ -37,6 +40,15 @@ GridView {
     reuseItems: true
     ScrollBar.vertical: UI.ScrollBar {}
 
+    function keyPressed(event) {
+        scrollKeys.handle(event);
+    }
+
+    ScrollKeys {
+        id: scrollKeys
+        view: grid
+    }
+
     // Every cell is as tall as one row at the current text size.
     AppListRow {
         id: probe
@@ -58,6 +70,7 @@ GridView {
             appKey: cell.modelData
             divider: cell.index < grid.lastRowStart
             showMore: grid.showMore
+            subtitle: !app ? "" : grid.showSizes && app.sizeText.length > 0 ? app.sizeText : app.tagline
             onActivated: key => grid.activated(key)
         }
     }

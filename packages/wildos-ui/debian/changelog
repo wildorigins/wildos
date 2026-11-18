@@ -1,3 +1,54 @@
+wildos-ui (0.1.20) trixie; urgency=medium
+
+  * Windows of Wild OS apps are easier to catch for resizing at the
+    corners and the top edge.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 09:30:00 +0000
+
+wildos-ui (0.1.19) trixie; urgency=medium
+
+  * Right-click menus can offer the faster graphics card for an app or
+    program on a PC with two.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 12:00:00 +0000
+
+wildos-ui (0.1.18) trixie; urgency=medium
+
+  * The sign-in screen can tell whether an account signs in with a PIN.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 15:00:00 +0000
+
+wildos-ui (0.1.17) trixie; urgency=medium
+
+  * The lock screen can tell whether the account has a PIN.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 10:45:00 +0000
+
+wildos-ui (0.1.16) trixie; urgency=medium
+
+  * App windows open at the size they were left, and maximised if they
+    were closed maximised; each kind of window keeps its own size.
+  * Scrolling a page no longer changes a slider that passes under the
+    pointer.
+  * Tooltips show on keyboard focus and move above a control when there
+    is no room below, and text that is cut short can show in full in one.
+  * Tabs can be dragged into a new order and right-clicked, and show a
+    long title in a tooltip.
+  * Screen readers name switches, drop-downs, fields and sliders, and
+    Enter opens a row reached with the keyboard.
+  * One shared size for the taller title bar, panel corners, greyed-out
+    controls and square toolbar buttons.
+  * Menus follow the animation speed setting.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:32:01 +0000
+
+wildos-ui (0.1.15) trixie; urgency=medium
+
+  * Loads the translations every Wild OS package ships for the display
+    language chosen in Settings, and its own controls are in French.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-ui (0.1.14) trixie; urgency=medium
 
   * The fingerprint keeps working after a restart again: asking for the

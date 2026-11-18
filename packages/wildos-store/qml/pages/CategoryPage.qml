@@ -20,64 +20,64 @@ AppGrid {
     readonly property var spec: {
         switch (kind) {
         case "work": return {
-            title: "Work",
-            subtitle: "Documents, email, calls and money.",
+            title: qsTr("Work"),
+            subtitle: qsTr("Documents, email, calls and money."),
             filters: [
-                { label: "All", any: ["Office", "Email", "Finance", "ProjectManagement", "Calendar", "ContactManagement", "WordProcessor", "Spreadsheet", "Presentation", "VideoConference"] },
-                { label: "Documents", any: ["WordProcessor", "Spreadsheet", "Presentation", "Publishing", "Office"], not: ["Email", "Finance", "ProjectManagement", "Calendar"] },
-                { label: "Email and calls", any: ["Email", "VideoConference", "InstantMessaging", "Telephony", "Chat"] },
-                { label: "Planning", any: ["ProjectManagement", "Calendar", "ContactManagement"] },
-                { label: "Money", any: ["Finance"] }
+                { label: qsTr("All"), any: ["Office", "Email", "Finance", "ProjectManagement", "Calendar", "ContactManagement", "WordProcessor", "Spreadsheet", "Presentation", "VideoConference"] },
+                { label: qsTr("Documents"), any: ["WordProcessor", "Spreadsheet", "Presentation", "Publishing", "Office"], not: ["Email", "Finance", "ProjectManagement", "Calendar"] },
+                { label: qsTr("Email and calls"), any: ["Email", "VideoConference", "InstantMessaging", "Telephony", "Chat"] },
+                { label: qsTr("Planning"), any: ["ProjectManagement", "Calendar", "ContactManagement"] },
+                { label: qsTr("Money"), any: ["Finance"] }
             ],
             hero: {
-                eyebrow: "Office files",
+                eyebrow: qsTr("Office files"),
                 photo: "qrc:/qt/qml/WildOS/Store/data/heroes/contours.jpg",
                 photoY: 0.5,
-                title: "Open Word, Excel and PowerPoint files",
-                body: "LibreOffice opens them and saves back to them, so you can keep working with people who use Office.",
-                apps: ["libreoffice"],
-                open: "libreoffice"
+                title: qsTr("Open Word, Excel and PowerPoint files"),
+                body: qsTr("Write, Tables and Slides open them and save back to them, so you can keep working with people who use Office."),
+                apps: ["org.wildos.write", "org.wildos.tables", "org.wildos.slides"],
+                section: "wildos"
             }
         };
         case "play": return {
-            title: "Play",
-            subtitle: "Free games, and Steam for the ones you bought on Windows.",
+            title: qsTr("Play"),
+            subtitle: qsTr("Free games, and Steam for the ones you bought on Windows."),
             filters: [
-                { label: "All", any: ["Game"] },
-                { label: "Action", any: ["ActionGame", "Shooter"] },
-                { label: "Adventure", any: ["AdventureGame", "RolePlaying"] },
-                { label: "Puzzles", any: ["LogicGame", "BlocksGame"] },
-                { label: "Strategy", any: ["StrategyGame"] },
-                { label: "Racing and sports", any: ["SportsGame"] },
-                { label: "Board and cards", any: ["BoardGame", "CardGame"] }
+                { label: qsTr("All"), any: ["Game"] },
+                { label: qsTr("Action"), any: ["ActionGame", "Shooter"] },
+                { label: qsTr("Adventure"), any: ["AdventureGame", "RolePlaying"] },
+                { label: qsTr("Puzzles"), any: ["LogicGame", "BlocksGame"] },
+                { label: qsTr("Strategy"), any: ["StrategyGame"] },
+                { label: qsTr("Racing and sports"), any: ["SportsGame"] },
+                { label: qsTr("Board and cards"), any: ["BoardGame", "CardGame"] }
             ],
             hero: {
-                eyebrow: "Your Steam games",
+                eyebrow: qsTr("Your Steam games"),
                 photo: "qrc:/qt/qml/WildOS/Store/data/heroes/waves-green.jpg",
                 photoY: 0.5,
-                title: "Bring your Steam library",
-                body: "Steam plays most Windows games here. Sign in and your library is there.",
+                title: qsTr("Bring your Steam library"),
+                body: qsTr("Steam plays most Windows games here. Sign in and your library is there."),
                 apps: ["steam"],
                 open: "steam"
             }
         };
         case "develop": return {
-            title: "Develop",
-            subtitle: "Code editors, version control and the tools around them.",
+            title: qsTr("Develop"),
+            subtitle: qsTr("Code editors, version control and the tools around them."),
             filters: [
-                { label: "All", any: ["Development"] },
-                { label: "Editors", any: ["IDE", "TextEditor"], also: ["Development"] },
-                { label: "Version control", any: ["RevisionControl"] },
-                { label: "Debugging", any: ["Debugger", "Profiling"] },
-                { label: "Databases", any: ["Database"] },
-                { label: "Web", any: ["WebDevelopment"] }
+                { label: qsTr("All"), any: ["Development"] },
+                { label: qsTr("Editors"), any: ["IDE", "TextEditor"], also: ["Development"] },
+                { label: qsTr("Version control"), any: ["RevisionControl"] },
+                { label: qsTr("Debugging"), any: ["Debugger", "Profiling"] },
+                { label: qsTr("Databases"), any: ["Database"] },
+                { label: qsTr("Web"), any: ["WebDevelopment"] }
             ],
             hero: {
-                eyebrow: "Start here",
+                eyebrow: qsTr("Start here"),
                 photo: "qrc:/qt/qml/WildOS/Store/data/heroes/dusk-hills.jpg",
                 photoY: 0.4,
-                title: "Write code in a proper editor",
-                body: "Free code editors, from quick and simple to full development environments.",
+                title: qsTr("Write code in a proper editor"),
+                body: qsTr("Free code editors, from quick and simple to full development environments."),
                 apps: [],
                 topApps: 2,
                 filter: 1
@@ -85,22 +85,22 @@ AppGrid {
         };
         }
         return {
-            title: "Create",
-            subtitle: "Paint, edit photos, cut video, make music.",
+            title: qsTr("Create"),
+            subtitle: qsTr("Paint, edit photos, cut video, make music."),
             filters: [
-                { label: "All", any: ["Graphics", "2DGraphics", "RasterGraphics", "VectorGraphics", "Photography", "3DGraphics", "AudioVideoEditing", "Music", "Midi", "Sequencer", "Mixer"] },
-                { label: "Photo", any: ["Photography", "RasterGraphics"] },
-                { label: "Drawing", any: ["2DGraphics", "VectorGraphics"] },
-                { label: "Video", any: ["AudioVideoEditing"], not: ["Audio"] },
-                { label: "Audio", any: ["Audio"], also: ["AudioVideoEditing", "Music", "Midi", "Sequencer", "Mixer", "Recorder"] },
+                { label: qsTr("All"), any: ["Graphics", "2DGraphics", "RasterGraphics", "VectorGraphics", "Photography", "3DGraphics", "AudioVideoEditing", "Music", "Midi", "Sequencer", "Mixer"] },
+                { label: qsTr("Photo"), any: ["Photography", "RasterGraphics"] },
+                { label: qsTr("Drawing"), any: ["2DGraphics", "VectorGraphics"] },
+                { label: qsTr("Video"), any: ["AudioVideoEditing"], not: ["Audio"] },
+                { label: qsTr("Audio"), any: ["Audio"], also: ["AudioVideoEditing", "Music", "Midi", "Sequencer", "Mixer", "Recorder"] },
                 { label: "3D", any: ["3DGraphics"] }
             ],
             hero: {
-                eyebrow: "Get started",
+                eyebrow: qsTr("Get started"),
                 photo: "qrc:/qt/qml/WildOS/Store/data/photos/create-timeline.jpg",
                 photoY: 0.5,
-                title: "Make your first video tonight",
-                body: "Kdenlive and Shotcut are free and never put a watermark on your videos.",
+                title: qsTr("Make your first video tonight"),
+                body: qsTr("Kdenlive and Shotcut are free and never put a watermark on your videos."),
                 apps: ["kdenlive", "org.shotcut.Shotcut"],
                 filter: 3
             }
@@ -174,6 +174,8 @@ AppGrid {
                     if (key.length > 0) {
                         page.store.openApp(key);
                     }
+                } else if (hero.section) {
+                    page.store.open(hero.section);
                 } else if (hero.filter !== undefined) {
                     page.selected = hero.filter;
                 }
@@ -185,7 +187,7 @@ AppGrid {
 
             SectionHeader {
                 width: parent.width
-                title: "Top picks"
+                title: qsTr("Top picks")
             }
 
             AppList {
@@ -198,7 +200,7 @@ AppGrid {
             UI.Label {
                 visible: page.topKeys.length === 0
                 topPadding: 16
-                text: Catalog.ready ? "Nothing here yet." : "Getting the list of apps"
+                text: Catalog.ready ? qsTr("Nothing here yet.") : qsTr("Getting the list of apps")
                 color: Metrics.inkSecondary
             }
         }
@@ -206,7 +208,7 @@ AppGrid {
         SectionHeader {
             visible: page.keys.length > 0
             width: parent.width
-            title: page.selected > 0 ? "More in " + page.spec.filters[page.selected].label : page.kind === "play" ? "More games" : "More apps"
+            title: page.selected > 0 ? qsTr("More in %1").arg(page.spec.filters[page.selected].label) : page.kind === "play" ? qsTr("More games") : qsTr("More apps")
         }
     }
 }

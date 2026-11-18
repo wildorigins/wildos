@@ -1,6 +1,7 @@
 #include "hosts.h"
 #include "paths.h"
 #include "secrets.h"
+#include "settings.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -24,14 +25,16 @@ QString file()
     return Paths::config() + QStringLiteral("/hosts.json");
 }
 
+// What a desktop starts with. How it opens and whether it shares the
+// clipboard are Remote's settings; a saved host keeps its own.
 QVariantMap desktopDefaults()
 {
     return {
-        {QStringLiteral("display"), QStringLiteral("full")},
+        {QStringLiteral("display"), RemoteSettings::instance()->desktopDisplay()},
         {QStringLiteral("resolution"), QStringLiteral("match")},
         {QStringLiteral("scaling"), QStringLiteral("auto")},
         {QStringLiteral("password"), QStringLiteral("ask")},
-        {QStringLiteral("clipboard"), true},
+        {QStringLiteral("clipboard"), RemoteSettings::instance()->desktopClipboard()},
         {QStringLiteral("sound"), true},
         {QStringLiteral("microphone"), false},
         {QStringLiteral("printers"), false},

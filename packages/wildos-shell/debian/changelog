@@ -1,3 +1,58 @@
+wildos-shell (0.1.24) trixie; urgency=medium
+
+  * The band just outside a window that resizes it is a little wider.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 09:30:00 +0000
+
+wildos-shell (0.1.23) trixie; urgency=medium
+
+  * A maximised window no longer has a resize band along its edges, which
+    on two screens lay over the edge of the next screen.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 17:30:00 +0000
+
+wildos-shell (0.1.22) trixie; urgency=medium
+
+  * A window is easier to resize: the pointer catches it from just outside
+    its left, right and bottom edges, not only on the one-pixel frame.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 12:50:00 +0000
+
+wildos-shell (0.1.21) trixie; urgency=medium
+
+  * Clicking or right-clicking the taskbar, or anywhere else outside Start,
+    closes Start. A right click on the taskbar used to leave it open until
+    the Start button was clicked.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 10:20:00 +0000
+
+wildos-shell (0.1.20) trixie; urgency=medium
+
+  * The start-up animation no longer has a KWin effect of its own: the boot
+    screen plays on until the desktop takes over, which carries it on.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 18:00:00 +0000
+
+wildos-shell (0.1.19) trixie; urgency=medium
+
+  * The start-up animation stays on screen while the desktop takes the
+    screen over from it, instead of going black for a moment.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 14:00:00 +0000
+
+wildos-shell (0.1.18) trixie; urgency=medium
+
+  * Hot corners do nothing on new accounts until one is chosen in Settings.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 15:23:14 +0000
+
+wildos-shell (0.1.17) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-shell (0.1.16) trixie; urgency=medium
 
   * The desktop is ready a little sooner after signing in.

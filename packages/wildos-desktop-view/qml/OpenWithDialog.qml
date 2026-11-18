@@ -32,7 +32,7 @@ DeskDialog {
         return out;
     }
 
-    title: "How do you want to open this file?"
+    title: qsTr("How do you want to open this file?")
     defaultAction: () => chooser.openChosen()
 
     function show(list) {
@@ -58,7 +58,7 @@ DeskDialog {
     UI.SearchField {
         id: search
         Layout.fillWidth: true
-        placeholderText: "Find an app"
+        placeholderText: qsTr("Find an app")
         Accessible.name: placeholderText
         onTextChanged: chooser.filter = text
         onEscapePressed: chooser.close()
@@ -132,19 +132,19 @@ DeskDialog {
     }
 
     UI.CheckBox {
-        text: "Always use this app for this kind of file"
+        text: qsTr("Always use this app for this kind of file")
         checked: chooser.always
         onToggled: chooser.always = checked
     }
     buttons: [
         UI.Button {
             kind: "primary"
-            text: "Open"
+            text: qsTr("Open")
             enabled: chooser.chosen.length > 0
             onClicked: chooser.openChosen()
         },
         UI.Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: chooser.close()
         }
     ]

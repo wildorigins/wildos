@@ -3,6 +3,7 @@
 #include "qwayland-fake-input.h"
 
 #include <QGuiApplication>
+#include <QThread>
 #include <QWaylandClientExtensionTemplate>
 #include <wayland-client.h>
 
@@ -14,6 +15,7 @@ constexpr uint32_t keyLeftShift = 42;
 constexpr uint32_t keyV = 47;
 constexpr uint32_t pressed = 1;
 constexpr uint32_t released = 0;
+constexpr int keyGapMs = 20;
 }
 
 class FakeInput : public QWaylandClientExtensionTemplate<FakeInput>, public QtWayland::org_kde_kwin_fake_input
@@ -59,18 +61,26 @@ bool FakeKeyboard::paste(bool shift)
         m_input->authenticate(QStringLiteral("Clipboard and emoji"), QStringLiteral("Paste what you picked into the app you are using"));
         m_input->authenticated = true;
     }
-    m_input->keyboard_key(keyLeftCtrl, pressed);
+    // One step at a time, each sent and given a moment. Sent in one go, an
+    // input method (Vietnamese, Chinese, Japanese and Korean typing all use
+    // one) passed the V on before it had heard about Ctrl, and the app got
+    // the letter v.
+    const auto step = [this](uint32_t key, uint32_t state) {
+        m_input->keyboard_key(key, state);
+        if (auto *app = qGuiApp->nativeInterface<QNativeInterface::QWaylandApplication>()) {
+            wl_display_flush(app->display());
+        }
+        QThread::msleep(keyGapMs);
+    };
+    step(keyLeftCtrl, pressed);
     if (shift) {
-        m_input->keyboard_key(keyLeftShift, pressed);
+        step(keyLeftShift, pressed);
     }
-    m_input->keyboard_key(keyV, pressed);
-    m_input->keyboard_key(keyV, released);
+    step(keyV, pressed);
+    step(keyV, released);
     if (shift) {
-        m_input->keyboard_key(keyLeftShift, released);
+        step(keyLeftShift, released);
     }
-    m_input->keyboard_key(keyLeftCtrl, released);
-    if (auto *app = qGuiApp->nativeInterface<QNativeInterface::QWaylandApplication>()) {
-        wl_display_flush(app->display());
-    }
+    step(keyLeftCtrl, released);
     return true;
 }

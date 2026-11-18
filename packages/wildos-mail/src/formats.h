@@ -8,13 +8,17 @@
 
 // Dates and times in the regional format chosen in Settings (LC_TIME, which
 // QLocale::system() follows) on the clock chosen in Settings > Date and
-// time, with day and month names in English as the
-// rest of Wild OS is. qml/Formats.js does the same for the QML side.
+// time, with day and month names in the display language chosen in Settings
+// (LANGUAGE), as WildOS.UI picks translations. qml/Formats.js does the same
+// for the QML side.
 namespace Formats
 {
 inline QLocale names()
 {
-    return QLocale(QLocale::English, QLocale::UnitedKingdom);
+    const QStringList languages = QLocale::system().uiLanguages();
+    if (languages.isEmpty() || languages.first().startsWith(QLatin1String("en")) || languages.first() == QLatin1String("C"))
+        return QLocale(QLocale::English, QLocale::UnitedKingdom);
+    return QLocale(languages.first());
 }
 
 inline QString time(const QDateTime &when)

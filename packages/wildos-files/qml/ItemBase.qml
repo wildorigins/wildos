@@ -1,5 +1,6 @@
 import QtQuick
 import WildOS.Files
+import WildOS.UI as UI
 
 // What a file or folder does under the pointer in either view: Windows
 // selection rules, open on double click, the context menu, middle click
@@ -25,15 +26,26 @@ Item {
     required property string subtitle
     required property real usage
     property bool renaming: false
+    // The label that draws the name. When it has to cut the name short,
+    // resting the pointer on the item shows the whole of it.
+    property Item nameLabel: null
     readonly property bool hovered: mouse.containsMouse
     readonly property bool highlighted: hovered || drop.containsDrag
-    readonly property bool isCurrentFocus: view.keyboardUsed && view.folder && view.folder.currentIndex === index && !selected
+    // Where the keyboard is, selected or not, once the keyboard has been
+    // used: with Ctrl held the focus moves without changing the selection,
+    // so it has to show on its own.
+    readonly property bool focusMarked: view.keyboardUsed && view.contentFocused && !renaming && !!view.folder && view.folder.currentIndex === index
+    // The corner of the item's highlight, which the focus outline follows.
+    property real corner: 6
 
     Accessible.role: Accessible.ListItem
     Accessible.name: name
     Accessible.selected: selected
 
-    // The thing actually dragged; Qt moves it, the drag image is the icon.
+    // The thing actually dragged; Qt moves it, the drag image is the icon,
+    // or a pile of it with a count when several items go together. The
+    // image is made on the press that could start a drag, not kept for
+    // every item in the folder.
     Item {
         id: proxy
         width: 1
@@ -41,8 +53,6 @@ Item {
         Drag.dragType: Drag.Automatic
         Drag.supportedActions: Qt.CopyAction | Qt.MoveAction | Qt.LinkAction
         Drag.proposedAction: Qt.MoveAction
-        Drag.imageSource: "image://icon/" + encodeURIComponent(item.iconName)
-        Drag.imageSourceSize: Qt.size(48, 48)
         Drag.hotSpot.x: 24
         Drag.hotSpot.y: 24
         Drag.active: mouse.drag.active
@@ -82,6 +92,11 @@ Item {
             proxy.Drag.mimeData = {
                 "text/uri-list": item.view.folder.selectedUrls().map(u => u.toString()).join("\r\n")
             };
+            const moving = item.view.folder.selectedCount;
+            proxy.Drag.imageSourceSize = moving > 1 ? Qt.size(64, 64) : Qt.size(48, 48);
+            proxy.Drag.imageSource = moving > 1
+                ? "image://dragicon/" + moving + "/" + encodeURIComponent(String(UI.Style.accent)) + "/" + encodeURIComponent(String(UI.Style.textOnAccent)) + "/" + encodeURIComponent(item.iconName)
+                : "image://icon/" + encodeURIComponent(item.iconName);
         }
         onReleased: m => {
             if (pendingSingle && !drag.active && m.button === Qt.LeftButton) {
@@ -102,6 +117,24 @@ Item {
             if (m.button === Qt.LeftButton && !(m.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))) {
                 item.view.folder.activate(item.index);
             }
+        }
+    }
+
+    // Drawn on the item's own edge, not outside it as on a button: the
+    // items sit 2px apart and the list clips at its sides.
+    UI.FocusRing {
+        visible: item.focusMarked
+        anchors.margins: 0
+        targetRadius: item.corner - 4
+        z: 1
+    }
+
+    Loader {
+        anchors.fill: parent
+        active: item.hovered && !mouse.pressed && !item.renaming && item.nameLabel !== null && item.nameLabel.truncated
+        sourceComponent: UI.Tooltip {
+            text: item.name
+            visible: true
         }
     }
 

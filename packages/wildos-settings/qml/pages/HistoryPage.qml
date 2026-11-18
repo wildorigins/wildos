@@ -19,8 +19,8 @@ PageScroll {
 
     readonly property var periodStart: period === "today" ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
         : new Date(now.getTime() - (period === "week" ? 7 : 30) * 86400000)
-    readonly property string periodWords: period === "today" ? "today" : period === "week" ? "this week" : "in the last 30 days"
-    readonly property string periodSpan: period === "today" ? "today" : period === "week" ? "in the last 7 days" : "in the last 30 days"
+    readonly property string periodWords: period === "today" ? qsTr("today") : period === "week" ? qsTr("this week") : qsTr("in the last 30 days")
+    readonly property string periodSpan: period === "today" ? qsTr("today") : period === "week" ? qsTr("in the last 7 days") : qsTr("in the last 30 days")
 
     // Every event in the period, with its words.
     readonly property var inPeriod: History.events.filter(e => e.when >= periodStart).map(e => ({ event: e, words: HistoryWords.describe(e, History.events) }))
@@ -37,7 +37,7 @@ PageScroll {
         const list = shown.slice(0, limit);
         for (let i = 0; i < list.length; ++i) {
             const day = Format.day(list[i].event.when);
-            const label = day === "today" ? "Today" : day === "yesterday" ? "Yesterday" : day;
+            const label = day === "today" ? qsTr("Today") : day === "yesterday" ? qsTr("Yesterday") : day;
             if (out.length === 0 || out[out.length - 1].label !== label) {
                 out.push({ label: label, rows: [] });
             }
@@ -48,30 +48,30 @@ PageScroll {
 
     function emptyText() {
         if (page.filter === "problems") {
-            return "No problems " + page.periodSpan + ".";
+            return qsTr("No problems %1.").arg(page.periodSpan);
         }
         if (page.filter === "security") {
-            return "Nothing to do with security " + page.periodSpan + ".";
+            return qsTr("Nothing to do with security %1.").arg(page.periodSpan);
         }
         if (page.filter === "updates") {
-            return "No updates or restore points " + page.periodSpan + ".";
+            return qsTr("No updates or restore points %1.").arg(page.periodSpan);
         }
         if (page.filter === "camera") {
-            return "No app used the camera or microphone " + page.periodSpan + ".";
+            return qsTr("No app used the camera or microphone %1.").arg(page.periodSpan);
         }
         if (page.filter === "apps") {
-            return "No apps installed, removed or closed unexpectedly " + page.periodSpan + ".";
+            return qsTr("No apps installed, removed or closed unexpectedly %1.").arg(page.periodSpan);
         }
-        return "Nothing has happened on this PC " + page.periodSpan + ".";
+        return qsTr("Nothing has happened on this PC %1.").arg(page.periodSpan);
     }
 
     function filterName() {
-        return ({ all: "Everything", problems: "Problems", security: "Security", updates: "Updates", apps: "Apps", camera: "Camera and microphone" })[page.filter];
+        return ({ all: qsTr("Everything"), problems: qsTr("Problems"), security: qsTr("Security"), updates: qsTr("Updates"), apps: qsTr("Apps"), camera: qsTr("Camera and microphone") })[page.filter];
     }
 
     function exportText() {
-        const head = "Wild OS history: " + filterName() + ", " + page.periodSpan + "\n"
-            + "Saved " + Format.longDate(new Date()) + " at " + Format.time(new Date()) + " from Settings > System > History\n";
+        const head = qsTr("Wild OS history: %1, %2").arg(filterName()).arg(page.periodSpan) + "\n"
+            + qsTr("Saved %1 at %2 from Settings > System > History").arg(Format.longDate(new Date())).arg(Format.time(new Date())) + "\n";
         const body = page.shown.map(x => HistoryWords.fullText(x.event, History.events)).join("\n----------------------------------------\n\n");
         return head + "\n" + (body.length > 0 ? body : emptyText() + "\n");
     }
@@ -149,9 +149,10 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: page.unreadable ? "History can't be shown"
-                            : page.problems > 0 ? Format.plural(page.problems, "thing", "things") + " worth a look " + page.periodWords
-                            : "Nothing needs a look " + page.periodWords
+                        text: page.unreadable ? qsTr("History can't be shown")
+                            : page.problems === 1 ? qsTr("1 thing worth a look %1").arg(page.periodWords)
+                            : page.problems > 0 ? qsTr("%1 things worth a look %2").arg(page.problems).arg(page.periodWords)
+                            : qsTr("Nothing needs a look %1").arg(page.periodWords)
                         size: 16.5
                         font.weight: UI.Style.weightBold
                         wrapMode: Text.Wrap
@@ -159,9 +160,9 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: page.unreadable ? History.problemDetail + " Restarting the PC usually fixes this."
-                            : page.problems > 0 ? "Everything else went as it should. Choose Problems to see only those."
-                            : "Everything went as it should."
+                        text: page.unreadable ? qsTr("%1 Restarting the PC usually fixes this.").arg(History.problemDetail)
+                            : page.problems > 0 ? qsTr("Everything else went as it should. Choose Problems to see only those.")
+                            : qsTr("Everything went as it should.")
                         size: 13
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
@@ -170,10 +171,10 @@ PageScroll {
 
                 UI.Button {
                     implicitHeight: 32
-                    text: "Report a problem"
+                    text: qsTr("Report a problem")
                     onClicked: {
                         if (!History.openReport()) {
-                            notice.show("Report a problem isn't installed", "Install it from the Store to send a report.", true);
+                            notice.show(qsTr("Report a problem isn't installed"), qsTr("Install it from the Store to send a report."), true);
                         }
                     }
                 }
@@ -186,8 +187,8 @@ PageScroll {
 
             Segmented {
                 enabled: !page.unreadable
-                options: [{ value: "all", text: "Everything" }, { value: "problems", text: "Problems" }, { value: "security", text: "Security" },
-                    { value: "updates", text: "Updates" }, { value: "apps", text: "Apps" }]
+                options: [{ value: "all", text: qsTr("Everything") }, { value: "problems", text: qsTr("Problems") }, { value: "security", text: qsTr("Security") },
+                    { value: "updates", text: qsTr("Updates") }, { value: "apps", text: qsTr("Apps") }]
                 value: page.filter
                 onPicked: v => {
                     page.filter = v;
@@ -202,8 +203,8 @@ PageScroll {
             UI.ComboBox {
                 Layout.preferredWidth: 150
                 enabled: !page.unreadable
-                Accessible.name: "Period"
-                model: [{ value: "today", text: "Today" }, { value: "week", text: "Last 7 days" }, { value: "month", text: "Last 30 days" }]
+                Accessible.name: qsTr("Period")
+                model: [{ value: "today", text: qsTr("Today") }, { value: "week", text: qsTr("Last 7 days") }, { value: "month", text: qsTr("Last 30 days") }]
                 currentIndex: model.findIndex(o => o.value === page.period)
                 onActivated: index => {
                     page.period = model[index].value;
@@ -227,7 +228,7 @@ PageScroll {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Some of the latest events may be missing. " + History.problemDetail
+                text: qsTr("Some of the latest events may be missing. %1").arg(History.problemDetail)
                 size: 12.5
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
@@ -279,8 +280,8 @@ PageScroll {
                                 hoverEnabled: true
                                 focusPolicy: Qt.StrongFocus
                                 Accessible.role: Accessible.Button
-                                Accessible.name: modelData.words.title + ". " + modelData.words.detail
-                                Accessible.description: "Details"
+                                Accessible.name: qsTr("%1. %2").arg(modelData.words.title).arg(modelData.words.detail)
+                                Accessible.description: qsTr("Details")
                                 onClicked: details.openFor(modelData.event)
 
                                 background: Rectangle {
@@ -347,8 +348,8 @@ PageScroll {
 
                                     UI.LinkButton {
                                         Layout.rightMargin: 18
-                                        text: "Details"
-                                        Accessible.name: "Details of " + eventRow.modelData.words.title
+                                        text: qsTr("Details")
+                                        Accessible.name: qsTr("Details of %1").arg(eventRow.modelData.words.title)
                                         onClicked: details.openFor(eventRow.modelData.event)
                                     }
                                 }
@@ -375,7 +376,7 @@ PageScroll {
                 anchors.leftMargin: 18
                 anchors.rightMargin: 18
                 anchors.verticalCenter: parent.verticalCenter
-                text: History.loading && History.events.length === 0 ? "Looking at what happened…" : page.emptyText()
+                text: History.loading && History.events.length === 0 ? qsTr("Looking at what happened…") : page.emptyText()
                 size: 13
                 color: UI.Style.inkMuted
             }
@@ -383,7 +384,7 @@ PageScroll {
 
         UI.LinkButton {
             visible: page.shown.length > page.limit
-            text: "Show " + Math.min(120, page.shown.length - page.limit) + " more"
+            text: qsTr("Show %1 more").arg(Math.min(120, page.shown.length - page.limit))
             onClicked: page.limit += 120
         }
 
@@ -400,7 +401,7 @@ PageScroll {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Kept on this PC for 30 days, then deleted. Nothing is sent anywhere."
+                text: qsTr("Kept on this PC for 30 days, then deleted. Nothing is sent anywhere.")
                 size: 12.5
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
@@ -408,7 +409,7 @@ PageScroll {
             }
 
             UI.LinkButton {
-                text: "Save as a file"
+                text: qsTr("Save as a file")
                 visible: !page.unreadable
                 onClicked: {
                     saveDialog.selectedFile = History.defaultSaveFile();
@@ -430,22 +431,22 @@ PageScroll {
 
     HistoryDetailDialog {
         id: details
-        onFailed: message => notice.show("Report a problem couldn't open", message, true)
+        onFailed: message => notice.show(qsTr("Report a problem couldn't open"), message, true)
     }
 
     FileDialog {
         id: saveDialog
-        title: "Save history as a file"
+        title: qsTr("Save history as a file")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "txt"
-        nameFilters: ["Text files (*.txt)"]
+        nameFilters: [qsTr("Text files (*.txt)")]
         onAccepted: {
             if (History.saveTo(selectedFile, page.exportText())) {
                 const parts = decodeURIComponent(selectedFile.toString()).split("/");
-                notice.show("History saved", Format.plural(page.shown.length, "event was", "events were") + " saved as " + parts[parts.length - 1]
-                    + ", in " + parts[parts.length - 2] + ".", false);
+                notice.show(qsTr("History saved"), page.shown.length === 1 ? qsTr("1 event was saved as %1, in %2.").arg(parts[parts.length - 1]).arg(parts[parts.length - 2])
+                    : qsTr("%1 events were saved as %2, in %3.").arg(page.shown.length).arg(parts[parts.length - 1]).arg(parts[parts.length - 2]), false);
             } else {
-                notice.show("History wasn't saved", "That folder can't be written to. Choose another one.", true);
+                notice.show(qsTr("History wasn't saved"), qsTr("That folder can't be written to. Choose another one."), true);
             }
         }
     }

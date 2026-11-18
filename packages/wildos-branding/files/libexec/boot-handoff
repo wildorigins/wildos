@@ -2,10 +2,13 @@
 # Ends the boot screen. Runs as plymouth-quit.service in place of a plain
 # "plymouth quit".
 #
-# When the sign-in screen is about to start, Plymouth quits with
-# --retain-splash: its last frame (always the same frame of its loading loop)
-# stays on screen until the sign-in screen draws the same frame and plays the
-# rest of the start-up animation. A marker in /run tells it to, for one
+# Plymouth keeps playing the start-up animation's wait until it quits, and
+# the screen is black for a moment while KWin takes the display over. The
+# sign-in screen or the session splash then carries the same wait on, the W
+# in the same place and at the same size, and plays the one finish into the
+# lock screen or desktop (sddm/wildos/components/BootHandoff.qml).
+#
+# A marker in /run tells those screens to carry the animation on, for one
 # minute; without one, a sign-in screen after signing out opens straight on
 # its controls. When the system signs in by itself the session splash plays
 # the animation instead, so it gets its own marker.
@@ -41,13 +44,45 @@ install -m 0644 /usr/share/icons/hicolor/16x16/apps/wildos.png "$marker" 2>/dev/
 # where the W landed after gliding out of the unlock screen, so the end of the
 # animation has to start there too. Wild OS always unlocks with a password.
 unlocked=
-if [ -n "$marker" ] && dmsetup ls --target crypt 2>/dev/null | grep -q .; then
+if [ -n "$marker" ] && grep -qs "^CRYPT-" /sys/block/dm-*/dm/uuid; then
     unlocked=/run/wildos/boot-handoff-unlocked.png
     install -m 0644 /usr/share/icons/hicolor/16x16/apps/wildos.png "$unlocked" 2>/dev/null || unlocked=
 fi
 
+# The screen's size in real pixels, as Plymouth drew on it, for the next
+# screens to lay the W out in the same pixels. Qt there knows only the
+# desktop's scaling rounded up to a whole number (3 for 225%), which put the
+# W at three quarters of its size. Read back as the size of an SVG image.
+panel=
+if [ -n "$marker" ]; then
+    for status in /sys/class/drm/card*-*/status; do
+        [ "$(cat "$status" 2>/dev/null)" = connected ] || continue
+        mode=$(head -n 1 "${status%/status}/modes" 2>/dev/null)
+        case "$mode" in
+            [0-9]*x[0-9]*) ;;
+            *) continue ;;
+        esac
+        panel=/run/wildos/boot-handoff-panel.svg
+        printf '<svg xmlns="http://www.w3.org/2000/svg" width="%s" height="%s"/>\n' \
+            "${mode%%x*}" "${mode#*x}" > "$panel"
+        chmod 0644 "$panel"
+        break
+    done
+fi
+
+# The animation's opening (0.9 s) always plays in full: on a start fast
+# enough to get here sooner, the finish follows it instead of cutting it off.
+# Plymouth's age stands in for the opening's, which starts a little later.
+pid=$(pidof -s plymouthd 2>/dev/null)
+if [ -n "$pid" ]; then
+    age=$(awk -v hz="$(getconf CLK_TCK)" 'NR == FNR { up = $1; next } { printf "%.2f\n", up - $22 / hz }' \
+        /proc/uptime "/proc/$pid/stat" 2>/dev/null)
+    wait=$(awk -v age="$age" 'BEGIN { if (age != "" && age < 1.0) printf "%.2f\n", 1.0 - age }')
+    [ -n "$wait" ] && sleep "$wait"
+fi
+
 [ -n "$marker" ] &&
     systemd-run --quiet --no-block --on-active=60 --timer-property=AccuracySec=1s \
-        --unit=wildos-boot-handoff-clear rm -f "$marker" $unlocked >/dev/null 2>&1
+        --unit=wildos-boot-handoff-clear rm -f "$marker" $unlocked $panel >/dev/null 2>&1
 
 exec plymouth quit --retain-splash

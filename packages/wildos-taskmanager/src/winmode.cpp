@@ -1,5 +1,6 @@
 #include "winmode.h"
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QFile>
@@ -83,30 +84,30 @@ QString appFor(const QList<App> &apps, const QString &program)
 QString stateText(const QString &vm)
 {
     if (vm == QLatin1String("running")) {
-        return QStringLiteral("Running");
+        return QCoreApplication::translate("WinMode", "Running");
     }
     if (vm == QLatin1String("paused") || vm == QLatin1String("pmsuspended")) {
-        return QStringLiteral("Paused");
+        return QCoreApplication::translate("WinMode", "Paused");
     }
     if (vm == QLatin1String("saved")) {
-        return QStringLiteral("Saved to disk");
+        return QCoreApplication::translate("WinMode", "Saved to disk");
     }
     if (vm.isEmpty()) {
-        return QStringLiteral("Not set up");
+        return QCoreApplication::translate("WinMode", "Not set up");
     }
-    return QStringLiteral("Off");
+    return QCoreApplication::translate("WinMode", "Off");
 }
 
 QString idleText(const QString &whenIdle, int seconds)
 {
-    const QString after = seconds % 60 == 0 ? (seconds == 60 ? QStringLiteral("1 minute") : QStringLiteral("%1 minutes").arg(seconds / 60))
-                                            : QStringLiteral("%1 seconds").arg(seconds);
+    const QString after = seconds % 60 == 0 ? (seconds == 60 ? QCoreApplication::translate("WinMode", "1 minute") : QCoreApplication::translate("WinMode", "%1 minutes").arg(seconds / 60))
+                                            : QCoreApplication::translate("WinMode", "%1 seconds").arg(seconds);
     if (whenIdle == QLatin1String("keep")) {
-        return QStringLiteral("Paused after ") + after;
+        return QCoreApplication::translate("WinMode", "Paused after %1").arg(after);
     }
     if (whenIdle == QLatin1String("save")) {
-        return QStringLiteral("Saved to disk after ") + after;
+        return QCoreApplication::translate("WinMode", "Saved to disk after %1").arg(after);
     }
-    return QStringLiteral("Paused or saved after ") + after;
+    return QCoreApplication::translate("WinMode", "Paused or saved after %1").arg(after);
 }
 }

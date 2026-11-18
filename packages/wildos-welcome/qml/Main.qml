@@ -30,9 +30,9 @@ Window {
     property bool windowsChosen: false
     property string windowsError
 
-    readonly property var stepNames: (setupMode ? ["Region and language", "Wi-Fi", "Your account"] : [])
-        .concat(["Make it feel like home", "Bring your files across", "Your privacy"])
-        .concat(windowsStep ? ["Your Windows programs"] : [])
+    readonly property var stepNames: (setupMode ? [qsTr("Region and language"), qsTr("Wi-Fi"), qsTr("Your account")] : [])
+        .concat([qsTr("Make it feel like home"), qsTr("Bring your files across"), qsTr("Your privacy")])
+        .concat(windowsStep ? [qsTr("Your Windows programs")] : [])
 
     width: 1440
     height: 900
@@ -40,7 +40,7 @@ Window {
     visibility: windowed ? Window.Windowed : Window.FullScreen
     flags: windowed ? Qt.Window : (Qt.Window | Qt.FramelessWindowHint)
     color: UI.Style.lakeNavy
-    title: "Welcome to Wild OS"
+    title: qsTr("Welcome to Wild OS")
 
     // Nothing may close the setup session but finishing it: the session
     // ends with this window, and SDDM would only start it again.
@@ -79,7 +79,7 @@ Window {
                 });
             } catch (error) {
                 console.warn("Finishing setup failed:", error);
-                FirstBoot.fail("Wild OS could not finish setting up. Restart the computer to try again.");
+                FirstBoot.fail(qsTr("Wild OS could not finish setting up. Restart the computer to try again."));
             }
         } else {
             if (windows.length > 0) {
@@ -98,7 +98,7 @@ Window {
     }
 
     function back() {
-        if (stepNames[step - 1] === "Your Windows programs" && windowsPage === 2) {
+        if (stepNames[step - 1] === qsTr("Your Windows programs") && windowsPage === 2) {
             windowsPage = 1;
         } else if (step > 1) {
             step -= setupMode && step === 3 && skipWifi ? 2 : 1;
@@ -216,7 +216,7 @@ Window {
             width: Metrics.sidebarWidth
             steps: root.stepNames
             current: root.step
-            showNote: root.stepNames[root.step - 1] === "Make it feel like home"
+            showNote: root.stepNames[root.step - 1] === qsTr("Make it feel like home")
             canLeave: !root.setupMode
             onLater: Setup.quit()
         }

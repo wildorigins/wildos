@@ -16,12 +16,12 @@ PageScroll {
 
     function whenText(date) {
         const day = Format.day(date);
-        const name = day === "today" ? "Today" : day === "yesterday" ? "Yesterday" : day.charAt(0).toUpperCase() + day.slice(1);
-        return name + ", " + Format.time(date);
+        const name = day === "today" ? qsTr("Today") : day === "yesterday" ? qsTr("Yesterday") : day.charAt(0).toUpperCase() + day.slice(1);
+        return qsTr("%1, %2").arg(name).arg(Format.time(date));
     }
 
     function pointDetail(p) {
-        const what = p.summary.length > 0 ? p.summary : p.kind === "manual" ? "Made by you" : "";
+        const what = p.summary.length > 0 ? p.summary : p.kind === "manual" ? qsTr("Made by you") : "";
         return what.length > 0 ? page.whenText(p.when) + " · " + what : page.whenText(p.when);
     }
 
@@ -34,7 +34,7 @@ PageScroll {
         target: Recovery
         function onBusyChanged() {
             if (!Recovery.busy && Recovery.error.length > 0 && !goBack.opened && !resetDialog.opened) {
-                notice.show("Nothing was changed", Recovery.error, true);
+                notice.show(qsTr("Nothing was changed"), Recovery.error, true);
             }
         }
         function onFinished(what) {
@@ -73,7 +73,7 @@ PageScroll {
                     name: "history"
                     size: 26
                     strokeWidth: 1.9
-                    color: Recovery.enabled ? "#5fd38d" : UI.Style.warning
+                    color: Recovery.enabled ? UI.Style.success : UI.Style.warning
                 }
             }
 
@@ -83,8 +83,8 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: !Recovery.available ? "Restore points aren't available"
-                        : Recovery.enabled ? "Restore points are on" : "Restore points are off"
+                    text: !Recovery.available ? qsTr("Restore points aren't available")
+                        : Recovery.enabled ? qsTr("Restore points are on") : qsTr("Restore points are off")
                     size: 17
                     font.weight: UI.Style.weightSemiBold
                     wrapMode: Text.Wrap
@@ -92,9 +92,9 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: !Recovery.available ? "This disk's layout can't keep restore points."
-                        : Recovery.enabled ? "Saved before every update and driver install. Your own files are never touched."
-                        : "Nothing is saved before updates. Turn them on under Change."
+                    text: !Recovery.available ? qsTr("This disk's layout can't keep restore points.")
+                        : Recovery.enabled ? qsTr("Saved before every update and driver install. Your own files are never touched.")
+                        : qsTr("Nothing is saved before updates. Turn them on under Change.")
                     size: 13
                     color: UI.Style.inkMuted
                     wrapMode: Text.Wrap
@@ -104,8 +104,8 @@ PageScroll {
             UI.Button {
                 visible: Recovery.available
                 iconName: "plus"
-                text: Recovery.busy && Recovery.busyText === "Making a restore point" ? "Making a restore point" : "Create a restore point"
-                busy: Recovery.busy && Recovery.busyText === "Making a restore point"
+                text: Recovery.busy && Recovery.busyText === qsTranslate("Recovery", "Making a restore point") ? qsTr("Making a restore point") : qsTr("Create a restore point")
+                busy: Recovery.busy && Recovery.busyText === qsTranslate("Recovery", "Making a restore point")
                 enabled: !Recovery.busy
                 onClicked: Recovery.create()
             }
@@ -118,7 +118,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Restore points"
+            text: qsTr("Restore points")
         }
 
         UI.Card {
@@ -148,7 +148,7 @@ PageScroll {
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
                             implicitHeight: 32
-                            text: "Go back"
+                            text: qsTr("Go back")
                             enabled: !Recovery.busy && !Recovery.restartPending
                             onClicked: goBack.openFor(row.modelData.id)
                         }
@@ -157,19 +157,19 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: Recovery.points.length === 0
-                    title: "No restore points yet"
-                    description: "The first one is made now, and then before every update."
+                    title: qsTr("No restore points yet")
+                    description: qsTr("The first one is made now, and then before every update.")
                 }
 
                 UI.SettingRow {
                     visible: Recovery.restartPending
-                    title: "Restart to finish going back"
-                    description: "The earlier version is ready. It takes over at the next start."
+                    title: qsTr("Restart to finish going back")
+                    description: qsTr("The earlier version is ready. It takes over at the next start.")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         kind: "primary"
-                        text: "Restart now"
+                        text: qsTr("Restart now")
                         onClicked: Recovery.restart()
                     }
                 }
@@ -194,7 +194,7 @@ PageScroll {
 
                         UI.Label {
                             Layout.fillWidth: true
-                            text: "Keeps the last " + Recovery.keep + ", using up to " + Recovery.maxGb + " GB. The oldest go first."
+                            text: qsTr("Keeps the last %1, using up to %2 GB. The oldest go first.").arg(Recovery.keep).arg(Recovery.maxGb)
                             size: 12.5
                             color: UI.Style.inkMuted
                             elide: Text.ElideRight
@@ -202,12 +202,12 @@ PageScroll {
 
                         UI.LinkButton {
                             visible: Recovery.points.length > 3
-                            text: page.showAll ? "Show fewer" : "See all " + Recovery.points.length
+                            text: page.showAll ? qsTr("Show fewer") : qsTr("See all %1").arg(Recovery.points.length)
                             onClicked: page.showAll = !page.showAll
                         }
 
                         UI.LinkButton {
-                            text: "Change"
+                            text: qsTr("Change")
                             onClicked: limits.start()
                         }
                     }
@@ -221,7 +221,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "If something goes wrong"
+            text: qsTr("If something goes wrong")
         }
 
         UI.Card {
@@ -240,13 +240,13 @@ PageScroll {
                         strokeWidth: 1.8
                         color: UI.Style.ink
                     }
-                    title: "Reset Wild OS"
-                    description: "Back to how it was when installed. Keep your files, or remove everything."
+                    title: qsTr("Reset Wild OS")
+                    description: qsTr("Back to how it was when installed. Keep your files, or remove everything.")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         implicitHeight: 32
-                        text: "Reset"
+                        text: qsTr("Reset")
                         enabled: !Recovery.busy
                         onClicked: resetDialog.start()
                     }
@@ -261,15 +261,15 @@ PageScroll {
                         strokeWidth: 1.8
                         color: UI.Style.ink
                     }
-                    title: "Start-up options"
+                    title: qsTr("Start-up options")
                     description: Recovery.startupRecovery
-                        ? "Earlier versions, safe mode and repair tools. Or hold Shift while the PC starts."
-                        : "Earlier versions, safe mode and repair tools. Available once the copy of Wild OS is on this PC."
+                        ? qsTr("Earlier versions, safe mode and repair tools. Or hold Shift while the PC starts.")
+                        : qsTr("Earlier versions, safe mode and repair tools. Available once the copy of Wild OS is on this PC.")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         implicitHeight: 32
-                        text: "Restart now"
+                        text: qsTr("Restart now")
                         enabled: Recovery.startupRecovery && !Recovery.busy
                         onClicked: Recovery.restartToRecovery()
                     }
@@ -284,14 +284,15 @@ PageScroll {
                         strokeWidth: 1.8
                         color: UI.Style.ink
                     }
-                    title: "Back up your files"
-                    description: "Restore points cover the system only. Backup keeps your files"
-                        + (Format.isValid(Recovery.lastBackup) ? ", last done " + Format.day(Recovery.lastBackup) + " at " + Format.time(Recovery.lastBackup) + "." : ".")
+                    title: qsTr("Back up your files")
+                    description: Format.isValid(Recovery.lastBackup)
+                        ? qsTr("Restore points cover the system only. Backup keeps your files, last done %1 at %2.").arg(Format.dayText(Recovery.lastBackup)).arg(Format.time(Recovery.lastBackup))
+                        : qsTr("Restore points cover the system only. Backup keeps your files.")
                     enabled: Recovery.backupInstalled
 
                     UI.LinkButton {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Open Backup"
+                        text: qsTr("Open Backup")
                         enabled: Recovery.backupInstalled
                         onClicked: Recovery.openBackup()
                     }
@@ -313,14 +314,14 @@ PageScroll {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Restore points stay on this PC, inside the encrypted disk."
+            text: qsTr("Restore points stay on this PC, inside the encrypted disk.")
             size: 12.5
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
         }
 
         UI.LinkButton {
-            text: "Learn more"
+            text: qsTr("Learn more")
             size: 13
             onClicked: Qt.openUrlExternally("https://help.wildos.io/troubleshooting/restore-points/")
         }
@@ -349,19 +350,20 @@ PageScroll {
             open();
         }
 
-        title: "Restore points"
+        title: qsTr("Restore points")
         dialogWidth: 480
 
         UI.SettingRow {
             Layout.fillWidth: true
             Layout.leftMargin: -18
             Layout.rightMargin: -18
-            title: "Take restore points"
-            description: "Before every update and driver install"
+            title: qsTr("Take restore points")
+            description: qsTr("Before every update and driver install")
 
             UI.Toggle {
                 anchors.verticalCenter: parent.verticalCenter
                 checked: limits.on
+                Accessible.name: qsTr("Take restore points")
                 onToggled: limits.on = checked
             }
         }
@@ -370,12 +372,12 @@ PageScroll {
             Layout.fillWidth: true
             Layout.leftMargin: -18
             Layout.rightMargin: -18
-            title: "How many to keep"
+            title: qsTr("How many to keep")
             enabled: limits.on
 
             UI.ComboBox {
                 anchors.verticalCenter: parent.verticalCenter
-                Accessible.name: "How many to keep"
+                Accessible.name: qsTr("How many to keep")
                 model: [3, 5, 10].map(n => ({ value: n, text: String(n) }))
                 currentIndex: [3, 5, 10].indexOf(limits.keep)
                 onActivated: index => limits.keep = [3, 5, 10][index]
@@ -386,13 +388,13 @@ PageScroll {
             Layout.fillWidth: true
             Layout.leftMargin: -18
             Layout.rightMargin: -18
-            title: "Space they can use"
+            title: qsTr("Space they can use")
             enabled: limits.on
 
             UI.ComboBox {
                 anchors.verticalCenter: parent.verticalCenter
-                Accessible.name: "Space they can use"
-                model: [10, 20, 40].map(n => ({ value: n, text: n + " GB" }))
+                Accessible.name: qsTr("Space they can use")
+                model: [10, 20, 40].map(n => ({ value: n, text: qsTr("%1 GB").arg(n) }))
                 currentIndex: [10, 20, 40].indexOf(limits.gb)
                 onActivated: index => limits.gb = [10, 20, 40][index]
             }
@@ -400,7 +402,7 @@ PageScroll {
 
         UI.Label {
             Layout.fillWidth: true
-            text: Recovery.usedBytes > 0 ? "Using " + (Recovery.usedBytes / 1073741824).toFixed(1) + " GB now. The oldest go first when either limit is reached." : "The oldest go first when either limit is reached."
+            text: Recovery.usedBytes > 0 ? qsTr("Using %1 GB now. The oldest go first when either limit is reached.").arg((Recovery.usedBytes / 1073741824).toFixed(1)) : qsTr("The oldest go first when either limit is reached.")
             size: 12.5
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -409,13 +411,13 @@ PageScroll {
         buttons: [
             UI.Button {
                 implicitHeight: 32
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: limits.close()
             },
             UI.Button {
                 implicitHeight: 32
                 kind: "primary"
-                text: "Save"
+                text: qsTr("Save")
                 busy: Recovery.busy
                 onClicked: {
                     Recovery.setLimits(limits.keep, limits.gb, limits.on);

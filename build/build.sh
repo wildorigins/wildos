@@ -161,7 +161,7 @@ wildos_suffix() {
 # against the repository's SHA-256 sums; anything not published is built.
 if [ -n "${WILDOS_PACKAGES_FROM:-}" ]; then
     log "Taking published Wild OS packages from $WILDOS_PACKAGES_FROM"
-    # The builder has Python, not curl.
+    # As tools/fetch-rebuilds.sh does: the builder has Python, not curl.
     fetch() {
         python3 -I -c 'import sys, urllib.request, shutil
 with urllib.request.urlopen(sys.argv[1], timeout=120) as r, open(sys.argv[2], "wb") as f:
@@ -435,10 +435,10 @@ done
     fi
     cp "$cached"/*.deb "$WORK/repo/"
 )
-# LibreOffice, which Write and Tables are, with the patches from
+# LibreOffice, which Write, Tables and Slides are, with the patches from
 # build/patches/libreoffice: the Wild OS ribbon, style cards, Tables' formula
-# bar, sheet tabs and headings, Write and Tables' status bars, and no empty
-# window while a document loads. The patched code is mostly in libmergedlo.so in libreoffice-core,
+# bar, sheet tabs and headings, the three apps' status bars, Slides' presenter
+# view, and no empty window while a document loads. The patched code is mostly in libmergedlo.so in libreoffice-core,
 # and every LibreOffice package built for the architecture requires that
 # exact version of it, so all of them are rebuilt +wildosN; the build-arch
 # half of Debian's build is enough for those (no help, no language packs).
@@ -995,10 +995,26 @@ repack_ship usr/bin/emerg-shutdown usr/bin/fm-shim-backend
 repack_close
 
 # sdwdate, the time sync, built sclockadj (moves the clock gradually) with
-# make and gcc in its postinst.
-repack_open sdwdate gcc libc6-dev
+# make and gcc in its postinst. It also took the place of every other time
+# service (time-daemon), which kept systemd-timesyncd from being installed
+# for the time server choice in Settings > Date and time. Only one of the
+# two ever runs: wildos-base's drop-ins start each by /etc/wildos/time-server.
+REPACK_REVISION=2 repack_open sdwdate gcc libc6-dev
 (
     cd "$REPACK/pkg"
+    [ "$(grep -cxE '(Provides|Conflicts): time-daemon' DEBIAN/control)" = 2 ] || repack_fail sdwdate
+    sed -i -E '/^(Provides|Conflicts): time-daemon$/d' DEBIAN/control
+    # Its units also kept systemd-timesyncd from ever starting.
+    block=usr/lib/systemd/system/systemd-timesyncd.service.d
+    [ -f "$block/40_sdwdate.conf" ] || repack_fail sdwdate
+    rm "$block/40_sdwdate.conf" && rmdir "$block"
+    sed -i "\|  $block/40_sdwdate.conf\$|d" DEBIAN/md5sums
+    for unit in usr/lib/systemd/system/sdwdate.service usr/lib/systemd/system/sdwdate-start-anondate-set-file-watcher.service; do
+        [ "$(grep -cxF 'Conflicts=systemd-timesyncd.service' "$unit")" = 1 ] || repack_fail sdwdate
+        sed -i '/^Conflicts=systemd-timesyncd.service$/d' "$unit"
+        sed -i "\|  $unit\$|d" DEBIAN/md5sums
+        md5sum "$unit" >> DEBIAN/md5sums
+    done
     start='       ## Build sclockadj program.'
     end='       popd >/dev/null'
     [ "$(grep -cxF "$start" DEBIAN/postinst)" = 1 ] && [ "$(grep -cxF "$end" DEBIAN/postinst)" = 1 ] || repack_fail sdwdate
@@ -1035,6 +1051,29 @@ for name in helper-scripts dist-general-cli; do
         | grep -vx "$REPACK/pkg/usr/bin/dummy-dependency" | grep -q . || repack_fail "$name"
     repack_close
 done
+# anon-apt-sources-list is where Debian's own packages come from, and
+# Kicksecure sends all of it through Tor: a few hundred kB a second, so a
+# large install (NVIDIA's driver, a Store app from Debian) took half an hour,
+# looked like a hang and kept every update waiting behind it. Wild OS
+# fetches them straight from the same servers, checked against Debian's
+# signatures as before. The Tor and onion entries stay in the file, switched
+# off, for anyone who wants them: set Enabled on those and off on these.
+REPACK_REVISION=1 repack_open anon-apt-sources-list
+(
+    cd "$REPACK/pkg"
+    sources=etc/apt/sources.list.d/debian.sources
+    marker='######## DISABLED BY DEFAULT SOURCES ########'
+    [ "$(grep -cxF "$marker" "$sources")" = 1 ] || repack_fail anon-apt-sources-list
+    [ "$(sed "/^$marker\$/q" "$sources" | grep -c '^URIs: tor+https://deb\.debian\.org/')" = 2 ] || repack_fail anon-apt-sources-list
+    sed -i "1,/^$marker\$/s|^URIs: tor+https://deb\.debian\.org/|URIs: https://deb.debian.org/|" "$sources"
+    ! sed "/^$marker\$/q" "$sources" | grep -q 'tor+' || repack_fail anon-apt-sources-list
+    if grep -q "  $sources\$" DEBIAN/md5sums; then
+        sed -i "\|  $sources\$|d" DEBIAN/md5sums
+        md5sum "$sources" >> DEBIAN/md5sums
+    fi
+)
+repack_close
+
 rm -rf "$KS_APT"
 (cd "$WORK/repo" && apt-ftparchive packages . > Packages)
 ls -1 "$WORK/repo"/*.deb

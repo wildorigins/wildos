@@ -14,7 +14,7 @@ Window {
 
     visible: false
     color: "transparent"
-    title: "Security options"
+    title: qsTr("Security options")
 
     Surface {
         id: surface
@@ -42,8 +42,10 @@ Window {
         model: Qt.application.screens
         delegate: Backdrop {
             required property var modelData
-            screen: modelData
+            required property int index
             dim: 0.5
+            // From the list itself (see PermissionPrompt.qml).
+            targetScreen: Qt.application.screens[index]
             open: Security.open && modelData.name !== window.screen.name
         }
     }

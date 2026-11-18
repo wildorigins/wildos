@@ -7,6 +7,8 @@ Build-Depends:
  cmake,
  qt6-base-dev,
  qt6-declarative-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
  libkf6kio-dev,
  libkf6config-dev,
  libkf6coreaddons-dev,
@@ -20,7 +22,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.11),
+ wildos-ui (>= 0.1.19),
  plasma-workspace (>= 4:6.3),
  kio6,
  qml6-module-qtquick,

@@ -10,7 +10,14 @@ PageScroll {
 
     property int revision: 0
     readonly property bool active: { revision; return System.config("kwinrc", "NightColor", "Active", false); }
-    readonly property int mode: { revision; return System.config("kwinrc", "NightColor", "Mode", 0); }
+    // KWin spells the schedule by name; older Wild OS wrote its number.
+    readonly property var modeNames: ["Automatic", "Location", "Times", "Constant"]
+    readonly property int mode: {
+        revision;
+        const stored = String(System.config("kwinrc", "NightColor", "Mode", ""));
+        const named = modeNames.indexOf(stored);
+        return named >= 0 ? named : (parseInt(stored) || 0);
+    }
     readonly property int temperature: { revision; return System.config("kwinrc", "NightColor", "NightTemperature", 4500); }
     readonly property string evening: { revision; return System.config("kwinrc", "NightColor", "EveningBeginFixed", "1800"); }
     readonly property string morning: { revision; return System.config("kwinrc", "NightColor", "MorningBeginFixed", "0600"); }
@@ -44,28 +51,28 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "moon"
-                title: "Night light"
-                description: "Shows warmer colours to help you sleep"
-                status: (page.active) ? "On" : "Off"
+                title: qsTr("Night light")
+                description: qsTr("Shows warmer colours to help you sleep")
+                status: (page.active) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: page.active
-                    Accessible.name: "Night light"
+                    Accessible.name: qsTr("Night light")
                     onToggled: page.set("Active", checked)
                 }
             }
 
             UI.SettingRow {
                 id: strengthRow
-                title: "Strength"
+                title: qsTr("Strength")
                 enabled: page.active
-                status: Math.round((page.neutral - page.temperature) / (page.neutral - page.warmest) * 100) + "%"
+                status: qsTr("%1%").arg(Math.round((page.neutral - page.temperature) / (page.neutral - page.warmest) * 100))
 
                 UI.Slider {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 240
-                    accessibleName: "Strength"
+                    accessibleName: qsTr("Strength")
                     enabled: page.active
                     from: 0
                     to: 100
@@ -75,34 +82,34 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Schedule night light"
-                description: page.mode === 3 ? "Warmer colours all the time"
-                    : page.mode === 2 ? "Between the hours you choose"
-                    : "From sunset to sunrise where you are"
+                title: qsTr("Schedule night light")
+                description: page.mode === 3 ? qsTr("Warmer colours all the time")
+                    : page.mode === 2 ? qsTr("Between the hours you choose")
+                    : qsTr("From sunset to sunrise where you are")
                 enabled: page.active
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Schedule night light"
+                    Accessible.name: qsTr("Schedule night light")
                     enabled: page.active
                     // Sunset needs to know where the computer is, which Wild OS
                     // only works out when location services are on.
-                    model: (System.locationServices ? [{ value: 0, text: "Sunset to sunrise" }] : [])
-                        .concat([{ value: 2, text: "Set hours" }, { value: 3, text: "All the time" }])
+                    model: (System.locationServices ? [{ value: 0, text: qsTr("Sunset to sunrise") }] : [])
+                        .concat([{ value: 2, text: qsTr("Set hours") }, { value: 3, text: qsTr("All the time") }])
                     readonly property var choice: page.mode === 1 ? 0 : page.mode
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
-                    onActivated: index => page.set("Mode", model[index].value)
+                    onActivated: index => page.set("Mode", page.modeNames[model[index].value])
                 }
             }
 
             UI.SettingRow {
                 visible: page.mode === 2
-                title: "Turn on"
+                title: qsTr("Turn on")
                 enabled: page.active
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Turn on"
+                    Accessible.name: qsTr("Turn on")
                     enabled: page.active
                     model: page.hours()
                     readonly property var choice: page.evening
@@ -113,12 +120,12 @@ PageScroll {
 
             UI.SettingRow {
                 visible: page.mode === 2
-                title: "Turn off"
+                title: qsTr("Turn off")
                 enabled: page.active
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Turn off"
+                    Accessible.name: qsTr("Turn off")
                     enabled: page.active
                     model: page.hours()
                     readonly property var choice: page.morning

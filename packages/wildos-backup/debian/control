@@ -13,6 +13,8 @@ Build-Depends:
  libkf6dbusaddons-dev,
  libkf6notifications-dev,
  libkf6windowsystem-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -24,7 +26,7 @@ Depends:
  restic,
  udisks2,
  pkexec,
- wildos-ui (>= 0.1.12),
+ wildos-ui (>= 0.1.16),
  qml6-module-qtcore,
  qml6-module-qtquick,
  qml6-module-qtquick-controls,

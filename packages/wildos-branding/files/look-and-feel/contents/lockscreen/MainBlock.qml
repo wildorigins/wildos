@@ -98,8 +98,10 @@ FocusScope {
             anchors.horizontalCenter: parent.horizontalCenter
             backdrop: block.backdrop
             focus: true
-            placeholder: "Password"
-            submitLabel: "Unlock"
+            // The PIN from Settings > Accounts > Sign-in options goes in
+            // the same box. An older WildOS.UI cannot say whether one is set.
+            placeholder: UI.System.pinSet !== undefined && UI.System.pinSet() ? qsTr("Password or PIN") : qsTr("Password")
+            submitLabel: qsTr("Unlock")
             enabled: !authenticator.graceLocked
             // The field is focused even while the prompt is faded out, so it
             // can wake the screen; only treat Enter as an unlock when visible.
@@ -130,19 +132,19 @@ FocusScope {
             Notice {
                 id: hintNotice
                 shown: block.notificationMessage.length > 0 && block.passwordHint.length > 0
-                text: "Hint: " + block.passwordHint
+                text: qsTr("Hint: %1").arg(block.passwordHint)
                 muted: true
             }
             Notice {
                 id: fingerprintNotice
                 shown: block.fingerprintReady && !messageNotice.shown && pill.text.length === 0
-                text: "Or touch the fingerprint reader"
+                text: qsTr("Or touch the fingerprint reader")
                 muted: true
             }
             Notice {
                 id: capsNotice
                 shown: block.capsLockOn
-                text: "Caps Lock is on"
+                text: qsTr("Caps Lock is on")
                 iconName: "caps-lock"
                 muted: true
             }
@@ -153,7 +155,7 @@ FocusScope {
             visible: block.hasOptions
             kind: "text"
             textColor: UI.Style.inkOnWallpaper
-            text: block.optionsOpen ? "Hide sign-in options" : "Sign-in options"
+            text: block.optionsOpen ? qsTr("Hide sign-in options") : qsTr("Sign-in options")
             onClicked: block.optionsOpen = !block.optionsOpen
         }
 
@@ -168,7 +170,7 @@ FocusScope {
                 visible: block.canSwitchUser
                 backdrop: block.backdrop
                 iconName: "account"
-                label: "Switch user"
+                label: qsTr("Switch user")
                 onClicked: block.switchUserRequested()
             }
 
@@ -176,7 +178,7 @@ FocusScope {
                 visible: block.hasLayouts
                 backdrop: block.backdrop
                 iconName: "keyboard"
-                label: "Keyboard"
+                label: qsTr("Keyboard")
                 value: block.hasLayouts ? block.layoutSwitcher.layoutNames.longName : ""
                 choices: {
                     const layout = block.keyboardLayout;

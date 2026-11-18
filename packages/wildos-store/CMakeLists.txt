@@ -67,6 +67,23 @@ install(FILES data/curated.json DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos-stor
 install(FILES data/org.wildos.store.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 # Apps listed in the Wild OS section before they are installed need their
 # Wild OS theme icon to be here already (Ganger's package used to ship it).
-install(FILES data/icons/wildos-ganger.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/WildOS/scalable/apps)
+install(FILES data/icons/wildos-ganger.svg data/icons/wildos-cooler.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/WildOS/scalable/apps)
 install(FILES data/60wildos-store-icons DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/apt/apt.conf.d)
 install(FILES data/wildos-store-update.service data/wildos-store-update.timer DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user)
+
+# Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
+# WildOS.UI for the language chosen in Settings.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

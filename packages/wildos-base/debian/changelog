@@ -1,3 +1,56 @@
+wildos-base (0.1.16) trixie; urgency=medium
+
+  * The start-up menu has an entry for the start-up manager, which Space
+    held while the PC starts picks.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 16:00:00 +0000
+
+wildos-base (0.1.15) trixie; urgency=medium
+
+  * The Store can offer Wild OS apps that do not come with Wild OS, such
+    as Ganger. Nothing is installed until you choose it.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 14:00:00 +0000
+
+wildos-base (0.1.14) trixie; urgency=medium
+
+  * NVIDIA's driver downloads straight from Debian, not through Tor.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 18:30:00 +0000
+
+wildos-base (0.1.13) trixie; urgency=medium
+
+  * No firmware messages on the start-up screen: only emergencies reach
+    the screen during start-up. Every message is still in the journal.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 17:30:00 +0000
+
+wildos-base (0.1.12) trixie; urgency=medium
+
+  * No more firmware warning on screen at start-up on some PCs: the
+    setting that keeps file systems from pausing moved off the kernel's
+    command line into systemd's own settings.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 14:00:00 +0000
+
+wildos-base (0.1.11) trixie; urgency=medium
+
+  * Start-up reaches the desktop sooner. File systems no longer pause for
+    a second while systemd catches up with a dozen mounts at once, and
+    the LVM check, the virtual machine shared folder and the live mode
+    AppArmor fix only run where they have something to do.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 12:00:00 +0000
+
+wildos-base (0.1.10) trixie; urgency=medium
+
+  * A time server can set the clock: Settings > Time and language > Date
+    and time has a "Set the time from" choice. Through Tor stays the
+    default, so no time server sees this computer's address unless one is
+    chosen. Only one of the two ever runs.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 09:00:00 +0000
+
 wildos-base (0.1.9) trixie; urgency=medium
 
   * The guest session from Settings > Privacy and security > Advanced

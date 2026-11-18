@@ -19,7 +19,7 @@ UI.TextField {
     maximumLength: 64
     // Only once all 25 are in (29 with the dashes), not while typing.
     error: text.length >= 29 && !Setup.keyShapeValid(text)
-    Accessible.name: "Windows product key"
+    Accessible.name: qsTr("Windows product key")
     onEditingFinished: if (Setup.keyShapeValid(text)) text = Setup.normaliseKey(text)
 
     Keys.onDeletePressed: event => {

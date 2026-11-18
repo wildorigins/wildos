@@ -58,9 +58,17 @@ struct LocalInfo {
 
 namespace
 {
-const QString unreadableText = QStringLiteral("This file can't be read. It may be damaged or only partly downloaded.");
-const QString elsewhereText = QStringLiteral("It was probably made for Ubuntu or another system rather than Debian, which Wild OS is built on. "
-                                             "Look for the app in the Store, or for a Flatpak or Debian version where you got this file.");
+QString unreadableText()
+{
+    return QCoreApplication::translate("LocalPackage", "This file can't be read. It may be damaged or only partly downloaded.");
+}
+
+QString elsewhereText()
+{
+    return QCoreApplication::translate("LocalPackage",
+                                       "It was probably made for Ubuntu or another system rather than Debian, which Wild OS is built on. "
+                                       "Look for the app in the Store, or for a Flatpak or Debian version where you got this file.");
+}
 
 QString run(const QString &program, const QStringList &arguments, int *exitCode = nullptr)
 {
@@ -108,23 +116,23 @@ QString kindOf(const QString &path)
 QString archLabel(const QString &arch)
 {
     if (arch == QLatin1String("amd64") || arch == QLatin1String("x86_64")) {
-        return QStringLiteral("64-bit Intel and AMD computers");
+        return QCoreApplication::translate("LocalPackage", "64-bit Intel and AMD computers");
     }
     if (arch == QLatin1String("i386") || arch == QLatin1String("i686")) {
-        return QStringLiteral("older 32-bit computers");
+        return QCoreApplication::translate("LocalPackage", "older 32-bit computers");
     }
     if (arch == QLatin1String("arm64") || arch == QLatin1String("aarch64")) {
-        return QStringLiteral("64-bit ARM computers");
+        return QCoreApplication::translate("LocalPackage", "64-bit ARM computers");
     }
     if (arch.startsWith(QLatin1String("arm"))) {
-        return QStringLiteral("32-bit ARM computers");
+        return QCoreApplication::translate("LocalPackage", "32-bit ARM computers");
     }
-    return QStringLiteral("another kind of computer");
+    return QCoreApplication::translate("LocalPackage", "another kind of computer");
 }
 
 QString archProblem(const QString &arch, const QString &native)
 {
-    return QStringLiteral("This package is made for %1 (%2), so it can't run on this computer. Look for the %3 version where you got it.")
+    return QCoreApplication::translate("LocalPackage", "This package is made for %1 (%2), so it can't run on this computer. Look for the %3 version where you got it.")
         .arg(archLabel(arch), arch, native);
 }
 
@@ -133,12 +141,12 @@ QString listText(QStringList items)
     if (items.size() > 4) {
         const int more = int(items.size()) - 3;
         items = items.mid(0, 3);
-        items << QStringLiteral("%1 more").arg(more);
+        items << QCoreApplication::translate("LocalPackage", "%1 more").arg(more);
     }
     if (items.size() < 2) {
         return items.value(0);
     }
-    return QStringList(items.mid(0, items.size() - 1)).join(QStringLiteral(", ")) + QStringLiteral(" and ") + items.constLast();
+    return QCoreApplication::translate("LocalPackage", "%1 and %2").arg(QStringList(items.mid(0, items.size() - 1)).join(QStringLiteral(", ")), items.constLast());
 }
 
 // PackageKit passes apt's own explanation on: "foo : Depends: libbar (>=
@@ -155,9 +163,9 @@ QString dependsProblem(const QString &details)
         }
     }
     if (missing.isEmpty()) {
-        return QStringLiteral("It needs parts Wild OS doesn't have. ") + elsewhereText;
+        return QCoreApplication::translate("LocalPackage", "It needs parts Wild OS doesn't have. %1").arg(elsewhereText());
     }
-    return QStringLiteral("It needs %1, which Wild OS doesn't have. ").arg(listText(missing)) + elsewhereText;
+    return QCoreApplication::translate("LocalPackage", "It needs %1, which Wild OS doesn't have. %2").arg(listText(missing), elsewhereText());
 }
 
 QString debError(Transaction::Error error, const QString &details)
@@ -166,15 +174,15 @@ QString debError(Transaction::Error error, const QString &details)
     case Transaction::ErrorDepResolutionFailed:
         return dependsProblem(details);
     case Transaction::ErrorIncompatibleArchitecture:
-        return QStringLiteral("This package is made for another kind of computer, so it can't run on this one.");
+        return QCoreApplication::translate("LocalPackage", "This package is made for another kind of computer, so it can't run on this one.");
     case Transaction::ErrorInvalidPackageFile:
     case Transaction::ErrorPackageCorrupt:
-        return unreadableText;
+        return unreadableText();
     case Transaction::ErrorFileConflicts:
-        return QStringLiteral("It would overwrite files that belong to another part of Wild OS, so it wasn't installed.");
+        return QCoreApplication::translate("LocalPackage", "It would overwrite files that belong to another part of Wild OS, so it wasn't installed.");
     case Transaction::ErrorPackageFailedToConfigure:
     case Transaction::ErrorPackageFailedToInstall:
-        return QStringLiteral("The package's own setup failed, so it may be only partly installed. Its maker may have a newer version.");
+        return QCoreApplication::translate("LocalPackage", "The package's own setup failed, so it may be only partly installed. Its maker may have a newer version.");
     default:
         return PackageKitBackend::errorText(error, false);
     }
@@ -355,7 +363,7 @@ LocalInfo readDeb(const QString &path, const QString &scratch)
     const auto fields = controlFields(run(QStringLiteral("dpkg-deb"), {QStringLiteral("-f"), path}, &code));
     info.id = fields.value(QStringLiteral("Package"));
     if (code != 0 || info.id.isEmpty()) {
-        info.problem = unreadableText;
+        info.problem = unreadableText();
         return info;
     }
     info.readable = true;
@@ -435,7 +443,7 @@ LocalInfo readFlatpakRef(const QString &path)
     GKeyFile *file = g_key_file_new();
     if (!g_key_file_load_from_file(file, path.toUtf8().constData(), G_KEY_FILE_NONE, nullptr) || keyString(file, "Name").isEmpty()) {
         g_key_file_free(file);
-        info.problem = unreadableText;
+        info.problem = unreadableText();
         return info;
     }
     info.readable = true;
@@ -455,7 +463,7 @@ LocalInfo readFlatpakRef(const QString &path)
     }
     if (g_key_file_get_boolean(file, "Flatpak Ref", "IsRuntime", nullptr)) {
         info.blocked = true;
-        info.problem = QStringLiteral("This file is for a part apps run on, not an app. Wild OS fetches those by itself when an app needs one.");
+        info.problem = QCoreApplication::translate("LocalPackage", "This file is for a part apps run on, not an app. Wild OS fetches those by itself when an app needs one.");
     }
     g_key_file_free(file);
     flatpakInstalled(info, branch);
@@ -554,7 +562,7 @@ LocalInfo readBundle(const QString &path, const QString &scratch)
     FlatpakBundleRef *bundle = flatpak_bundle_ref_new(file, nullptr);
     g_object_unref(file);
     if (!bundle) {
-        info.problem = unreadableText;
+        info.problem = unreadableText();
         return info;
     }
     info.readable = true;
@@ -591,7 +599,7 @@ LocalInfo readBundle(const QString &path, const QString &scratch)
 
     if (flatpak_ref_get_kind(ref) != FLATPAK_REF_KIND_APP) {
         info.blocked = true;
-        info.problem = QStringLiteral("This file is for a part apps run on, not an app. Wild OS fetches those by itself when an app needs one.");
+        info.problem = QCoreApplication::translate("LocalPackage", "This file is for a part apps run on, not an app. Wild OS fetches those by itself when an app needs one.");
     } else {
         bool supported = false;
         const char *const *arches = flatpak_get_supported_arches();
@@ -704,8 +712,8 @@ void LocalPackage::read()
     const QString kind = kindOf(m_path);
     if (kind.isEmpty() || !QFileInfo(m_path).isFile()) {
         LocalInfo info;
-        info.problem = QFileInfo::exists(m_path) ? QStringLiteral("The Store can install .deb, .flatpakref and .flatpak files, and this isn't one of them.")
-                                                 : QStringLiteral("This file isn't there any more. It may have been moved or deleted.");
+        info.problem = QFileInfo::exists(m_path) ? tr("The Store can install .deb, .flatpakref and .flatpak files, and this isn't one of them.")
+                                                 : tr("This file isn't there any more. It may have been moved or deleted.");
         adopt(info);
         return;
     }
@@ -834,7 +842,7 @@ void LocalPackage::installDeb()
 {
     Catalog *catalog = Catalog::instance();
     if (!catalog || !catalog->packageKitBackend()->isAvailable()) {
-        finish(false, QStringLiteral("The part of Wild OS that installs packages isn't running. Restart the computer and try again."));
+        finish(false, tr("The part of Wild OS that installs packages isn't running. Restart the computer and try again."));
         return;
     }
     auto error = std::make_shared<QString>();
@@ -879,7 +887,7 @@ void LocalPackage::installDeb()
         } else if (status == Transaction::ExitCancelled) {
             finish(false, QString::fromLatin1(cancelledMarker));
         } else {
-            finish(false, error->isEmpty() ? QStringLiteral("Something went wrong. Try again in a few minutes.") : *error);
+            finish(false, error->isEmpty() ? tr("Something went wrong. Try again in a few minutes.") : *error);
         }
     });
 }
@@ -888,7 +896,7 @@ void LocalPackage::installFlatpak()
 {
     Catalog *catalog = Catalog::instance();
     if (!catalog) {
-        finish(false, QStringLiteral("Something went wrong. Try again in a few minutes."));
+        finish(false, tr("Something went wrong. Try again in a few minutes."));
         return;
     }
     m_job = nextJob--;

@@ -73,13 +73,13 @@ Item {
             list.push({
                 text: p.name,
                 icon: p.icon,
-                shortcut: i < 9 ? "Ctrl+Shift+" + (i + 1) : "",
+                shortcut: i < 9 ? qsTr("Ctrl+Shift+%1").arg(i + 1) : "",
                 run: () => host.newTab(p.id)
             });
         }
         list.push({ separator: true });
-        list.push({ text: "Settings", icon: "cog", shortcut: "Ctrl+,", run: () => host.openSettings() });
-        list.push({ text: "New window", icon: "new-window", shortcut: "Ctrl+Shift+N", run: () => host.newWindow() });
+        list.push({ text: qsTr("Settings"), icon: "cog", shortcut: qsTr("Ctrl+,"), run: () => host.openSettings() });
+        list.push({ text: qsTr("New window"), icon: "new-window", shortcut: qsTr("Ctrl+Shift+N"), run: () => host.newWindow() });
         return list;
     }
 
@@ -99,11 +99,11 @@ Item {
     function openTabMenu(index, item, x, y) {
         const t = host.tabs[index];
         showMenu([
-            { text: "Duplicate tab", icon: "duplicate", shortcut: "Ctrl+Shift+D", enabled: !t.isSettings, run: () => host.duplicateTab(index) },
+            { text: qsTr("Duplicate tab"), icon: "duplicate", shortcut: qsTr("Ctrl+Shift+D"), enabled: !t.isSettings, run: () => host.duplicateTab(index) },
             { separator: true },
-            { text: "Close tab", icon: "close", shortcut: "Ctrl+Shift+W", run: () => host.closeTab(index) },
-            { text: "Close other tabs", enabled: host.tabs.length > 1, run: () => host.closeOtherTabs(index) },
-            { text: "Close tabs to the right", enabled: index < host.tabs.length - 1, run: () => host.closeTabsToRight(index) }
+            { text: qsTr("Close tab"), icon: "close", shortcut: qsTr("Ctrl+Shift+W"), run: () => host.closeTab(index) },
+            { text: qsTr("Close other tabs"), enabled: host.tabs.length > 1, run: () => host.closeOtherTabs(index) },
+            { text: qsTr("Close tabs to the right"), enabled: index < host.tabs.length - 1, run: () => host.closeTabsToRight(index) }
         ], 260, false, item, x, y);
     }
 
@@ -113,21 +113,21 @@ Item {
         function onContextMenuRequested(x, y, hasSelection, hasLink, split) {
             const entries = [];
             if (hasLink) {
-                entries.push({ text: "Open link", icon: "external", run: () => host.openLink() });
-                entries.push({ text: "Copy link", icon: "link", run: () => host.copyLink() });
+                entries.push({ text: qsTr("Open link"), icon: "external", run: () => host.openLink() });
+                entries.push({ text: qsTr("Copy link"), icon: "link", run: () => host.copyLink() });
                 entries.push({ separator: true });
             }
-            entries.push({ text: "Copy", icon: "copy", shortcut: "Ctrl+Shift+C", enabled: hasSelection, run: () => host.copy() });
-            entries.push({ text: "Paste", icon: "paste", shortcut: "Ctrl+Shift+V", run: () => host.paste() });
+            entries.push({ text: qsTr("Copy"), icon: "copy", shortcut: qsTr("Ctrl+Shift+C"), enabled: hasSelection, run: () => host.copy() });
+            entries.push({ text: qsTr("Paste"), icon: "paste", shortcut: qsTr("Ctrl+Shift+V"), run: () => host.paste() });
             entries.push({ separator: true });
-            entries.push({ text: "Split right", icon: "split-right", shortcut: "Alt+Shift+=", run: () => host.split(true) });
-            entries.push({ text: "Split down", icon: "split-down", shortcut: "Alt+Shift+-", run: () => host.split(false) });
+            entries.push({ text: qsTr("Split right"), icon: "split-right", shortcut: qsTr("Alt+Shift+="), run: () => host.split(true) });
+            entries.push({ text: qsTr("Split down"), icon: "split-down", shortcut: qsTr("Alt+Shift+-"), run: () => host.split(false) });
             if (split) {
-                entries.push({ text: "Close pane", icon: "close-pane", shortcut: "Ctrl+Shift+W", run: () => host.closePane() });
+                entries.push({ text: qsTr("Close pane"), icon: "close-pane", shortcut: qsTr("Ctrl+Shift+W"), run: () => host.closePane() });
             }
             entries.push({ separator: true });
-            entries.push({ text: "New tab", icon: "plus", shortcut: "Ctrl+Shift+T", run: () => host.newTab("") });
-            entries.push({ text: "Settings", icon: "cog", shortcut: "Ctrl+,", run: () => host.openSettings() });
+            entries.push({ text: qsTr("New tab"), icon: "plus", shortcut: qsTr("Ctrl+Shift+T"), run: () => host.newTab("") });
+            entries.push({ text: qsTr("Settings"), icon: "cog", shortcut: qsTr("Ctrl+,"), run: () => host.openSettings() });
             root.showMenu(entries, 260, false, root, x, y);
         }
 
@@ -155,17 +155,17 @@ Item {
     UI.Dialog {
         id: closeDialog
         property int count: 0
-        title: "Close all tabs?"
-        text: "This window has " + count + " tabs open. Anything still running in them will stop."
+        title: qsTr("Close all tabs?")
+        text: qsTr("This window has %n tabs open. Anything still running in them will stop.", "", count)
         onClosed: host.focusTerminal()
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: closeDialog.close()
             },
             UI.Button {
                 kind: "primary"
-                text: "Close all"
+                text: qsTr("Close all")
                 focus: true
                 Keys.onReturnPressed: clicked()
                 Keys.onEnterPressed: clicked()
@@ -181,8 +181,8 @@ Item {
         id: pasteDialog
         property int lines: 0
         property bool answered: false
-        title: "Paste " + lines + " lines?"
-        text: "Each line may run as a command as soon as it is pasted. Check the text is what you meant to copy."
+        title: qsTr("Paste %n lines?", "", lines)
+        text: qsTr("Each line may run as a command as soon as it is pasted. Check the text is what you meant to copy.")
         onAboutToShow: answered = false
         onClosed: {
             if (!answered) {
@@ -191,12 +191,12 @@ Item {
         }
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: pasteDialog.close()
             },
             UI.Button {
                 kind: "primary"
-                text: "Paste anyway"
+                text: qsTr("Paste anyway")
                 focus: true
                 Keys.onReturnPressed: clicked()
                 Keys.onEnterPressed: clicked()

@@ -38,25 +38,25 @@ Item {
 
         NavButton {
             iconName: "back"
-            tip: "Back (Alt+Left)"
+            tip: qsTr("Back (Alt+Left)")
             enabled: nav.folder && nav.folder.canGoBack
             onClicked: nav.folder.back()
         }
         NavButton {
             iconName: "forward"
-            tip: "Forward (Alt+Right)"
+            tip: qsTr("Forward (Alt+Right)")
             enabled: nav.folder && nav.folder.canGoForward
             onClicked: nav.folder.forward()
         }
         NavButton {
             iconName: "up"
-            tip: "Up one level (Alt+Up)"
+            tip: qsTr("Up one level (Alt+Up)")
             enabled: nav.folder && nav.folder.canGoUp
             onClicked: nav.folder.up()
         }
         NavButton {
             iconName: "refresh"
-            tip: "Refresh (F5)"
+            tip: qsTr("Refresh (F5)")
             onClicked: nav.folder.refresh()
         }
     }
@@ -82,7 +82,7 @@ Item {
         height: Metrics.fieldHeight
         // Searching the drives list itself means nothing; open a drive first.
         enabled: nav.folder && nav.folder.kind !== "computer"
-        placeholderText: nav.folder ? "Search " + nav.folder.title : "Search"
+        placeholderText: nav.folder ? qsTr("Search %1").arg(nav.folder.title) : qsTr("Search")
         Accessible.name: placeholderText
 
         // Typing filters straight away; the deeper search through the

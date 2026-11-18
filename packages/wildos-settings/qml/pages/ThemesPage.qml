@@ -27,7 +27,7 @@ PageScroll {
         columnSpacing: 18
         rowSpacing: 16
         Accessible.role: Accessible.Grouping
-        Accessible.name: "Theme"
+        Accessible.name: qsTr("Theme")
 
         Repeater {
             model: Themes.themes
@@ -118,66 +118,65 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
-                title: "Wallpaper"
+                title: qsTr("Wallpaper")
                 description: {
                     const more = page.theme.moreWallpaperNames || [];
-                    const also = more.length === 0 ? ""
-                        : more.length === 1 ? " " + more[0] + " is also included."
-                        : " " + more.slice(0, -1).join(", ") + " and " + more[more.length - 1] + " are also included.";
-                    return System.wallpaperName + "." + also;
+                    return more.length === 0 ? System.wallpaperName + "."
+                        : more.length === 1 ? qsTr("%1. %2 is also included.").arg(System.wallpaperName).arg(more[0])
+                        : qsTr("%1. %2 and %3 are also included.").arg(System.wallpaperName).arg(more.slice(0, -1).join(", ")).arg(more[more.length - 1]);
                 }
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
                     size: "small"
-                    text: "Change"
-                    Accessible.name: "Change wallpaper"
+                    text: qsTr("Change")
+                    Accessible.name: qsTr("Change wallpaper")
                     onClicked: Navigator.open("background")
                 }
             }
 
             UI.SettingRow {
                 visible: page.underglowShown && Themes.rgbDevices > 0
-                title: "Lighting on RGB keyboards and mice"
-                description: "Matches the underglow on most gaming keyboards, mice and laptops"
-                status: Themes.lightingRgb ? "On" : "Off"
+                title: qsTr("Lighting on RGB keyboards and mice")
+                description: qsTr("On most gaming keyboards, mice and laptops. Follows the underglow unless Cooler sets an effect")
+                status: Themes.lightingRgb ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: Themes.lightingRgb
-                    Accessible.name: "Lighting on RGB keyboards and mice"
+                    Accessible.name: qsTr("Lighting on RGB keyboards and mice")
                     onToggled: Themes.setLightingRgb(checked)
                 }
             }
 
             UI.SettingRow {
                 visible: page.underglowShown
-                title: "Taskbar underglow"
-                description: "A thin line of light along the top of the taskbar"
-                status: Themes.underglow ? "On" : "Off"
+                title: qsTr("Taskbar underglow")
+                description: qsTr("A thin line of light along the top of the taskbar")
+                status: Themes.underglow ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: Themes.underglow
-                    Accessible.name: "Taskbar underglow"
+                    Accessible.name: qsTr("Taskbar underglow")
                     onToggled: Themes.setUnderglow(checked)
                 }
             }
 
             UI.SettingRow {
                 visible: page.underglowShown && Themes.underglow
-                title: "Underglow colour and effect"
+                title: qsTr("Underglow colour and effect")
                 description: Themes.rgbDevices > 0 && Themes.lightingRgb
-                    ? "Keyboard and mouse lighting copies these"
-                    : "Your accent, a colour of your own, or every colour in turn"
+                    ? qsTr("Keyboard and mouse lighting copies these unless Cooler sets an effect")
+                    : qsTr("Your accent, a colour of your own, or every colour in turn")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Underglow colour"
+                    Accessible.name: qsTr("Underglow colour")
                     model: [
-                        { value: "accent", text: "Accent" },
+                        { value: "accent", text: qsTr("Accent") },
                         { value: "rgb", text: "RGB" },
-                        { value: "custom", text: "Custom" }
+                        { value: "custom", text: qsTr("Custom") }
                     ]
                     readonly property string choice: Themes.underglowColour
                     currentIndex: model.findIndex(o => o.value === choice)
@@ -186,12 +185,12 @@ PageScroll {
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Underglow effect"
+                    Accessible.name: qsTr("Underglow effect")
                     // RGB flows along the bar; a single colour is steady or
                     // breathes.
                     model: Themes.underglowColour === "rgb"
-                        ? [{ value: "flowing", text: "Flowing" }]
-                        : [{ value: "steady", text: "Steady" }, { value: "breathing", text: "Breathing" }]
+                        ? [{ value: "flowing", text: qsTr("Flowing") }]
+                        : [{ value: "steady", text: qsTr("Steady") }, { value: "breathing", text: qsTr("Breathing") }]
                     readonly property string choice: Themes.underglowEffect
                     currentIndex: model.findIndex(o => o.value === choice)
                     onActivated: index => Themes.setUnderglowEffect(model[index].value)
@@ -201,22 +200,22 @@ PageScroll {
             UI.SettingRow {
                 id: customRow
                 visible: page.underglowShown && Themes.underglow && page.custom
-                title: "Custom colour"
+                title: qsTr("Custom colour")
 
                 readonly property var swatches: [
-                    { colour: "#3dff7a", name: "Green" },
-                    { colour: "#ff2d95", name: "Pink" },
-                    { colour: "#3dd5ff", name: "Cyan" },
-                    { colour: "#ffb03d", name: "Amber" },
-                    { colour: "#c85cff", name: "Violet" },
-                    { colour: "#ffffff", name: "White" }
+                    { colour: "#3dff7a", name: qsTr("Green") },
+                    { colour: "#ff2d95", name: qsTr("Pink") },
+                    { colour: "#3dd5ff", name: qsTr("Cyan") },
+                    { colour: "#ffb03d", name: qsTr("Amber") },
+                    { colour: "#c85cff", name: qsTr("Violet") },
+                    { colour: "#ffffff", name: qsTr("White") }
                 ]
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 12
                     Accessible.role: Accessible.Grouping
-                    Accessible.name: "Custom colour"
+                    Accessible.name: qsTr("Custom colour")
 
                     Repeater {
                         model: customRow.swatches
@@ -236,7 +235,7 @@ PageScroll {
                 UI.Label {
                     anchors.verticalCenter: parent.verticalCenter
                     leftPadding: 6
-                    text: "Or any colour"
+                    text: qsTr("Or any colour")
                     size: 12
                     color: UI.Style.inkMuted
                 }
@@ -248,7 +247,7 @@ PageScroll {
                     leftPadding: 36
                     placeholderText: "#RRGGBB"
                     maximumLength: 7
-                    Accessible.name: "Underglow colour, as a hex code"
+                    Accessible.name: qsTr("Underglow colour, as a hex code")
                     validator: RegularExpressionValidator { regularExpression: /#?[0-9A-Fa-f]{0,6}/ }
                     readonly property string normalised: (text.startsWith("#") ? text : "#" + text).toLowerCase()
                     readonly property bool complete: /^#[0-9a-f]{6}$/.test(normalised)

@@ -29,5 +29,10 @@
     <entry name="positions" type="String">
       <default></default>
     </entry>
+    <!-- Plasma widgets on the desktop: off unless turned on in Settings >
+         Personalisation, as the desktop is otherwise just icons. -->
+    <entry name="allowWidgets" type="Bool">
+      <default>false</default>
+    </entry>
   </group>
 </kcfg>

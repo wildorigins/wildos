@@ -33,6 +33,9 @@ class Graphics : public QObject
     Q_PROPERTY(QString enrolCode READ enrolCode NOTIFY changed)
     // Why the last switch failed, in plain words, or empty.
     Q_PROPERTY(QString error READ error NOTIFY changed)
+    // The desktop never appeared on the first start-up with NVIDIA's driver,
+    // so graphics-driver-trial put the open one back.
+    Q_PROPERTY(bool trialFailed READ trialFailed NOTIFY changed)
 
 public:
     explicit Graphics(QObject *parent = nullptr);
@@ -47,9 +50,12 @@ public:
     QString step() const { return m_step; }
     QString enrolCode() const { return m_code; }
     QString error() const { return m_error; }
+    bool trialFailed() const;
 
     // "nvidia" or "open".
     Q_INVOKABLE void useDriver(const QString &driver);
+    // Restart to finish a switch.
+    Q_INVOKABLE void restart();
 
 Q_SIGNALS:
     void changed();

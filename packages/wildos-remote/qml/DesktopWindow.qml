@@ -31,6 +31,7 @@ UI.AppWindow {
 
     title: desktop ? qsTr("%1, Remote").arg(desktop.name) : qsTr("Remote")
     color: full ? "#000000" : "transparent"
+    rememberSize: false
     // Full screen, a window is its screen's size. Sized from the remote
     // desktop it grew, once connected, to the span of every monitor with All
     // my monitors, and showed its part of the picture shrunk inside it.

@@ -81,38 +81,38 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "bell"
-                title: "Do not disturb"
-                description: "Notifications are kept in the list instead of popping up"
-                status: (page.doNotDisturb) ? "On" : "Off"
+                title: qsTr("Do not disturb")
+                description: qsTr("Notifications are kept in the list instead of popping up")
+                status: (page.doNotDisturb) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: page.doNotDisturb
-                    Accessible.name: "Do not disturb"
+                    Accessible.name: qsTr("Do not disturb")
                     onToggled: page.setDoNotDisturb(checked)
                 }
             }
 
             UI.SettingRow {
-                title: "Turn on do not disturb automatically at set times"
-                description: "Quiet hours, for example overnight. You can still turn it off early"
-                status: (page.quietHours) ? "On" : "Off"
+                title: qsTr("Turn on do not disturb automatically at set times")
+                description: qsTr("Quiet hours, for example overnight. You can still turn it off early")
+                status: (page.quietHours) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: page.quietHours
-                    Accessible.name: "Turn on do not disturb automatically at set times"
+                    Accessible.name: qsTr("Turn on do not disturb automatically at set times")
                     onToggled: page.setQuiet("Enabled", checked)
                 }
             }
 
             UI.SettingRow {
                 visible: page.quietHours
-                title: "From"
+                title: qsTr("From")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Quiet hours start"
+                    Accessible.name: qsTr("Quiet hours start")
                     model: page.hours()
                     readonly property var choice: page.quietFrom
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -122,11 +122,11 @@ PageScroll {
 
             UI.SettingRow {
                 visible: page.quietHours
-                title: "To"
+                title: qsTr("To")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Quiet hours end"
+                    Accessible.name: qsTr("Quiet hours end")
                     model: page.hours()
                     readonly property var choice: page.quietTo
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -135,14 +135,14 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Turn on do not disturb automatically when sharing or mirroring the screen"
-                description: "So alerts never show during a presentation"
-                status: (settings.inhibitNotificationsWhenScreensMirrored) ? "On" : "Off"
+                title: qsTr("Turn on do not disturb automatically when sharing or mirroring the screen")
+                description: qsTr("So alerts never show during a presentation")
+                status: (settings.inhibitNotificationsWhenScreensMirrored) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: settings.inhibitNotificationsWhenScreensMirrored
-                    Accessible.name: "Turn on do not disturb automatically when sharing or mirroring the screen"
+                    Accessible.name: qsTr("Turn on do not disturb automatically when sharing or mirroring the screen")
                     onToggled: {
                         settings.inhibitNotificationsWhenScreensMirrored = checked;
                         settings.inhibitNotificationsWhenScreenSharing = checked;
@@ -152,14 +152,14 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Let urgent notifications through"
-                description: "Low battery and other critical alerts still pop up during do not disturb"
-                status: (settings.criticalPopupsInDoNotDisturbMode) ? "On" : "Off"
+                title: qsTr("Let urgent notifications through")
+                description: qsTr("Low battery and other critical alerts still pop up during do not disturb")
+                status: (settings.criticalPopupsInDoNotDisturbMode) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: settings.criticalPopupsInDoNotDisturbMode
-                    Accessible.name: "Let urgent notifications through"
+                    Accessible.name: qsTr("Let urgent notifications through")
                     onToggled: {
                         settings.criticalPopupsInDoNotDisturbMode = checked;
                         page.save();
@@ -176,14 +176,14 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
-                title: "Play sounds"
-                description: "Apps can play a sound with their notifications"
-                status: (!settings.notificationSoundsInhibited) ? "On" : "Off"
+                title: qsTr("Play sounds")
+                description: qsTr("Apps can play a sound with their notifications")
+                status: (!settings.notificationSoundsInhibited) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: !settings.notificationSoundsInhibited
-                    Accessible.name: "Play sounds"
+                    Accessible.name: qsTr("Play sounds")
                     onToggled: {
                         settings.notificationSoundsInhibited = !checked;
                         page.save();
@@ -192,14 +192,14 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Show badges on taskbar apps"
-                description: "A count of unread notifications on the app's icon"
-                status: (settings.badgesInTaskManager) ? "On" : "Off"
+                title: qsTr("Show badges on taskbar apps")
+                description: qsTr("A count of unread notifications on the app's icon")
+                status: (settings.badgesInTaskManager) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: settings.badgesInTaskManager
-                    Accessible.name: "Show badges on taskbar apps"
+                    Accessible.name: qsTr("Show badges on taskbar apps")
                     onToggled: {
                         settings.badgesInTaskManager = checked;
                         page.save();
@@ -208,18 +208,18 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Keep notifications on screen for"
+                title: qsTr("Keep notifications on screen for")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Keep notifications on screen for"
+                    Accessible.name: qsTr("Keep notifications on screen for")
                     model: [
-                        { value: 5000, text: "5 seconds" },
-                        { value: 7000, text: "7 seconds" },
-                        { value: 15000, text: "15 seconds" },
-                        { value: 30000, text: "30 seconds" },
-                        { value: 60000, text: "1 minute" }
-                    ].concat([5000, 7000, 15000, 30000, 60000].includes(settings.popupTimeout) ? [] : [{ value: settings.popupTimeout, text: Math.round(settings.popupTimeout / 1000) + " seconds" }])
+                        { value: 5000, text: qsTr("5 seconds") },
+                        { value: 7000, text: qsTr("7 seconds") },
+                        { value: 15000, text: qsTr("15 seconds") },
+                        { value: 30000, text: qsTr("30 seconds") },
+                        { value: 60000, text: qsTr("1 minute") }
+                    ].concat([5000, 7000, 15000, 30000, 60000].includes(settings.popupTimeout) ? [] : [{ value: settings.popupTimeout, text: qsTr("%1 seconds").arg(Math.round(settings.popupTimeout / 1000)) }])
                     readonly property var choice: settings.popupTimeout
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
                     onActivated: index => {

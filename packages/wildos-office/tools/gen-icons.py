@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the Wild OS icon themes for Write and Tables.
+"""Builds the Wild OS icon themes for Write, Tables and Slides.
 
     tools/gen-icons.py OUTDIR      write images_wildos_svg.zip and
                                    images_wildos_dark_svg.zip into OUTDIR
@@ -45,6 +45,9 @@ TONES = {
         "red": ("#ff8a8a", None),
         "yellow": ("#ffd27a", None),
         "green": ("#8fd6a8", None),
+        # The presenter view is dark whatever the theme: its buttons' icons.
+        "presenter": ("#ffffff", None),
+        "presenter-end": ("#ff9a9a", None),
     },
     "light": {
         "fg": ("#1d1f23", None),
@@ -53,6 +56,9 @@ TONES = {
         "red": ("#c5372c", None),
         "yellow": ("#9a6400", None),
         "green": ("#2f7a1f", None),
+        # The presenter view is dark whatever the theme: its buttons' icons.
+        "presenter": ("#ffffff", None),
+        "presenter-end": ("#ff9a9a", None),
     },
 }
 
@@ -291,7 +297,7 @@ def coverage(config_tree, stock_zip, ui_files):
 
     for path in ui_files:
         scan("ribbon", path)
-    for module in ("swriter", "scalc"):
+    for module in ("swriter", "scalc", "simpress"):
         for path in glob.glob(os.path.join(config_tree, "modules", module, "popupmenu", "*.xml")):
             scan("menus", path)
         for bar in ("tableobjectbar", "graphicobjectbar", "drawingobjectbar", "drawobjectbar",

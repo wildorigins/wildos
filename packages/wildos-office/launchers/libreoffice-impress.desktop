@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=Slides
+Name[fr]=Slides
+GenericName=Presentations
+GenericName[fr]=Présentations
+Comment=Make and show presentations, and open and save PowerPoint files
+Comment[fr]=Créez et projetez des présentations, et ouvrez et enregistrez des fichiers PowerPoint
+Exec=wildos-slides %U
+Icon=org.wildos.slides
+Terminal=false
+StartupNotify=true
+StartupWMClass=libreoffice-impress
+Categories=Office;Presentation;
+Keywords=powerpoint;pptx;ppt;ppsx;presentation;slideshow;slides;deck;odp;impress;
+X-GIO-NoFuse=true
+InitialPreference=9
+MimeType=application/mspowerpoint;application/vnd.apple.keynote;application/vnd.ms-powerpoint;application/vnd.ms-powerpoint.presentation.macroEnabled.12;application/vnd.ms-powerpoint.slideshow.macroEnabled.12;application/vnd.ms-powerpoint.template.macroEnabled.12;application/vnd.oasis.opendocument.presentation;application/vnd.oasis.opendocument.presentation-flat-xml;application/vnd.oasis.opendocument.presentation-template;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.openxmlformats-officedocument.presentationml.slide;application/vnd.openxmlformats-officedocument.presentationml.slideshow;application/vnd.openxmlformats-officedocument.presentationml.template;application/vnd.stardivision.impress;application/vnd.sun.xml.impress;application/vnd.sun.xml.impress.template;application/x-iwork-keynote-sffkey;application/x-starimpress;
+Actions=NewDocument;
+
+[Desktop Action NewDocument]
+Name=New presentation
+Exec=wildos-slides --new

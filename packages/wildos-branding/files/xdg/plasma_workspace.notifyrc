@@ -1,7 +1,7 @@
 # A sound when the desktop starts. The shutdown sound is played by Wild OS
 # itself as the session ends (wildos-logout-sound.service), not through
 # Plasma's logout event, which would hold the shutdown back until it had
-# finished. Settings > Sound turns both off. The sounds are desktop-login
-# and desktop-logout in the Wild OS sound theme.
+# finished; it is off unless turned on in Settings > Sound. The sounds are
+# desktop-login and desktop-logout in the Wild OS sound theme.
 [Event/startkde]
 Action=Sound

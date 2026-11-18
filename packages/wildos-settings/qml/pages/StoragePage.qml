@@ -50,14 +50,14 @@ PageScroll {
 
                         UI.Label {
                             Layout.fillWidth: true
-                            text: System.formatBytes(volume.used) + " used of " + System.formatBytes(volume.modelData.total)
+                            text: qsTr("%1 used of %2").arg(System.formatBytes(volume.used)).arg(System.formatBytes(volume.modelData.total))
                             size: 12
                             color: UI.Style.inkMuted
                         }
                     }
 
                     UI.Label {
-                        text: System.formatBytes(volume.modelData.free) + " free"
+                        text: qsTr("%1 free").arg(System.formatBytes(volume.modelData.free))
                         color: volume.modelData.free / volume.modelData.total < 0.1 ? UI.Style.warning : UI.Style.accentText
                     }
                 }
@@ -78,7 +78,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Free up space"
+            text: qsTr("Free up space")
         }
 
         UI.Card {
@@ -91,8 +91,8 @@ PageScroll {
                 // Recycle Bin included, on a page of its own.
                 UI.SettingRow {
                     iconName: "trash"
-                    title: "Clean up"
-                    description: "Recycle Bin, old restore points, update files, app caches and more"
+                    title: qsTr("Clean up")
+                    description: qsTr("Recycle Bin, old restore points, update files, app caches and more")
                     chevron: true
                     onClicked: Navigator.open("freespace")
                 }
@@ -100,8 +100,8 @@ PageScroll {
                 UI.SettingRow {
                     visible: System.hasProgram("partitionmanager")
                     iconName: "storage"
-                    title: "Disks and volumes"
-                    description: "Format drives and change partitions"
+                    title: qsTr("Disks and volumes")
+                    description: qsTr("Format drives and change partitions")
                     external: true
                     onClicked: System.launch("partitionmanager")
                 }
@@ -110,8 +110,8 @@ PageScroll {
                 UI.SettingRow {
                     visible: System.hasProgram("wildos-files")
                     iconName: "folder"
-                    title: "See what is taking up space"
-                    description: "Open your Home folder in Files"
+                    title: qsTr("See what is taking up space")
+                    description: qsTr("Open your Home folder in Files")
                     external: true
                     onClicked: System.launch("wildos-files", [StandardPaths.writableLocation(StandardPaths.HomeLocation)])
                 }

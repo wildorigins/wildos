@@ -18,9 +18,14 @@ import QtQuick.Templates as T
 // once before the list was loaded and left the box blank. An entry with
 // `divider: true` has a hairline above it in the list, to group choices; it
 // stays an ordinary choice for the keyboard.
+//
+// `accessibleName` says what the drop-down chooses ("Theme"); a screen
+// reader then hears that and the current choice, not the choice alone. A
+// drop-down on the right of a ListRow takes the row's title by itself.
 T.ComboBox {
     id: control
 
+    property string accessibleName
     property bool previewHover: false
     property bool previewFocus: false
     // "field" is the drop-down inside a form (FirstRegion.dc "Display
@@ -47,8 +52,8 @@ T.ComboBox {
     rightPadding: 12 + 12 + 10
     focusPolicy: Qt.StrongFocus
     hoverEnabled: true
-    opacity: enabled ? 1 : 0.5
-    Accessible.name: displayText
+    opacity: enabled ? 1 : Style.disabledOpacity
+    Accessible.name: accessibleName.length > 0 ? qsTr("%1, %2").arg(accessibleName).arg(displayText) : displayText
 
     FontMetrics {
         id: metrics

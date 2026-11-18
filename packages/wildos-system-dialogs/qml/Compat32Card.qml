@@ -19,16 +19,18 @@ PromptCard {
     signal accepted()
 
     width: 440
-    title: mode === "pending" ? "Restart to use 32-bit apps" : "32-bit apps are turned off"
+    title: mode === "pending" ? qsTr("Restart to use 32-bit apps") : qsTr("32-bit apps are turned off")
     text: {
-        const what = card.appName.length > 0 ? card.appName + " is a 32-bit app" : "This is a 32-bit app";
+        const named = card.appName.length > 0;
         let line;
         if (mode === "pending") {
-            line = "32-bit apps are turned on and start working once you restart. Open apps are asked to save first.";
+            line = qsTr("32-bit apps are turned on and start working once you restart. Open apps are asked to save first.");
         } else if (mode === "locked") {
-            line = what + ", and Strict and Maximum protection keep 32-bit apps off. To use it, choose Standard protection in Settings > Privacy and security first.";
+            line = named ? qsTr("%1 is a 32-bit app, and Strict and Maximum protection keep 32-bit apps off. To use it, choose Standard protection in Settings > Privacy and security first.").arg(card.appName)
+                         : qsTr("This is a 32-bit app, and Strict and Maximum protection keep 32-bit apps off. To use it, choose Standard protection in Settings > Privacy and security first.");
         } else {
-            line = what + ", and Wild OS keeps them off for security. Turning them on lets it run, but adds a part of the system that has had serious security flaws. It takes a restart.";
+            line = named ? qsTr("%1 is a 32-bit app, and Wild OS keeps them off for security. Turning them on lets it run, but adds a part of the system that has had serious security flaws. It takes a restart.").arg(card.appName)
+                         : qsTr("This is a 32-bit app, and Wild OS keeps them off for security. Turning them on lets it run, but adds a part of the system that has had serious security flaws. It takes a restart.");
         }
         return card.error.length > 0 ? card.error + " " + line : line;
     }
@@ -40,7 +42,7 @@ PromptCard {
     buttons: [
         UI.Button {
             id: notNowButton
-            text: "Not now"
+            text: qsTr("Not now")
             onClicked: card.cancelled()
         },
         UI.Button {
@@ -48,7 +50,7 @@ PromptCard {
             kind: "primary"
             busy: card.busy
             enabled: !card.busy
-            text: card.mode === "pending" ? "Restart now" : card.mode === "locked" ? "Open Settings" : "Turn on and restart"
+            text: card.mode === "pending" ? qsTr("Restart now") : card.mode === "locked" ? qsTr("Open Settings") : qsTr("Turn on and restart")
             onClicked: card.accepted()
         }
     ]

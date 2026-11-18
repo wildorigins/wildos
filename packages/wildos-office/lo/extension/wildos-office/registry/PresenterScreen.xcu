@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The words over the panes of Slides' presenter view (board 12.20). They sit
+     here and not in wildos-slides.xcd because LibreOffice's language packs
+     carry their own ("Current Slide", "Next Slide") and are read after that
+     file but before an extension. -->
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:package="org.openoffice.Office" oor:name="PresenterScreen">
+  <node oor:name="Presenter">
+    <node oor:name="Views">
+      <node oor:name="CurrentSlidePreview">
+        <prop oor:name="Title"><value xml:lang="en-US">ON SCREEN NOW</value><value xml:lang="en-GB">ON SCREEN NOW</value><value xml:lang="fr">À L’ÉCRAN</value></prop>
+        <node oor:name="Strings">
+          <node oor:name="ClickToExitPresentationTitle">
+            <prop oor:name="String"><value xml:lang="en-US">ON SCREEN NOW</value><value xml:lang="en-GB">ON SCREEN NOW</value><value xml:lang="fr">À L’ÉCRAN</value></prop>
+          </node>
+        </node>
+      </node>
+      <node oor:name="NextSlidePreview">
+        <prop oor:name="Title"><value xml:lang="en-US">NEXT</value><value xml:lang="en-GB">NEXT</value><value xml:lang="fr">SUIVANTE</value></prop>
+      </node>
+      <node oor:name="NotesView">
+        <prop oor:name="Title"><value xml:lang="en-US">NOTES</value><value xml:lang="en-GB">NOTES</value><value xml:lang="fr">NOTES</value></prop>
+      </node>
+    </node>
+  </node>
+</oor:component-data>

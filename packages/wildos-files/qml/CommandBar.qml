@@ -14,7 +14,35 @@ Item {
     readonly property bool inComputer: folder && folder.kind === "computer"
     readonly property int selected: folder ? folder.selectedCount : 0
 
+    // In a narrow window the buttons with words give them up rather than
+    // run under one another: first Sort, View and Details (1), then New
+    // and the Recycle Bin's own buttons (2). The word becomes the tooltip.
+    // Each level remembers the width it ran out of room at, and comes back
+    // once the bar is that wide again.
+    property int compact: 0
+    property var neededAt: [0, 0]
+    readonly property real needed: left.x + left.width + 16 + detailsButton.width + 12
+
+    function fit() {
+        if (width <= 0) {
+            return;
+        }
+        if (compact < 2 && needed > width) {
+            const widths = neededAt.slice();
+            widths[compact] = needed;
+            neededAt = widths;
+            compact += 1;
+        } else if (compact > 0 && width >= neededAt[compact - 1]) {
+            compact -= 1;
+        }
+    }
+
     height: Metrics.commandHeight
+    // Fitting changes the very widths it is worked out from, so it runs
+    // once they have settled rather than in the middle of the change.
+    onWidthChanged: Qt.callLater(bar.fit)
+    onNeededChanged: Qt.callLater(bar.fit)
+    Component.onCompleted: Qt.callLater(bar.fit)
 
     Rectangle {
         anchors.bottom: parent.bottom
@@ -24,8 +52,20 @@ Item {
     }
 
     component CommandButton: UI.Button {
+        id: commandButton
+        // The button's word, and the level of squeeze at which it goes.
+        property string label
+        property int dropAt: 2
+        readonly property bool wordless: bar.compact >= dropAt
         kind: "text"
         height: Metrics.buttonHeight
+        text: wordless ? "" : label
+        Accessible.name: label
+
+        UI.Tooltip {
+            text: commandButton.label
+            visible: commandButton.wordless && commandButton.hovered && !commandButton.down
+        }
     }
 
     component CommandIcon: UI.IconButton {
@@ -60,7 +100,7 @@ Item {
             iconSize: 18
             iconStroke: 2
             iconColor: UI.Style.accent
-            text: "New"
+            label: qsTr("New")
             dropDown: true
             enabled: bar.folder && bar.folder.writable
             onClicked: bar.view.openNewMenu(newButton)
@@ -69,7 +109,7 @@ Item {
         CommandButton {
             visible: bar.inBin
             iconName: "bin"
-            text: "Empty Recycle Bin"
+            label: qsTr("Empty Recycle Bin")
             enabled: FileOps.binCount > 0
             onClicked: FileOps.emptyBin()
         }
@@ -77,7 +117,7 @@ Item {
         CommandButton {
             visible: bar.inBin
             iconName: "restore"
-            text: bar.selected > 0 ? "Restore" : "Restore all"
+            label: bar.selected > 0 ? qsTr("Restore") : qsTr("Restore all")
             enabled: bar.folder && bar.folder.count > 0
             onClicked: bar.view.restore()
         }
@@ -87,28 +127,28 @@ Item {
         CommandIcon {
             visible: !bar.inBin
             iconName: "cut"
-            tip: "Cut (Ctrl+X)"
+            tip: qsTr("Cut (Ctrl+X)")
             enabled: bar.selected > 0 && bar.folder.writable && !bar.inComputer
             onClicked: bar.view.cut()
         }
         CommandIcon {
             visible: !bar.inBin
             iconName: "copy"
-            tip: "Copy (Ctrl+C)"
+            tip: qsTr("Copy (Ctrl+C)")
             enabled: bar.selected > 0 && !bar.inComputer
             onClicked: bar.view.copy()
         }
         CommandIcon {
             visible: !bar.inBin
             iconName: "paste"
-            tip: "Paste (Ctrl+V)"
+            tip: qsTr("Paste (Ctrl+V)")
             enabled: FileOps.canPaste && bar.folder && bar.folder.writable
             onClicked: bar.view.paste()
         }
         CommandIcon {
             visible: !bar.inBin
             iconName: "rename"
-            tip: "Rename (F2)"
+            tip: qsTr("Rename (F2)")
             enabled: bar.selected === 1 && bar.folder.writable && !bar.inComputer
             onClicked: bar.view.rename()
         }
@@ -116,13 +156,13 @@ Item {
             id: shareButton
             visible: !bar.inBin
             iconName: "share"
-            tip: "Share"
+            tip: qsTr("Share")
             enabled: bar.selected > 0 && !bar.inComputer && !bar.folder.selectionHasFolders()
             onClicked: bar.view.openShareMenu(shareButton)
         }
         CommandIcon {
             iconName: "delete"
-            tip: bar.inBin ? "Delete for good" : "Delete (Delete)"
+            tip: bar.inBin ? qsTr("Delete for good") : qsTr("Delete (Delete)")
             enabled: bar.selected > 0 && !bar.inComputer
             onClicked: bar.view.remove(bar.inBin)
         }
@@ -133,21 +173,23 @@ Item {
             id: sortButton
             iconName: "sort"
             enabled: !bar.inComputer
-            text: "Sort"
+            label: qsTr("Sort")
+            dropAt: 1
             dropDown: true
             onClicked: bar.view.openSortMenu(sortButton)
         }
         CommandButton {
             id: viewButton
             iconName: "view"
-            text: "View"
+            label: qsTr("View")
+            dropAt: 1
             dropDown: true
             onClicked: bar.view.openViewMenu(viewButton)
         }
         CommandIcon {
             id: moreButton
             iconName: "more"
-            tip: "More options"
+            tip: qsTr("More options")
             onClicked: bar.view.openMoreMenu(moreButton)
         }
     }
@@ -214,8 +256,10 @@ Item {
         }
 
         CommandButton {
+            id: detailsButton
             iconName: "pane"
-            text: "Details"
+            label: qsTr("Details")
+            dropAt: 1
             checked: Settings.detailsPane
             onClicked: Settings.detailsPane = !Settings.detailsPane
         }

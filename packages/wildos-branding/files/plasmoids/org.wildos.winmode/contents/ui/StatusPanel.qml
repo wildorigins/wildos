@@ -106,7 +106,7 @@ FocusScope {
         implicitHeight: 20
         hoverEnabled: true
         focusPolicy: Qt.StrongFocus
-        text: "Windows mode settings"
+        text: qsTr("Windows mode settings")
         Accessible.role: Accessible.Link
         Accessible.name: text
 
@@ -173,7 +173,7 @@ FocusScope {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Windows mode"
+                    text: qsTr("Windows mode")
                     size: 15
                     font.weight: UI.Style.weightSemiBold
                     Accessible.role: Accessible.Heading
@@ -220,11 +220,11 @@ FocusScope {
 
                 Caption {
                     Layout.fillWidth: true
-                    text: "Processor, last minute"
+                    text: qsTr("Processor, last minute")
                 }
 
                 Figure {
-                    text: panel.winmode.processorPercent + "%"
+                    text: qsTr("%1%").arg(panel.winmode.processorPercent)
                 }
             }
 
@@ -245,12 +245,12 @@ FocusScope {
 
                 Caption {
                     Layout.fillWidth: true
-                    text: panel.running ? "Memory" : "Memory held"
+                    text: panel.running ? qsTr("Memory") : qsTr("Memory held")
                 }
 
                 Figure {
                     text: panel.running && panel.winmode.memoryLimit > 0
-                        ? panel.winmode.bytesText(panel.winmode.memoryHeld) + " of " + panel.winmode.bytesText(panel.winmode.memoryLimit)
+                        ? qsTr("%1 of %2").arg(panel.winmode.bytesText(panel.winmode.memoryHeld)).arg(panel.winmode.bytesText(panel.winmode.memoryLimit))
                         : panel.winmode.bytesText(panel.winmode.memoryHeld)
                 }
             }
@@ -259,11 +259,11 @@ FocusScope {
                 Layout.fillWidth: true
                 value: panel.winmode.memoryLimit > 0 ? panel.winmode.memoryHeld / panel.winmode.memoryLimit : 0
                 held: !panel.running
-                Accessible.name: panel.running ? "Memory" : "Memory held"
+                Accessible.name: panel.running ? qsTr("Memory") : qsTr("Memory held")
             }
 
             Note {
-                text: panel.running ? "Unused memory goes back to Wild OS" : "No processor use. Ready in about a second."
+                text: panel.running ? qsTr("Unused memory goes back to Wild OS") : qsTr("No processor use. Ready in about a second.")
             }
         }
 
@@ -288,8 +288,8 @@ FocusScope {
             wrapMode: Text.Wrap
             elide: Text.ElideNone
             color: panel.level === "attention" ? UI.Style.ink : UI.Style.inkMuted
-            text: panel.level === "starting" ? "Getting Windows ready. Your app opens as soon as it is."
-                : panel.level === "updating" ? "Installing Windows and Office updates that Wild OS has tested. Your apps open as normal once it's done."
+            text: panel.level === "starting" ? qsTr("Getting Windows ready. Your app opens as soon as it is.")
+                : panel.level === "updating" ? qsTr("Installing Windows and Office updates that Wild OS has tested. Your apps open as normal once it's done.")
                 : panel.winmode.attentionText()
         }
 
@@ -307,7 +307,7 @@ FocusScope {
 
             Caption {
                 Layout.bottomMargin: 2
-                text: "Open now"
+                text: qsTr("Open now")
             }
 
             Repeater {
@@ -416,7 +416,7 @@ FocusScope {
 
                 Action {
                     visible: controls.live
-                    text: "Pause"
+                    text: qsTr("Pause")
                     onClicked: panel.winmode.power("pause")
                 }
 
@@ -424,23 +424,23 @@ FocusScope {
                     visible: controls.paused || controls.saved
                     Layout.columnSpan: controls.saved ? 2 : 1
                     kind: "primary"
-                    text: "Resume"
+                    text: qsTr("Resume")
                     onClicked: panel.winmode.power("resume")
                 }
 
                 Action {
                     visible: (controls.live || controls.paused) && panel.winmode.canSave
-                    text: "Save to disk"
+                    text: qsTr("Save to disk")
                     onClicked: panel.winmode.power("save")
                 }
 
                 Action {
-                    text: "Restart"
+                    text: qsTr("Restart")
                     onClicked: panel.winmode.power("restart")
                 }
 
                 Action {
-                    text: "Shut down"
+                    text: qsTr("Shut down")
                     onClicked: panel.winmode.power("shutdown")
                 }
             }
@@ -449,7 +449,7 @@ FocusScope {
                 visible: panel.level === "off"
                 enabled: !panel.winmode.busyAction
                 kind: "primary"
-                text: "Start Windows mode"
+                text: qsTr("Start Windows mode")
                 onClicked: panel.winmode.power("start")
             }
 

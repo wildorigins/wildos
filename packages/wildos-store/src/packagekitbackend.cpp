@@ -8,7 +8,13 @@
 #include <QDBusConnectionInterface>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDateTime>
+#include <QDir>
+#include <QDirIterator>
+#include <QFileInfo>
 #include <QTimer>
+
+#include <limits>
 
 using PackageKit::Daemon;
 using PackageKit::Transaction;
@@ -47,10 +53,26 @@ void PackageKitBackend::start()
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
         watcher->deleteLater();
         QDBusPendingReply<uint> reply = *watcher;
-        if (reply.isError() || reply.value() > 3600) {
+        // A source added since the last refresh, like the apps repository
+        // an update brings, has never been read: its apps would stay
+        // missing until the next hourly refresh.
+        if (reply.isError() || reply.value() > 3600 || reply.value() > secondsSinceSourcesChanged()) {
             refresh();
         }
     });
+}
+
+qint64 PackageKitBackend::secondsSinceSourcesChanged()
+{
+    QDateTime newest = QFileInfo(QStringLiteral("/etc/apt/sources.list")).lastModified();
+    QDirIterator it(QStringLiteral("/etc/apt/sources.list.d"), {QStringLiteral("*.list"), QStringLiteral("*.sources")}, QDir::Files);
+    while (it.hasNext()) {
+        const QDateTime changed = it.nextFileInfo().lastModified();
+        if (!newest.isValid() || changed > newest) {
+            newest = changed;
+        }
+    }
+    return newest.isValid() ? newest.secsTo(QDateTime::currentDateTime()) : std::numeric_limits<qint64>::max();
 }
 
 void PackageKitBackend::refresh()
@@ -131,7 +153,7 @@ void PackageKitBackend::resolveThen(const QStringList &packages, Transaction::Fi
     });
     connect(t, &Transaction::finished, this, [this, ids, job, next](Transaction::Exit status, uint) {
         if (status != Transaction::ExitSuccess || ids->isEmpty()) {
-            Q_EMIT finished(job, false, QStringLiteral("This app is not in the catalogue any more. Try again after the Store has refreshed."));
+            Q_EMIT finished(job, false, tr("This app is not in the catalogue any more. Try again after the Store has refreshed."));
             return;
         }
         Transaction *action = next(*ids);
@@ -194,7 +216,7 @@ void PackageKitBackend::watch(int job, Transaction *transaction, bool removing)
         } else if (status == Transaction::ExitCancelled) {
             Q_EMIT finished(job, false, QString::fromLatin1(cancelledMarker));
         } else {
-            Q_EMIT finished(job, false, error->isEmpty() ? QStringLiteral("Something went wrong. Try again in a few minutes.") : *error);
+            Q_EMIT finished(job, false, error->isEmpty() ? tr("Something went wrong. Try again in a few minutes.") : *error);
         }
     });
 }
@@ -288,21 +310,21 @@ QString PackageKitBackend::errorText(Transaction::Error error, bool removing)
     case Transaction::ErrorRepoNotAvailable:
     case Transaction::ErrorCannotFetchSources:
     case Transaction::ErrorPackageDownloadFailed:
-        return QStringLiteral("Wild OS could not reach the app servers. Check your internet connection and try again.");
+        return tr("Wild OS could not reach the app servers. Check your internet connection and try again.");
     case Transaction::ErrorNotAuthorized:
-        return QStringLiteral("This needs the administrator password, and it was not given.");
+        return tr("This needs the administrator password, and it was not given.");
     case Transaction::ErrorNoSpaceOnDevice:
-        return QStringLiteral("There is not enough free space for this app.");
+        return tr("There is not enough free space for this app.");
     case Transaction::ErrorLockRequired:
     case Transaction::ErrorCannotGetLock:
-        return QStringLiteral("Another app is installing software. Try again when it has finished.");
+        return tr("Another app is installing software. Try again when it has finished.");
     case Transaction::ErrorTransactionCancelled:
-        return QStringLiteral("Cancelled.");
+        return tr("Cancelled.");
     case Transaction::ErrorDepResolutionFailed:
     case Transaction::ErrorCannotRemoveSystemPackage:
-        return removing ? QStringLiteral("Other parts of Wild OS need this app, so it has to stay.")
-                        : QStringLiteral("This app needs parts Wild OS can't provide right now. Try again after your next update.");
+        return removing ? tr("Other parts of Wild OS need this app, so it has to stay.")
+                        : tr("This app needs parts Wild OS can't provide right now. Try again after your next update.");
     default:
-        return QStringLiteral("Something went wrong. Try again in a few minutes.");
+        return tr("Something went wrong. Try again in a few minutes.");
     }
 }

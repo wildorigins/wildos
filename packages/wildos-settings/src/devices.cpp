@@ -194,9 +194,9 @@ QString sizeText(double bytes)
     const double gb = 1024.0 * 1024 * 1024;
     const double tb = gb * 1024;
     if (bytes >= tb) {
-        return QStringLiteral("%1 TB").arg(locale.toString(bytes / tb, 'f', 2));
+        return QCoreApplication::translate("Devices", "%1 TB").arg(locale.toString(bytes / tb, 'f', 2));
     }
-    return QStringLiteral("%1 GB").arg(locale.toString(bytes / gb, 'f', bytes >= 100 * gb ? 0 : 1));
+    return QCoreApplication::translate("Devices", "%1 GB").arg(locale.toString(bytes / gb, 'f', bytes >= 100 * gb ? 0 : 1));
 }
 
 bool isVirtualVendor(const QString &vendor)
@@ -310,19 +310,19 @@ QString networkLine(const QString &interface, bool wifi, bool cable)
     const QString active = dbusProperty(nm, device, nm + QStringLiteral(".Device"), QStringLiteral("ActiveConnection")).value<QDBusObjectPath>().path();
     if (active.isEmpty() || active == QLatin1String("/")) {
         if (wifi && !dbusProperty(nm, QStringLiteral("/org/freedesktop/NetworkManager"), nm, QStringLiteral("WirelessEnabled")).toBool()) {
-            return QStringLiteral("Turned off");
+            return QCoreApplication::translate("Devices", "Turned off");
         }
         if (!wifi && !cable) {
-            return QStringLiteral("No cable plugged in");
+            return QCoreApplication::translate("Devices", "No cable plugged in");
         }
-        return QStringLiteral("Not connected");
+        return QCoreApplication::translate("Devices", "Not connected");
     }
     const QString id = dbusProperty(nm, active, nm + QStringLiteral(".Connection.Active"), QStringLiteral("Id")).toString();
     const uint state = dbusProperty(nm, active, nm + QStringLiteral(".Connection.Active"), QStringLiteral("State")).toUInt();
     if (!wifi) {
-        return state == 2 ? QStringLiteral("Connected") : QStringLiteral("Connecting");
+        return state == 2 ? QCoreApplication::translate("Devices", "Connected") : QCoreApplication::translate("Devices", "Connecting");
     }
-    return (state == 2 ? QStringLiteral("Connected to %1") : QStringLiteral("Connecting to %1")).arg(id);
+    return (state == 2 ? QCoreApplication::translate("Devices", "Connected to %1") : QCoreApplication::translate("Devices", "Connecting to %1")).arg(id);
 }
 
 // BlueZ's adapters: hciN -> {powered, paired}.
@@ -471,13 +471,13 @@ LibfprintReaders libfprintReaders()
 QString usbConnection(const QString &path)
 {
     const QString port = QFileInfo(path).fileName();
-    return text(path + QStringLiteral("/removable")) == QLatin1String("fixed") ? QStringLiteral("Built in, on USB port %1").arg(port)
-                                                                              : QStringLiteral("USB port %1").arg(port);
+    return text(path + QStringLiteral("/removable")) == QLatin1String("fixed") ? QCoreApplication::translate("Devices", "Built in, on USB port %1").arg(port)
+                                                                              : QCoreApplication::translate("Devices", "USB port %1").arg(port);
 }
 
 QString pciConnection(const QString &address)
 {
-    return QStringLiteral("Inside this PC, in PCI slot %1").arg(address);
+    return QCoreApplication::translate("Devices", "Inside this PC, in PCI slot %1").arg(address);
 }
 
 // NVIDIA cards Debian's nvidia-driver drives: Maxwell (GeForce GTX 900,
@@ -612,7 +612,7 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
             }
         }
         if (kind == QLatin1String("usbctl") && progIf == 0x40) {
-            d.name = QStringLiteral("USB4 controller");
+            d.name = QCoreApplication::translate("Devices", "USB4 controller");
         }
         list << d;
     }
@@ -676,10 +676,10 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
             classes = descriptorClasses(path);
             d.port = entry;
             d.state = QStringLiteral("attention");
-            d.problem = QStringLiteral("Blocked by USB protection until you allow it.");
-            d.badge = QStringLiteral("Blocked");
+            d.problem = QCoreApplication::translate("Devices", "Blocked by USB protection until you allow it.");
+            d.badge = QCoreApplication::translate("Devices", "Blocked");
             d.action = QStringLiteral("allow");
-            d.actionLabel = QStringLiteral("Allow");
+            d.actionLabel = QCoreApplication::translate("Devices", "Allow");
         }
         QString unboundIface;
         for (const QString &cls : {QStringLiteral("01"), QStringLiteral("02"), QStringLiteral("03"), QStringLiteral("05"), QStringLiteral("07"),
@@ -709,10 +709,10 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
             d.driver = QStringLiteral("libfprint");
             if (fprint.unsupported.contains(id)) {
                 d.state = QStringLiteral("attention");
-                d.problem = QStringLiteral("Wild OS has no driver for this reader yet.");
-                d.badge = QStringLiteral("Needs a driver");
+                d.problem = QCoreApplication::translate("Devices", "Wild OS has no driver for this reader yet.");
+                d.badge = QCoreApplication::translate("Devices", "Needs a driver");
                 d.action = QStringLiteral("report");
-                d.actionLabel = QStringLiteral("Report it");
+                d.actionLabel = QCoreApplication::translate("Devices", "Report it");
                 d.driver.clear();
             }
         } else if (classes.contains(QStringLiteral("0e"))) {
@@ -785,7 +785,7 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
             if (d) {
                 d->kind = QStringLiteral("usbdrive");
                 d->blockName = block;
-                d->line = QStringLiteral("Plugged in, %1").arg(sizeText(bytes));
+                d->line = QCoreApplication::translate("Devices", "Plugged in, %1").arg(sizeText(bytes));
             }
             continue;
         }
@@ -820,76 +820,76 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
         if (d.driver.isEmpty() || d.driver == QLatin1String("sd")) {
             d.driver = d.driver.isEmpty() ? linkName(pciPath + QStringLiteral("/driver")) : QStringLiteral("sd (%1)").arg(linkName(pciPath + QStringLiteral("/driver")));
         }
-        d.connection =port.hasMatch() ? QStringLiteral("Inside this PC, on SATA port %1").arg(port.captured(1))
+        d.connection =port.hasMatch() ? QCoreApplication::translate("Devices", "Inside this PC, on SATA port %1").arg(port.captured(1))
                      : !pciAddress.isEmpty() ? pciConnection(pciAddress)
-                                             : QStringLiteral("Built in");
+                                             : QCoreApplication::translate("Devices", "Built in");
         d.hardwareId = pciPath.isEmpty() ? QString() : QStringLiteral("PCI %1:%2").arg(text(pciPath + QStringLiteral("/vendor")).mid(2), text(pciPath + QStringLiteral("/device")).mid(2));
         if (removable || block.startsWith(QLatin1String("mmcblk"))) {
             d.kind = QStringLiteral("card");
-            d.name = QStringLiteral("Memory card, %1").arg(sizeText(bytes));
-            d.line = QStringLiteral("In the card reader");
+            d.name = QCoreApplication::translate("Devices", "Memory card, %1").arg(sizeText(bytes));
+            d.line = QCoreApplication::translate("Devices", "In the card reader");
             list << d;
             continue;
         }
         d.kind = QStringLiteral("storage");
         d.first = systemDisks.contains(block);
-        d.name = (d.virtualHardware ? QStringLiteral("Virtual drive, %1") : solid ? QStringLiteral("Internal SSD, %1") : QStringLiteral("Internal hard drive, %1")).arg(sizeText(bytes));
-        d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Size")}, {QStringLiteral("value"), sizeText(bytes)}};
+        d.name = (d.virtualHardware ? QCoreApplication::translate("Devices", "Virtual drive, %1") : solid ? QCoreApplication::translate("Devices", "Internal SSD, %1") : QCoreApplication::translate("Devices", "Internal hard drive, %1")).arg(sizeText(bytes));
+        d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Size")}, {QStringLiteral("value"), sizeText(bytes)}};
 
         QString used;
         if (space.contains(block) && space.value(block).second > 0) {
             const auto s = space.value(block);
-            used = QStringLiteral("%1% used").arg(qRound(100 * s.first / s.second));
-            d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Space used")},
-                                   {QStringLiteral("value"), QStringLiteral("%1% (%2 of %3)").arg(qRound(100 * s.first / s.second)).arg(sizeText(s.first), sizeText(s.second))}};
+            used = QCoreApplication::translate("Devices", "%1% used").arg(qRound(100 * s.first / s.second));
+            d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Space used")},
+                                   {QStringLiteral("value"), QCoreApplication::translate("Devices", "%1% (%2 of %3)").arg(qRound(100 * s.first / s.second)).arg(sizeText(s.first), sizeText(s.second))}};
         }
         const QJsonObject h = health.value(block).toObject();
         QString healthWords;
         if (!rootAnswered) {
-            healthWords = QStringLiteral("Couldn't be checked just now.");
-            d.line = used.isEmpty() ? QStringLiteral("Built in") : used.left(1).toUpper() + used.mid(1);
+            healthWords = QCoreApplication::translate("Devices", "Couldn't be checked just now.");
+            d.line = used.isEmpty() ? QCoreApplication::translate("Devices", "Built in") : used.left(1).toUpper() + used.mid(1);
         } else if (!h.value(QStringLiteral("reported")).toBool()) {
-            healthWords = d.virtualHardware ? QStringLiteral("A virtual drive doesn't report its health.") : QStringLiteral("This drive doesn't report its health.");
-            d.line = used.isEmpty() ? QStringLiteral("Built in") : used.left(1).toUpper() + used.mid(1);
+            healthWords = d.virtualHardware ? QCoreApplication::translate("Devices", "A virtual drive doesn't report its health.") : QCoreApplication::translate("Devices", "This drive doesn't report its health.");
+            d.line = used.isEmpty() ? QCoreApplication::translate("Devices", "Built in") : used.left(1).toUpper() + used.mid(1);
         } else {
             const bool passed = h.value(QStringLiteral("passed")).toBool();
             const int warning = h.value(QStringLiteral("criticalWarning")).toInt();
             const int wear = h.value(QStringLiteral("percentUsed")).toInt(-1);
             if (!passed || warning != 0) {
-                healthWords = QStringLiteral("Failing. Its own health check says it may stop working.");
+                healthWords = QCoreApplication::translate("Devices", "Failing. Its own health check says it may stop working.");
                 d.state = QStringLiteral("attention");
-                d.problem = QStringLiteral("Its health check says it's failing. Back up your files now.");
-                d.badge = QStringLiteral("Failing");
+                d.problem = QCoreApplication::translate("Devices", "Its health check says it's failing. Back up your files now.");
+                d.badge = QCoreApplication::translate("Devices", "Failing");
                 d.action = QStringLiteral("backup");
-                d.actionLabel = QStringLiteral("Back up now");
+                d.actionLabel = QCoreApplication::translate("Devices", "Back up now");
             } else if (wear >= 100) {
-                healthWords = QStringLiteral("Worn out. It has used all of its rated life.");
+                healthWords = QCoreApplication::translate("Devices", "Worn out. It has used all of its rated life.");
                 d.state = QStringLiteral("attention");
-                d.problem = QStringLiteral("It has used all of its rated life. Back up your files now.");
-                d.badge = QStringLiteral("Wearing out");
+                d.problem = QCoreApplication::translate("Devices", "It has used all of its rated life. Back up your files now.");
+                d.badge = QCoreApplication::translate("Devices", "Wearing out");
                 d.action = QStringLiteral("backup");
-                d.actionLabel = QStringLiteral("Back up now");
+                d.actionLabel = QCoreApplication::translate("Devices", "Back up now");
             } else {
-                healthWords = QStringLiteral("Healthy. Its own health check passed.");
+                healthWords = QCoreApplication::translate("Devices", "Healthy. Its own health check passed.");
             }
-            d.line = QStringLiteral("Healthy") + (used.isEmpty() ? QString() : QStringLiteral(". ") + used);
+            d.line = used.isEmpty() ? QCoreApplication::translate("Devices", "Healthy") : QCoreApplication::translate("Devices", "Healthy. %1").arg(used);
             if (wear >= 0) {
-                d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Wear")}, {QStringLiteral("value"), QStringLiteral("%1% of its rated life used").arg(wear)}};
+                d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Wear")}, {QStringLiteral("value"), QCoreApplication::translate("Devices", "%1% of its rated life used").arg(wear)}};
             }
             if (h.contains(QStringLiteral("temperature"))) {
-                d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Temperature")}, {QStringLiteral("value"), QStringLiteral("%1 °C").arg(h.value(QStringLiteral("temperature")).toInt())}};
+                d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Temperature")}, {QStringLiteral("value"), QStringLiteral("%1 °C").arg(h.value(QStringLiteral("temperature")).toInt())}};
             }
             if (h.value(QStringLiteral("hours")).toInteger() > 0) {
-                d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Switched on for")},
-                                       {QStringLiteral("value"), QStringLiteral("%1 hours in all").arg(QLocale(QLocale::English).toString(h.value(QStringLiteral("hours")).toInteger()))}};
+                d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Switched on for")},
+                                       {QStringLiteral("value"), QCoreApplication::translate("Devices", "%1 hours in all").arg(QLocale::system().toString(h.value(QStringLiteral("hours")).toInteger()))}};
             }
             const qint64 bad = h.value(QStringLiteral("reallocated")).toInteger() + h.value(QStringLiteral("pending")).toInteger();
             if (bad > 0) {
-                d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Damaged areas")},
-                                       {QStringLiteral("value"), QStringLiteral("%1, set aside so nothing is stored there").arg(bad)}};
+                d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Damaged areas")},
+                                       {QStringLiteral("value"), QCoreApplication::translate("Devices", "%1, set aside so nothing is stored there").arg(bad)}};
             }
         }
-        d.extra.insert(0, QVariantMap{{QStringLiteral("label"), QStringLiteral("Health")}, {QStringLiteral("value"), healthWords}});
+        d.extra.insert(0, QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Health")}, {QStringLiteral("value"), healthWords}});
         list << d;
     }
 
@@ -995,7 +995,7 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
             d.model = in.name;
             d.driver = in.driver;
         } else if (in.bus == QLatin1String("builtin")) {
-            d.connection = QStringLiteral("Built in");
+            d.connection = QCoreApplication::translate("Devices", "Built in");
             d.builtIn = true;
             d.model = in.name;
             d.driver = in.driver;
@@ -1019,7 +1019,7 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
         d.key = path;
         d.kind = QStringLiteral("battery");
         d.builtIn = true;
-        d.connection = QStringLiteral("Built in");
+        d.connection = QCoreApplication::translate("Devices", "Built in");
         d.maker = text(path + QStringLiteral("/manufacturer"));
         d.model = text(path + QStringLiteral("/model_name"));
         d.driver = linkName(path + QStringLiteral("/device/driver"));
@@ -1031,10 +1031,10 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
         }
         if (design > 0 && full > 0) {
             const int percent = qMin(100, qRound(100 * full / design));
-            d.line = QStringLiteral("Holds %1% of its charge when new").arg(percent);
-            d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Health")}, {QStringLiteral("value"), d.line}};
+            d.line = QCoreApplication::translate("Devices", "Holds %1% of its charge when new").arg(percent);
+            d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Health")}, {QStringLiteral("value"), d.line}};
         } else {
-            d.line = QStringLiteral("Built in");
+            d.line = QCoreApplication::translate("Devices", "Built in");
         }
         list << d;
     }
@@ -1091,56 +1091,56 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
         const bool bound = !d.driver.isEmpty();
 
         // Plain names and icons.
-        static const QHash<QString, QPair<QString, QString>> plain = {
-            {QStringLiteral("graphics"), {QStringLiteral("Graphics"), QStringLiteral("monitor-round")}},
+        const QHash<QString, QPair<QString, QString>> plain = {
+            {QStringLiteral("graphics"), {QCoreApplication::translate("Devices", "Graphics"), QStringLiteral("monitor-round")}},
             {QStringLiteral("wifi"), {QStringLiteral("Wi-Fi"), QStringLiteral("wifi-round")}},
             {QStringLiteral("ethernet"), {QStringLiteral("Ethernet"), QStringLiteral("ethernet")}},
             {QStringLiteral("bluetooth"), {QStringLiteral("Bluetooth"), QStringLiteral("bluetooth")}},
-            {QStringLiteral("sound"), {QStringLiteral("Speakers and microphone"), QStringLiteral("volume-round")}},
-            {QStringLiteral("hdmisound"), {QStringLiteral("Sound over HDMI"), QStringLiteral("volume-round")}},
-            {QStringLiteral("camera"), {QStringLiteral("Camera"), QStringLiteral("camera-round")}},
-            {QStringLiteral("fingerprint"), {QStringLiteral("Fingerprint reader"), QStringLiteral("fingerprint")}},
-            {QStringLiteral("storage"), {QStringLiteral("Storage"), QStringLiteral("hard-drive")}},
-            {QStringLiteral("touchpad"), {QStringLiteral("Touchpad"), QStringLiteral("touchpad")}},
-            {QStringLiteral("keyboard"), {QStringLiteral("Keyboard"), QStringLiteral("keyboard")}},
-            {QStringLiteral("keyboardmouse"), {QStringLiteral("Keyboard and mouse"), QStringLiteral("keyboard")}},
-            {QStringLiteral("mouse"), {QStringLiteral("Mouse"), QStringLiteral("mouse")}},
-            {QStringLiteral("touchscreen"), {QStringLiteral("Touchscreen"), QStringLiteral("display")}},
-            {QStringLiteral("pen"), {QStringLiteral("Pen and tablet"), QStringLiteral("pencil")}},
-            {QStringLiteral("controller"), {QStringLiteral("Game controller"), QStringLiteral("games")}},
-            {QStringLiteral("battery"), {QStringLiteral("Battery"), QStringLiteral("battery")}},
-            {QStringLiteral("printer"), {QStringLiteral("Printer"), QStringLiteral("printer-round")}},
-            {QStringLiteral("scanner"), {QStringLiteral("Scanner"), QStringLiteral("printer-round")}},
-            {QStringLiteral("smartcard"), {QStringLiteral("Smart card reader"), QStringLiteral("security-key")}},
-            {QStringLiteral("phone"), {QStringLiteral("Phone or camera"), QStringLiteral("phone")}},
-            {QStringLiteral("usbdrive"), {QStringLiteral("USB drive"), QStringLiteral("usb")}},
-            {QStringLiteral("card"), {QStringLiteral("Memory card"), QStringLiteral("usb")}},
-            {QStringLiteral("cardreader"), {QStringLiteral("Memory card reader"), QStringLiteral("usb")}},
-            {QStringLiteral("usb"), {QStringLiteral("USB device"), QStringLiteral("usb")}},
-            {QStringLiteral("usbctl"), {QStringLiteral("USB controller"), QStringLiteral("usb")}},
-            {QStringLiteral("storagectl"), {QStringLiteral("Storage controller"), QStringLiteral("chip")}},
-            {QStringLiteral("firewire"), {QStringLiteral("FireWire port"), QStringLiteral("plug")}},
+            {QStringLiteral("sound"), {QCoreApplication::translate("Devices", "Speakers and microphone"), QStringLiteral("volume-round")}},
+            {QStringLiteral("hdmisound"), {QCoreApplication::translate("Devices", "Sound over HDMI"), QStringLiteral("volume-round")}},
+            {QStringLiteral("camera"), {QCoreApplication::translate("Devices", "Camera"), QStringLiteral("camera-round")}},
+            {QStringLiteral("fingerprint"), {QCoreApplication::translate("Devices", "Fingerprint reader"), QStringLiteral("fingerprint")}},
+            {QStringLiteral("storage"), {QCoreApplication::translate("Devices", "Storage"), QStringLiteral("hard-drive")}},
+            {QStringLiteral("touchpad"), {QCoreApplication::translate("Devices", "Touchpad"), QStringLiteral("touchpad")}},
+            {QStringLiteral("keyboard"), {QCoreApplication::translate("Devices", "Keyboard"), QStringLiteral("keyboard")}},
+            {QStringLiteral("keyboardmouse"), {QCoreApplication::translate("Devices", "Keyboard and mouse"), QStringLiteral("keyboard")}},
+            {QStringLiteral("mouse"), {QCoreApplication::translate("Devices", "Mouse"), QStringLiteral("mouse")}},
+            {QStringLiteral("touchscreen"), {QCoreApplication::translate("Devices", "Touchscreen"), QStringLiteral("display")}},
+            {QStringLiteral("pen"), {QCoreApplication::translate("Devices", "Pen and tablet"), QStringLiteral("pencil")}},
+            {QStringLiteral("controller"), {QCoreApplication::translate("Devices", "Game controller"), QStringLiteral("games")}},
+            {QStringLiteral("battery"), {QCoreApplication::translate("Devices", "Battery"), QStringLiteral("battery")}},
+            {QStringLiteral("printer"), {QCoreApplication::translate("Devices", "Printer"), QStringLiteral("printer-round")}},
+            {QStringLiteral("scanner"), {QCoreApplication::translate("Devices", "Scanner"), QStringLiteral("printer-round")}},
+            {QStringLiteral("smartcard"), {QCoreApplication::translate("Devices", "Smart card reader"), QStringLiteral("security-key")}},
+            {QStringLiteral("phone"), {QCoreApplication::translate("Devices", "Phone or camera"), QStringLiteral("phone")}},
+            {QStringLiteral("usbdrive"), {QCoreApplication::translate("Devices", "USB drive"), QStringLiteral("usb")}},
+            {QStringLiteral("card"), {QCoreApplication::translate("Devices", "Memory card"), QStringLiteral("usb")}},
+            {QStringLiteral("cardreader"), {QCoreApplication::translate("Devices", "Memory card reader"), QStringLiteral("usb")}},
+            {QStringLiteral("usb"), {QCoreApplication::translate("Devices", "USB device"), QStringLiteral("usb")}},
+            {QStringLiteral("usbctl"), {QCoreApplication::translate("Devices", "USB controller"), QStringLiteral("usb")}},
+            {QStringLiteral("storagectl"), {QCoreApplication::translate("Devices", "Storage controller"), QStringLiteral("chip")}},
+            {QStringLiteral("firewire"), {QCoreApplication::translate("Devices", "FireWire port"), QStringLiteral("plug")}},
         };
         if (d.name.isEmpty()) {
             d.name = plain.value(d.kind).first;
             if (d.kind == QLatin1String("graphics")) {
                 if (d.virtualHardware) {
-                    d.name = QStringLiteral("Virtual graphics");
+                    d.name = QCoreApplication::translate("Devices", "Virtual graphics");
                 } else if (d.vendorId == QLatin1String("10de")) {
-                    d.name = QStringLiteral("NVIDIA graphics card");
+                    d.name = QCoreApplication::translate("Devices", "NVIDIA graphics card");
                 } else if (d.vendorId == QLatin1String("1002")) {
-                    d.name = QStringLiteral("AMD graphics");
+                    d.name = QCoreApplication::translate("Devices", "AMD graphics");
                 } else if (d.vendorId == QLatin1String("8086")) {
-                    d.name = QStringLiteral("Intel graphics");
+                    d.name = QCoreApplication::translate("Devices", "Intel graphics");
                 }
             } else if (d.kind == QLatin1String("sound") && d.bus == QLatin1String("usb")) {
-                d.name = QStringLiteral("USB audio");
+                d.name = QCoreApplication::translate("Devices", "USB audio");
             } else if (d.kind == QLatin1String("camera") && d.bus == QLatin1String("usb") && !d.builtIn) {
-                d.name = QStringLiteral("Webcam");
+                d.name = QCoreApplication::translate("Devices", "Webcam");
             } else if (d.kind == QLatin1String("wifi") && d.bus == QLatin1String("usb")) {
-                d.name = QStringLiteral("Wi-Fi adapter");
+                d.name = QCoreApplication::translate("Devices", "Wi-Fi adapter");
             } else if (d.kind == QLatin1String("ethernet") && d.bus == QLatin1String("usb")) {
-                d.name = QStringLiteral("Ethernet adapter");
+                d.name = QCoreApplication::translate("Devices", "Ethernet adapter");
             }
         }
         d.icon = plain.value(d.kind).second;
@@ -1152,9 +1152,9 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
         if (d.line.isEmpty()) {
             if (d.kind == QLatin1String("wifi") || d.kind == QLatin1String("ethernet")) {
                 if (rfkill == QLatin1String("hard")) {
-                    d.line = QStringLiteral("Turned off with a switch or key");
+                    d.line = QCoreApplication::translate("Devices", "Turned off with a switch or key");
                 } else if (rfkill == QLatin1String("soft")) {
-                    d.line = QStringLiteral("Turned off");
+                    d.line = QCoreApplication::translate("Devices", "Turned off");
                 } else if (!d.netInterface.isEmpty()) {
                     d.line = networkLine(d.netInterface, d.kind == QLatin1String("wifi"),
                                          text(QStringLiteral("/sys/class/net/%1/carrier").arg(d.netInterface)) == QLatin1String("1"));
@@ -1167,26 +1167,26 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
                     }
                 }
                 if (rfkill == QLatin1String("hard")) {
-                    d.line = QStringLiteral("Turned off with a switch or key");
+                    d.line = QCoreApplication::translate("Devices", "Turned off with a switch or key");
                 } else if (rfkill == QLatin1String("soft") || (adapters.contains(hci) && !adapters.value(hci).first)) {
-                    d.line = QStringLiteral("Turned off");
+                    d.line = QCoreApplication::translate("Devices", "Turned off");
                 } else if (adapters.contains(hci)) {
                     const int paired = adapters.value(hci).second;
-                    d.line = paired == 0 ? QStringLiteral("No devices paired yet")
-                                         : paired == 1 ? QStringLiteral("1 device paired")
-                                                       : QStringLiteral("%1 devices paired").arg(paired);
+                    d.line = paired == 0 ? QCoreApplication::translate("Devices", "No devices paired yet")
+                                         : paired == 1 ? QCoreApplication::translate("Devices", "1 device paired")
+                                                       : QCoreApplication::translate("Devices", "%1 devices paired").arg(paired);
                 }
             } else if (d.kind == QLatin1String("graphics") && d.driver == QLatin1String("nvidia")) {
-                d.line = QStringLiteral("Using NVIDIA's driver");
+                d.line = QCoreApplication::translate("Devices", "Using NVIDIA's driver");
             } else if (d.kind == QLatin1String("graphics") && d.driver == QLatin1String("nouveau")) {
-                d.line = QStringLiteral("Using the open driver");
+                d.line = QCoreApplication::translate("Devices", "Using the open driver");
             } else if (d.kind == QLatin1String("usb")) {
-                d.line = d.model.isEmpty() ? QStringLiteral("Plugged in") : d.model;
+                d.line = d.model.isEmpty() ? QCoreApplication::translate("Devices", "Plugged in") : d.model;
             }
             if (d.line.isEmpty()) {
-                d.line = d.bus == QLatin1String("bluetooth") ? QStringLiteral("Connected over Bluetooth")
-                       : d.builtIn                           ? QStringLiteral("Built in")
-                                                             : QStringLiteral("Plugged in over USB");
+                d.line = d.bus == QLatin1String("bluetooth") ? QCoreApplication::translate("Devices", "Connected over Bluetooth")
+                       : d.builtIn                           ? QCoreApplication::translate("Devices", "Built in")
+                                                             : QCoreApplication::translate("Devices", "Plugged in over USB");
             }
         }
 
@@ -1219,25 +1219,25 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
         } else if (d.kind == QLatin1String("graphics") && d.vendorId == QLatin1String("10de") && d.driver != QLatin1String("nvidia")
                    && QFile::exists(QStringLiteral("/var/lib/dpkg/info/nvidia-driver.list"))) {
             d.state = QStringLiteral("attention");
-            d.problem = QStringLiteral("NVIDIA's driver is installed and starts after a restart.");
-            d.badge = QStringLiteral("Restart needed");
+            d.problem = QCoreApplication::translate("Devices", "NVIDIA's driver is installed and starts after a restart.");
+            d.badge = QCoreApplication::translate("Devices", "Restart needed");
             d.action = QStringLiteral("restart");
-            d.actionLabel = QStringLiteral("Restart now");
+            d.actionLabel = QCoreApplication::translate("Devices", "Restart now");
         } else if (d.kind == QLatin1String("graphics") && d.vendorId == QLatin1String("10de") && d.driver != QLatin1String("nvidia")
                    && nvidiaSupported(d.productId) && firmwareFiles.isEmpty()) {
             d.state = QStringLiteral("attention");
-            d.problem = bound && !d.functionMissing ? QStringLiteral("Running on the basic driver, so games and video will be slow.")
-                                                    : QStringLiteral("Running without a driver, so games and video will be slow.");
-            d.badge = QStringLiteral("Needs a driver");
+            d.problem = bound && !d.functionMissing ? QCoreApplication::translate("Devices", "Running on the basic driver, so games and video will be slow.")
+                                                    : QCoreApplication::translate("Devices", "Running without a driver, so games and video will be slow.");
+            d.badge = QCoreApplication::translate("Devices", "Needs a driver");
             d.action = QStringLiteral("graphicsdriver");
-            d.actionLabel = QStringLiteral("Install the driver");
+            d.actionLabel = QCoreApplication::translate("Devices", "Install the driver");
         } else if ((wantsDriver || d.functionMissing) && !firmwareFiles.isEmpty()) {
             d.state = QStringLiteral("attention");
-            d.problem = QStringLiteral("Can't start because its firmware is missing.");
-            d.badge = QStringLiteral("Missing firmware");
+            d.problem = QCoreApplication::translate("Devices", "Can't start because its firmware is missing.");
+            d.badge = QCoreApplication::translate("Devices", "Missing firmware");
             d.action = QStringLiteral("update");
-            d.actionLabel = QStringLiteral("Check for updates");
-            d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Firmware it asked for")}, {QStringLiteral("value"), firmwareFiles.join(QStringLiteral(", "))}};
+            d.actionLabel = QCoreApplication::translate("Devices", "Check for updates");
+            d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Firmware it asked for")}, {QStringLiteral("value"), firmwareFiles.join(QStringLiteral(", "))}};
         } else if (wantsDriver) {
             // settings-devices resolves the driver (the kernel's module list
             // is root's on Wild OS) and says whether something switched it off.
@@ -1251,39 +1251,39 @@ QVariantList scanAll(const QJsonObject &root, bool rootAnswered)
             const QString blacklist = why.value(QStringLiteral("blacklisted")).toString();
             if (!security.isEmpty() && blacklist.isEmpty()) {
                 d.state = QStringLiteral("off");
-                d.line = QStringLiteral("Switched off for security");
-                d.badge = QStringLiteral("Off");
-                d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Why it's off")},
-                                       {QStringLiteral("value"), QStringLiteral("Wild OS keeps its driver, %1, switched off: it is rarely needed and has been used to attack PCs.").arg(security)}};
+                d.line = QCoreApplication::translate("Devices", "Switched off for security");
+                d.badge = QCoreApplication::translate("Devices", "Off");
+                d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Why it's off")},
+                                       {QStringLiteral("value"), QCoreApplication::translate("Devices", "Wild OS keeps its driver, %1, switched off: it is rarely needed and has been used to attack PCs.").arg(security)}};
             } else if (d.kind == QLatin1String("usb") && modules.isEmpty() && !d.unboundInterface) {
                 // A device apps talk to directly, with no kernel driver to want.
             } else {
                 d.state = QStringLiteral("attention");
-                d.badge = QStringLiteral("Needs a driver");
+                d.badge = QCoreApplication::translate("Devices", "Needs a driver");
                 d.action = QStringLiteral("report");
-                d.actionLabel = QStringLiteral("Report it");
+                d.actionLabel = QCoreApplication::translate("Devices", "Report it");
                 if (!blacklist.isEmpty()) {
-                    d.problem = QStringLiteral("Its driver is switched off on this PC.");
-                    d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Why it's off")},
-                                           {QStringLiteral("value"), QStringLiteral("Its driver, %1, is blocked in %2.").arg(blacklist, why.value(QStringLiteral("file")).toString())}};
+                    d.problem = QCoreApplication::translate("Devices", "Its driver is switched off on this PC.");
+                    d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Why it's off")},
+                                           {QStringLiteral("value"), QCoreApplication::translate("Devices", "Its driver, %1, is blocked in %2.").arg(blacklist, why.value(QStringLiteral("file")).toString())}};
                 } else if (!modules.isEmpty()) {
-                    d.problem = QStringLiteral("Its driver didn't start.");
-                    d.extra << QVariantMap{{QStringLiteral("label"), QStringLiteral("Driver that should run it")}, {QStringLiteral("value"), modules.join(QStringLiteral(", "))}};
+                    d.problem = QCoreApplication::translate("Devices", "Its driver didn't start.");
+                    d.extra << QVariantMap{{QStringLiteral("label"), QCoreApplication::translate("Devices", "Driver that should run it")}, {QStringLiteral("value"), modules.join(QStringLiteral(", "))}};
                 } else if (!known) {
-                    d.problem = d.kind == QLatin1String("graphics") ? QStringLiteral("No driver is running it, so the screen runs on a basic stand-in.")
-                                                                    : QStringLiteral("No driver is running it.");
+                    d.problem = d.kind == QLatin1String("graphics") ? QCoreApplication::translate("Devices", "No driver is running it, so the screen runs on a basic stand-in.")
+                                                                    : QCoreApplication::translate("Devices", "No driver is running it.");
                 } else if (d.kind == QLatin1String("graphics")) {
-                    d.problem = QStringLiteral("Wild OS has no driver for it, so the screen runs on a basic stand-in.");
+                    d.problem = QCoreApplication::translate("Devices", "Wild OS has no driver for it, so the screen runs on a basic stand-in.");
                 } else {
-                    d.problem = QStringLiteral("Wild OS has no driver for it yet.");
+                    d.problem = QCoreApplication::translate("Devices", "Wild OS has no driver for it yet.");
                 }
             }
         } else if (d.functionMissing) {
             d.state = QStringLiteral("attention");
-            d.problem = QStringLiteral("Its driver started, but it isn't working.");
-            d.badge = QStringLiteral("Not working");
+            d.problem = QCoreApplication::translate("Devices", "Its driver started, but it isn't working.");
+            d.badge = QCoreApplication::translate("Devices", "Not working");
             d.action = QStringLiteral("report");
-            d.actionLabel = QStringLiteral("Report it");
+            d.actionLabel = QCoreApplication::translate("Devices", "Report it");
         }
         done << d;
     }
@@ -1347,7 +1347,7 @@ void Devices::allow(const QString &port)
 {
     static const QRegularExpression valid(QStringLiteral("^\\d+-\\d+(\\.\\d+)*$"));
     if (!valid.match(port).hasMatch() || !QFile::exists(allowHelper)) {
-        Q_EMIT failed(QStringLiteral("This device couldn't be allowed. Unplug it and try again."));
+        Q_EMIT failed(tr("This device couldn't be allowed. Unplug it and try again."));
         return;
     }
     auto *process = new QProcess(this);
@@ -1355,9 +1355,9 @@ void Devices::allow(const QString &port)
         process->deleteLater();
         const QString result = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
         if (result == QLatin1String("denied")) {
-            Q_EMIT failed(QStringLiteral("Only an administrator can allow USB devices."));
+            Q_EMIT failed(tr("Only an administrator can allow USB devices."));
         } else if (result != QLatin1String("allowed") && result != QLatin1String("cancelled")) {
-            Q_EMIT failed(QStringLiteral("This device couldn't be allowed. Unplug it and try again."));
+            Q_EMIT failed(tr("This device couldn't be allowed. Unplug it and try again."));
         }
         // Its drivers take a moment to bind once it is let in.
         QTimer::singleShot(1500, this, &Devices::scan);

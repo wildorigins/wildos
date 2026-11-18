@@ -17,7 +17,7 @@ Window {
     height: 900
     visible: true
     color: UI.Style.lakeNavy
-    title: "Files preview"
+    title: qsTr("Files preview")
 
     Image {
         id: wallpaper

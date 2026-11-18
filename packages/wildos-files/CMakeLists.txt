@@ -78,10 +78,28 @@ if(WILDOS_FILES_TESTS)
 endif()
 
 install(TARGETS wildos-files wildos-safebox RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(PROGRAMS data/remove-details DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+install(PROGRAMS data/remove-details data/files-drop-dev-tools DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+install(FILES data/wildos-files-dev-tools.service data/wildos-files-dev-tools.timer DESTINATION lib/systemd/system)
 # Advanced protection's rows for these two appear when their hooks exist;
 # Files itself reads the switches (src/protection.cpp).
 install(PROGRAMS data/advanced-protection/scrub_files data/advanced-protection/safebox DESTINATION lib/wildos/advanced-protection.d)
 install(FILES data/org.wildos.files.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/org.wildos.Files.service data/org.wildos.files.FileManager1.service DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/services)
 install(FILES data/fm-shim-wildos-files.conf DESTINATION lib/systemd/user/fm-shim.service.d RENAME 50-wildos-files.conf)
+
+# Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
+# WildOS.UI for the language chosen in Settings.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

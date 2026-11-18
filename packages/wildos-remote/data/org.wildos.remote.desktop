@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Remote
+Name[fr]=Accès à distance
 GenericName=Remote desktop and SSH
+GenericName[fr]=Bureau à distance et SSH
 Comment=Connect to other PCs and servers
+Comment[fr]=Connectez-vous à d'autres PC et serveurs
 Exec=wildos-remote %u
 Icon=org.wildos.remote
 Terminal=false

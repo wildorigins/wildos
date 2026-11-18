@@ -165,6 +165,10 @@ Panel {
                     elide: Text.ElideRight
                     text: card.detail()
                 }
+                ErrorDetails {
+                    Layout.fillWidth: true
+                    text: card.variant === "failed" ? (card.last.detail || "") : ""
+                }
             }
 
             BoardButton {

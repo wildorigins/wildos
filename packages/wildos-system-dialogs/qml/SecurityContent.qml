@@ -27,7 +27,7 @@ FocusScope {
 
         SecurityLink {
             id: lockLink
-            text: "Lock"
+            text: qsTr("Lock")
             onClicked: Security.lock()
             KeyNavigation.down: switchLink.visible ? switchLink : signOutLink
         }
@@ -35,7 +35,7 @@ FocusScope {
         SecurityLink {
             id: switchLink
             visible: Security.canSwitchUser
-            text: "Switch user"
+            text: qsTr("Switch user")
             onClicked: Security.switchUser()
             KeyNavigation.up: lockLink
             KeyNavigation.down: signOutLink
@@ -44,7 +44,7 @@ FocusScope {
         SecurityLink {
             id: signOutLink
             visible: Security.canSignOut
-            text: "Sign out"
+            text: qsTr("Sign out")
             onClicked: Security.signOut()
             KeyNavigation.up: switchLink.visible ? switchLink : lockLink
             KeyNavigation.down: passwordLink.visible ? passwordLink : taskLink
@@ -53,7 +53,7 @@ FocusScope {
         SecurityLink {
             id: passwordLink
             visible: Security.canChangePassword
-            text: "Change password"
+            text: qsTr("Change password")
             onClicked: Security.changePassword()
             KeyNavigation.up: signOutLink
             KeyNavigation.down: taskLink.visible ? taskLink : cancelButton
@@ -62,7 +62,7 @@ FocusScope {
         SecurityLink {
             id: taskLink
             visible: Security.canTaskManager
-            text: "Task Manager"
+            text: qsTr("Task Manager")
             previewHover: content.previewHover
             onClicked: Security.taskManager()
             KeyNavigation.up: passwordLink.visible ? passwordLink : signOutLink
@@ -80,7 +80,7 @@ FocusScope {
             onWallpaper: true
             size: "large"
             leftPadding: 28
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: Security.close()
             KeyNavigation.up: taskLink.visible ? taskLink : passwordLink.visible ? passwordLink : signOutLink
         }
@@ -96,24 +96,24 @@ FocusScope {
         CornerButton {
             visible: Security.networkAvailable
             iconName: Security.networkConnected ? "wifi" : "wifi-off"
-            label: "Network"
+            label: qsTr("Network")
             entries: [
                 { text: Security.networkText, enabled: false },
                 { separator: true },
-                { text: "Network settings", icon: "cog", run: () => Security.networkSettings() }
+                { text: qsTr("Network settings"), icon: "cog", run: () => Security.networkSettings() }
             ]
         }
 
         CornerButton {
             iconName: "accessibility"
-            label: "Accessibility"
+            label: qsTr("Accessibility")
             entries: {
                 const list = [
-                    { text: "Magnifier", checked: Security.magnifier, run: () => Security.setMagnifier(!Security.magnifier) },
-                    { text: "Sticky keys", checked: Security.stickyKeys, run: () => Security.setStickyKeys(!Security.stickyKeys) }
+                    { text: qsTr("Magnifier"), checked: Security.magnifier, run: () => Security.setMagnifier(!Security.magnifier) },
+                    { text: qsTr("Sticky keys"), checked: Security.stickyKeys, run: () => Security.setStickyKeys(!Security.stickyKeys) }
                 ];
                 if (Security.screenReaderAvailable) {
-                    list.push({ text: "Screen reader", checked: Security.screenReader, run: () => Security.setScreenReader(!Security.screenReader) });
+                    list.push({ text: qsTr("Screen reader"), checked: Security.screenReader, run: () => Security.setScreenReader(!Security.screenReader) });
                 }
                 return list;
             }
@@ -121,14 +121,14 @@ FocusScope {
 
         CornerButton {
             iconName: "power"
-            label: "Power"
+            label: qsTr("Power")
             entries: {
                 const list = [];
                 if (Security.canSleep) {
-                    list.push({ text: "Sleep", icon: "moon", run: () => Security.sleep() });
+                    list.push({ text: qsTr("Sleep"), icon: "moon", run: () => Security.sleep() });
                 }
-                list.push({ text: "Shut down", icon: "power", run: () => Security.shutDown() });
-                list.push({ text: "Restart", icon: "restart", run: () => Security.restart() });
+                list.push({ text: qsTr("Shut down"), icon: "power", run: () => Security.shutDown() });
+                list.push({ text: qsTr("Restart"), icon: "restart", run: () => Security.restart() });
                 return list;
             }
         }

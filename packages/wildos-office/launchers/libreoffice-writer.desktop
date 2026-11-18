@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Write
+Name[fr]=Write
 GenericName=Documents
+GenericName[fr]=Documents
 Comment=Write letters, reports and CVs, and open and save Word files
+Comment[fr]=Écrivez des lettres, des rapports et des CV, et ouvrez et enregistrez des fichiers Word
 Exec=wildos-write %U
 Icon=org.wildos.write
 Terminal=false

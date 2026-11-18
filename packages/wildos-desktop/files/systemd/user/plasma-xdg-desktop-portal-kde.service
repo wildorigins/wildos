@@ -1,0 +1,16 @@
+# Plasma's own unit (diverted to /usr/share/wildos/diverted/), ordered after
+# the compositor instead of after the desktop. The desktop asks the portal
+# for its settings while it starts, and the portal waits for this backend:
+# ordered after the desktop, the two waited on each other until a 25 second
+# timeout gave way, so the desktop sometimes took over half a minute to
+# appear.
+[Unit]
+Description=Xdg Desktop Portal For KDE
+PartOf=graphical-session.target
+After=plasma-kwin_wayland.service
+
+[Service]
+ExecStart=/usr/lib/x86_64-linux-gnu/libexec/xdg-desktop-portal-kde
+BusName=org.freedesktop.impl.portal.desktop.kde
+Slice=session.slice
+Restart=no

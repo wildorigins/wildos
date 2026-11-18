@@ -228,17 +228,44 @@ bool Recordings::rename(const QString &path, const QString &title)
 bool Recordings::remove(const QString &path)
 {
     const QString title = QFileInfo(path).completeBaseName();
-    if (!QFile::moveToTrash(path)) {
+    QString binned;
+    if (!QFile::moveToTrash(path, &binned)) {
         setError(tr("%1 couldn't be moved to the bin.").arg(title));
         return false;
     }
+    m_binned.clear();
+    m_binned.append(std::make_pair(path, binned));
     for (const QString &extra : {VoicePaths::sidecarOf(path), VoicePaths::transcriptOf(path)}) {
-        if (QFileInfo::exists(extra)) {
-            QFile::moveToTrash(extra);
+        if (QFileInfo::exists(extra) && QFile::moveToTrash(extra, &binned)) {
+            m_binned.append(std::make_pair(extra, binned));
         }
     }
     m_waveforms.remove(path);
     Q_EMIT removed(path);
+    refresh();
+    return true;
+}
+
+bool Recordings::restore(const QString &path)
+{
+    const auto files = m_binned;
+    m_binned.clear();
+    // The bin keeps each file in "files" and a note about it in "info".
+    const auto takeBack = [](const QString &original, const QString &held) {
+        if (held.isEmpty() || !QFileInfo::exists(held) || QFileInfo::exists(original) || !QFile::rename(held, original)) {
+            return false;
+        }
+        const QFileInfo file(held);
+        QFile::remove(file.absoluteDir().absoluteFilePath(QStringLiteral("../info/") + file.fileName() + QStringLiteral(".trashinfo")));
+        return true;
+    };
+    if (files.isEmpty() || files.first().first != path || !takeBack(files.first().first, files.first().second)) {
+        setError(tr("%1 couldn't be brought back from the bin.").arg(QFileInfo(path).completeBaseName()));
+        return false;
+    }
+    for (qsizetype i = 1; i < files.size(); ++i) {
+        takeBack(files.at(i).first, files.at(i).second);
+    }
     refresh();
     return true;
 }

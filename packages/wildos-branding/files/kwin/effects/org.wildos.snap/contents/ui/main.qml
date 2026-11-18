@@ -176,7 +176,7 @@ KWin.SceneEffect {
 
     KWin.ShortcutHandler {
         name: "Wild OS snap layouts"
-        text: "Show snap layouts for the active window"
+        text: qsTr("Show snap layouts for the active window")
         sequence: "Meta+Z"
         onActivated: effect.visible ? effect.close() : effect.open()
     }

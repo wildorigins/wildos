@@ -34,25 +34,22 @@ PageScroll {
     readonly property int screenToggle: 128
 
     readonly property var profiles: hasBattery
-        ? [{ id: "Battery", prefix: "On battery power, " }, { id: "AC", prefix: "When plugged in, " }]
-        : [{ id: "AC", prefix: "" }]
-
-    function capitalise(text) {
-        return text.charAt(0).toUpperCase() + text.slice(1);
-    }
+        ? [{ id: "Battery", power: qsTr("On battery power, pressing the power button will"), lid: qsTr("On battery power, closing the lid will"), dim: qsTr("On battery power, dim my screen after") },
+           { id: "AC", power: qsTr("When plugged in, pressing the power button will"), lid: qsTr("When plugged in, closing the lid will"), dim: qsTr("When plugged in, dim my screen after") }]
+        : [{ id: "AC", power: qsTr("Pressing the power button will"), lid: qsTr("Closing the lid will"), dim: qsTr("Dim my screen after") }]
 
     function actionText(value) {
         switch (value) {
-        case page.doNothing: return "Do nothing";
-        case page.sleep: return "Sleep";
-        case page.hibernate: return "Hibernate";
-        case page.shutDown: return "Shut down";
-        case page.askWhatToDo: return "Ask me what to do";
-        case page.lock: return "Lock";
-        case page.screenOff: return "Turn off the screen";
-        case page.screenToggle: return "Turn the screen off or on";
+        case page.doNothing: return qsTr("Do nothing");
+        case page.sleep: return qsTr("Sleep");
+        case page.hibernate: return qsTr("Hibernate");
+        case page.shutDown: return qsTr("Shut down");
+        case page.askWhatToDo: return qsTr("Ask me what to do");
+        case page.lock: return qsTr("Lock");
+        case page.screenOff: return qsTr("Turn off the screen");
+        case page.screenToggle: return qsTr("Turn the screen off or on");
         }
-        return "Something else";
+        return qsTr("Something else");
     }
 
     // The same choices powerdevil's own settings offer for each, without
@@ -133,12 +130,12 @@ PageScroll {
     }
 
     function dimTimeouts(current) {
-        const list = [{ value: 30, text: "30 seconds" }].concat([1, 2, 3, 5, 10, 15, 20, 30].map(m => ({ value: m * 60, text: Format.plural(m, "minute", "minutes") })));
+        const list = [{ value: 30, text: qsTr("30 seconds") }].concat([1, 2, 3, 5, 10, 15, 20, 30].map(m => ({ value: m * 60, text: Format.plural(m, qsTr("minute"), qsTr("minutes")) })));
         if (current > 0 && !list.some(o => o.value === current)) {
-            list.push({ value: current, text: current < 60 ? Format.plural(current, "second", "seconds") : Format.plural(Math.round(current / 60), "minute", "minutes") });
+            list.push({ value: current, text: current < 60 ? Format.plural(current, qsTr("second"), qsTr("seconds")) : Format.plural(Math.round(current / 60), qsTr("minute"), qsTr("minutes")) });
             list.sort((a, b) => a.value - b.value);
         }
-        return [{ value: 0, text: "Never" }].concat(list);
+        return [{ value: 0, text: qsTr("Never") }].concat(list);
     }
 
     readonly property int criticalAction: {
@@ -170,7 +167,7 @@ PageScroll {
             list.push(current);
             list.sort((a, b) => a - b);
         }
-        return list.map(n => ({ value: n, text: n + "%" }));
+        return list.map(n => ({ value: n, text: qsTr("%1%").arg(n) }));
     }
 
     ColumnLayout {
@@ -178,7 +175,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: PowerOptions.lidPresent ? "Lid and power button" : "Power button"
+            text: PowerOptions.lidPresent ? qsTr("Lid and power button") : qsTr("Power button")
         }
 
         UI.Card {
@@ -205,7 +202,7 @@ PageScroll {
 
                         UI.SettingRow {
                             id: powerRow
-                            readonly property string label: page.capitalise(block.modelData.prefix + "pressing the power button will")
+                            readonly property string label: block.modelData.power
                             iconName: "power"
                             title: label
 
@@ -221,7 +218,7 @@ PageScroll {
 
                         UI.SettingRow {
                             id: lidRow
-                            readonly property string label: page.capitalise(block.modelData.prefix + "closing the lid will")
+                            readonly property string label: block.modelData.lid
                             visible: PowerOptions.lidPresent
                             iconName: "computer"
                             title: label
@@ -241,14 +238,14 @@ PageScroll {
                 UI.SettingRow {
                     visible: PowerOptions.lidPresent
                     iconName: "monitor"
-                    title: "Do this even when another screen is connected"
-                    description: "When this is off, closing the lid with a monitor plugged in leaves the computer running on the monitor"
-                    status: page.lidWithScreen ? "On" : "Off"
+                    title: qsTr("Do this even when another screen is connected")
+                    description: qsTr("When this is off, closing the lid with a monitor plugged in leaves the computer running on the monitor")
+                    status: page.lidWithScreen ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: page.lidWithScreen
-                        Accessible.name: "Do this even when another screen is connected"
+                        Accessible.name: qsTr("Do this even when another screen is connected")
                         onToggled: page.setLidWithScreen(checked)
                     }
                 }
@@ -261,7 +258,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Screen dimming"
+            text: qsTr("Screen dimming")
         }
 
         UI.Card {
@@ -276,12 +273,12 @@ PageScroll {
                     UI.SettingRow {
                         id: dimRow
                         required property var modelData
-                        readonly property string label: page.capitalise(modelData.prefix + "dim my screen after")
+                        readonly property string label: modelData.dim
                         readonly property int dim: page.dimAfter(modelData.id)
                         readonly property int off: page.screenOffAfter(modelData.id)
                         iconName: "sun"
                         title: label
-                        description: dim > 0 && off > 0 && dim >= off ? "The screen turns off before then, so it won't dim first" : ""
+                        description: dim > 0 && off > 0 && dim >= off ? qsTr("The screen turns off before then, so it won't dim first") : ""
                         descriptionColor: UI.Style.warning
 
                         UI.ComboBox {
@@ -304,7 +301,7 @@ PageScroll {
         visible: page.hasBattery
 
         SectionTitle {
-            text: "Battery"
+            text: qsTr("Battery")
         }
 
         UI.Card {
@@ -315,12 +312,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "battery"
-                    title: "Critical battery level"
-                    description: "Below this, Wild OS acts before the battery runs out"
+                    title: qsTr("Critical battery level")
+                    description: qsTr("Below this, Wild OS acts before the battery runs out")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Critical battery level"
+                        Accessible.name: qsTr("Critical battery level")
                         readonly property var choice: page.criticalLevel
                         model: page.criticalLevels(choice)
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -330,11 +327,11 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "alert"
-                    title: "When the battery is critically low"
+                    title: qsTr("When the battery is critically low")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "When the battery is critically low"
+                        Accessible.name: qsTr("When the battery is critically low")
                         readonly property var choice: page.criticalAction
                         model: page.actionChoices([page.doNothing, page.sleep, page.hibernate, page.shutDown], choice)
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1

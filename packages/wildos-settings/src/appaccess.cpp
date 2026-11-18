@@ -2,6 +2,7 @@
 
 #include <KDesktopFile>
 
+#include <QCoreApplication>
 #include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -84,14 +85,14 @@ struct Folder {
 const QList<Folder> &folders()
 {
     static const QList<Folder> list = {
-        {"host", "Every file on this computer"},
-        {"home", "Your home folder"},
-        {"xdg-documents", "Your Documents folder"},
-        {"xdg-pictures", "Your Pictures folder"},
-        {"xdg-music", "Your Music folder"},
-        {"xdg-videos", "Your Videos folder"},
-        {"xdg-download", "Your Downloads folder"},
-        {"xdg-desktop", "Your Desktop"},
+        {"host", QT_TRANSLATE_NOOP("AppAccess", "Every file on this computer")},
+        {"home", QT_TRANSLATE_NOOP("AppAccess", "Your home folder")},
+        {"xdg-documents", QT_TRANSLATE_NOOP("AppAccess", "Your Documents folder")},
+        {"xdg-pictures", QT_TRANSLATE_NOOP("AppAccess", "Your Pictures folder")},
+        {"xdg-music", QT_TRANSLATE_NOOP("AppAccess", "Your Music folder")},
+        {"xdg-videos", QT_TRANSLATE_NOOP("AppAccess", "Your Videos folder")},
+        {"xdg-download", QT_TRANSLATE_NOOP("AppAccess", "Your Downloads folder")},
+        {"xdg-desktop", QT_TRANSLATE_NOOP("AppAccess", "Your Desktop")},
     };
     return list;
 }
@@ -198,33 +199,33 @@ struct ContextKey {
 const QList<ContextKey> &contextKeys()
 {
     static const QList<ContextKey> list = {
-        {"shared", "Network",
-         {{"network", "Internet and your local network"}, {"ipc", "Shared memory with apps outside its sandbox"}}},
-        {"devices", "Devices",
-         {{"dri", "Graphics acceleration"},
-          {"input", "Game controllers and other input devices"},
-          {"usb", "USB devices"},
-          {"kvm", "Running virtual machines"},
-          {"shm", "Shared memory between apps"},
-          {"all", "Every device, including cameras"}}},
-        {"features", "Other features",
+        {"shared", QT_TRANSLATE_NOOP("AppAccess", "Network"),
+         {{"network", QT_TRANSLATE_NOOP("AppAccess", "Internet and your local network")}, {"ipc", QT_TRANSLATE_NOOP("AppAccess", "Shared memory with apps outside its sandbox")}}},
+        {"devices", QT_TRANSLATE_NOOP("AppAccess", "Devices"),
+         {{"dri", QT_TRANSLATE_NOOP("AppAccess", "Graphics acceleration")},
+          {"input", QT_TRANSLATE_NOOP("AppAccess", "Game controllers and other input devices")},
+          {"usb", QT_TRANSLATE_NOOP("AppAccess", "USB devices")},
+          {"kvm", QT_TRANSLATE_NOOP("AppAccess", "Running virtual machines")},
+          {"shm", QT_TRANSLATE_NOOP("AppAccess", "Shared memory between apps")},
+          {"all", QT_TRANSLATE_NOOP("AppAccess", "Every device, including cameras")}}},
+        {"features", QT_TRANSLATE_NOOP("AppAccess", "Other features"),
          {{"bluetooth", "Bluetooth"},
-          {"canbus", "Vehicle and machine networks (CAN bus)"},
-          {"devel", "Debugging other programs"},
-          {"multiarch", "Running 32-bit programs"},
-          {"per-app-dev-shm", "Its own shared memory folder"}}},
-        {"sockets", "Display, sound and system",
-         {{"wayland", "Showing windows"},
-          {"x11", "Showing windows the older way (X11)"},
-          {"fallback-x11", "The older way when the newer one is missing"},
-          {"inherit-wayland-socket", "Showing windows through the app that started it"},
-          {"pulseaudio", "Sound and your microphone"},
-          {"cups", "Printing"},
-          {"pcsc", "Smart cards"},
-          {"ssh-auth", "Your SSH keys"},
-          {"gpg-agent", "Your GPG keys"},
-          {"session-bus", "Every service in your session"},
-          {"system-bus", "Every service on this computer"}}},
+          {"canbus", QT_TRANSLATE_NOOP("AppAccess", "Vehicle and machine networks (CAN bus)")},
+          {"devel", QT_TRANSLATE_NOOP("AppAccess", "Debugging other programs")},
+          {"multiarch", QT_TRANSLATE_NOOP("AppAccess", "Running 32-bit programs")},
+          {"per-app-dev-shm", QT_TRANSLATE_NOOP("AppAccess", "Its own shared memory folder")}}},
+        {"sockets", QT_TRANSLATE_NOOP("AppAccess", "Display, sound and system"),
+         {{"wayland", QT_TRANSLATE_NOOP("AppAccess", "Showing windows")},
+          {"x11", QT_TRANSLATE_NOOP("AppAccess", "Showing windows the older way (X11)")},
+          {"fallback-x11", QT_TRANSLATE_NOOP("AppAccess", "The older way when the newer one is missing")},
+          {"inherit-wayland-socket", QT_TRANSLATE_NOOP("AppAccess", "Showing windows through the app that started it")},
+          {"pulseaudio", QT_TRANSLATE_NOOP("AppAccess", "Sound and your microphone")},
+          {"cups", QT_TRANSLATE_NOOP("AppAccess", "Printing")},
+          {"pcsc", QT_TRANSLATE_NOOP("AppAccess", "Smart cards")},
+          {"ssh-auth", QT_TRANSLATE_NOOP("AppAccess", "Your SSH keys")},
+          {"gpg-agent", QT_TRANSLATE_NOOP("AppAccess", "Your GPG keys")},
+          {"session-bus", QT_TRANSLATE_NOOP("AppAccess", "Every service in your session")},
+          {"system-bus", QT_TRANSLATE_NOOP("AppAccess", "Every service on this computer")}}},
     };
     return list;
 }
@@ -233,21 +234,21 @@ QString folderLabel(const QString &base)
 {
     for (const Folder &f : folders()) {
         if (base == QLatin1String(f.base)) {
-            return QString::fromLatin1(f.label);
+            return QCoreApplication::translate("AppAccess", f.label);
         }
     }
     static const QList<std::pair<const char *, const char *>> more = {
-        {"host-os", "This computer's programs and libraries"},
-        {"host-etc", "This computer's system settings"},
-        {"xdg-config", "Settings of every app"},
-        {"xdg-cache", "Cached files of every app"},
-        {"xdg-data", "Data of every app"},
-        {"xdg-templates", "Your Templates folder"},
-        {"xdg-public-share", "Your Public folder"},
+        {"host-os", QT_TRANSLATE_NOOP("AppAccess", "This computer's programs and libraries")},
+        {"host-etc", QT_TRANSLATE_NOOP("AppAccess", "This computer's system settings")},
+        {"xdg-config", QT_TRANSLATE_NOOP("AppAccess", "Settings of every app")},
+        {"xdg-cache", QT_TRANSLATE_NOOP("AppAccess", "Cached files of every app")},
+        {"xdg-data", QT_TRANSLATE_NOOP("AppAccess", "Data of every app")},
+        {"xdg-templates", QT_TRANSLATE_NOOP("AppAccess", "Your Templates folder")},
+        {"xdg-public-share", QT_TRANSLATE_NOOP("AppAccess", "Your Public folder")},
     };
     for (const auto &[key, label] : more) {
         if (base == QLatin1String(key)) {
-            return QString::fromLatin1(label);
+            return QCoreApplication::translate("AppAccess", label);
         }
     }
     return base;
@@ -256,15 +257,15 @@ QString folderLabel(const QString &base)
 QString folderDetail(const QString &grant, bool allowed)
 {
     if (!allowed) {
-        return QStringLiteral("No access");
+        return QCoreApplication::translate("AppAccess", "No access");
     }
     if (grant.endsWith(QLatin1String(":ro"))) {
-        return QStringLiteral("Can open files, not change them");
+        return QCoreApplication::translate("AppAccess", "Can open files, not change them");
     }
     if (grant.endsWith(QLatin1String(":create"))) {
-        return QStringLiteral("Can open and change files, and create the folder");
+        return QCoreApplication::translate("AppAccess", "Can open and change files, and create the folder");
     }
-    return QStringLiteral("Can open and change files");
+    return QCoreApplication::translate("AppAccess", "Can open and change files");
 }
 
 bool policyAllows(const QString &policy)
@@ -275,15 +276,15 @@ bool policyAllows(const QString &policy)
 QString policyDetail(const QString &policy)
 {
     if (policy == QLatin1String("own")) {
-        return QStringLiteral("Can talk to it and take its name");
+        return QCoreApplication::translate("AppAccess", "Can talk to it and take its name");
     }
     if (policy == QLatin1String("talk")) {
-        return QStringLiteral("Can talk to it");
+        return QCoreApplication::translate("AppAccess", "Can talk to it");
     }
     if (policy == QLatin1String("see")) {
-        return QStringLiteral("Can see it is there");
+        return QCoreApplication::translate("AppAccess", "Can see it is there");
     }
-    return QStringLiteral("No access");
+    return QCoreApplication::translate("AppAccess", "No access");
 }
 
 QVariantMap item(const QString &token, const QString &label, const QString &detail, bool allowed, const QString &grant, bool changed)
@@ -439,7 +440,7 @@ QVariantList AppAccess::apps(const QString &kind) const
                 const bool allowed = user >= 0 ? user == 1 : def == 1;
                 any = any || allowed;
                 items << QVariantMap{{QStringLiteral("token"), QStringLiteral("filesystems:") + base},
-                                     {QStringLiteral("label"), QString::fromLatin1(f.label)},
+                                     {QStringLiteral("label"), QCoreApplication::translate("AppAccess", f.label)},
                                      {QStringLiteral("allowed"), allowed}};
             }
             if (!items.isEmpty()) {
@@ -672,7 +673,7 @@ QVariantList AppAccess::details(const QString &id) const
             const bool changed = mine >= 0 && (allowed != (def == 1) || grantingEntry(user, base) != grantingEntry(defaults, base));
             items << item(QStringLiteral("filesystems:") + base, folderLabel(base), folderDetail(grant, allowed), allowed, grant, changed);
         }
-        section(QStringLiteral("filesystems"), QStringLiteral("Files and folders"), items);
+        section(QStringLiteral("filesystems"), tr("Files and folders"), items);
     }
 
     for (const ContextKey &key : contextKeys()) {
@@ -684,10 +685,10 @@ QVariantList AppAccess::details(const QString &id) const
             const int def = stateIn(defaults, value);
             const int mine = stateIn(user, value);
             const bool allowed = mine >= 0 ? mine == 1 : def == 1;
-            items << item(QString::fromLatin1(key.key) + QLatin1Char(':') + value, QString::fromLatin1(choice.label), QString(), allowed, value,
+            items << item(QString::fromLatin1(key.key) + QLatin1Char(':') + value, QCoreApplication::translate("AppAccess", choice.label), QString(), allowed, value,
                           mine >= 0 && allowed != (def == 1));
         }
-        section(QString::fromLatin1(key.key), QString::fromLatin1(key.title), items);
+        section(QString::fromLatin1(key.key), QCoreApplication::translate("AppAccess", key.title), items);
     }
 
     for (const QString &bus : {QStringLiteral("session-bus"), QStringLiteral("system-bus")}) {
@@ -706,7 +707,7 @@ QVariantList AppAccess::details(const QString &id) const
             const QString grant = policyAllows(mine) ? mine : policyAllows(def) ? def : QStringLiteral("talk");
             items << item(bus + QLatin1Char(':') + name, name, policyDetail(effective), policyAllows(effective), grant, !mine.isEmpty() && mine != def);
         }
-        section(bus, bus == QLatin1String("system-bus") ? QStringLiteral("System services") : QStringLiteral("Services in your session"), items);
+        section(bus, bus == QLatin1String("system-bus") ? tr("System services") : tr("Services in your session"), items);
     }
 
     {
@@ -724,11 +725,11 @@ QVariantList AppAccess::details(const QString &id) const
             const bool mine = hasEntry(over, "Environment", name) && !cleared;
             const bool allowed = !cleared && (mine || byDefault);
             const QString value = mine ? entry(over, "Environment", name) : entry(meta, "Environment", name);
-            const QString detail = !allowed ? QStringLiteral("Not set") : value.isEmpty() ? QStringLiteral("Set, but empty") : value;
+            const QString detail = !allowed ? tr("Not set") : value.isEmpty() ? tr("Set, but empty") : value;
             items << item(QStringLiteral("env:") + name, name, detail, allowed, value,
                           cleared || (mine && (!byDefault || value != entry(meta, "Environment", name))));
         }
-        section(QStringLiteral("env"), QStringLiteral("Environment variables"), items);
+        section(QStringLiteral("env"), tr("Environment variables"), items);
     }
 
     g_key_file_free(over);
@@ -739,7 +740,7 @@ QVariantList AppAccess::details(const QString &id) const
 QString AppAccess::add(const QString &id, const QString &kind, const QString &value, const QString &extra)
 {
     if (!find(id)) {
-        return QStringLiteral("That app is no longer installed.");
+        return tr("That app is no longer installed.");
     }
     QString v = value.trimmed();
     if (kind == QLatin1String("folder")) {
@@ -754,7 +755,7 @@ QString AppAccess::add(const QString &id, const QString &kind, const QString &va
         // anything that is not a path or one of its own names.
         if (v.contains(QLatin1Char(':')) || v.contains(QLatin1Char('\n')) || v.startsWith(QLatin1Char('!'))
             || !(v.startsWith(QLatin1Char('/')) || v.startsWith(QLatin1String("~/")) || v.startsWith(QLatin1String("xdg-")) || special.contains(v))) {
-            return QStringLiteral("Type a folder such as ~/Projects or /media/backup.");
+            return tr("Type a folder such as ~/Projects or /media/backup.");
         }
         set(id, QStringLiteral("filesystems:") + v, true, extra == QLatin1String("ro") ? v + QStringLiteral(":ro") : v);
         return {};
@@ -764,7 +765,7 @@ QString AppAccess::add(const QString &id, const QString &kind, const QString &va
         // at the end for every name below one.
         static const QRegularExpression name(QStringLiteral("^[A-Za-z_-][A-Za-z0-9_-]*(\\.[A-Za-z_-][A-Za-z0-9_-]*)+(\\.\\*)?$"));
         if (v.length() > 255 || !name.match(v).hasMatch()) {
-            return QStringLiteral("Type a service name such as org.freedesktop.Notifications.");
+            return tr("Type a service name such as org.freedesktop.Notifications.");
         }
         const QString policy = QStringList{QStringLiteral("see"), QStringLiteral("talk"), QStringLiteral("own")}.contains(extra) ? extra : QStringLiteral("talk");
         set(id, QStringLiteral("session-bus:") + v, true, policy);
@@ -773,15 +774,15 @@ QString AppAccess::add(const QString &id, const QString &kind, const QString &va
     if (kind == QLatin1String("env")) {
         static const QRegularExpression name(QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$"));
         if (!name.match(v).hasMatch()) {
-            return QStringLiteral("A variable's name is letters, digits and underscores, such as GTK_THEME.");
+            return tr("A variable's name is letters, digits and underscores, such as GTK_THEME.");
         }
         if (extra.contains(QLatin1Char('\n'))) {
-            return QStringLiteral("The value has to fit on one line.");
+            return tr("The value has to fit on one line.");
         }
         set(id, QStringLiteral("env:") + v, true, extra);
         return {};
     }
-    return QStringLiteral("That can't be added.");
+    return tr("That can't be added.");
 }
 
 void AppAccess::reset(const QString &id)

@@ -4,6 +4,7 @@ import QtQuick.Templates as T
 import QtQuick.Window
 import WildOS.UI as UI
 import WildOS.WinMode.Setup
+import "ServiceText.js" as ServiceText
 
 // Windows mode setup, boards 9.1 to 9.7: a 1040 by 720 sheet with the steps
 // at the left. It opens on whatever the daemon is doing: the checks when
@@ -24,13 +25,14 @@ UI.AppWindow {
 
     readonly property int step: page === "check" ? 1 : page === "options" ? 2 : page === "setup" ? 3 : 4
 
+    rememberSize: board.length === 0
     width: board === "problems" ? 1440 : 1040
     height: board === "problems" ? 900 : 720
     minimumWidth: 1040
     minimumHeight: 720
     visible: true
     deep: true
-    title: "Windows mode"
+    title: qsTr("Windows mode")
 
     Component.onCompleted: {
         Setup.begin(board.length > 0 ? "preview" : "setup", board);
@@ -114,7 +116,7 @@ UI.AppWindow {
 
             // 9.4, the licence among the options since 3.10 shares the page.
             OptionsPage {
-                mainText: "Set up"
+                mainText: qsTr("Set up")
                 onBack: window.page = "check"
                 onConfirmed: window.startSetup()
             }
@@ -139,7 +141,7 @@ UI.AppWindow {
         anchors.rightMargin: 14
         visible: window.page === "check" || window.page === "options"
         iconName: "close"
-        tip: "Close"
+        tip: qsTr("Close")
         onClicked: window.close()
     }
 
@@ -164,7 +166,7 @@ UI.AppWindow {
             kind: window.problem
             received: (Setup.status.problem || {}).received || 0
             offline: (Setup.status.problem || {}).offline === true
-            failure: window.startError.length > 0 ? window.startError : ((Setup.status.problem || {}).text || "")
+            failure: ServiceText.tr(window.startError.length > 0 ? window.startError : ((Setup.status.problem || {}).text || ""))
             detail: window.startError.length > 0 ? "" : ((Setup.status.problem || {}).detail || "")
             onDismissed: problemPopup.close()
             onRetry: {

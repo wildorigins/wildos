@@ -166,7 +166,7 @@ FocusScope {
         readonly property rect area: scene.owner.areaFor(scene.screen)
 
         visible: scene.hasTarget && !scene.assisting
-        hint: "Use the arrow keys to pick a zone, then press Enter."
+        hint: qsTr("Use the arrow keys to pick a zone, then press Enter.")
 
         // Centred under the maximise button when there is one, otherwise
         // under the middle of the window's top edge; kept on screen.

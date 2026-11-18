@@ -23,9 +23,9 @@ StepPage {
     property bool autoConnect: true
 
     gap: 18
-    title: "Connect to Wi-Fi"
-    subtitle: "Wild OS needs the internet to fetch security updates and set up Windows programs."
-    note: "You can skip this and connect later."
+    title: qsTr("Connect to Wi-Fi")
+    subtitle: qsTr("Wild OS needs the internet to fetch security updates and set up Windows programs.")
+    note: qsTr("You can skip this and connect later.")
     Component.onCompleted: {
         wifi.active = true;
         focusQuietly(wifi.online ? continueButton : skipButton);
@@ -51,12 +51,12 @@ StepPage {
 
     function failText() {
         if (failReason === "password") {
-            return "That password didn't work. Check it and try again.";
+            return qsTr("That password didn't work. Check it and try again.");
         }
         if (failReason === "range") {
-            return "This network is out of range now.";
+            return qsTr("This network is out of range now.");
         }
-        return "Wild OS couldn't connect to this network.";
+        return qsTr("Wild OS couldn't connect to this network.");
     }
 
     // Where the list would be, when there is nothing to list.
@@ -67,16 +67,16 @@ StepPage {
         UI.ListRow {
             minHeight: 60
             iconName: page.wifi.ready && (!page.wifi.available || !page.wifi.enabled) ? "wifi-off" : "wifi"
-            title: !page.wifi.ready ? "Looking for Wi-Fi"
-                : !page.wifi.available ? "This computer has no Wi-Fi"
-                : "Wi-Fi is turned off"
-            description: !page.wifi.ready ? "This takes a few seconds."
-                : !page.wifi.available ? "Plug in a network cable if you want to connect, or skip this for now."
-                : "Turn it on to see the networks around you."
+            title: !page.wifi.ready ? qsTr("Looking for Wi-Fi")
+                : !page.wifi.available ? qsTr("This computer has no Wi-Fi")
+                : qsTr("Wi-Fi is turned off")
+            description: !page.wifi.ready ? qsTr("This takes a few seconds.")
+                : !page.wifi.available ? qsTr("Plug in a network cable if you want to connect, or skip this for now.")
+                : qsTr("Turn it on to see the networks around you.")
 
             UI.Button {
                 visible: page.wifi.ready && page.wifi.available && !page.wifi.enabled
-                text: "Turn on"
+                text: qsTr("Turn on")
                 onClicked: page.wifi.setRadio(true)
             }
         }
@@ -92,7 +92,7 @@ StepPage {
             UI.ListRow {
                 visible: networks.count === 0
                 minHeight: 52
-                title: page.wifi.scanning ? "Searching for networks" : "No networks found"
+                title: page.wifi.scanning ? qsTr("Searching for networks") : qsTr("No networks found")
             }
 
             Repeater {
@@ -188,11 +188,11 @@ StepPage {
 
                         UI.Label {
                             visible: text.length > 0
-                            text: entry.net.active ? "Connected"
+                            text: entry.net.active ? qsTr("Connected")
                                 : page.failedSsid === entry.net.ssid && !entry.open ? page.failText()
-                                : entry.net.enterprise ? "Needs a work or school sign-in"
-                                : !entry.net.secure ? "Open"
-                                : entry.net.saved ? "Saved" : ""
+                                : entry.net.enterprise ? qsTr("Needs a work or school sign-in")
+                                : !entry.net.secure ? qsTr("Open")
+                                : entry.net.saved ? qsTr("Saved") : ""
                             size: 12
                             color: entry.net.active ? UI.Style.accentText : page.failedSsid === entry.net.ssid ? UI.Style.danger : UI.Style.inkMuted
                         }
@@ -227,7 +227,7 @@ StepPage {
                                 implicitHeight: 40
                                 revealable: true
                                 UI.NoPaste {}
-                                placeholderText: "Network password"
+                                placeholderText: qsTr("Network password")
                                 enabled: page.wifi.connectingSsid === ""
                                 onAccepted: if (connectButton.enabled) connectButton.clicked()
                             }
@@ -236,7 +236,7 @@ StepPage {
                                 id: connectButton
                                 kind: "primary"
                                 size: "large"
-                                text: "Connect"
+                                text: qsTr("Connect")
                                 busy: page.wifi.connectingSsid === entry.net.ssid
                                 enabled: password.text.length >= 8 && page.wifi.connectingSsid === ""
                                 onClicked: {
@@ -255,7 +255,7 @@ StepPage {
                         }
 
                         UI.CheckBox {
-                            text: "Connect automatically"
+                            text: qsTr("Connect automatically")
                             checked: page.autoConnect
                             onToggled: page.autoConnect = checked
                         }
@@ -272,7 +272,7 @@ StepPage {
         UI.LinkButton {
             Layout.leftMargin: -4
             visible: page.listing
-            text: "Join a hidden network"
+            text: qsTr("Join a hidden network")
             onClicked: hiddenDialog.open()
         }
 
@@ -281,7 +281,7 @@ StepPage {
         }
 
         UI.Label {
-            text: page.wifi.wiredOnline ? "You're connected with a network cable." : "Using a network cable? You are already connected."
+            text: page.wifi.wiredOnline ? qsTr("You're connected with a network cable.") : qsTr("Using a network cable? You are already connected.")
             color: UI.Style.inkMuted
         }
     }
@@ -300,9 +300,9 @@ StepPage {
         UI.Label {
             Layout.fillWidth: true
             readonly property string zone: FirstBoot.timeZone.split("/").pop().replace(/_/g, " ")
-            text: FirstBoot.lookupState === "failed" ? "The online service didn't answer. You can change the time zone in Settings."
-                : FirstBoot.zoneSource === "internet" ? "Time zone set to " + zone + " from your internet address."
-                : "Time zone: " + zone + ", from your language. Finding it sends your internet address to an online service."
+            text: FirstBoot.lookupState === "failed" ? qsTr("The online service didn't answer. You can change the time zone in Settings.")
+                : FirstBoot.zoneSource === "internet" ? qsTr("Time zone set to %1 from your internet address.").arg(zone)
+                : qsTr("Time zone: %1, from your language. Finding it sends your internet address to an online service.").arg(zone)
             size: 12
             color: FirstBoot.lookupState === "failed" ? UI.Style.danger : UI.Style.inkMuted
             wrapMode: Text.WordWrap
@@ -318,7 +318,7 @@ StepPage {
 
             visible: parent.guessed && FirstBoot.lookupState !== "failed"
             enabled: FirstBoot.lookupState !== "busy"
-            text: FirstBoot.lookupState === "busy" ? "Looking it up" : "Find it for me"
+            text: FirstBoot.lookupState === "busy" ? qsTr("Looking it up") : qsTr("Find it for me")
             size: 12
             onClicked: {
                 asked = true;
@@ -339,8 +339,8 @@ StepPage {
 
     UI.Dialog {
         id: hiddenDialog
-        title: "Join a hidden network"
-        text: "Type the network's name exactly as it was set up on the router."
+        title: qsTr("Join a hidden network")
+        text: qsTr("Type the network's name exactly as it was set up on the router.")
         onOpened: hiddenName.forceActiveFocus()
         onClosed: {
             hiddenName.text = "";
@@ -354,7 +354,7 @@ StepPage {
             UI.TextField {
                 id: hiddenName
                 Layout.fillWidth: true
-                placeholderText: "Network name"
+                placeholderText: qsTr("Network name")
             }
 
             UI.TextField {
@@ -362,7 +362,7 @@ StepPage {
                 Layout.fillWidth: true
                 revealable: true
                 UI.NoPaste {}
-                placeholderText: "Password, if it has one"
+                placeholderText: qsTr("Password, if it has one")
             }
 
             UI.Label {
@@ -378,7 +378,7 @@ StepPage {
         buttons: [
             UI.Button {
                 kind: "primary"
-                text: "Connect"
+                text: qsTr("Connect")
                 busy: page.wifi.connectingSsid.length > 0 && page.wifi.connectingSsid === hiddenName.text.trim()
                 enabled: hiddenName.text.trim().length > 0 && (hiddenPassword.text.length === 0 || hiddenPassword.text.length >= 8)
                          && page.wifi.connectingSsid === ""
@@ -388,7 +388,7 @@ StepPage {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: hiddenDialog.close()
             }
         ]
@@ -398,16 +398,16 @@ StepPage {
         UI.Button {
             id: skipButton
             visible: !page.wifi.online
-            text: "Skip for now"
+            text: qsTr("Skip for now")
             onClicked: page.next()
         },
         UI.Button {
-            text: "Back"
+            text: qsTr("Back")
             onClicked: page.back()
         },
         UI.Button {
             id: continueButton
-            text: "Continue"
+            text: qsTr("Continue")
             kind: "primary"
             enabled: page.wifi.online
             onClicked: page.next()

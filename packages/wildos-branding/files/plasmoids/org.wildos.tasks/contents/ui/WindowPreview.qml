@@ -7,15 +7,24 @@
     of each of its windows with the title and a close button. Pointing at
     one brings that window forward full size and fades the rest (KWin's
     highlight effect, through Plasma's task manager backend); clicking it
-    switches to it and a middle click closes it. The glass is Plasma's
-    popup frame, the one the clock and quick settings flyouts are drawn
-    with, so it follows the theme's glass and text settings with them.
+    switches to it, a middle click closes it and a right click opens the
+    window's menu. An app with more windows than fit across the screen as
+    pictures gets a list of their titles instead, as on Windows. The glass
+    is Plasma's popup frame, the one the clock and quick settings flyouts
+    are drawn with, so it follows the theme's glass and text settings with
+    them.
+
+    The preview never takes the keyboard: the window it shows full size
+    would lose it. A button with the keyboard on it opens its preview with
+    the up arrow and drives it from there (keyPressed), and currentIndex
+    marks the window the keys are on.
 */
 
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
+import QtQuick.Templates as T
 import org.kde.ksvg as KSvg
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.core as PlasmaCore
@@ -43,7 +52,23 @@ PlasmaCore.Dialog {
     // bare frame, and the next hover maps that sliver before growing it,
     // where it can stay.
     property int sizedCount: 1
-    onWindowCountChanged: if (windowCount > 0) sizedCount = windowCount
+    onWindowCountChanged: {
+        if (windowCount > 0) {
+            sizedCount = windowCount;
+        }
+        if (currentIndex >= windowCount) {
+            currentIndex = windowCount - 1;
+        }
+    }
+
+    // The window the keyboard is on, or -1 while the pointer drives.
+    property int currentIndex: -1
+    onCurrentIndexChanged: {
+        backend.cancelHighlightWindows();
+        if (currentIndex >= 0 && visible) {
+            highlight(winIdAt(currentIndex), true);
+        }
+    }
 
     // Titles and minimised states change while the preview is up; every
     // tile reads them again when the model says something changed.
@@ -56,21 +81,40 @@ PlasmaCore.Dialog {
     readonly property int tilePad: 6
     readonly property int tileGap: 4
     readonly property int headerHeight: 28
+    readonly property int minimumPicture: 120
+    readonly property int room: {
+        const screen = tasksModel.screenGeometry;
+        return (screen.width > 0 ? screen.width : 1920) - 32 - 2 * (glassBorder + pad);
+    }
+    // Past the number of pictures that fit across the screen at their
+    // smallest, the windows are listed by title.
+    readonly property bool listMode: sizedCount > Math.max(1, Math.floor((room + tileGap) / (minimumPicture + 2 * tilePad + tileGap)))
+    readonly property int listWidth: 320
+    readonly property int rowHeight: 36
+    readonly property int rowGap: 2
+    // As many rows as the screen has room for above the taskbar; the rest
+    // scroll.
+    readonly property int listRows: {
+        const screen = tasksModel.screenGeometry;
+        const tall = (screen.height > 0 ? screen.height : 1080) - 160 - 2 * (glassBorder + pad);
+        return Math.max(1, Math.min(sizedCount, Math.floor((tall + rowGap) / (rowHeight + rowGap))));
+    }
+
     // The design's 16:9 picture, narrowed when many windows would not fit
     // across the screen.
     readonly property int pictureWidth: {
-        const screen = tasksModel.screenGeometry;
-        const room = (screen.width > 0 ? screen.width : 1920) - 32 - 2 * (glassBorder + pad);
         const n = sizedCount;
         const tile = Math.floor((room + tileGap) / n - tileGap);
-        return Math.max(120, Math.min(200, tile - 2 * tilePad));
+        return Math.max(minimumPicture, Math.min(200, tile - 2 * tilePad));
     }
     readonly property int pictureHeight: Math.round(pictureWidth * 9 / 16)
     readonly property int tileWidth: pictureWidth + 2 * tilePad
     readonly property int tileHeight: tilePad + headerHeight + 4 + pictureHeight + tilePad
 
-    readonly property real glassWidth: 2 * (glassBorder + pad) + sizedCount * tileWidth + (sizedCount - 1) * tileGap
-    readonly property real glassHeight: 2 * (glassBorder + pad) + tileHeight
+    readonly property real glassWidth: 2 * (glassBorder + pad)
+        + (listMode ? listWidth : sizedCount * tileWidth + (sizedCount - 1) * tileGap)
+    readonly property real glassHeight: 2 * (glassBorder + pad)
+        + (listMode ? listRows * rowHeight + (listRows - 1) * rowGap : tileHeight)
 
     // A notification-type window is placed exactly where it is told, never
     // takes keyboard focus, and KWin's highlight effect leaves it unfaded.
@@ -98,6 +142,7 @@ PlasmaCore.Dialog {
     }
     onShownChanged: if (shown) place()
     onTaskChanged: {
+        currentIndex = -1;
         backend.cancelHighlightWindows();
         if (visible) {
             place();
@@ -143,6 +188,80 @@ PlasmaCore.Dialog {
         }
     }
 
+    function windowIndex(at: int): var {
+        return group ? tasksModel.makeModelIndex(task.index, at) : tasksModel.makeModelIndex(task.index);
+    }
+
+    function windowData(at: int, role: int): var {
+        return task ? tasksModel.data(windowIndex(at), role) : undefined;
+    }
+
+    function winIdAt(at: int): string {
+        const ids = windowData(at, atm.WinIdList);
+        return ids && ids.length > 0 ? String(ids[0]) : "";
+    }
+
+    function activateWindow(at: int): void {
+        backend.cancelHighlightWindows();
+        tasksModel.requestActivate(windowIndex(at));
+        tasksRoot.hidePreview();
+    }
+
+    function closeWindow(at: int): void {
+        backend.cancelHighlightWindows();
+        tasksModel.requestClose(windowIndex(at));
+    }
+
+    // The menu opens from the taskbar button, in the taskbar's own window,
+    // and the preview makes way for it.
+    function showWindowMenu(at: int, fromKeyboard: bool): void {
+        const button = task;
+        const winId = winIdAt(at);
+        const title = String(windowData(at, Qt.DisplayRole) ?? "");
+        const icon = windowData(at, Qt.DecorationRole);
+        if (button && winId.length > 0) {
+            tasksRoot.showWindowMenu(button, winId, title, icon, fromKeyboard);
+        }
+    }
+
+    // Keys from the taskbar button the preview belongs to, while the
+    // keyboard drives it. Pictures run left to right; the list runs down
+    // to the taskbar, so going down past its last row leaves it.
+    function keyPressed(key: int): bool {
+        const back = listMode ? Qt.Key_Up : Qt.Key_Left;
+        const on = listMode ? Qt.Key_Down : Qt.Key_Right;
+        if (key === back) {
+            currentIndex = Math.max(0, currentIndex - 1);
+        } else if (key === on) {
+            if (currentIndex < windowCount - 1) {
+                currentIndex++;
+            } else if (listMode) {
+                tasksRoot.hidePreview();
+            }
+        } else if (key === Qt.Key_Home) {
+            currentIndex = 0;
+        } else if (key === Qt.Key_End) {
+            currentIndex = windowCount - 1;
+        } else if (key === Qt.Key_Return || key === Qt.Key_Enter || key === Qt.Key_Space) {
+            activateWindow(currentIndex);
+        } else if (key === Qt.Key_Delete) {
+            closeWindow(currentIndex);
+        } else if (key === Qt.Key_Menu) {
+            showWindowMenu(currentIndex, true);
+        } else if (key === Qt.Key_Escape || key === Qt.Key_Down) {
+            tasksRoot.hidePreview();
+        } else if (key === Qt.Key_Up) {
+            return true;
+        } else {
+            // Moving on along the taskbar leaves the preview behind.
+            if ([Qt.Key_Left, Qt.Key_Right, Qt.Key_Tab, Qt.Key_Backtab].indexOf(key) >= 0) {
+                tasksRoot.hidePreview();
+            }
+            return false;
+        }
+        return true;
+    }
+
     mainItem: Item {
         Connections {
             target: preview.tasksModel
@@ -166,12 +285,13 @@ PlasmaCore.Dialog {
         }
 
         Row {
+            visible: !preview.listMode
             x: preview.glassBorder + preview.pad - frame.margins.left
             y: preview.glassBorder + preview.pad - frame.margins.top
             spacing: preview.tileGap
 
             Repeater {
-                model: preview.windowCount
+                model: preview.listMode ? 0 : preview.windowCount
 
                 delegate: Item {
                     id: tile
@@ -181,51 +301,51 @@ PlasmaCore.Dialog {
                     width: preview.tileWidth
                     height: preview.tileHeight
 
-                    function modelIndex(): var {
-                        const at = preview.task.index;
-                        return preview.group ? preview.tasksModel.makeModelIndex(at, index) : preview.tasksModel.makeModelIndex(at);
-                    }
-
-                    function get(role: int): var {
-                        return preview.task ? preview.tasksModel.data(modelIndex(), role) : undefined;
-                    }
-
                     readonly property string winId: {
                         preview.revision;
-                        const ids = get(preview.atm.WinIdList);
-                        return ids && ids.length > 0 ? String(ids[0]) : "";
+                        return preview.winIdAt(index);
                     }
                     readonly property string title: {
                         preview.revision;
-                        return String(get(Qt.DisplayRole) ?? "");
+                        return String(preview.windowData(index, Qt.DisplayRole) ?? "");
                     }
                     readonly property bool minimized: {
                         preview.revision;
-                        return get(preview.atm.IsMinimized) === true;
+                        return preview.windowData(index, preview.atm.IsMinimized) === true;
                     }
                     readonly property var icon: {
                         preview.revision;
-                        return get(Qt.DecorationRole);
+                        return preview.windowData(index, Qt.DecorationRole);
                     }
+                    readonly property bool current: preview.currentIndex === index
 
                     function activate(): void {
-                        preview.backend.cancelHighlightWindows();
-                        preview.tasksModel.requestActivate(modelIndex());
-                        preview.tasksRoot.hidePreview();
+                        preview.activateWindow(index);
                     }
 
                     function close(): void {
-                        preview.backend.cancelHighlightWindows();
-                        preview.tasksModel.requestClose(modelIndex());
+                        preview.closeWindow(index);
                     }
 
                     Accessible.role: Accessible.Button
                     Accessible.name: title
                     Accessible.onPressAction: activate()
 
+                    // The pointer takes over from the keyboard.
                     HoverHandler {
                         id: tileHover
-                        onHoveredChanged: preview.highlight(tile.winId, hovered)
+                        onHoveredChanged: {
+                            if (hovered) {
+                                preview.currentIndex = -1;
+                            }
+                            preview.highlight(tile.winId, hovered);
+                        }
+                    }
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                        onTapped: preview.showWindowMenu(tile.index, false)
                     }
 
                     TapHandler {
@@ -245,10 +365,18 @@ PlasmaCore.Dialog {
                         anchors.fill: parent
                         radius: UI.Style.radiusSm
                         color: tileTap.pressed ? UI.Style.surfacePressed
-                             : tileHover.hovered ? UI.Style.surfaceHover
+                             : tileHover.hovered || tile.current ? UI.Style.surfaceHover
                              : "transparent"
                         Behavior on color {
                             ColorAnimation { duration: UI.Style.hoverDuration }
+                        }
+
+                        // Inside the tile's edge: 4 px is all there is
+                        // between two tiles.
+                        UI.FocusRing {
+                            visible: tile.current
+                            anchors.margins: 0
+                            targetRadius: UI.Style.radiusSm - 4
                         }
                     }
 
@@ -283,9 +411,9 @@ PlasmaCore.Dialog {
                         height: 24
                         iconName: "close"
                         iconSize: 12
-                        tip: "Close window"
+                        tip: qsTr("Close window")
                         focusPolicy: Qt.NoFocus
-                        opacity: tileHover.hovered ? 1 : 0
+                        opacity: tileHover.hovered || tile.current ? 1 : 0
                         enabled: tileHover.hovered
                         onClicked: tile.close()
                     }
@@ -352,6 +480,138 @@ PlasmaCore.Dialog {
                             visible: !picture.live && (tile.minimized || !stream.active || !patience.running)
                         }
                     }
+                }
+            }
+        }
+
+        ListView {
+            id: titles
+            visible: preview.listMode
+            x: preview.glassBorder + preview.pad - frame.margins.left
+            y: preview.glassBorder + preview.pad - frame.margins.top
+            width: preview.listWidth
+            height: preview.listRows * preview.rowHeight + (preview.listRows - 1) * preview.rowGap
+            spacing: preview.rowGap
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            model: preview.listMode ? preview.windowCount : 0
+            T.ScrollBar.vertical: UI.ScrollBar {}
+
+            Connections {
+                target: preview
+                function onCurrentIndexChanged(): void {
+                    if (preview.listMode && preview.currentIndex >= 0) {
+                        titles.positionViewAtIndex(preview.currentIndex, ListView.Contain);
+                    }
+                }
+            }
+
+            delegate: Item {
+                id: line
+
+                required property int index
+
+                width: titles.width
+                height: preview.rowHeight
+
+                readonly property string winId: {
+                    preview.revision;
+                    return preview.winIdAt(index);
+                }
+                readonly property string title: {
+                    preview.revision;
+                    return String(preview.windowData(index, Qt.DisplayRole) ?? "");
+                }
+                readonly property var icon: {
+                    preview.revision;
+                    return preview.windowData(index, Qt.DecorationRole);
+                }
+                readonly property bool current: preview.currentIndex === index
+
+                Accessible.role: Accessible.Button
+                Accessible.name: title
+                Accessible.onPressAction: preview.activateWindow(index)
+
+                // The pointer takes over from the keyboard.
+                HoverHandler {
+                    id: lineHover
+                    onHoveredChanged: {
+                        if (hovered) {
+                            preview.currentIndex = -1;
+                        }
+                        preview.highlight(line.winId, hovered);
+                    }
+                }
+
+                TapHandler {
+                    id: lineTap
+                    acceptedButtons: Qt.LeftButton
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    onTapped: preview.activateWindow(line.index)
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.MiddleButton
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    onTapped: preview.closeWindow(line.index)
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    onTapped: preview.showWindowMenu(line.index, false)
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: UI.Style.radiusSm
+                    color: lineTap.pressed ? UI.Style.surfacePressed
+                         : lineHover.hovered || line.current ? UI.Style.surfaceHover
+                         : "transparent"
+                    Behavior on color {
+                        ColorAnimation { duration: UI.Style.hoverDuration }
+                    }
+
+                    // Inside the row's edge, where the list does not clip it.
+                    UI.FocusRing {
+                        visible: line.current
+                        anchors.margins: 0
+                        targetRadius: UI.Style.radiusSm - 4
+                    }
+                }
+
+                Kirigami.Icon {
+                    id: lineIcon
+                    x: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16
+                    height: 16
+                    source: line.icon ?? ""
+                    animated: false
+                }
+
+                UI.Label {
+                    anchors.left: lineIcon.right
+                    anchors.leftMargin: 10
+                    anchors.right: lineClose.left
+                    anchors.rightMargin: 4
+                    height: parent.height
+                    text: line.title
+                }
+
+                UI.IconButton {
+                    id: lineClose
+                    x: line.width - 6 - width
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 24
+                    height: 24
+                    iconName: "close"
+                    iconSize: 12
+                    tip: qsTr("Close window")
+                    focusPolicy: Qt.NoFocus
+                    opacity: lineHover.hovered || line.current ? 1 : 0
+                    enabled: lineHover.hovered
+                    onClicked: preview.closeWindow(line.index)
                 }
             }
         }

@@ -20,6 +20,15 @@ FocusScope {
     // Recommended page does; it is only offered when there is more to see.
     property bool showAllRecents: false
     readonly property bool moreRecents: launcher.recentModel.count > 6
+    // The page's height with the pinned apps showing. "More" swaps them for
+    // a list of another length, and Start keeps the height it had.
+    property real restHeight: 0
+    onImplicitHeightChanged: {
+        if (!showAllRecents) {
+            restHeight = implicitHeight;
+        }
+    }
+    Component.onCompleted: restHeight = implicitHeight
 
     signal allAppsRequested()
     signal moreRequested()
@@ -42,8 +51,8 @@ FocusScope {
             SectionHeader {
                 id: pinnedHeader
                 width: parent.width
-                title: "Pinned"
-                buttonText: "All apps"
+                title: qsTr("Pinned")
+                buttonText: qsTr("All apps")
                 onActivated: home.allAppsRequested()
             }
 
@@ -63,6 +72,8 @@ FocusScope {
                     delegate: AppTile {
                         grid: pinnedGrid
                     }
+                    reorder: true
+                    onMoved: (from, to) => model.moveRow(from, to)
                     onActivated: index => {
                         if (model.trigger(index, "", null)) {
                             home.launcher.close();
@@ -78,7 +89,7 @@ FocusScope {
                     visible: pinnedGrid.count === 0
                     size: 12
                     color: UI.Style.inkMuted
-                    text: "Pin apps from All apps to keep them here"
+                    text: qsTr("Pin apps from All apps to keep them here")
                 }
             }
         }
@@ -96,8 +107,8 @@ FocusScope {
             SectionHeader {
                 id: recentHeader
                 width: parent.width
-                title: home.showAllRecents ? "Recommended" : "Pick up where you left off"
-                buttonText: home.showAllRecents ? "Back" : home.moreRecents ? "More" : ""
+                title: home.showAllRecents ? qsTr("Recommended") : qsTr("Pick up where you left off")
+                buttonText: home.showAllRecents ? qsTr("Back") : home.moreRecents ? qsTr("More") : ""
                 backward: home.showAllRecents
                 onActivated: home.moreRequested()
             }

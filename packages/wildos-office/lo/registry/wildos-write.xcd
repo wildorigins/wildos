@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Wild OS defaults for Write: the settings that only exist with LibreOffice Writer
+     installed. Shipped by wildos-write, which requires it; wildos.xcd holds the rest. -->
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <dependency file="main"/>
+  <dependency file="writer"/>
+
+  <oor:component-data oor:package="org.openoffice" oor:name="Setup">
+    <node oor:name="Office">
+      <node oor:name="Factories">
+        <node oor:name="com.sun.star.text.TextDocument">
+          <prop oor:name="ooSetupFactoryWindowAttributes"><value>,,,;4;</value></prop>
+          <prop oor:name="ooSetupFactoryTemplateFile"><value>file:///usr/share/wildos-office/templates/default/Default.ott</value></prop>
+          <prop oor:name="ooSetupFactoryDefaultFilter"><value>MS Word 2007 XML</value></prop>
+          <prop oor:name="ooSetupFactoryUIName"><value xml:lang="en-US">Write</value></prop>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- Alt+Q opens Find a command, as in Word; the search field shows it. -->
+  <oor:component-data oor:package="org.openoffice.Office" oor:name="Accelerators">
+    <node oor:name="PrimaryKeys">
+      <node oor:name="Modules">
+        <node oor:name="com.sun.star.text.TextDocument">
+          <node oor:name="Q_MOD2" oor:op="replace">
+            <prop oor:name="Command"><value xml:lang="en-US">.uno:CommandPopup</value></prop>
+          </node>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+</oor:data>

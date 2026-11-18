@@ -14,6 +14,11 @@ import QtQuick.Templates as T
 // with 13px (Settings, BringFiles), "large" 40px with 14px and radius 10
 // (Welcome and WinApp footers). Pressing darkens the button's own fill
 // instead of swapping it for grey.
+//
+// `danger: true` marks a secondary or text button that removes something:
+// its label and icon take the danger red and the fill stays neutral. A
+// primary button keeps the accent, as the confirm button of a Windows
+// "Delete" dialog does, so `danger` changes nothing there.
 T.Button {
     id: control
 
@@ -53,7 +58,7 @@ T.Button {
     bottomPadding: 0
     focusPolicy: Qt.StrongFocus
     hoverEnabled: true
-    opacity: enabled ? 1 : 0.5
+    opacity: enabled ? 1 : Style.disabledOpacity
 
     Accessible.name: text
     Accessible.role: Accessible.Button

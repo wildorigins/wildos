@@ -68,7 +68,7 @@ T.Button {
                 width: 24
                 height: 24
                 radius: 5
-                color: "#ffffff"
+                color: VoiceStyle.recordGlyph
             }
             Rectangle {
                 visible: control.glyph === "record"
@@ -76,7 +76,7 @@ T.Button {
                 width: 26
                 height: 26
                 radius: 13
-                color: "#ffffff"
+                color: VoiceStyle.recordGlyph
             }
 
             UI.FocusRing {

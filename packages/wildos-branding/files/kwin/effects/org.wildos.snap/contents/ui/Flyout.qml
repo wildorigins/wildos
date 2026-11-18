@@ -63,7 +63,7 @@ Window {
         id: panel
         x: flyout.sideMargin
         y: flyout.topMargin
-        hint: flyout.mode === "hover" ? "Or drag a window to a screen edge." : ""
+        hint: flyout.mode === "hover" ? qsTr("Or drag a window to a screen edge.") : ""
         grid.interactive: flyout.mode === "hover"
     }
 

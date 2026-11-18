@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Task Manager
+Name[fr]=Gestionnaire des tâches
 GenericName=Task manager
+GenericName[fr]=Gestionnaire des tâches
 Comment=See and end what is running, and how hard your computer is working
+Comment[fr]=Voyez et arrêtez ce qui s'exécute, et à quel point votre ordinateur travaille
 Exec=wildos-taskmanager
 Icon=org.wildos.taskmanager
 Terminal=false

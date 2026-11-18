@@ -5,29 +5,57 @@ import WildOS.UI as UI
 
 // A file or folder in a backup: a tick box to pick it, its name, size and
 // when it was last changed. A folder opens with a click on its name or a
-// double click anywhere on the row.
+// double click anywhere on the row. `current` is the row the keyboard is
+// on, outlined while the list has the keyboard.
 Rectangle {
     id: row
 
     property var entry: ({})
     property bool showPath: false
     property string pathText
+    property bool current: false
+
+    signal pressed()
+    signal menuRequested(real x, real y)
 
     readonly property bool picked: Restore.selected.indexOf(entry.path) >= 0
 
     implicitHeight: showPath ? 50 : 38
     color: picked ? BackupStyle.rowSelected : mouse.containsMouse ? BackupStyle.rowHover : "transparent"
+    Behavior on color {
+        ColorAnimation { duration: UI.Style.hoverDuration }
+    }
     Accessible.role: Accessible.ListItem
     Accessible.name: entry.name
     Accessible.selected: picked
+    Accessible.focused: current
+
+    // Inside the row's edge, where the list's clipping can't cut it off.
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 2
+        visible: row.current
+        radius: UI.Style.radiusXs
+        color: "transparent"
+        border.width: 2
+        border.color: UI.Style.accent
+    }
 
     MouseArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
-        onClicked: Restore.toggle(row.entry.path)
-        onDoubleClicked: {
-            if (row.entry.dir) {
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: event => {
+            row.pressed();
+            if (event.button === Qt.RightButton) {
+                row.menuRequested(event.x, event.y);
+            } else {
+                Restore.toggle(row.entry.path);
+            }
+        }
+        onDoubleClicked: event => {
+            if (event.button === Qt.LeftButton && row.entry.dir) {
                 Restore.openFolder(row.entry.path);
             }
         }

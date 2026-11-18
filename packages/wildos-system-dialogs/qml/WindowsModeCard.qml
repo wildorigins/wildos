@@ -15,8 +15,8 @@ PromptCard {
     signal accepted()
 
     width: 440
-    title: "This app needs Windows mode"
-    text: appName + " is a Windows app, and Windows apps are turned off on this computer. It can run in Windows mode instead and will still open as a normal window."
+    title: qsTr("This app needs Windows mode")
+    text: qsTr("%1 is a Windows app, and Windows apps are turned off on this computer. It can run in Windows mode instead and will still open as a normal window.").arg(appName)
 
     picture: AppPicture {
         iconName: card.iconName.length > 0 ? card.iconName : "wildos-windows-app"
@@ -25,13 +25,13 @@ PromptCard {
 
     buttons: [
         UI.Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: card.cancelled()
         },
         UI.Button {
             id: useButton
             kind: "primary"
-            text: "Use Windows mode"
+            text: qsTr("Use Windows mode")
             onClicked: card.accepted()
         }
     ]

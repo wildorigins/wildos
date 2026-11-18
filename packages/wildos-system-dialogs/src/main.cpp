@@ -14,6 +14,8 @@
 #include <QTextStream>
 #include <QUrl>
 
+#include <memory>
+
 // One program for every Wild OS system dialog:
 //
 //   wildos-dialogs --session        the session service (systemd user unit):
@@ -155,9 +157,33 @@ int main(int argc, char *argv[])
         QObject::connect(service, &DialogsService::windowsDevicesRequested, prompts, &Prompts::askWindowsDevices);
         QObject::connect(service, &DialogsService::windowsStartingRequested, prompts, &Prompts::windowsStarting);
         QObject::connect(service, &DialogsService::windowsStartingDone, prompts, &Prompts::windowsStartingDone);
-        engine.loadFromModule("WildOS.SystemDialogs", "PermissionPrompt");
+        // Ctrl+Alt+Del is loaded now, so it opens at once however busy the
+        // PC is. The permission prompt and the other prompts are loaded the
+        // first time one is needed, then kept: most sessions never show
+        // them, and each held a full-screen window for the whole session.
+        // Both pick up a request already waiting when they load.
         engine.loadFromModule("WildOS.SystemDialogs", "SecurityScreen");
-        engine.loadFromModule("WildOS.SystemDialogs", "PromptWindow");
+        auto loadOnce = [&engine](const char *name) {
+            auto loaded = std::make_shared<bool>(false);
+            return [&engine, name, loaded] {
+                if (!*loaded) {
+                    *loaded = true;
+                    engine.loadFromModule("WildOS.SystemDialogs", name);
+                }
+            };
+        };
+        auto permission = loadOnce("PermissionPrompt");
+        QObject::connect(agent, &Agent::activeChanged, &app, [agent, permission] {
+            if (agent->active()) {
+                permission();
+            }
+        });
+        auto promptWindow = loadOnce("PromptWindow");
+        QObject::connect(prompts, &Prompts::showingChanged, &app, [prompts, promptWindow] {
+            if (!prompts->showing().isEmpty()) {
+                promptWindow();
+            }
+        });
         agent->start();
         prompts->watch();
         return app.exec();

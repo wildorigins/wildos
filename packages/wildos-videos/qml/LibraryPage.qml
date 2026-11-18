@@ -41,6 +41,28 @@ Item {
         }
     }
 
+    // Tab can reach a tile that is scrolled out of sight.
+    Connections {
+        target: page.Window.window
+        function onActiveFocusItemChanged() {
+            const tile = page.Window.window.activeFocusItem;
+            let inside = false;
+            for (let up = tile; up && !inside; up = up.parent) {
+                inside = up === body;
+            }
+            if (!inside) {
+                return;
+            }
+            const top = tile.mapToItem(flick.contentItem, 0, 0).y - 12;
+            const bottom = top + tile.height + 24;
+            if (top < flick.contentY) {
+                flick.contentY = Math.max(0, top);
+            } else if (bottom > flick.contentY + flick.height) {
+                flick.contentY = bottom - flick.height;
+            }
+        }
+    }
+
     Flickable {
         id: flick
         anchors.fill: parent

@@ -17,9 +17,20 @@ Item {
     signal menuRequested(real x, real y)
 
     implicitHeight: 34
+    activeFocusOnTab: true
     Accessible.role: Accessible.ListItem
     Accessible.name: count >= 0 ? qsTr("%1, %2").arg(text).arg(count) : text
     Accessible.selected: current
+    Accessible.onPressAction: row.clicked()
+    Keys.onReturnPressed: row.clicked()
+    Keys.onEnterPressed: row.clicked()
+    Keys.onSpacePressed: row.clicked()
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            row.menuRequested(18, row.height - 4);
+            event.accepted = true;
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -39,6 +50,17 @@ Item {
             height: parent.height - 18
             radius: 2
             color: UI.Style.accent
+        }
+
+        // Drawn inside the row: the usual ring sits outside its control,
+        // where the sidebar's scrolling would clip it on the first row.
+        Rectangle {
+            anchors.fill: parent
+            visible: row.activeFocus
+            radius: parent.radius
+            color: "transparent"
+            border.width: 2
+            border.color: UI.Style.accent
         }
     }
 

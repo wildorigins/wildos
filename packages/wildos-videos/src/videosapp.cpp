@@ -105,7 +105,7 @@ void VideosApp::handle(const QStringList &arguments, const QString &workingDirec
 {
     const QStringList files = filesFrom(arguments.mid(1), workingDirectory);
     if (!files.isEmpty()) {
-        Player::instance()->open(files.first());
+        Player::instance()->openFiles(files);
     }
     showMain();
 }

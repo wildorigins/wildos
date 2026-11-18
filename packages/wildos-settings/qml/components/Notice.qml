@@ -23,7 +23,7 @@ StatusCard {
     iconName: warning ? "warning" : "check"
 
     UI.Button {
-        text: "Dismiss"
+        text: qsTr("Dismiss")
         onClicked: notice.hide()
     }
 }

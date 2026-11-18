@@ -44,4 +44,8 @@ QtObject {
     readonly property string accessibility: "M13.8 4.5a1.8 1.8 0 1 1-3.6 0a1.8 1.8 0 1 1 3.6 0zM5 8.5l7 1.5 7-1.5M12 10v5M9 21l3-6 3 6"
     readonly property string bolt: "M13 3L5 14h6l-1 7 8-11h-6z"
     readonly property string device: "M7 3h10v18H7zM11 18h2"
+    readonly property string play: "M8 5.5v13l10.5-6.5z"
+    readonly property string pause: "M9 6v12M15 6v12"
+    readonly property string skipNext: "M6 6l9 6-9 6zM18 6v12"
+    readonly property string skipPrevious: "M18 6l-9 6 9 6zM6 6v12"
 }

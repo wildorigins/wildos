@@ -18,11 +18,11 @@ Item {
     property string profileId: ""
 
     readonly property var pages: [
-        { id: "startup", title: "Startup", icon: "startup" },
-        { id: "appearance", title: "Appearance", icon: "palette" },
-        { id: "profiles", title: "Profiles", icon: "profiles" },
-        { id: "interaction", title: "Interaction", icon: "pointer" },
-        { id: "keyboard", title: "Keyboard shortcuts", icon: "keyboard" }
+        { id: "startup", title: qsTr("Startup"), icon: "startup" },
+        { id: "appearance", title: qsTr("Appearance"), icon: "palette" },
+        { id: "profiles", title: qsTr("Profiles"), icon: "profiles" },
+        { id: "interaction", title: qsTr("Interaction"), icon: "pointer" },
+        { id: "keyboard", title: qsTr("Keyboard shortcuts"), icon: "keyboard" }
     ]
 
     function titleOf(id) {
@@ -119,7 +119,7 @@ Item {
                 model: {
                     const trail = [{ id: view.page, title: view.titleOf(view.page) }];
                     if (view.profileId.length > 0) {
-                        trail.push({ id: "", title: Config.profile(view.profileId).name || "Profile" });
+                        trail.push({ id: "", title: Config.profile(view.profileId).name || qsTr("Profile") });
                     }
                     return trail;
                 }

@@ -162,7 +162,7 @@ Item {
             border.color: closeMouse.containsMouse ? "transparent" : UI.Style.borderMenu
 
             Accessible.role: Accessible.Button
-            Accessible.name: "Close " + item.title
+            Accessible.name: qsTr("Close %1").arg(item.title)
 
             UI.Icon {
                 anchors.centerIn: parent

@@ -28,15 +28,18 @@ QtObject {
         }
     }
 
-    // The output devices that are plugged in, for the tray menu's Output
-    // list: { name, current, device }; choosing one makes it the default,
-    // as the stock volume applet does.
+    // The output devices that are plugged in, for the flyout's Sound output
+    // page and the tray menu's Output list.
+    readonly property var outputModel: PulseObjectFilterModel {
+        filterOutInactiveDevices: true
+        filterVirtualDevices: true
+        sourceModel: SinkModel {}
+    }
+
+    // The same devices as { name, current, device }; choosing one makes it
+    // the default, as the stock volume applet does.
     readonly property Instantiator outputDevices: Instantiator {
-        model: PulseObjectFilterModel {
-            filterOutInactiveDevices: true
-            filterVirtualDevices: true
-            sourceModel: SinkModel {}
-        }
+        model: audio.outputModel
         delegate: QtObject {
             required property var model
             readonly property string name: model.Description

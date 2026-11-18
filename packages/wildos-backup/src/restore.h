@@ -25,6 +25,7 @@ class Restore : public QObject
     // "idle", "opening", "noDrive", "needPassword", "ready" or "failed"
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString error READ error NOTIFY stateChanged)
+    Q_PROPERTY(QString errorDetail READ errorDetail NOTIFY stateChanged)
     Q_PROPERTY(QString driveName READ driveName NOTIFY stateChanged)
     // [{ id, time, dataAdded, files }], newest first
     Q_PROPERTY(QVariantList snapshots READ snapshots NOTIFY snapshotsChanged)
@@ -54,6 +55,12 @@ public:
     QString error() const
     {
         return m_error;
+    }
+    // The backup tool's own words, for Details, when `error` is only the
+    // general sentence.
+    QString errorDetail() const
+    {
+        return m_errorDetail;
     }
     QString driveName() const
     {
@@ -126,10 +133,10 @@ Q_SIGNALS:
     void restoreChanged();
     // count of items put back, and the folder to show them in.
     void restored(int count, const QString &where);
-    void restoreFailed(const QString &reason);
+    void restoreFailed(const QString &reason, const QString &detail);
 
 private:
-    void setState(const QString &state, const QString &error = QString());
+    void setState(const QString &state, const QString &error = QString(), const QString &detail = QString());
     void loadSnapshots();
     void list(const QString &path);
     void moveIntoPlace(const QString &stage, const QStringList &items, const QString &destination, bool replace);
@@ -138,6 +145,7 @@ private:
 
     QString m_state = QStringLiteral("idle");
     QString m_error;
+    QString m_errorDetail;
     QString m_driveName;
     QString m_repo;
     QByteArray m_password;

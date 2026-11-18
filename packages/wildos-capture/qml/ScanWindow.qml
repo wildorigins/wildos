@@ -59,6 +59,7 @@ UI.AppWindow {
     }
 
     deep: true
+    stateKey: "scan"
     title: qsTr("Scan")
     width: Math.round(Math.min(1384, Screen.desktopAvailableWidth - 56))
     height: Math.round(Math.min(802, Screen.desktopAvailableHeight - 56))
@@ -109,6 +110,18 @@ UI.AppWindow {
     }
 
     Shortcut { sequences: [StandardKey.Undo]; enabled: win.scanner.canUndo && !win.scanner.scanning; onActivated: win.scanner.undo() }
+    Shortcut { sequences: [StandardKey.Redo, "Ctrl+Y"]; enabled: win.scanner.canRedo && !win.scanner.scanning; onActivated: win.scanner.redo() }
+    // Dragging a page in the strip moves it; these move it from the keys.
+    Shortcut {
+        sequence: "Alt+Up"
+        enabled: win.canEdit && win.scanner.current > 0
+        onActivated: win.scanner.movePage(win.scanner.current, win.scanner.current - 1)
+    }
+    Shortcut {
+        sequence: "Alt+Down"
+        enabled: win.canEdit && win.scanner.current < win.pages.length - 1
+        onActivated: win.scanner.movePage(win.scanner.current, win.scanner.current + 1)
+    }
     Shortcut { sequences: [StandardKey.Delete]; enabled: win.canEdit; onActivated: win.scanner.removePage() }
     Shortcut { sequences: [StandardKey.Save]; enabled: win.pages.length > 0 && !win.scanner.busy; onActivated: win.scanner.savePdf() }
     Shortcut { sequences: [StandardKey.Close]; onActivated: win.close() }
@@ -648,6 +661,46 @@ UI.AppWindow {
                     onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
                     T.ScrollBar.vertical: UI.ScrollBar {}
 
+                    // A page being dragged to a new place: the one picked
+                    // up, the one it would land on, and where the pointer
+                    // is down the strip.
+                    property int dragFrom: -1
+                    property int dragTo: -1
+                    property real dragAt: 0
+
+                    function dragOver(at: real): void {
+                        dragAt = at;
+                        const over = indexAt(width / 2, contentY + at);
+                        if (over >= 0) {
+                            dragTo = over;
+                        }
+                    }
+                    function drop(): void {
+                        const from = dragFrom;
+                        const to = dragTo;
+                        dragFrom = -1;
+                        dragTo = -1;
+                        if (from >= 0 && to >= 0 && to !== from) {
+                            win.cropping = false;
+                            win.scanner.movePage(from, to);
+                        }
+                    }
+
+                    // Held near the top or bottom edge, the strip scrolls
+                    // to reach pages out of view.
+                    Timer {
+                        interval: 16
+                        repeat: true
+                        running: strip.dragFrom >= 0 && (strip.dragAt < 30 || strip.dragAt > strip.height - 30)
+                        onTriggered: {
+                            const step = strip.dragAt < 30 ? -10 : 10;
+                            const top = strip.originY - strip.topMargin;
+                            const bottom = Math.max(top, strip.originY + strip.contentHeight + strip.bottomMargin - strip.height);
+                            strip.contentY = Math.max(top, Math.min(bottom, strip.contentY + step));
+                            strip.dragOver(strip.dragAt);
+                        }
+                    }
+
                     delegate: Item {
                         id: thumb
                         required property var modelData
@@ -655,6 +708,19 @@ UI.AppWindow {
                         readonly property bool current: index === win.scanner.current
                         width: strip.width
                         height: Math.round(90 * Math.min(2, modelData.height / Math.max(1, modelData.width)))
+                        opacity: strip.dragFrom === index ? 0.5 : 1
+
+                        // Where the dragged page would go: after this one
+                        // when it comes from above, before it from below.
+                        Rectangle {
+                            visible: strip.dragFrom >= 0 && strip.dragTo === thumb.index && strip.dragFrom !== thumb.index
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            y: strip.dragTo > strip.dragFrom ? parent.height + 6 : -8
+                            width: 90
+                            height: 2
+                            radius: 1
+                            color: UI.Style.accent
+                        }
 
                         Rectangle {
                             id: sheet
@@ -710,10 +776,39 @@ UI.AppWindow {
                         }
                         MouseArea {
                             anchors.fill: sheet
-                            cursorShape: Qt.PointingHandCursor
+                            property real pressedAt: 0
+                            property bool dragged: false
+                            cursorShape: strip.dragFrom >= 0 ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+                            // A drag here moves the page, not the strip.
+                            preventStealing: true
                             Accessible.role: Accessible.Button
                             Accessible.name: qsTr("Page %1").arg(thumb.index + 1)
+                            Accessible.description: qsTr("Drag to move this page, or press Alt and the up or down arrow.")
+                            onPressed: mouse => {
+                                pressedAt = mouse.y;
+                                dragged = false;
+                            }
+                            onPositionChanged: mouse => {
+                                if (!dragged && Math.abs(mouse.y - pressedAt) > 8 && win.pages.length > 1 && !win.scanner.scanning && !win.scanner.busy) {
+                                    dragged = true;
+                                    strip.dragFrom = thumb.index;
+                                    strip.dragTo = thumb.index;
+                                }
+                                if (strip.dragFrom >= 0) {
+                                    strip.dragOver(mapToItem(strip, mouse.x, mouse.y).y);
+                                }
+                            }
+                            // Later: moving the page makes the strip's
+                            // pages again, this one included.
+                            onReleased: Qt.callLater(strip.drop)
+                            onCanceled: {
+                                strip.dragFrom = -1;
+                                strip.dragTo = -1;
+                            }
                             onClicked: {
+                                if (dragged) {
+                                    return;
+                                }
                                 win.cropping = false;
                                 win.scanner.current = thumb.index;
                             }

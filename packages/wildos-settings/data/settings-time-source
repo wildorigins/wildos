@@ -1,0 +1,63 @@
+#!/bin/sh
+# Chooses where the clock is set from, for Settings > Time and language >
+# Date and time. Runs as root through pkexec (see org.wildos.settings.policy)
+# and takes exactly these requests:
+#
+#   tor              Sites reached through Tor set the clock (sdwdate), so
+#                    no time server sees this computer's address.
+#   server [HOST]    A time server sets it (systemd-timesyncd): HOST, or
+#                    Debian's servers when none is named.
+#
+# /etc/wildos/time-server is the choice: wildos-base's drop-ins start
+# systemd-timesyncd only while it is there and sdwdate only while it is
+# not, so the two never run together, at start-up included.
+
+set -eu
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+CHOICE=/etc/wildos/time-server
+SERVER=/etc/systemd/timesyncd.conf.d/50-wildos.conf
+
+case "${1:-}" in
+    tor)
+        [ $# -eq 1 ] || exit 2
+        rm -f "$CHOICE"
+        systemctl stop systemd-timesyncd.service || true
+        for unit in sdwdate-start-anondate-set-file-watcher.service sdwdate.service; do
+            if systemctl -q is-enabled "$unit" 2>/dev/null; then
+                systemctl start --no-block "$unit" || true
+            fi
+        done
+        ;;
+    server)
+        [ $# -le 2 ] || exit 2
+        host=${2:-}
+        # A host name or an address, nothing a configuration file could
+        # read as anything else.
+        case "$host" in
+            -*|*[!A-Za-z0-9.:-]*) exit 2 ;;
+        esac
+        [ "${#host}" -le 253 ] || exit 2
+        mkdir -p /etc/wildos "${SERVER%/*}"
+        if [ -n "$host" ]; then
+            {
+                echo "# Written by Wild OS Settings > Date and time."
+                echo "[Time]"
+                echo "NTP=$host"
+            } > "$SERVER.wildos-new"
+            chmod 644 "$SERVER.wildos-new"
+            mv -f "$SERVER.wildos-new" "$SERVER"
+        else
+            rm -f "$SERVER"
+        fi
+        : > "$CHOICE"
+        chmod 644 "$CHOICE"
+        systemctl stop sdwdate-start-anondate-set-file-watcher.service sdwdate.service || true
+        systemctl enable systemd-timesyncd.service >/dev/null 2>&1 || true
+        systemctl restart systemd-timesyncd.service
+        ;;
+    *)
+        echo "usage: settings-time-source tor | server [HOST]" >&2
+        exit 2
+        ;;
+esac

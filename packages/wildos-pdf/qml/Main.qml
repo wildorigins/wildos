@@ -17,7 +17,9 @@ UI.AppWindow {
     // From main.cpp: the tool to start with, "sign" for --sign.
     property string startTool
     property string tool: "select"
-    property bool showThumbnails: true
+    property alias showThumbnails: settings.showThumbnails
+    // The zoom last chosen, for PDFs not opened before; 0 until one is.
+    readonly property real keptZoom: settings.zoom
     // Set while a save opens the saved file again, so the view stays put.
     property bool keepPlace: false
 
@@ -55,6 +57,19 @@ UI.AppWindow {
     visible: true
     title: PdfDocument.fileName.length > 0 ? PdfDocument.fileName : qsTr("PDF")
 
+    function keepZoom(zoom) {
+        settings.zoom = zoom;
+    }
+    // A link on a page or a line of the contents: a place in this file,
+    // or a web or mail address.
+    function followLink(link) {
+        if (link.page >= 0) {
+            pages.showSpot(link.page, link.top);
+            focusPages();
+        } else if (link.url) {
+            Qt.openUrlExternally(link.url);
+        }
+    }
     function focusPages() {
         pagesArea.forceActiveFocus();
     }
@@ -303,6 +318,7 @@ UI.AppWindow {
 
     property bool closingNow: false
     onClosing: close => {
+        pages.rememberPlace();
         if (closingNow) {
             return;
         }
@@ -320,6 +336,14 @@ UI.AppWindow {
         window.close();
     }
 
+    Settings {
+        id: settings
+        category: "View"
+        property bool showThumbnails: true
+        property bool showContents: false
+        property real zoom: 0
+    }
+
     TextMetrics {
         id: dateMetrics
         font.family: "Liberation Sans"
@@ -332,10 +356,13 @@ UI.AppWindow {
     Shortcut { sequence: StandardKey.Print; enabled: window.ready; onActivated: window.print() }
     Shortcut { sequence: StandardKey.Find; enabled: window.ready; onActivated: findBar.start() }
     Shortcut { sequences: [StandardKey.Undo]; enabled: PdfDocument.canUndo; onActivated: PdfDocument.undo() }
+    Shortcut { sequences: [StandardKey.Redo, "Ctrl+Y"]; enabled: PdfDocument.canRedo; onActivated: PdfDocument.redo() }
     Shortcut { sequence: StandardKey.Copy; enabled: window.selectionText.length > 0; onActivated: window.copySelection() }
     Shortcut { sequences: [StandardKey.ZoomIn, "Ctrl+="]; enabled: window.ready; onActivated: pages.setZoom(pages.zoom * 1.25) }
     Shortcut { sequences: [StandardKey.ZoomOut]; enabled: window.ready; onActivated: pages.setZoom(pages.zoom / 1.25) }
     Shortcut { sequence: "Ctrl+0"; enabled: window.ready; onActivated: pages.setZoom(1) }
+    Shortcut { sequence: "Ctrl+]"; enabled: window.ready; onActivated: pages.turn(1) }
+    Shortcut { sequence: "Ctrl+["; enabled: window.ready; onActivated: pages.turn(-1) }
     Shortcut { sequence: StandardKey.Close; onActivated: window.close() }
     Shortcut {
         sequence: StandardKey.Delete
@@ -371,6 +398,7 @@ UI.AppWindow {
             Row {
                 anchors.left: parent.left
                 anchors.leftMargin: -2
+                anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 10
 
@@ -384,6 +412,8 @@ UI.AppWindow {
                 }
                 UI.Label {
                     anchors.verticalCenter: parent.verticalCenter
+                    // Room kept for the icon and the word after the name.
+                    width: Math.min(implicitWidth, parent.width - 150)
                     visible: PdfDocument.fileName.length > 0
                     text: PdfDocument.fileName
                     font.weight: UI.Style.weightMedium
@@ -634,7 +664,11 @@ UI.AppWindow {
                     { text: qsTr("Save a signed copy"), enabled: window.hasSignaturePlaced, run: () => window.saveSigned() },
                     { separator: true },
                     { text: qsTr("Undo"), icon: "undo", shortcut: "Ctrl+Z", enabled: PdfDocument.canUndo, run: () => PdfDocument.undo() },
+                    { text: qsTr("Redo"), shortcut: "Ctrl+Y", enabled: PdfDocument.canRedo, run: () => PdfDocument.redo() },
                     { text: qsTr("Copy"), icon: "copy", shortcut: "Ctrl+C", enabled: window.selectionText.length > 0, run: () => window.copySelection() },
+                    { separator: true },
+                    { text: qsTr("Rotate right"), icon: "rotate", shortcut: "Ctrl+]", enabled: window.ready, run: () => pages.turn(1) },
+                    { text: qsTr("Rotate left"), shortcut: "Ctrl+[", enabled: window.ready, run: () => pages.turn(-1) },
                     { separator: true },
                     { text: qsTr("Print"), shortcut: "Ctrl+P", enabled: window.ready, run: () => window.print() },
                     { text: qsTr("Show in Files"), enabled: window.ready, run: () => PdfDocument.showInFolder() },
@@ -652,11 +686,14 @@ UI.AppWindow {
             spacing: 0
 
             Thumbnails {
-                Layout.preferredWidth: 170
+                Layout.preferredWidth: contents ? 260 : Math.max(170, tabsWidth)
                 Layout.fillHeight: true
                 visible: window.showThumbnails && window.ready
                 current: pages.currentPage
+                wantContents: settings.showContents
+                onContentsChosen: shown => settings.showContents = shown
                 onPageChosen: index => pages.goToPage(index)
+                onSpotChosen: (index, top) => pages.showSpot(index, top)
             }
 
             // The pages, on the darker canvas.
@@ -738,6 +775,33 @@ UI.AppWindow {
                         kind: "primary"
                         text: PdfDocument.locked ? qsTr("Type the password") : qsTr("Open a PDF")
                         onClicked: PdfDocument.locked ? passwordDialog.ask() : window.openFile()
+                    }
+
+                    UI.Label {
+                        topPadding: 12
+                        visible: recentFiles.count > 0
+                        text: qsTr("Recent")
+                        size: 13
+                        font.weight: UI.Style.weightSemiBold
+                        color: UI.Style.inkMuted
+                    }
+                    Column {
+                        width: parent.width
+                        visible: recentFiles.count > 0
+
+                        Repeater {
+                            id: recentFiles
+                            model: window.ready || PdfDocument.locked ? [] : History.recent
+
+                            delegate: RecentRow {
+                                required property var modelData
+                                width: parent.width
+                                name: modelData.name
+                                folder: modelData.folder
+                                onClicked: window.openUrl(modelData.url)
+                                onRemoveRequested: History.removeRecent(modelData.path)
+                            }
+                        }
                     }
                 }
 
@@ -866,7 +930,6 @@ UI.AppWindow {
         UI.TextField {
             id: passwordField
             Layout.fillWidth: true
-            echoMode: TextInput.Password
             revealable: true
             placeholderText: qsTr("Password")
             onAccepted: unlockButton.clicked()

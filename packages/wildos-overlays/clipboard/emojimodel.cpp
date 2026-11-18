@@ -40,7 +40,7 @@ QVariantList EmojiData::search(const QString &query, int limit) const
             }
         }
         if (all) {
-            hits.append(entry.toVariantList());
+            hits.append(QVariant(entry.toVariantList()));
             if (hits.size() >= limit) {
                 break;
             }
@@ -56,7 +56,7 @@ QVariantList EmojiData::find(const QStringList &texts) const
         for (const QJsonValue &value : m_all) {
             const QJsonArray entry = value.toArray();
             if (entry.at(0).toString() == text) {
-                found.append(entry.toVariantList());
+                found.append(QVariant(entry.toVariantList()));
                 break;
             }
         }

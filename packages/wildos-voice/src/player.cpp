@@ -72,6 +72,13 @@ void Player::load(const QString &path)
     Q_EMIT pathChanged();
 }
 
+void Player::play()
+{
+    if (!m_path.isEmpty()) {
+        m_player.play();
+    }
+}
+
 void Player::playPause()
 {
     if (m_path.isEmpty()) {
@@ -96,7 +103,9 @@ void Player::seek(double ms)
     if (length > 0) {
         target = std::clamp<qint64>(target, 0, length);
     }
-    m_player.setPosition(std::max<qint64>(0, target));
+    target = std::max<qint64>(0, target);
+    m_player.setPosition(target);
+    Q_EMIT seeked(double(target));
 }
 
 void Player::skip(double ms)

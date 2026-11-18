@@ -6,6 +6,10 @@ import QtQuick.Templates as T
 // accent thumb that grows a little under the pointer. From wildos-settings
 // WSlider, which the flyout's LevelSlider copies; Page Up and Down move by
 // ten as on Windows.
+//
+// The mouse wheel leaves the value alone, so scrolling a page never drags a
+// slider that passes under the pointer. A slider in a flyout that does not
+// scroll (volume, brightness) sets `wheelEnabled: true`.
 T.Slider {
     id: control
 
@@ -26,10 +30,10 @@ T.Slider {
     from: 0
     to: 100
     stepSize: 1
-    wheelEnabled: true
+    wheelEnabled: false
     focusPolicy: Qt.StrongFocus
     hoverEnabled: true
-    opacity: enabled ? 1 : 0.5
+    opacity: enabled ? 1 : Style.disabledOpacity
     Accessible.name: accessibleName
 
     Keys.onPressed: event => {

@@ -1,7 +1,10 @@
 #!/bin/sh
 # Brave as Wild OS starts it: videos decode on the graphics chip where it can
 # (VA-API through OpenGL, the path Chromium uses on Wayland), falling back to
-# the processor where it can't. Installed over Brave's own link by a dpkg
+# the processor where it can't. A click of the mouse wheel starts scrolling
+# by moving the mouse, as on Windows (Chromium has it, switched off on
+# Linux). Installed over Brave's own link by a dpkg
 # diversion (wildos-desktop's postinst), so a Brave update keeps it.
 exec /opt/brave.com/brave/brave-browser \
-    --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL "$@"
+    --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL \
+    --enable-blink-features=MiddleClickAutoscroll "$@"

@@ -3,6 +3,7 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import WildOS.UI as UI
 import WildOS.WinMode.Setup
+import "ServiceText.js" as ServiceText
 
 // 9.5, Setting up (WinModeSetup.dc). Everything here is the daemon's own
 // progress; closing the window leaves setup running.
@@ -31,9 +32,9 @@ Page {
         return null;
     }
 
-    title: "Setting up Windows mode"
-    text: "This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready."
-    note: "If your PC restarts or sleeps, setup carries on where it left off."
+    title: qsTr("Setting up Windows mode")
+    text: qsTr("This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.")
+    note: qsTr("If your PC restarts or sleeps, setup carries on where it left off.")
     spacing: 16
 
     Rectangle {
@@ -58,14 +59,14 @@ Page {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: page.stopping ? "Stopping setup" : page.paused ? "Paused" : page.offline ? "Waiting for the internet"
-                        : page.waitingForWindows ? "Waiting for Windows" : page.active ? page.activeLabel(page.active.id) : "Getting ready"
+                    text: page.stopping ? qsTr("Stopping setup") : page.paused ? qsTr("Paused") : page.offline ? qsTr("Waiting for the internet")
+                        : page.waitingForWindows ? qsTr("Waiting for Windows") : page.active ? page.activeLabel(page.active.id) : qsTr("Getting ready")
                     size: 13
                     font.weight: UI.Style.weightSemiBold
                 }
 
                 UI.Label {
-                    text: page.stopping || page.paused || page.offline || page.waitingForWindows ? "" : (page.status.left || "")
+                    text: page.stopping || page.paused || page.offline || page.waitingForWindows ? "" : ServiceText.tr(page.status.left || "")
                     size: 13
                     color: UI.Style.inkMuted
                 }
@@ -77,11 +78,11 @@ Page {
                 from: 0
                 to: 100
                 value: page.status.percent || 0
-                Accessible.name: "Windows mode setup"
+                Accessible.name: qsTr("Windows mode setup")
             }
 
             UI.Label {
-                text: (page.status.percent || 0) + "%"
+                text: qsTr("%1%").arg(page.status.percent || 0)
                 size: 12
                 color: UI.Style.inkMuted
             }
@@ -90,11 +91,11 @@ Page {
 
     function activeLabel(id) {
         switch (id) {
-        case "media": return page.status.ownIso ? "Preparing" : "Downloading";
-        case "install": return "Installing Windows";
-        case "activate": return "Activating";
-        case "tune": return "Tuning";
-        default: return "Installing Microsoft 365";
+        case "media": return page.status.ownIso ? qsTr("Preparing") : qsTr("Downloading");
+        case "install": return qsTr("Installing Windows");
+        case "activate": return qsTr("Activating");
+        case "tune": return qsTr("Tuning");
+        default: return qsTr("Installing Microsoft 365");
         }
     }
 
@@ -110,10 +111,10 @@ Page {
 
                 CheckRow {
                     required property var modelData
-                    title: modelData.title
-                    detail: modelData.detail
+                    title: ServiceText.tr(modelData.title)
+                    detail: ServiceText.tr(modelData.detail || "")
                     state: modelData.state === "done" ? "done" : modelData.state === "active" ? "active" : modelData.state === "failed" ? "failed" : "pending"
-                    value: modelData.state === "done" ? "Done" : modelData.state === "active" && modelData.percent > 0 ? modelData.percent + "%" : ""
+                    value: modelData.state === "done" ? qsTr("Done") : modelData.state === "active" && modelData.percent > 0 ? qsTr("%1%").arg(modelData.percent) : ""
                 }
             }
         }
@@ -125,20 +126,20 @@ Page {
         visible: page.waitingForWindows
         tone: page.problem.kind === "iso-refused" ? "warning" : "accent"
         iconName: "download"
-        title: page.problem.kind === "iso-refused" ? "That file can't be used" : "Download Windows 11 from Microsoft"
-        text: page.problem.kind === "iso-refused" ? page.problem.text
-            : "On Microsoft's page, choose Windows 11, then your language, then 64-bit Download. Setup carries on by itself once the download finishes."
+        title: page.problem.kind === "iso-refused" ? qsTr("That file can't be used") : qsTr("Download Windows 11 from Microsoft")
+        text: page.problem.kind === "iso-refused" ? ServiceText.tr(page.problem.text || "")
+            : qsTr("On Microsoft's page, choose Windows 11, then your language, then 64-bit Download. Setup carries on by itself once the download finishes.")
 
         UI.Button {
             kind: "primary"
             size: "small"
-            text: "Open Microsoft's page"
+            text: qsTr("Open Microsoft's page")
             onClicked: Setup.openDownloadPage()
         }
 
         UI.Button {
             size: "small"
-            text: "Choose a file"
+            text: qsTr("Choose a file")
             onClicked: isoDialog.open()
         }
     }
@@ -149,40 +150,40 @@ Page {
         visible: !!page.status.notice && !page.waitingForWindows
         tone: "warning"
         iconName: "restart"
-        title: "Trying again"
-        text: page.status.notice || ""
+        title: qsTr("Trying again")
+        text: ServiceText.tr(page.status.notice || "")
     }
 
     Banner {
         visible: page.offline && !page.stopping
         iconName: "wifi-off"
-        title: "Waiting for the internet"
-        text: "This PC is offline. Setup carries on from where it stopped as soon as you're back online, with nothing to press."
+        title: qsTr("Waiting for the internet")
+        text: qsTr("This PC is offline. Setup carries on from where it stopped as soon as you're back online, with nothing to press.")
     }
 
     Banner {
         visible: !page.waitingForWindows && !page.status.notice && !page.offline
         iconName: "monitor"
-        title: "Carry on while it works"
-        text: "Close this window and Wild OS tells you when it's ready. Setup only uses spare capacity."
+        title: qsTr("Carry on while it works")
+        text: qsTr("Close this window and Wild OS tells you when it's ready. Setup only uses spare capacity.")
     }
 
     FileDialog {
         id: isoDialog
-        title: "Choose the Windows 11 download"
-        nameFilters: ["Windows installation media (*.iso)"]
+        title: qsTr("Choose the Windows 11 download")
+        nameFilters: [qsTr("Windows installation media (*.iso)")]
         onAccepted: Setup.chooseIso(selectedFile)
     }
 
     UI.Dialog {
         id: startOverDialog
-        title: "Start setting up again?"
-        text: page.status.ownIso ? "Windows mode stops this setup and removes what it has made so far, including its copy of your Windows 11 file. Your own file stays as it is."
-            : "Windows mode stops this setup and removes what it has made so far. The Windows download is kept, so starting again doesn't fetch it twice."
+        title: qsTr("Start setting up again?")
+        text: page.status.ownIso ? qsTr("Windows mode stops this setup and removes what it has made so far, including its copy of your Windows 11 file. Your own file stays as it is.")
+            : qsTr("Windows mode stops this setup and removes what it has made so far. The Windows download is kept, so starting again doesn't fetch it twice.")
         buttons: [
             UI.Button {
                 kind: "primary"
-                text: "Start over"
+                text: qsTr("Start over")
                 onClicked: {
                     startOverDialog.close();
                     page.stopping = true;
@@ -190,7 +191,7 @@ Page {
                 }
             },
             UI.Button {
-                text: "Keep going"
+                text: qsTr("Keep going")
                 onClicked: startOverDialog.close()
             }
         ]
@@ -198,18 +199,18 @@ Page {
 
     buttons: [
         UI.Button {
-            text: "Start over"
+            text: qsTr("Start over")
             visible: !page.stopping && (page.status.state === "setup" || page.status.state === "failed")
             onClicked: startOverDialog.open()
         },
         UI.Button {
-            text: page.paused ? "Resume" : "Pause"
+            text: page.paused ? qsTr("Resume") : qsTr("Pause")
             visible: !page.stopping && page.status.state === "setup" && (page.problem.kind !== "download" || page.offline) && !page.waitingForWindows
             onClicked: page.paused ? Setup.resume() : Setup.pause()
         },
         UI.Button {
             kind: "primary"
-            text: "Close"
+            text: qsTr("Close")
             onClicked: page.closeRequested()
         }
     ]

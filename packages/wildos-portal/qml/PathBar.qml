@@ -28,7 +28,7 @@ Rectangle {
     border.width: 1
     border.color: field.activeFocus ? UI.Style.accentBorderStrong : UI.Style.borderGlass
     Accessible.role: Accessible.Grouping
-    Accessible.name: "Location"
+    Accessible.name: qsTr("Location")
 
     MouseArea {
         anchors.fill: parent
@@ -90,6 +90,9 @@ Rectangle {
                             height: 24
                             radius: UI.Style.radiusXs
                             color: crumbMouse.pressed ? UI.Style.surfacePressed : crumbMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                            Behavior on color {
+                                ColorAnimation { duration: UI.Style.hoverDuration }
+                            }
                             Accessible.role: Accessible.Button
                             Accessible.name: crumb.modelData.name
                             Accessible.onPressAction: bar.folder.openUrl(crumb.modelData.url)
@@ -128,13 +131,13 @@ Rectangle {
         font.pixelSize: UI.Style.px(13)
         clip: true
         Accessible.role: Accessible.EditableText
-        Accessible.name: "Location"
+        Accessible.name: qsTr("Location")
         onAccepted: {
             if (bar.folder.openText(text)) {
                 bar.editing = false;
                 bar.done();
             } else {
-                bar.folder.failed("Wild OS cannot find \"" + text + "\". Check the spelling and try again.");
+                bar.folder.failed(qsTr("Wild OS cannot find \"%1\". Check the spelling and try again.").arg(text));
             }
         }
         // The text menu holds focus while it is open; the location is still

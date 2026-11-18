@@ -9,6 +9,7 @@
 #include <KApplicationTrader>
 #include <KConfigGroup>
 #include <KCoreDirLister>
+#include <KFileItem>
 #include <KFileUtils>
 #include <KIO/ApplicationLauncherJob>
 #include <KIO/CommandLauncherJob>
@@ -23,6 +24,7 @@
 #include <KIO/Paste>
 #include <KIO/RestoreJob>
 #include <KIO/StoredTransferJob>
+#include <KIO/UDSEntry>
 #include <KService>
 #include <KSharedConfig>
 #include <KTerminalLauncherJob>
@@ -40,6 +42,7 @@
 #include <QGuiApplication>
 #include <QMimeData>
 #include <QMimeDatabase>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QStorageInfo>
 #include <QWindow>
@@ -51,10 +54,10 @@ namespace
 QString folderName(const QUrl &url)
 {
     if (url.isLocalFile() && QDir::cleanPath(url.toLocalFile()) == QDir::homePath()) {
-        return QStringLiteral("Home");
+        return QCoreApplication::translate("FileOps", "Home");
     }
     const QString name = url.adjusted(QUrl::StripTrailingSlash).fileName();
-    return name.isEmpty() ? QStringLiteral("this folder") : name;
+    return name.isEmpty() ? QCoreApplication::translate("FileOps", "this folder") : name;
 }
 
 QVariantMap appEntry(const KService::Ptr &service)
@@ -201,16 +204,16 @@ void Asker::askInWindow(KJob *job, const QString &, const QUrl &src, const QUrl 
     prompt[QStringLiteral("kind")] = QStringLiteral("conflict");
     prompt[QStringLiteral("multiple")] = multiple;
     if (folders) {
-        prompt[QStringLiteral("title")] = QStringLiteral("Merge folders?");
-        prompt[QStringLiteral("text")] = QStringLiteral("%1 already has a folder called \"%2\". Merging puts what you are copying inside it; files with the same name will be asked about one by one.").arg(where, name);
-        prompt[QStringLiteral("replace")] = QStringLiteral("Merge folders");
+        prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Merge folders?");
+        prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "%1 already has a folder called \"%2\". Merging puts what you are copying inside it; files with the same name will be asked about one by one.").arg(where, name);
+        prompt[QStringLiteral("replace")] = QCoreApplication::translate("FileOps", "Merge folders");
     } else if (itself) {
-        prompt[QStringLiteral("title")] = QStringLiteral("This is the same file");
-        prompt[QStringLiteral("text")] = QStringLiteral("\"%1\" is already here. Keep both to make a copy next to it.").arg(name);
+        prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "This is the same file");
+        prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "\"%1\" is already here. Keep both to make a copy next to it.").arg(name);
     } else {
-        prompt[QStringLiteral("title")] = QStringLiteral("Replace or skip files");
-        prompt[QStringLiteral("text")] = QStringLiteral("%1 already has a file called \"%2\".").arg(where, name);
-        prompt[QStringLiteral("replace")] = QStringLiteral("Replace the file");
+        prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Replace or skip files");
+        prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "%1 already has a file called \"%2\".").arg(where, name);
+        prompt[QStringLiteral("replace")] = QCoreApplication::translate("FileOps", "Replace the file");
         prompt[QStringLiteral("incoming")] = Format::size(qint64(sizeSrc)) + QStringLiteral(", ") + Format::date(mtimeSrc);
         prompt[QStringLiteral("existing")] = Format::size(qint64(sizeDest)) + QStringLiteral(", ") + Format::date(mtimeDest);
     }
@@ -244,7 +247,7 @@ void Asker::askUserSkip(KJob *job, KIO::SkipDialog_Options options, const QStrin
 {
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("skip");
-    prompt[QStringLiteral("title")] = QStringLiteral("A file could not be copied");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "A file could not be copied");
     prompt[QStringLiteral("text")] = errorText;
     prompt[QStringLiteral("multiple")] = bool(options & KIO::SkipDialog_MultipleItems);
     QPointer<KJob> guard(job);
@@ -270,9 +273,9 @@ void Asker::askUserDelete(const QList<QUrl> &urls, DeletionType deletionType, Co
     }
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = deletionType == EmptyTrash ? QStringLiteral("Empty the Recycle Bin?") : QStringLiteral("Delete for good?");
-    prompt[QStringLiteral("text")] = QStringLiteral("You cannot undo this.");
-    prompt[QStringLiteral("primary")] = deletionType == EmptyTrash ? QStringLiteral("Empty Recycle Bin") : QStringLiteral("Delete for good");
+    prompt[QStringLiteral("title")] = deletionType == EmptyTrash ? QCoreApplication::translate("FileOps", "Empty the Recycle Bin?") : QCoreApplication::translate("FileOps", "Delete for good?");
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "You cannot undo this.");
+    prompt[QStringLiteral("primary")] = deletionType == EmptyTrash ? QCoreApplication::translate("FileOps", "Empty Recycle Bin") : QCoreApplication::translate("FileOps", "Delete for good");
     FileOps::instance()->ask(prompt, [this, urls, deletionType, parent](const QString &choice, bool) {
         Q_EMIT askUserDeleteResult(choice == QStringLiteral("primary"), urls, deletionType, parent);
     });
@@ -286,7 +289,7 @@ void Asker::requestUserMessageBox(MessageDialogType type, const QString &text, c
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
     prompt[QStringLiteral("title")] = title;
     prompt[QStringLiteral("text")] = text;
-    prompt[QStringLiteral("primary")] = primaryActionText.isEmpty() ? QStringLiteral("Continue") : primaryActionText;
+    prompt[QStringLiteral("primary")] = primaryActionText.isEmpty() ? QCoreApplication::translate("FileOps", "Continue") : primaryActionText;
     if (type == QuestionTwoActions || type == WarningTwoActions || !secondaryActionText.isEmpty()) {
         prompt[QStringLiteral("secondary")] = secondaryActionText;
     }
@@ -304,10 +307,11 @@ void Asker::askIgnoreSslErrors(const QVariantMap &sslErrorData, QWidget *)
     const QString host = sslErrorData.value(QStringLiteral("hostname")).toString();
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("This connection may not be safe");
-    prompt[QStringLiteral("text")] = (host.isEmpty() ? QStringLiteral("The server's") : host + QStringLiteral("'s"))
-        + QStringLiteral(" security certificate cannot be checked, so someone could be listening in. Only carry on if you trust this place.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Connect anyway");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "This connection may not be safe");
+    prompt[QStringLiteral("text")] = host.isEmpty()
+        ? QCoreApplication::translate("FileOps", "The server's security certificate cannot be checked, so someone could be listening in. Only carry on if you trust this place.")
+        : QCoreApplication::translate("FileOps", "%1's security certificate cannot be checked, so someone could be listening in. Only carry on if you trust this place.").arg(host);
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Connect anyway");
     FileOps::instance()->ask(prompt, [this](const QString &choice, bool) {
         Q_EMIT askIgnoreSslErrorsResult(choice == QStringLiteral("primary") ? 1 : 0);
     });
@@ -333,9 +337,9 @@ void UntrustedAsker::showUntrustedProgramWarning(KJob *, const QString &programN
 {
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Run %1?").arg(programName);
-    prompt[QStringLiteral("text")] = QStringLiteral("This shortcut starts a program and did not come with Wild OS or the Store. Only run it if you know where it came from.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Run");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Run %1?").arg(programName);
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "This shortcut starts a program and did not come with Wild OS or the Store. Only run it if you know where it came from.");
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Run");
     FileOps::instance()->ask(prompt, [this](const QString &choice, bool) {
         Q_EMIT result(choice == QStringLiteral("primary"));
     });
@@ -423,23 +427,22 @@ void FileOps::watchJob(KJob *job, const QString &verb)
         if (!job->error() || job->error() == KIO::ERR_USER_CANCELED || job->error() == KJob::KilledJobError) {
             return;
         }
-        QString message = job->errorString();
         switch (job->error()) {
         case KIO::ERR_ACCESS_DENIED:
         case KIO::ERR_WRITE_ACCESS_DENIED:
         case KIO::ERR_CANNOT_WRITE:
-            message = QStringLiteral("You do not have permission to %1 here.").arg(verb);
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "You do not have permission to %1 here.").arg(verb));
             break;
         case KIO::ERR_DISK_FULL:
-            message = QStringLiteral("There is not enough free space to %1 this.").arg(verb);
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "There is not enough free space to %1 this.").arg(verb));
             break;
         case KIO::ERR_DOES_NOT_EXIST:
-            message = QStringLiteral("The item is no longer there. It may have been moved or deleted.");
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "The item is no longer there. It may have been moved or deleted."));
             break;
         default:
+            Q_EMIT failedInDetail(QCoreApplication::translate("FileOps", "Wild OS could not %1.").arg(verb), job->errorString());
             break;
         }
-        Q_EMIT failed(message);
     });
 }
 
@@ -487,20 +490,20 @@ void FileOps::askToRun(const QUrl &url)
     const QString name = url.fileName();
     const quint16 machine = elfMachine(path);
     if (machine != 0 && hostMachine != 0 && machine != hostMachine) {
-        Q_EMIT failed(QStringLiteral("%1 is made for a different type of processor, so it cannot run on this PC. "
-                                     "Download the version marked x86_64 or amd64 instead.").arg(name));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "%1 is made for a different type of processor, so it cannot run on this PC. "
+                                                             "Download the version marked x86_64 or amd64 instead.").arg(name));
         return;
     }
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Run %1?").arg(name);
-    prompt[QStringLiteral("text")] = QStringLiteral("This is a program that did not come with Wild OS or the Store, and nothing has checked it. "
-                                                    "It can open and change any of your files. Only run it if you trust where it came from.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Run");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Run %1?").arg(name);
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "This is a program that did not come with Wild OS or the Store, and nothing has checked it. "
+                                                                            "It can open and change any of your files. Only run it if you trust where it came from.");
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Run");
     // With the safe box on, it can be tried sealed off first.
     const bool box = safeBoxPlan(url).value(QStringLiteral("ok")).toBool();
     if (box) {
-        prompt[QStringLiteral("secondary")] = QStringLiteral("Run in safe box");
+        prompt[QStringLiteral("secondary")] = QCoreApplication::translate("FileOps", "Run in safe box");
     }
     prompt[QStringLiteral("cancelDefault")] = true;
     ask(prompt, [this, url, path, name](const QString &choice, bool) {
@@ -518,7 +521,7 @@ void FileOps::askToRun(const QUrl &url)
             file.setPermissions(file.permissions() | QFileDevice::ExeOwner);
         }
         if (!QFileInfo(path).isExecutable()) {
-            Q_EMIT failed(QStringLiteral("%1 cannot run from here. Copy it to a folder in Home, such as Downloads, and try again.").arg(name));
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "%1 cannot run from here. Copy it to a folder in Home, such as Downloads, and try again.").arg(name));
             return;
         }
         // The executable and arguments overload quotes the path. A bare {}
@@ -745,28 +748,37 @@ void FileOps::transfer(const QList<QUrl> &urls, const QUrl &folder, bool move)
         }
     }
     job->setAutoRename(sameFolder);
-    auto made = std::make_shared<QList<QUrl>>();
-    connect(job, &KIO::CopyJob::copyingDone, this, [made](KIO::Job *, const QUrl &, const QUrl &to, const QDateTime &, bool, bool) {
-        made->append(to);
+    auto made = std::make_shared<QList<QPair<QUrl, QUrl>>>();
+    connect(job, &KIO::CopyJob::copyingDone, this, [made](KIO::Job *, const QUrl &from, const QUrl &to, const QDateTime &, bool, bool) {
+        made->append(qMakePair(from, to));
     });
-    connect(job, &KIO::CopyJob::copyingLinkDone, this, [made](KIO::Job *, const QUrl &, const QString &, const QUrl &to) {
-        made->append(to);
+    connect(job, &KIO::CopyJob::copyingLinkDone, this, [made](KIO::Job *, const QUrl &from, const QString &, const QUrl &to) {
+        made->append(qMakePair(from, to));
     });
-    connect(job, &KJob::result, this, [this, made, folder] {
+    connect(job, &KJob::result, this, [this, made, folder, move] {
         QList<QUrl> top;
-        for (const QUrl &url : std::as_const(*made)) {
-            if (KIO::upUrl(url).adjusted(QUrl::StripTrailingSlash) == folder.adjusted(QUrl::StripTrailingSlash)) {
-                top.append(url);
+        QList<QPair<QUrl, QUrl>> done;
+        for (const auto &item : std::as_const(*made)) {
+            if (KIO::upUrl(item.second).adjusted(QUrl::StripTrailingSlash) == folder.adjusted(QUrl::StripTrailingSlash)) {
+                top.append(item.second);
+                done.append(item);
             }
         }
         if (!top.isEmpty()) {
             Q_EMIT created(folder, top, false);
         }
+        // What got across before an error or Cancel can still be taken back.
+        remember(move ? UndoStep::Move : UndoStep::Copy, done);
     });
-    watchJob(job, move ? QStringLiteral("move files") : QStringLiteral("copy files"));
+    watchJob(job, move ? QCoreApplication::translate("FileOps", "move files") : QCoreApplication::translate("FileOps", "copy files"));
 }
 
 void FileOps::trash(const QList<QUrl> &urls)
+{
+    bin(urls, true);
+}
+
+void FileOps::bin(const QList<QUrl> &urls, bool undoable)
 {
     if (urls.isEmpty()) {
         return;
@@ -782,7 +794,17 @@ void FileOps::trash(const QList<QUrl> &urls)
         if (auto tracker = KIO::getJobTracker()) {
             tracker->registerJob(job);
         }
-        connect(job, &KJob::result, this, [this, job, local] {
+        // Where each item ended up in the Recycle Bin, for putting it back.
+        auto binned = std::make_shared<QList<QPair<QUrl, QUrl>>>();
+        connect(job, &KIO::CopyJob::copyingDone, this, [binned, local](KIO::Job *, const QUrl &from, const QUrl &to, const QDateTime &, bool, bool) {
+            if (local.contains(from)) {
+                binned->append(qMakePair(from, to));
+            }
+        });
+        connect(job, &KJob::result, this, [this, job, local, binned, undoable] {
+            if (undoable) {
+                remember(UndoStep::Trash, *binned);
+            }
             if (!job->error() || job->error() == KIO::ERR_USER_CANCELED) {
                 return;
             }
@@ -790,15 +812,15 @@ void FileOps::trash(const QList<QUrl> &urls)
             // good instead, and so do we.
             QVariantMap prompt;
             prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-            prompt[QStringLiteral("title")] = QStringLiteral("Delete for good?");
+            prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Delete for good?");
             prompt[QStringLiteral("text")] = local.size() == 1
-                ? QStringLiteral("This item cannot go to the Recycle Bin, so it would be deleted for good. You cannot undo this.")
-                : QStringLiteral("These items cannot go to the Recycle Bin, so they would be deleted for good. You cannot undo this.");
-            prompt[QStringLiteral("primary")] = QStringLiteral("Delete for good");
+                ? QCoreApplication::translate("FileOps", "This item cannot go to the Recycle Bin, so it would be deleted for good. You cannot undo this.")
+                : QCoreApplication::translate("FileOps", "These items cannot go to the Recycle Bin, so they would be deleted for good. You cannot undo this.");
+            prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Delete for good");
             ask(prompt, [this, local](const QString &choice, bool) {
                 if (choice == QStringLiteral("primary")) {
                     auto del = KIO::del(local);
-                    watchJob(del, QStringLiteral("delete files"));
+                    watchJob(del, QCoreApplication::translate("FileOps", "delete files"));
                 }
             });
         });
@@ -815,13 +837,13 @@ void FileOps::deleteForGood(const QList<QUrl> &urls)
     }
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = urls.size() == 1 ? QStringLiteral("Delete this item for good?") : QStringLiteral("Delete %1 items for good?").arg(urls.size());
-    prompt[QStringLiteral("text")] = QStringLiteral("It will not go to the Recycle Bin, and you cannot undo this.");
-    prompt[QStringLiteral("primary")] = QStringLiteral("Delete for good");
+    prompt[QStringLiteral("title")] = urls.size() == 1 ? QCoreApplication::translate("FileOps", "Delete this item for good?") : QCoreApplication::translate("FileOps", "Delete %1 items for good?").arg(urls.size());
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "It will not go to the Recycle Bin, and you cannot undo this.");
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Delete for good");
     ask(prompt, [this, urls](const QString &choice, bool) {
         if (choice == QStringLiteral("primary")) {
             auto job = KIO::del(urls);
-            watchJob(job, QStringLiteral("delete files"));
+            watchJob(job, QCoreApplication::translate("FileOps", "delete files"));
         }
     });
 }
@@ -833,21 +855,21 @@ void FileOps::restore(const QList<QUrl> &urls)
     }
     auto job = KIO::restoreFromTrash(urls);
     job->setUiDelegate(delegate());
-    watchJob(job, QStringLiteral("restore files"));
+    watchJob(job, QCoreApplication::translate("FileOps", "restore files"));
 }
 
 void FileOps::emptyBin()
 {
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Empty the Recycle Bin?");
-    prompt[QStringLiteral("text")] = m_binCount == 1 ? QStringLiteral("The item in the Recycle Bin will be deleted for good. You cannot undo this.")
-                                                     : QStringLiteral("All %1 items in the Recycle Bin will be deleted for good. You cannot undo this.").arg(m_binCount);
-    prompt[QStringLiteral("primary")] = QStringLiteral("Empty Recycle Bin");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Empty the Recycle Bin?");
+    prompt[QStringLiteral("text")] = m_binCount == 1 ? QCoreApplication::translate("FileOps", "The item in the Recycle Bin will be deleted for good. You cannot undo this.")
+                                                     : QCoreApplication::translate("FileOps", "All %1 items in the Recycle Bin will be deleted for good. You cannot undo this.").arg(m_binCount);
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Empty Recycle Bin");
     ask(prompt, [this](const QString &choice, bool) {
         if (choice == QStringLiteral("primary")) {
             auto job = KIO::emptyTrash();
-            watchJob(job, QStringLiteral("empty the Recycle Bin"));
+            watchJob(job, QCoreApplication::translate("FileOps", "empty the Recycle Bin"));
         }
     });
 }
@@ -865,7 +887,7 @@ void FileOps::rename(const QUrl &url, const QString &fileName, bool isDir, const
         return;
     }
     if (name.contains(QLatin1Char('/')) || name == QStringLiteral(".") || name == QStringLiteral("..")) {
-        Q_EMIT failed(QStringLiteral("A name cannot contain / or be just dots. Try a different name."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "A name cannot contain / or be just dots. Try a different name."));
         return;
     }
     // The extension hidden from view stays on the file.
@@ -874,17 +896,18 @@ void FileOps::rename(const QUrl &url, const QString &fileName, bool isDir, const
     QUrl target = folder;
     target.setPath(folder.path() + (folder.path().endsWith(QLatin1Char('/')) ? QString() : QStringLiteral("/")) + name);
     if (target.isLocalFile() && QFileInfo::exists(target.toLocalFile()) && target.toLocalFile().compare(url.toLocalFile(), Qt::CaseSensitive) != 0) {
-        Q_EMIT failed(QStringLiteral("There is already an item called \"%1\" here. Pick a different name.").arg(typed.trimmed()));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "There is already an item called \"%1\" here. Pick a different name.").arg(typed.trimmed()));
         return;
     }
     auto job = KIO::moveAs(url, target, KIO::HideProgressInfo);
     job->setUiDelegate(delegate());
-    connect(job, &KJob::result, this, [this, job, folder, target] {
+    connect(job, &KJob::result, this, [this, job, folder, url, target] {
         if (!job->error()) {
             Q_EMIT created(folder, {target}, false);
+            remember(UndoStep::Rename, {{url, target}});
         }
     });
-    watchJob(job, QStringLiteral("rename this"));
+    watchJob(job, QCoreApplication::translate("FileOps", "rename this"));
 }
 
 QString FileOps::uniqueName(const QUrl &folder, const QString &base, const QString &suffix) const
@@ -902,16 +925,155 @@ QString FileOps::uniqueName(const QUrl &folder, const QString &base, const QStri
 
 void FileOps::newFolder(const QUrl &folder)
 {
-    const QString name = uniqueName(folder, QStringLiteral("New folder"), QString());
+    const QString name = uniqueName(folder, QCoreApplication::translate("FileOps", "New folder"), QString());
     QUrl url = folder;
     url.setPath(folder.path() + (folder.path().endsWith(QLatin1Char('/')) ? QString() : QStringLiteral("/")) + name);
     auto job = KIO::mkdir(url);
     connect(job, &KJob::result, this, [this, job, folder, url] {
         if (!job->error()) {
             Q_EMIT created(folder, {url}, true);
+            remember(UndoStep::NewFolder, {{QUrl(), url}});
         }
     });
-    watchJob(job, QStringLiteral("make a folder"));
+    watchJob(job, QCoreApplication::translate("FileOps", "make a folder"));
+}
+
+void FileOps::remember(UndoStep::Kind kind, const QList<QPair<QUrl, QUrl>> &items)
+{
+    if (items.isEmpty()) {
+        return;
+    }
+    m_undo.append(UndoStep{kind, items});
+    // Further back than anyone retraces their steps.
+    while (m_undo.size() > 20) {
+        m_undo.removeFirst();
+    }
+    Q_EMIT undoChanged();
+}
+
+QString FileOps::undoText() const
+{
+    if (m_undo.isEmpty()) {
+        return QCoreApplication::translate("FileOps", "Undo");
+    }
+    switch (m_undo.constLast().kind) {
+    case UndoStep::Move:
+        return QCoreApplication::translate("FileOps", "Undo move");
+    case UndoStep::Copy:
+        return QCoreApplication::translate("FileOps", "Undo copy");
+    case UndoStep::Rename:
+        return QCoreApplication::translate("FileOps", "Undo rename");
+    case UndoStep::Trash:
+        return QCoreApplication::translate("FileOps", "Undo delete");
+    case UndoStep::NewFolder:
+        return QCoreApplication::translate("FileOps", "Undo new folder");
+    }
+    return QCoreApplication::translate("FileOps", "Undo");
+}
+
+void FileOps::undo()
+{
+    if (m_undo.isEmpty()) {
+        return;
+    }
+    const UndoStep step = m_undo.takeLast();
+    Q_EMIT undoChanged();
+
+    switch (step.kind) {
+    case UndoStep::Move:
+    case UndoStep::Rename: {
+        // Items that kept their name go back together, one job for each
+        // folder they came from; one that was renamed on the way goes back
+        // under the name it had.
+        QHash<QUrl, QList<QUrl>> together;
+        for (const auto &item : step.items) {
+            const QUrl from = item.first;
+            const QUrl to = item.second;
+            const QUrl home = KIO::upUrl(from).adjusted(QUrl::StripTrailingSlash);
+            if (from.fileName() == to.fileName()) {
+                together[home].append(to);
+                continue;
+            }
+            auto job = KIO::moveAs(to, from, KIO::HideProgressInfo);
+            job->setUiDelegate(delegate());
+            connect(job, &KJob::result, this, [this, job, home, from] {
+                if (!job->error()) {
+                    Q_EMIT created(home, {from}, false);
+                }
+            });
+            watchJob(job, QCoreApplication::translate("FileOps", "move files"));
+        }
+        for (auto it = together.cbegin(); it != together.cend(); ++it) {
+            const QUrl home = it.key();
+            QList<QUrl> back;
+            for (const QUrl &to : it.value()) {
+                back.append(childUrl(home, to.fileName()));
+            }
+            auto job = KIO::move(it.value(), home);
+            job->setUiDelegate(delegate());
+            connect(job, &KJob::result, this, [this, job, home, back] {
+                if (!job->error()) {
+                    Q_EMIT created(home, back, false);
+                }
+            });
+            watchJob(job, QCoreApplication::translate("FileOps", "move files"));
+        }
+        break;
+    }
+    case UndoStep::Copy:
+    case UndoStep::NewFolder: {
+        QList<QUrl> made;
+        for (const auto &item : step.items) {
+            // One moved or deleted since has nothing left to take back.
+            if (!item.second.isLocalFile() || QFileInfo::exists(item.second.toLocalFile())) {
+                made.append(item.second);
+            }
+        }
+        bin(made, false);
+        break;
+    }
+    case UndoStep::Trash: {
+        const KFileItemList inBin = m_bin->items();
+        QList<QUrl> binned;
+        // An address in the Recycle Bin starts with which bin it is, as in
+        // trash:/0-name.
+        static const QRegularExpression binAddress(QStringLiteral("^/[0-9]+-."));
+        for (const auto &item : step.items) {
+            // Where the job said the item went, when the Recycle Bin has it
+            // there. Otherwise it is the newest one that came from the same
+            // place.
+            const QString original = item.first.toLocalFile();
+            QUrl found;
+            QString foundDate;
+            for (const KFileItem &entry : inBin) {
+                if (entry.url() == item.second) {
+                    found = entry.url();
+                    break;
+                }
+                const KIO::UDSEntry uds = entry.entry();
+                const QString date = uds.stringValue(KIO::UDSEntry::UDS_EXTRA + 1);
+                if (uds.stringValue(KIO::UDSEntry::UDS_EXTRA) == original && (found.isEmpty() || date > foundDate)) {
+                    found = entry.url();
+                    foundDate = date;
+                }
+            }
+            // Undone before the Recycle Bin's listing caught up: the job's
+            // word is all there is.
+            if (found.isEmpty() && item.second.scheme() == QLatin1String("trash") && binAddress.match(item.second.path()).hasMatch()) {
+                found = item.second;
+            }
+            if (!found.isEmpty()) {
+                binned.append(found);
+            }
+        }
+        if (binned.isEmpty()) {
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "The deleted items are no longer in the Recycle Bin, so they cannot be put back."));
+            return;
+        }
+        restore(binned);
+        break;
+    }
+    }
 }
 
 QVariantList FileOps::shareTargets(const QList<QUrl> &urls)
@@ -946,12 +1108,10 @@ void FileOps::reportLaunch(KJob *job)
         if (job->error() == 0 || job->error() == KIO::ERR_USER_CANCELED) {
             return;
         }
-        QString message = job->errorString();
         if (job->error() == KIO::ERR_DOES_NOT_EXIST) {
-            message = QStringLiteral("The item is no longer there. It may have been moved or deleted.");
-        } else if (message.isEmpty()) {
-            message = QStringLiteral("Wild OS could not open this.");
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "The item is no longer there. It may have been moved or deleted."));
+        } else {
+            Q_EMIT failedInDetail(QCoreApplication::translate("FileOps", "Wild OS could not open this."), job->errorString());
         }
-        Q_EMIT failed(message);
     });
 }

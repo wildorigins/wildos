@@ -170,6 +170,7 @@ Rectangle {
                 to: Math.max(1, Player.duration)
                 source: Player.position
                 enabled: bar.hasSong && Player.seekable
+                timeTip: true
                 accessibleName: qsTr("Position in the song")
                 onCommitted: value => Player.seek(value)
             }
@@ -220,6 +221,19 @@ Rectangle {
             onCommitted: value => {
                 Player.muted = false;
                 Player.volume = value;
+            }
+
+            // A touchpad sends many small turns; a step is a full notch.
+            WheelHandler {
+                property real turned: 0
+                onWheel: event => {
+                    turned += event.angleDelta.y;
+                    const steps = Math.trunc(turned / 120);
+                    if (steps !== 0) {
+                        turned -= steps * 120;
+                        Player.stepVolume(steps);
+                    }
+                }
             }
         }
         ToolButton {

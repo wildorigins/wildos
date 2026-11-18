@@ -31,6 +31,9 @@ class DirModel : public QAbstractListModel
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(QString errorText READ errorText NOTIFY errorChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    // The longest type and size on show, for columns wide enough to fit them.
+    Q_PROPERTY(QString widestType READ widestType NOTIFY countChanged)
+    Q_PROPERTY(QString widestSize READ widestSize NOTIFY countChanged)
     Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectionChanged)
     Q_PROPERTY(int currentIndex READ currentIndex WRITE setCurrentIndex NOTIFY currentIndexChanged)
     Q_PROPERTY(int sortColumn READ sortColumn WRITE setSortColumn NOTIFY sortChanged)
@@ -38,6 +41,9 @@ class DirModel : public QAbstractListModel
     Q_PROPERTY(QString searchText READ searchText WRITE setSearchText NOTIFY searchTextChanged)
     Q_PROPERTY(bool foldersOnly READ foldersOnly WRITE setFoldersOnly NOTIFY filterChanged)
     Q_PROPERTY(bool multiple READ multiple WRITE setMultiple NOTIFY multipleChanged)
+    // USB sticks and other disks that are mounted now, for the places
+    // column: { name, icon, url }.
+    Q_PROPERTY(QVariantList drives READ drives NOTIFY drivesChanged)
 
 public:
     enum Roles {
@@ -78,6 +84,8 @@ public:
     bool loading() const { return m_loading; }
     QString errorText() const { return m_error; }
     int count() const { return int(m_rows.size()); }
+    QString widestType() const { return m_widestType; }
+    QString widestSize() const { return m_widestSize; }
     int selectedCount() const;
     int currentIndex() const { return m_current; }
     void setCurrentIndex(int row);
@@ -91,6 +99,9 @@ public:
     void setFoldersOnly(bool on);
     bool multiple() const { return m_multiple; }
     void setMultiple(bool on);
+    QVariantList drives() const;
+    // The folders pinned to the Files sidebar, so the places match it.
+    Q_INVOKABLE QVariantList pinned() const;
 
     // Files of this type are listed; the rest are hidden, folders never.
     void setFilter(const Portal::Filter &filter);
@@ -119,6 +130,12 @@ public:
     // through folderMade once it exists, so the list can rename it.
     Q_INVOKABLE void newFolder();
     Q_INVOKABLE bool renameItem(int row, const QString &newName);
+    // Moves what is selected to the Recycle Bin. Nothing here deletes for
+    // good: what the bin cannot take stays where it is.
+    Q_INVOKABLE void trashSelected();
+    // Puts the paths of what is selected, or of this folder when nothing
+    // is, on the clipboard, written as Files writes them.
+    Q_INVOKABLE void copyPaths() const;
     Q_INVOKABLE QString uniqueName(const QString &base, const QString &suffix) const;
 
 Q_SIGNALS:
@@ -133,6 +150,7 @@ Q_SIGNALS:
     void searchTextChanged();
     void filterChanged();
     void multipleChanged();
+    void drivesChanged();
     void folderMade(int row);
     void failed(const QString &message);
 
@@ -175,6 +193,8 @@ private:
     QString m_search;
     QString m_error;
     QString m_madeFolder;
+    QString m_widestType;
+    QString m_widestSize;
     int m_current = -1;
     int m_anchor = -1;
     int m_sortColumn = 0;

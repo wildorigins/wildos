@@ -19,12 +19,12 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Accent colour"
+            text: qsTr("Accent colour")
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Shows on buttons, switches that are on, selections and the security shield."
+            text: qsTr("Shows on buttons, switches that are on, selections and the security shield.")
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
             elide: Text.ElideNone
@@ -48,7 +48,7 @@ PageScroll {
                     Layout.fillWidth: true
                     text: {
                         const chosen = UI.Style.accents.find(a => Qt.colorEqual(a.colour, System.accent));
-                        return chosen ? chosen.name : Themes.accentName(System.accent) || "Your own colour";
+                        return chosen ? chosen.name : Themes.accentName(System.accent) || qsTr("Your own colour");
                     }
                     color: UI.Style.inkMuted
                 }

@@ -111,7 +111,7 @@ QString FileSearch::display(const QString &folder) const
     path.chop(1);
     const QString home = QDir::homePath();
     if (path == home) {
-        return QStringLiteral("Your home folder");
+        return tr("Your home folder");
     }
     if (path.startsWith(home + QLatin1Char('/'))) {
         return QLatin1Char('~') + path.mid(home.length());

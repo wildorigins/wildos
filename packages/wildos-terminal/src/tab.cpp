@@ -70,7 +70,7 @@ Tab::Tab(bool settings, QWidget *page, QObject *parent)
 QString Tab::title() const
 {
     if (m_settings) {
-        return QStringLiteral("Settings");
+        return tr("Settings");
     }
     return m_current ? m_current->displayTitle() : QString();
 }

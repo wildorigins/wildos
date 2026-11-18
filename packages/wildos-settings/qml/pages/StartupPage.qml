@@ -13,7 +13,7 @@ PageScroll {
 
     UI.Label {
         Layout.fillWidth: true
-        text: "Apps can start when you sign in. Fewer apps at the start means the desktop is ready sooner."
+        text: qsTr("Apps can start when you sign in. Fewer apps at the start means the desktop is ready sooner.")
         color: UI.Style.inkMuted
         wrapMode: Text.Wrap
         elide: Text.ElideNone
@@ -33,7 +33,7 @@ PageScroll {
                     themeIcon: modelData.icon.length > 0 ? modelData.icon : "application-x-executable"
                     title: modelData.name
                     description: modelData.description
-                    status: modelData.enabled ? "On" : "Off"
+                    status: modelData.enabled ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
@@ -47,8 +47,8 @@ PageScroll {
             UI.SettingRow {
                 visible: StartupApps.apps.length === 0
                 iconName: "startup"
-                title: "No apps start when you sign in"
-                description: "Apps that offer to start with Wild OS appear here, each with a switch."
+                title: qsTr("No apps start when you sign in")
+                description: qsTr("Apps that offer to start with Wild OS appear here, each with a switch.")
             }
         }
     }

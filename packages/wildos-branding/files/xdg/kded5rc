@@ -1,0 +1,12 @@
+# Brave is not given the Plasma Integration extension (it reported every
+# download to the desktop as a copy as well), so nothing suggests adding it
+# and it is not set up inside browsers from the Store.
+[Module-browserintegrationreminder]
+autoload=false
+
+[Module-browserintegrationflatpakintegrator]
+autoload=false
+
+# KDE's own once-a-year request for donations is not a Wild OS message.
+[Module-donationmessage]
+autoload=false

@@ -29,7 +29,7 @@ UI.Glass {
 
         UI.Label {
             width: parent.width
-            text: "Snap this window"
+            text: qsTr("Snap this window")
             size: 12
             font.weight: UI.Style.weightSemiBold
             color: UI.Style.inkStatus

@@ -11,6 +11,8 @@ import WildOS.UI as UI
 PageScroll {
     id: page
 
+    Component.onCompleted: System.readDesktopWidgets()
+
     RowLayout {
         Layout.fillWidth: true
         spacing: 20
@@ -31,7 +33,7 @@ PageScroll {
                 spacing: 8
 
                 UI.Label {
-                    text: "Theme"
+                    text: qsTr("Theme")
                     size: 14
                     font.weight: UI.Style.weightSemiBold
                     Accessible.role: Accessible.Heading
@@ -47,9 +49,9 @@ PageScroll {
                     Repeater {
                         model: [
                             // Each theme's page ground, as UI.Style draws it.
-                            { name: "Dark", scheme: "WildOS", swatch: ["#16181c"] },
-                            { name: "Light", scheme: "WildOSLight", swatch: ["#eef1f7"] },
-                            { name: "Automatic", scheme: "", swatch: ["#eef1f7", "#16181c"] }
+                            { name: qsTr("Dark"), scheme: "WildOS", swatch: ["#16181c"] },
+                            { name: qsTr("Light"), scheme: "WildOSLight", swatch: ["#eef1f7"] },
+                            { name: qsTr("Automatic"), scheme: "", swatch: ["#eef1f7", "#16181c"] }
                         ]
 
                         Item {
@@ -57,7 +59,7 @@ PageScroll {
                             required property var modelData
                             readonly property bool automatic: modelData.scheme.length === 0
                             readonly property bool available: System.hasColourScheme(automatic ? "WildOSLight" : modelData.scheme)
-                            readonly property string reason: "The light theme is not installed on this computer"
+                            readonly property string reason: qsTr("The light theme is not installed on this computer")
                             Layout.fillWidth: true
                             Layout.preferredWidth: 1
                             implicitHeight: card.implicitHeight
@@ -123,7 +125,7 @@ PageScroll {
                 spacing: 8
 
                 UI.Label {
-                    text: "Accent colour"
+                    text: qsTr("Accent colour")
                     size: 14
                     font.weight: UI.Style.weightSemiBold
                     Accessible.role: Accessible.Heading
@@ -142,7 +144,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Desktop"
+            text: qsTr("Desktop")
         }
 
         UI.Card {
@@ -152,30 +154,30 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Wallpaper"
+                    title: qsTr("Wallpaper")
                     description: System.wallpaperName
                     interactive: true
                     onClicked: Navigator.open("background")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Browse photos"
+                        text: qsTr("Browse photos")
                         onClicked: photoDialog.open()
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Change wallpaper automatically"
+                    title: qsTr("Change wallpaper automatically")
                     description: System.slideshow && System.slideshowFolder.length > 0
-                        ? "A new photo from " + System.slideshowFolder.split("/").pop() + " every half hour"
-                        : "Cycle through a folder of your photos"
-                    status: (System.slideshow) ? "On" : "Off"
+                        ? qsTr("A new photo from %1 every half hour").arg(System.slideshowFolder.split("/").pop())
+                        : qsTr("Cycle through a folder of your photos")
+                    status: (System.slideshow) ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         id: slideshowToggle
                         anchors.verticalCenter: parent.verticalCenter
                         checked: System.slideshow
-                        Accessible.name: "Change wallpaper automatically"
+                        Accessible.name: qsTr("Change wallpaper automatically")
                         onToggled: {
                             if (checked) {
                                 folderDialog.open();
@@ -187,15 +189,28 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Taskbar layout"
-                    description: "Centred like Windows 11, or left-aligned like Windows 10"
+                    title: qsTr("Widgets on the desktop")
+                    description: qsTr("Add Plasma widgets, like a clock, a calendar or the weather, from the desktop's right-click menu")
+                    status: (System.desktopWidgets) ? qsTr("On") : qsTr("Off")
+
+                    UI.Toggle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: System.desktopWidgets
+                        Accessible.name: qsTr("Widgets on the desktop")
+                        onToggled: System.setDesktopWidgets(checked)
+                    }
+                }
+
+                UI.SettingRow {
+                    title: qsTr("Taskbar layout")
+                    description: qsTr("Centred like Windows 11, or left-aligned like Windows 10")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Taskbar layout"
+                        Accessible.name: qsTr("Taskbar layout")
                         model: [
-                            { value: true, text: "Centred" },
-                            { value: false, text: "Left" }
+                            { value: true, text: qsTr("Centred") },
+                            { value: false, text: qsTr("Left") }
                         ]
                         readonly property var choice: System.taskbarCentred
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -204,15 +219,15 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Taskbar style"
-                    description: "Docked along the bottom like Windows, or floating panels"
+                    title: qsTr("Taskbar style")
+                    description: qsTr("Docked along the bottom like Windows, or floating panels")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Taskbar style"
+                        Accessible.name: qsTr("Taskbar style")
                         model: [
-                            { value: false, text: "Docked" },
-                            { value: true, text: "Floating" }
+                            { value: false, text: qsTr("Docked") },
+                            { value: true, text: qsTr("Floating") }
                         ]
                         readonly property var choice: System.taskbarFloating
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -221,21 +236,21 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Transparency effects"
-                    description: "The frosted glass behind menus and windows"
-                    status: (System.transparency) ? "On" : "Off"
+                    title: qsTr("Transparency effects")
+                    description: qsTr("The frosted glass behind menus and windows")
+                    status: (System.transparency) ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: System.transparency
-                        Accessible.name: "Transparency effects"
+                        Accessible.name: qsTr("Transparency effects")
                         onToggled: System.setTransparency(checked)
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Text size"
-                    description: "Makes text larger across every app"
+                    title: qsTr("Text size")
+                    description: qsTr("Makes text larger across every app")
 
                     TextSizeBox {
                         anchors.verticalCenter: parent.verticalCenter
@@ -269,15 +284,15 @@ PageScroll {
 
     FileDialog {
         id: photoDialog
-        title: "Choose a photo"
-        nameFilters: ["Pictures (*.jpg *.jpeg *.png *.webp)"]
+        title: qsTr("Choose a photo")
+        nameFilters: [qsTr("Pictures (*.jpg *.jpeg *.png *.webp)")]
         currentFolder: StandardPaths.writableLocation(StandardPaths.PicturesLocation)
         onAccepted: System.setWallpaper(selectedFile.toString())
     }
 
     FolderDialog {
         id: folderDialog
-        title: "Choose a folder of photos"
+        title: qsTr("Choose a folder of photos")
         currentFolder: StandardPaths.writableLocation(StandardPaths.PicturesLocation)
         onAccepted: System.setSlideshow(true, selectedFolder.toString())
         // No folder, no slideshow: the switch goes back to off.

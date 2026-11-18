@@ -53,10 +53,10 @@ PlasmoidItem {
     // has one.
     readonly property string level: !checked ? "checking" : warnings.length > 0 ? "attention"
         : updatesUnchecked ? "unchecked" : "protected"
-    readonly property string chipText: level === "attention" ? "Action needed"
-        : level === "checking" ? "Checking"
-        : level === "unchecked" ? "Check updates" : "Protected"
-    readonly property string uncheckedTitle: updatesNeverChecked ? "Updates not checked yet" : "Updates not checked lately"
+    readonly property string chipText: level === "attention" ? qsTr("Action needed")
+        : level === "checking" ? qsTr("Checking")
+        : level === "unchecked" ? qsTr("Check updates") : qsTr("Protected")
+    readonly property string uncheckedTitle: updatesNeverChecked ? qsTr("Updates not checked yet") : qsTr("Updates not checked lately")
 
     function number(value: var): int {
         const n = parseInt(value, 10);
@@ -67,8 +67,9 @@ PlasmoidItem {
         return d.port + "|" + d.name;
     }
 
+    // one is the whole phrase for 1, many has %1 for the count.
     function plural(n: int, one: string, many: string): string {
-        return n === 1 ? one : n + " " + many;
+        return n === 1 ? one : many.arg(n);
     }
 
     // Each area: the row's icon, title and status, how loud the status is,
@@ -82,66 +83,66 @@ PlasmoidItem {
         // load, and never one that can be ignored: the shield stays amber
         // until the firewall is back.
         if (s.firewall === "off") {
-            row("firewall", "firewall", "Firewall", "Firewall is off", "warn", "Turn on", "settings:firewall");
+            row("firewall", "firewall", qsTr("Firewall"), qsTr("Firewall is off"), "warn", qsTr("Turn on"), "settings:firewall");
         }
 
         if (s.encryption === "on") {
-            row("encryption", "lock", "Disk encryption", "Your files are encrypted", "ok", "", "privacy");
+            row("encryption", "lock", qsTr("Disk encryption"), qsTr("Your files are encrypted"), "ok", "", "privacy");
         } else if (s.encryption === "off") {
-            row("encryption", "lock", "Disk encryption", "This disk isn't encrypted", "warn", "Learn how", "help:encryption");
+            row("encryption", "lock", qsTr("Disk encryption"), qsTr("This disk isn't encrypted"), "warn", qsTr("Learn how"), "help:encryption");
         } else {
-            row("encryption", "lock", "Disk encryption", "You can turn this on when you install", "quiet", "", "help:encryption");
+            row("encryption", "lock", qsTr("Disk encryption"), qsTr("You can turn this on when you install"), "quiet", "", "help:encryption");
         }
 
         const securityUpdates = number(s.updates_security);
         if (s.updates === "waiting") {
-            row("updates", "refresh", "Security updates",
-                plural(securityUpdates, "1 security update is ready", "security updates are ready"),
-                "warn", "Install now", "updates");
+            row("updates", "refresh", qsTr("Security updates"),
+                plural(securityUpdates, qsTr("1 security update is ready"), qsTr("%1 security updates are ready")),
+                "warn", qsTr("Install now"), "updates");
         } else if (s.updates === "current") {
-            row("updates", "refresh", "Security updates",
-                number(s.updates_other) > 0 ? "No security updates waiting" : "You're up to date",
+            row("updates", "refresh", qsTr("Security updates"),
+                number(s.updates_other) > 0 ? qsTr("No security updates waiting") : qsTr("You're up to date"),
                 "ok", "", "updates");
         } else if (s.updates === "na") {
-            row("updates", "refresh", "Security updates", "Updates start once Wild OS is installed", "quiet", "", "privacy");
+            row("updates", "refresh", qsTr("Security updates"), qsTr("Updates start once Wild OS is installed"), "quiet", "", "privacy");
         } else {
             const checkedAt = number(s.updates_checked);
             const days = checkedAt > 0 ? Math.floor((now / 1000 - checkedAt) / 86400) : 0;
-            row("updates", "refresh", "Security updates",
-                days >= 1 ? "Not checked for " + plural(days, "1 day", "days") : "Not checked yet",
-                "quiet", "Check now", "updates");
+            row("updates", "refresh", qsTr("Security updates"),
+                days >= 1 ? plural(days, qsTr("Not checked for 1 day"), qsTr("Not checked for %1 days")) : qsTr("Not checked yet"),
+                "quiet", qsTr("Check now"), "updates");
         }
 
         if (s.apps === "off") {
-            row("apps", "box", "App protection", "Apps aren't being contained", "warn", "Learn how", "help:app-protection");
+            row("apps", "box", qsTr("App protection"), qsTr("Apps aren't being contained"), "warn", qsTr("Learn how"), "help:app-protection");
         } else {
-            row("apps", "box", "App protection", "Apps are limited in what they can reach", "ok", "", "privacy");
+            row("apps", "box", qsTr("App protection"), qsTr("Apps are limited in what they can reach"), "ok", "", "privacy");
         }
 
         if (s.devices === "off") {
-            row("devices", "plug", "Device protection", "New USB devices aren't checked", "warn", "Learn how", "help:usb-protection");
+            row("devices", "plug", qsTr("Device protection"), qsTr("New USB devices aren't checked"), "warn", qsTr("Learn how"), "help:usb-protection");
         } else if (pending > 0) {
-            row("devices", "plug", "Device protection",
-                plural(pending, "1 USB device is blocked", "USB devices are blocked"), "note", "Review", "page:usb");
+            row("devices", "plug", qsTr("Device protection"),
+                plural(pending, qsTr("1 USB device is blocked"), qsTr("%1 USB devices are blocked")), "note", qsTr("Review"), "page:usb");
         } else {
-            row("devices", "plug", "Device protection", "New USB devices need your OK", "ok", "", "privacy");
+            row("devices", "plug", qsTr("Device protection"), qsTr("New USB devices need your OK"), "ok", "", "privacy");
         }
 
         if (s.network === "off") {
-            row("network", "globe", "Network protection", "Other computers can reach some apps", "quiet", "", "privacy");
+            row("network", "globe", qsTr("Network protection"), qsTr("Other computers can reach some apps"), "quiet", "", "privacy");
         } else {
-            row("network", "globe", "Network protection", "Other computers can't connect to this one", "ok", "", "privacy");
+            row("network", "globe", qsTr("Network protection"), qsTr("Other computers can't connect to this one"), "ok", "", "privacy");
         }
 
         // A choice made in Settings, so it is listed but never a warning.
         if (s.compat32 === "on") {
-            row("compat32", "chip", "32-bit apps", "On, for Steam and older apps", "quiet", "", "privacy");
+            row("compat32", "chip", qsTr("32-bit apps"), qsTr("On, for Steam and older apps"), "quiet", "", "privacy");
         }
 
         // Only worth a row when it could be on and is not; on a BIOS machine
         // there is nothing anyone can do about it.
         if (s.secureboot === "off") {
-            row("secureboot", "chip", "Startup protection", "Secure Boot is off", "warn", "How to turn it on", "help:secure-boot");
+            row("secureboot", "chip", qsTr("Startup protection"), qsTr("Secure Boot is off"), "warn", qsTr("How to turn it on"), "help:secure-boot");
         }
 
         // A warning the person chose to ignore stays listed but quiet, with
@@ -156,8 +157,8 @@ PlasmoidItem {
             }
             if (ignored.includes(area.id)) {
                 area.tone = "quiet";
-                area.status += ". Ignored";
-                area.action = "Show again";
+                area.status = qsTr("%1. Ignored").arg(area.status);
+                area.action = qsTr("Show again");
                 area.run = "unignore:" + area.id;
             } else {
                 area.ignorable = true;
@@ -169,12 +170,12 @@ PlasmoidItem {
     function checkedText(): string {
         const minutes = Math.floor((now - lastChecked) / 60000);
         if (minutes < 1) {
-            return "Checked just now";
+            return qsTr("Checked just now");
         }
         if (minutes < 60) {
-            return "Checked " + minutes + " min ago";
+            return qsTr("Checked %1 min ago").arg(minutes);
         }
-        return "Checked at " + Qt.locale().toString(new Date(lastChecked), UI.TimeFormat.shortFormat);
+        return qsTr("Checked at %1").arg(Qt.locale().toString(new Date(lastChecked), UI.TimeFormat.shortFormat));
     }
 
     P5Support.DataSource {
@@ -349,9 +350,9 @@ PlasmoidItem {
         } else if (command.indexOf("usb-devices allow ") >= 0) {
             busy = onlyPorts(busy, p => p !== port);
             if (answer === "denied") {
-                setError(port, "Only an administrator can allow USB devices.");
+                setError(port, qsTr("Only an administrator can allow USB devices."));
             } else if (answer === "failed") {
-                setError(port, "This device couldn't be allowed. Unplug it and try again.");
+                setError(port, qsTr("This device couldn't be allowed. Unplug it and try again."));
             }
             refreshDevices();
             refreshStatus();
@@ -398,9 +399,10 @@ PlasmoidItem {
     // Settings ships with Wild OS, but if it has gone the click still says
     // something rather than doing nothing.
     function openSettings(page: string): void {
+        const quoted = text => "'" + text.replace(/'/g, "'\\''") + "'";
         run("if command -v wildos-settings >/dev/null; then setsid -f wildos-settings --page " + page + " >/dev/null 2>&1; "
-            + "else notify-send -a 'Wild OS' -i preferences-system 'Settings is missing' "
-            + "'Reinstall it from the Store to change this.'; fi");
+            + "else notify-send -a 'Wild OS' -i preferences-system " + quoted(qsTr("Settings is missing")) + " "
+            + quoted(qsTr("Reinstall it from the Store to change this.")) + "; fi");
         expanded = false;
     }
 
@@ -451,11 +453,13 @@ PlasmoidItem {
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "security-high"
-    Plasmoid.title: "Security"
-    Plasmoid.status: level === "attention" ? PlasmaCore.Types.NeedsAttentionStatus : PlasmaCore.Types.PassiveStatus
-    toolTipMainText: level === "attention" ? "Action needed" : level === "checking" ? "Checking your protection"
-        : level === "unchecked" ? uncheckedTitle : "Your computer is protected"
-    toolTipSubText: level === "attention" ? warnings.map(a => a.status).join("\n") : "Click for details"
+    Plasmoid.title: qsTr("Security")
+    // Never "needs attention": Plasma keeps a hidden taskbar on screen for as
+    // long as anything on it says that, and a warning here can last for days.
+    Plasmoid.status: level === "attention" ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
+    toolTipMainText: level === "attention" ? qsTr("Action needed") : level === "checking" ? qsTr("Checking your protection")
+        : level === "unchecked" ? uncheckedTitle : qsTr("Your computer is protected")
+    toolTipSubText: level === "attention" ? warnings.map(a => a.status).join("\n") : qsTr("Click for details")
 
     preferredRepresentation: compactRepresentation
     compactRepresentation: Chip {

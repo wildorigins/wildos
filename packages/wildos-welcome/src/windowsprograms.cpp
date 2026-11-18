@@ -1,6 +1,7 @@
 #include "windowsprograms.h"
 #include "firstrun.h"
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
@@ -167,9 +168,9 @@ QString formatBytes(qint64 bytes)
 {
     const QLocale locale = QLocale::system();
     if (bytes >= 1000000000) {
-        return QStringLiteral("%1 GB").arg(locale.toString(bytes / 1e9, 'f', 1));
+        return QCoreApplication::translate("WindowsPrograms", "%1 GB").arg(locale.toString(bytes / 1e9, 'f', 1));
     }
-    return QStringLiteral("%1 MB").arg(qMax<qint64>(1, bytes / 1000000));
+    return QCoreApplication::translate("WindowsPrograms", "%1 MB").arg(qMax<qint64>(1, bytes / 1000000));
 }
 
 QJsonArray loadList(const QString &path, const QString &resource, const char *key)
@@ -364,26 +365,26 @@ void WindowsPrograms::classify(const Scan &scan)
             set(QStringLiteral("windows"), QStringLiteral("windows"), mine.value(QStringLiteral("detail")).toString(size));
         } else if (mine.contains(QStringLiteral("installer"))) {
             row.insert(QStringLiteral("installer"), mine.value(QStringLiteral("installer")).toObject().toVariantMap());
-            set(QStringLiteral("desktop"), QStringLiteral("download"), QStringLiteral("A fresh installer from its makers, set up with Windows app support"));
+            set(QStringLiteral("desktop"), QStringLiteral("download"), QCoreApplication::translate("WindowsPrograms", "A fresh installer from its makers, set up with Windows app support"));
         } else if (!storeId.isEmpty()) {
             // "Discord has a Wild OS version..." says no more than the chip;
             // "Pinta, free in the Store, works a lot like Paint.NET" names
             // what is installed instead, so it stays.
             QString native = theirs.value(QStringLiteral("native")).toString();
             if (native.startsWith(theirs.value(QStringLiteral("name")).toString() + QStringLiteral(" has a Wild OS version"))) {
-                native = QStringLiteral("Its Wild OS version, from the Store");
+                native = QCoreApplication::translate("WindowsPrograms", "Its Wild OS version, from the Store");
             }
             if (storeAppInstalled(storeId)) {
-                set(QStringLiteral("desktop"), QString(), native.isEmpty() ? QStringLiteral("Already on Wild OS") : native);
+                set(QStringLiteral("desktop"), QString(), native.isEmpty() ? QCoreApplication::translate("WindowsPrograms", "Already on Wild OS") : native);
             } else {
                 set(QStringLiteral("desktop"), QStringLiteral("store"), native);
             }
         } else if (runs == QLatin1String("no")) {
             set(QStringLiteral("unsupported"), QString(), theirs.value(QStringLiteral("reason")).toString());
         } else if (runs == QLatin1String("well") || runs == QLatin1String("some")) {
-            set(QStringLiteral("desktop"), QString(), QStringLiteral("Open its Windows installer on Wild OS to set it up"));
+            set(QStringLiteral("desktop"), QString(), QCoreApplication::translate("WindowsPrograms", "Open its Windows installer on Wild OS to set it up"));
         } else {
-            set(QStringLiteral("unknown"), QString(), size.isEmpty() ? QStringLiteral("Wild OS hasn't tried this one yet") : size + QStringLiteral(" · Wild OS hasn't tried this one yet"));
+            set(QStringLiteral("unknown"), QString(), size.isEmpty() ? QCoreApplication::translate("WindowsPrograms", "Wild OS hasn't tried this one yet") : QCoreApplication::translate("WindowsPrograms", "%1 · Wild OS hasn't tried this one yet").arg(size));
         }
         rows << row;
     }
@@ -456,7 +457,7 @@ void WindowsPrograms::checkLicence()
     if (m_licence == QLatin1String("checking")) {
         return;
     }
-    setLicence(QStringLiteral("checking"), QStringLiteral("Looking for your Windows licence."));
+    setLicence(QStringLiteral("checking"), QCoreApplication::translate("WindowsPrograms", "Looking for your Windows licence."));
     // Only the setup service can read the firmware's key; without the
     // system bus it cannot be asked, and the drive is all there is.
     QDBusMessage call = QDBusMessage::createMethodCall(QStringLiteral("org.wildos.Setup1"), QStringLiteral("/org/wildos/Setup1"), QStringLiteral("org.wildos.Setup1"),
@@ -464,16 +465,16 @@ void WindowsPrograms::checkLicence()
     const auto found = [this](const QString &firmware) {
         if (!firmware.isEmpty()) {
             setLicence(QStringLiteral("firmware"),
-                       QStringLiteral("This computer has a Windows licence built in, with a key ending %1. Windows mode will use it and finish setting up later, in the background.")
+                       QCoreApplication::translate("WindowsPrograms", "This computer has a Windows licence built in, with a key ending %1. Windows mode will use it and finish setting up later, in the background.")
                            .arg(firmware));
         } else if (!m_productKeyEnd.isEmpty()) {
             setLicence(QStringLiteral("registry"),
-                       QStringLiteral("%1 on your Windows drive has a product key ending %2. Windows mode will use it and finish setting up later, in the background. "
+                       QCoreApplication::translate("WindowsPrograms", "%1 on your Windows drive has a product key ending %2. Windows mode will use it and finish setting up later, in the background. "
                                       "Microsoft confirms the licence when Windows mode first starts.")
                            .arg(m_product.isEmpty() ? QStringLiteral("Windows") : m_product, m_productKeyEnd));
         } else {
             setLicence(QStringLiteral("none"),
-                       QStringLiteral("Windows mode needs a Windows licence, and Wild OS didn't find one in this computer or on its Windows drive. "
+                       QCoreApplication::translate("WindowsPrograms", "Windows mode needs a Windows licence, and Wild OS didn't find one in this computer or on its Windows drive. "
                                       "Nothing was set up."));
         }
     };

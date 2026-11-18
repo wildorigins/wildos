@@ -73,7 +73,7 @@ RecoveryDialog {
         Firewall.allow(name, port, app ? app.proto : "both", scope, scope === "device" ? address : "", duration);
     }
 
-    title: "Allow an app or port"
+    title: qsTr("Allow an app or port")
     iconName: "shield-round-check"
     dialogWidth: 560
 
@@ -97,8 +97,8 @@ RecoveryDialog {
     UI.Label {
         Layout.fillWidth: true
         text: dialog.what === "app"
-            ? "Apps listed here are running now and waiting for other devices to connect. Until you allow one, the firewall turns those connections away."
-            : "Other devices can connect to whatever on this PC waits on the port you give. Allow only a port an app you trust uses."
+            ? qsTr("Apps listed here are running now and waiting for other devices to connect. Until you allow one, the firewall turns those connections away.")
+            : qsTr("Other devices can connect to whatever on this PC waits on the port you give. Allow only a port an app you trust uses.")
         size: 13
         lineHeightMode: Text.FixedHeight
         lineHeight: 19.5
@@ -113,7 +113,7 @@ RecoveryDialog {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "WHAT TO ALLOW"
+            text: qsTr("WHAT TO ALLOW")
             size: 12.5
             font.weight: UI.Style.weightBold
             font.letterSpacing: 0.25
@@ -121,7 +121,7 @@ RecoveryDialog {
         }
 
         Segmented {
-            options: [{ value: "app", text: "An app" }, { value: "port", text: "A port number" }]
+            options: [{ value: "app", text: qsTr("An app") }, { value: "port", text: qsTr("A port number") }]
             value: dialog.what
             onPicked: v => dialog.what = v
         }
@@ -140,7 +140,7 @@ RecoveryDialog {
                 required property int index
                 Layout.fillWidth: true
                 title: modelData.name
-                description: "Waiting for connections on " + (modelData.proto === "udp" ? "UDP port " : "port ") + modelData.port
+                description: (modelData.proto === "udp" ? qsTr("Waiting for connections on UDP port %1") : qsTr("Waiting for connections on port %1")).arg(modelData.port)
                 checked: dialog.appIndex === index
                 onClicked: dialog.appIndex = index
             }
@@ -149,7 +149,7 @@ RecoveryDialog {
         UI.Label {
             Layout.fillWidth: true
             visible: dialog.apps.length === 0
-            text: "No apps are waiting for connections right now. Start the app first, or choose A port number."
+            text: qsTr("No apps are waiting for connections right now. Start the app first, or choose A port number.")
             size: 12.5
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -165,20 +165,20 @@ RecoveryDialog {
         UI.TextField {
             id: portField
             Layout.preferredWidth: 160
-            placeholderText: "Port, such as 8096"
+            placeholderText: qsTr("Port, such as 8096")
             inputMethodHints: Qt.ImhDigitsOnly
             validator: IntValidator { bottom: 1; top: 65535 }
             text: dialog.portText
             onTextEdited: dialog.portText = text
             onAccepted: dialog.submit()
-            Accessible.name: "Port number"
+            Accessible.name: qsTr("Port number")
         }
 
         UI.Label {
             Layout.fillWidth: true
             text: {
                 const known = dialog.port > 0 ? Firewall.serviceName(dialog.port, "tcp") : "";
-                return known.length > 0 ? "Usually " + known + ". TCP and UDP." : dialog.port > 0 ? "TCP and UDP." : "";
+                return known.length > 0 ? qsTr("Usually %1. TCP and UDP.").arg(known) : dialog.port > 0 ? qsTr("TCP and UDP.") : "";
             }
             size: 12
             color: UI.Style.inkMuted
@@ -188,7 +188,7 @@ RecoveryDialog {
 
     UI.Label {
         Layout.fillWidth: true
-        text: "WHO CAN CONNECT"
+        text: qsTr("WHO CAN CONNECT")
         size: 12.5
         font.weight: UI.Style.weightBold
         font.letterSpacing: 0.25
@@ -201,8 +201,8 @@ RecoveryDialog {
 
         FirewallChoice {
             Layout.fillWidth: true
-            title: "Devices on this network"
-            description: dialog.networkName.length > 0 ? "Phones, TVs and PCs on " + dialog.networkName + ". Recommended." : "Phones, TVs and PCs on the network you're on. Recommended."
+            title: qsTr("Devices on this network")
+            description: dialog.networkName.length > 0 ? qsTr("Phones, TVs and PCs on %1. Recommended.").arg(dialog.networkName) : qsTr("Phones, TVs and PCs on the network you're on. Recommended.")
             checked: dialog.scope === "network"
             onClicked: dialog.scope = "network"
         }
@@ -210,9 +210,9 @@ RecoveryDialog {
         FirewallChoice {
             id: deviceChoice
             Layout.fillWidth: true
-            title: "One device only"
+            title: qsTr("One device only")
             description: dialog.scope === "device" && dialog.address.length > 0 && dialog.addressProblem.length > 0
-                ? dialog.addressProblem : "Give its address, such as 192.168.1.24."
+                ? dialog.addressProblem : qsTr("Give its address, such as 192.168.1.24.")
             checked: dialog.scope === "device"
             showBelow: checked
             onClicked: {
@@ -228,14 +228,14 @@ RecoveryDialog {
                 error: dialog.address.length > 0 && dialog.addressProblem.length > 0
                 onTextEdited: dialog.address = text.trim()
                 onAccepted: dialog.submit()
-                Accessible.name: "The device's address"
+                Accessible.name: qsTr("The device's address")
             }
         }
 
         FirewallChoice {
             Layout.fillWidth: true
-            title: "Anyone, including the internet"
-            description: "Only works if your router is set up to pass it on."
+            title: qsTr("Anyone, including the internet")
+            description: qsTr("Only works if your router is set up to pass it on.")
             checked: dialog.scope === "anyone"
             onClicked: dialog.scope = "anyone"
 
@@ -243,7 +243,7 @@ RecoveryDialog {
                 name: "triangle-alert"
                 size: 16
                 strokeWidth: 2
-                color: "#ffc46a"
+                color: UI.Style.warning
             }
         }
     }
@@ -254,7 +254,7 @@ RecoveryDialog {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "FOR HOW LONG"
+            text: qsTr("FOR HOW LONG")
             size: 12.5
             font.weight: UI.Style.weightBold
             font.letterSpacing: 0.25
@@ -265,11 +265,11 @@ RecoveryDialog {
             id: durationBox
             Layout.preferredWidth: 220
             implicitHeight: 32
-            Accessible.name: "For how long"
+            Accessible.name: qsTr("For how long")
             model: [
-                { value: "forever", text: "Until I turn it off" },
-                { value: "restart", text: "Until I restart" },
-                { value: "hour", text: "For one hour" }
+                { value: "forever", text: qsTr("Until I turn it off") },
+                { value: "restart", text: qsTr("Until I restart") },
+                { value: "hour", text: qsTr("For one hour") }
             ]
             currentIndex: model.findIndex(o => o.value === dialog.duration)
             onActivated: dialog.duration = currentValue
@@ -289,7 +289,7 @@ RecoveryDialog {
 
         UI.Label {
             Layout.fillWidth: true
-            text: dialog.error.length > 0 ? dialog.error : "Never applies on a public network. You will be asked for your password."
+            text: dialog.error.length > 0 ? dialog.error : qsTr("Never applies on a public network. You will be asked for your password.")
             size: 12.5
             color: dialog.error.length > 0 ? UI.Style.warning : UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -300,13 +300,13 @@ RecoveryDialog {
     buttons: [
         UI.Button {
             implicitHeight: 32
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: dialog.close()
         },
         UI.Button {
             implicitHeight: 32
             kind: "primary"
-            text: Firewall.busy && Firewall.busyWhat === "allow" ? "Allowing" : "Allow"
+            text: Firewall.busy && Firewall.busyWhat === "allow" ? qsTr("Allowing") : qsTr("Allow")
             busy: Firewall.busy && Firewall.busyWhat === "allow"
             enabled: dialog.ready && !Firewall.busy
             onClicked: dialog.submit()

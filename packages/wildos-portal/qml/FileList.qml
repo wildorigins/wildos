@@ -6,10 +6,12 @@ import QtQuick.Layouts
 import WildOS.UI as UI
 
 // The details list of DialogSave.dc: a 30px header (Name, Date modified
-// 150, Type 130, Size 70) that sorts when clicked, then 36px rows with a
+// 150, Type 130, Size 70, the last two wider when what they hold is
+// longer) that sorts when clicked, then 36px rows with a
 // 20px icon, the name in 13px and the rest in 12px muted. Click selects
 // (Ctrl and Shift add when several may be opened), double click opens a
-// folder or chooses the file, and typing jumps to a name.
+// folder or chooses the file, right click (or the Menu key) asks for the
+// menu, Delete sends to the Recycle Bin and typing jumps to a name.
 //
 // Large icons, the other view, lays the same items out as Files' Large
 // icons tiles (140 by 150, a 96px icon or a preview of the picture) so
@@ -23,8 +25,19 @@ FocusScope {
     property bool showSize: true
     property int renameRow: -1
     property string typed: ""
+    // A folder that lists at once never flashes the spinner.
+    property bool slowLoad: false
+
+    readonly property real sizeWidth: Math.round(Math.max(70, Math.min(140, sizeProbe.implicitWidth + 6)))
+    // The longest type name in the folder fits, as long as the name column
+    // keeps room of its own.
+    readonly property real typeWidth: Math.round(Math.max(90, Math.min(Math.max(130, typeProbe.implicitWidth + 6), 260,
+        width - 268 - sizeWidth - (folder.isComputer ? 0 : 160))))
 
     signal activated(int row)
+    // A right click or the Menu key: on `row`, or on the empty space when
+    // it is -1, at a point in this item.
+    signal menuRequested(int row, real x, real y, bool keyboard)
     signal emptyAction(string action)
     property string emptyText: ""
     property string emptyButton: ""
@@ -40,6 +53,21 @@ FocusScope {
             grid.positionViewAtIndex(row, GridView.Contain);
         } else {
             view.positionViewAtIndex(row, ListView.Contain);
+        }
+    }
+
+    function requestMenu(row, item, x, y, keyboard) {
+        const at = item.mapToItem(list, x, y);
+        menuRequested(row, at.x, at.y, keyboard);
+    }
+
+    function requestMenuAtCurrent() {
+        const cur = folder.currentIndex;
+        const item = cur < 0 ? null : icons ? grid.itemAtIndex(cur) : view.itemAtIndex(cur);
+        if (item && item.selected) {
+            requestMenu(cur, item, Math.min(item.width / 2, 120), item.height / 2, true);
+        } else {
+            menuRequested(-1, 24, header.visible ? header.height + 12 : 24, true);
         }
     }
 
@@ -82,6 +110,12 @@ FocusScope {
             f.select(cur, Qt.ControlModifier);
         } else if (event.key === Qt.Key_F2 && cur >= 0 && f.writable) {
             list.startRename(cur);
+        } else if (event.key === Qt.Key_Delete && !(event.modifiers & Qt.ShiftModifier) && f.selectedCount > 0 && f.writable) {
+            f.trashSelected();
+        } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            list.requestMenuAtCurrent();
+        } else if (event.key === Qt.Key_C && mods === (Qt.ControlModifier | Qt.ShiftModifier)) {
+            f.copyPaths();
         } else if (event.text.length === 1 && event.text >= " " && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier))) {
             typed += event.text;
             typeReset.restart();
@@ -101,6 +135,26 @@ FocusScope {
         onTriggered: list.typed = ""
     }
 
+    Timer {
+        interval: 300
+        running: list.folder.loading
+        onTriggered: list.slowLoad = true
+    }
+
+    UI.Label {
+        id: typeProbe
+        visible: false
+        size: 12
+        text: list.folder.widestType
+    }
+
+    UI.Label {
+        id: sizeProbe
+        visible: false
+        size: 12
+        text: list.folder.widestSize
+    }
+
     Connections {
         target: list.folder
         function onCurrentIndexChanged() {
@@ -115,6 +169,11 @@ FocusScope {
         }
         function onFolderMade(row) {
             list.startRename(row);
+        }
+        function onLoadingChanged() {
+            if (!list.folder.loading) {
+                list.slowLoad = false;
+            }
         }
     }
 
@@ -184,10 +243,10 @@ FocusScope {
             spacing: 10
 
             Item { Layout.preferredWidth: 20 }
-            HeaderCell { Layout.fillWidth: true; column: 0; label: "Name" }
-            HeaderCell { Layout.preferredWidth: 150; column: 1; label: "Date modified"; visible: !list.folder.isComputer }
-            HeaderCell { Layout.preferredWidth: 130; column: 2; label: "Type" }
-            HeaderCell { Layout.preferredWidth: 70; column: 3; label: list.folder.isComputer ? "Free" : "Size"; alignRight: true }
+            HeaderCell { Layout.fillWidth: true; column: 0; label: qsTr("Name") }
+            HeaderCell { Layout.preferredWidth: 150; column: 1; label: qsTr("Date modified"); visible: !list.folder.isComputer }
+            HeaderCell { Layout.preferredWidth: list.typeWidth; column: 2; label: qsTr("Type") }
+            HeaderCell { Layout.preferredWidth: list.sizeWidth; column: 3; label: list.folder.isComputer ? qsTr("Free") : qsTr("Size"); alignRight: true }
         }
     }
 
@@ -228,7 +287,11 @@ FocusScope {
             Rectangle {
                 anchors.fill: parent
                 radius: UI.Style.radiusXs
-                color: row.selected ? UI.Style.accentSelected : rowMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                color: rowMouse.pressed ? UI.Style.surfacePressed : row.selected ? UI.Style.accentSelected
+                    : rowMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                Behavior on color {
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
                 border.width: list.activeFocus && list.folder.currentIndex === row.index ? 1 : 0
                 border.color: UI.Style.accentBorderStrong
             }
@@ -305,14 +368,14 @@ FocusScope {
                 }
 
                 UI.Label {
-                    Layout.preferredWidth: 130
+                    Layout.preferredWidth: list.typeWidth
                     text: row.type
                     size: 12
                     color: UI.Style.inkMuted
                 }
 
                 UI.Label {
-                    Layout.preferredWidth: 70
+                    Layout.preferredWidth: list.sizeWidth
                     horizontalAlignment: Text.AlignRight
                     text: row.size
                     size: 12
@@ -324,25 +387,47 @@ FocusScope {
                 id: rowMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                acceptedButtons: Qt.LeftButton
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 enabled: list.renameRow !== row.index
                 onPressed: mouse => {
                     list.forceActiveFocus();
-                    list.folder.select(row.index, mouse.modifiers);
+                    // A right click on one of several selected items keeps
+                    // them all, as in Files.
+                    if (mouse.button === Qt.LeftButton) {
+                        list.folder.select(row.index, mouse.modifiers);
+                    } else if (!row.selected) {
+                        list.folder.select(row.index, 0);
+                    }
                 }
-                onDoubleClicked: list.activated(row.index)
+                onClicked: mouse => {
+                    if (mouse.button === Qt.RightButton) {
+                        list.requestMenu(row.index, row, mouse.x, mouse.y, false);
+                    }
+                }
+                onDoubleClicked: mouse => {
+                    if (mouse.button === Qt.LeftButton) {
+                        list.activated(row.index);
+                    }
+                }
             }
         }
 
         // Clicking below the last row clears the selection, as in Files.
         MouseArea {
+            id: belowRows
             z: -1
             width: view.width
             height: Math.max(0, view.height - view.contentHeight)
             y: view.contentHeight
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             onPressed: {
                 list.forceActiveFocus();
                 list.folder.clearSelection();
+            }
+            onClicked: mouse => {
+                if (mouse.button === Qt.RightButton) {
+                    list.requestMenu(-1, belowRows, mouse.x, mouse.y, false);
+                }
             }
         }
     }
@@ -388,7 +473,11 @@ FocusScope {
             Rectangle {
                 anchors.fill: parent
                 radius: 8
-                color: tile.selected ? UI.Style.accentSelected : tileMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                color: tileMouse.pressed ? UI.Style.surfacePressed : tile.selected ? UI.Style.accentSelected
+                    : tileMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                Behavior on color {
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
                 border.width: 1
                 border.color: tile.selected ? UI.Style.accentBorderStrong
                     : list.activeFocus && list.folder.currentIndex === tile.index ? UI.Style.accentBorderStrong : "transparent"
@@ -479,29 +568,56 @@ FocusScope {
                 id: tileMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                acceptedButtons: Qt.LeftButton
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 enabled: list.renameRow !== tile.index
                 onPressed: mouse => {
                     list.forceActiveFocus();
-                    list.folder.select(tile.index, mouse.modifiers);
+                    if (mouse.button === Qt.LeftButton) {
+                        list.folder.select(tile.index, mouse.modifiers);
+                    } else if (!tile.selected) {
+                        list.folder.select(tile.index, 0);
+                    }
                 }
-                onDoubleClicked: list.activated(tile.index)
+                onClicked: mouse => {
+                    if (mouse.button === Qt.RightButton) {
+                        list.requestMenu(tile.index, tile, mouse.x, mouse.y, false);
+                    }
+                }
+                onDoubleClicked: mouse => {
+                    if (mouse.button === Qt.LeftButton) {
+                        list.activated(tile.index);
+                    }
+                }
             }
         }
 
         // Clicking between or below the tiles clears the selection.
         MouseArea {
+            id: betweenTiles
             parent: grid.contentItem
             z: -1
             width: Math.max(grid.width, grid.contentWidth)
             height: Math.max(grid.height, grid.contentHeight)
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             onPressed: {
                 list.forceActiveFocus();
                 list.folder.clearSelection();
             }
+            onClicked: mouse => {
+                if (mouse.button === Qt.RightButton) {
+                    list.requestMenu(-1, betweenTiles, mouse.x, mouse.y, false);
+                }
+            }
         }
     }
 
+    UI.Spinner {
+        anchors.centerIn: list.icons ? grid : view
+        size: 24
+        visible: list.slowLoad && list.folder.loading && list.folder.count === 0
+        Accessible.role: Accessible.Indicator
+        Accessible.name: qsTr("Loading")
+    }
 
     ColumnLayout {
         anchors.centerIn: list.icons ? grid : view

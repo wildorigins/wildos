@@ -6,7 +6,10 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusVariant>
+#include <QFile>
 #include <QFileSystemWatcher>
+#include <QProcess>
+#include <QRegularExpression>
 #include <QTimeZone>
 
 #include "securetime.h"
@@ -18,6 +21,11 @@ namespace
 const QString service = QStringLiteral("org.freedesktop.timedate1");
 const QString path = QStringLiteral("/org/freedesktop/timedate1");
 const QString interfaceName = QStringLiteral("org.freedesktop.timedate1");
+const QString sourceHelper = QStringLiteral("/usr/libexec/wildos/settings-time-source");
+// Both written by the helper: the first is the choice of a time server,
+// the second names the server when it is not Debian's.
+const QString sourceChoice = QStringLiteral("/etc/wildos/time-server");
+const QString serverFile = QStringLiteral("/etc/systemd/timesyncd.conf.d/50-wildos.conf");
 
 QString offsetText(int seconds)
 {
@@ -33,6 +41,7 @@ Clock::Clock(QObject *parent)
     : QObject(parent)
 {
     readSecureTime();
+    readTimeSource();
     // sdwdate's marker for having set the clock appears in this folder, so
     // the page changes from "being set" to "set" as it happens.
     auto watch = new QFileSystemWatcher({QStringLiteral("/run/sdwdate")}, this);
@@ -61,6 +70,66 @@ void Clock::readSecureTime()
         m_secureTimeSet = set;
         Q_EMIT changed();
     }
+}
+
+void Clock::readTimeSource()
+{
+    const QString source = QFile::exists(sourceChoice) ? QStringLiteral("server") : QStringLiteral("tor");
+    QString server;
+    QFile file(serverFile);
+    if (file.open(QIODevice::ReadOnly)) {
+        static const QRegularExpression line(QStringLiteral("^NTP=(\\S+)\\s*$"), QRegularExpression::MultilineOption);
+        server = line.match(QString::fromUtf8(file.readAll())).captured(1);
+    }
+    if (source != m_timeSource || server != m_timeServer) {
+        m_timeSource = source;
+        m_timeServer = server;
+        Q_EMIT changed();
+    }
+}
+
+bool Clock::serverNameValid(const QString &server) const
+{
+    static const QRegularExpression name(QStringLiteral("^[A-Za-z0-9.:][A-Za-z0-9.:-]{0,252}$"));
+    return server.isEmpty() || name.match(server).hasMatch();
+}
+
+void Clock::setTimeSource(const QString &source, const QString &server)
+{
+    const bool toServer = source == QLatin1String("server");
+    if (m_sourceBusy || (!toServer && source != QLatin1String("tor")) || (toServer && !serverNameValid(server))
+        || (source == m_timeSource && (!toServer || server == m_timeServer))) {
+        return;
+    }
+    m_sourceBusy = true;
+    Q_EMIT changed();
+    auto process = new QProcess(this);
+    connect(process, &QProcess::finished, this, [this, process](int code) {
+        process->deleteLater();
+        m_sourceBusy = false;
+        readTimeSource();
+        readSecureTime();
+        Q_EMIT changed();
+        if (code == 126 || code == 127) {
+            Q_EMIT failed(tr("Nothing was changed. An administrator password is needed for this."));
+        } else if (code != 0) {
+            Q_EMIT failed(tr("Wild OS could not change where the clock is set from. Try again in a moment."));
+        }
+        read();
+    });
+    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart) {
+            process->deleteLater();
+            m_sourceBusy = false;
+            Q_EMIT changed();
+            Q_EMIT failed(tr("Wild OS could not change where the clock is set from. Try again in a moment."));
+        }
+    });
+    QStringList arguments{sourceHelper, source};
+    if (toServer && !server.isEmpty()) {
+        arguments << server;
+    }
+    process->start(QStringLiteral("pkexec"), arguments);
 }
 
 void Clock::read()
@@ -102,9 +171,9 @@ void Clock::call(const QString &method, const QVariantList &arguments)
         if (reply.isError()) {
             const QString name = reply.error().name();
             if (name.endsWith(QLatin1String("AccessDenied")) || name.endsWith(QLatin1String("InteractiveAuthorizationRequired"))) {
-                Q_EMIT failed(QStringLiteral("Nothing was changed. An administrator password is needed for this."));
+                Q_EMIT failed(tr("Nothing was changed. An administrator password is needed for this."));
             } else {
-                Q_EMIT failed(QStringLiteral("Wild OS could not change the clock. Try again in a moment."));
+                Q_EMIT failed(tr("Wild OS could not change the clock. Try again in a moment."));
             }
         }
         read();
@@ -162,7 +231,7 @@ void Clock::setDateTime(int day, int month, int year, int hour, int minute)
 {
     const QDateTime when(QDate(year, month, day), QTime(hour, minute));
     if (!when.isValid()) {
-        Q_EMIT failed(QStringLiteral("That is not a date and time Wild OS can set."));
+        Q_EMIT failed(tr("That is not a date and time Wild OS can set."));
         return;
     }
     call(QStringLiteral("SetTime"), {QVariant::fromValue<qlonglong>(when.toMSecsSinceEpoch() * 1000), false, true});

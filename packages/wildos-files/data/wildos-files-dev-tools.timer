@@ -1,0 +1,7 @@
+[Unit]
+Description=Remove the Qt developer packages an earlier Files update brought in
+ConditionPathExists=!/var/lib/wildos/files-dev-tools-removed
+
+[Timer]
+# Well after start-up, so it never competes with signing in.
+OnBootSec=3min

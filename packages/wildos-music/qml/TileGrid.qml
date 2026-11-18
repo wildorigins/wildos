@@ -49,11 +49,14 @@ GridView {
     delegate: Item {
         id: cell
         required property var modelData
+        required property int index
         width: grid.cellWidth
         height: grid.cellHeight
 
         AlbumTile {
             id: tile
+            // Tab can reach a cover that is scrolled out of sight.
+            onActiveFocusChanged: if (activeFocus) grid.positionViewAtIndex(cell.index, GridView.Contain)
             coverSize: grid.tileSize
             round: grid.round
             placeholder: grid.round ? "artist" : "album"

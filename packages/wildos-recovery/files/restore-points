@@ -897,7 +897,46 @@ def ext4_restore(store, info, target, boot_dir):
     restore_boot(store.boot(pid), boot_dir)
 
 
+PREVIEW_LOWER = "/run/wildos-snapshot/lower"
+
+
+def preview_id():
+    """The restore point the start-up menu started to try, or None."""
+    try:
+        with open("/proc/cmdline") as f:
+            m = re.search(r"(?:^|\s)wildos\.snapshot=(\d+)(?:\s|$)", f.read())
+    except OSError:
+        return None
+    return int(m.group(1)) if m else None
+
+
+def go_back_from_preview(pid, hold):
+    """Keep the restore point that is being tried.
+
+    / is that point under a layer in memory (wildos-restore.sh) and the
+    installed system is not running, so this is start-up recovery's way of
+    going back, reached from the desktop. Without it, trying a point from
+    the start-up menu looked like a finished restore, and the next normal
+    start went back to the system that was broken.
+    """
+    top = os.path.join(RUN, "top")
+    mount_top(root_device(PREVIEW_LOWER), top)
+    try:
+        # /boot is its own partition on most PCs; where it is not, it is a
+        # folder of the system that is about to be put in place.
+        boot_dir = "/boot" if os.path.ismount("/boot") else os.path.join(top, "@", "boot")
+        offline_restore(pid, None, top, boot_dir, hold)
+    finally:
+        run(["umount", top], check=False)
+
+
 def go_back(pid, hold):
+    tried = preview_id()
+    if tried is not None:
+        if pid != tried:
+            raise SystemExit(f"restore point {tried} is being tried; only it can be kept from here")
+        go_back_from_preview(pid, hold)
+        return
     store = Store()
     info = store.get(pid)
     if not info:

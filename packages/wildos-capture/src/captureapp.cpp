@@ -16,6 +16,7 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QMimeData>
@@ -23,6 +24,7 @@
 #include <QPainterPath>
 #include <QScreen>
 #include <QStandardPaths>
+#include <QWindow>
 
 namespace
 {
@@ -115,7 +117,7 @@ CaptureApp::CaptureApp(QObject *parent)
 
     connect(m_recorder, &Recorder::finished, this, &CaptureApp::recordingFinished);
     connect(m_recorder, &Recorder::failed, this, [this](const QString &message) {
-        notifyFailure(QStringLiteral("Recording stopped"), message);
+        notifyFailure(tr("Recording stopped"), message);
         quitWhenIdle();
     });
     connect(m_recorder, &Recorder::recordingChanged, this, &CaptureApp::quitWhenIdle);
@@ -266,7 +268,7 @@ void CaptureApp::freeze()
 {
     const auto images = m_grabber->grabScreens(m_includePointer);
     if (images.isEmpty()) {
-        notifyFailure(QStringLiteral("Nothing captured"), QStringLiteral("The screen could not be read. Sign out and back in, then try again."));
+        notifyFailure(tr("Nothing captured"), tr("The screen could not be read. Sign out and back in, then try again."));
         quitWhenIdle();
         return;
     }
@@ -485,7 +487,7 @@ QString CaptureApp::nextPath() const
 void CaptureApp::finish(const QImage &image)
 {
     if (image.isNull()) {
-        notifyFailure(QStringLiteral("Nothing captured"), QStringLiteral("The screen could not be read. Try again."));
+        notifyFailure(tr("Nothing captured"), tr("The screen could not be read. Try again."));
         quitWhenIdle();
         return;
     }
@@ -523,10 +525,10 @@ void CaptureApp::finish(const QImage &image)
     const QUrl file = QUrl::fromLocalFile(path);
     auto *notification = new KNotification(QStringLiteral("captured"));
     notification->setComponentName(QStringLiteral("wildos-screenshot"));
-    notification->setTitle(QStringLiteral("Screenshot copied"));
-    notification->setText(saved            ? QStringLiteral("Also saved to Pictures › Screenshots.")
-                              : m_autoSave ? QStringLiteral("It could not be saved to Pictures › Screenshots, so paste it somewhere soon.")
-                                           : QStringLiteral("Paste it wherever you need it."));
+    notification->setTitle(tr("Screenshot copied"));
+    notification->setText(saved            ? tr("Also saved to Pictures › Screenshots.")
+                              : m_autoSave ? tr("It could not be saved to Pictures › Screenshots, so paste it somewhere soon.")
+                                           : tr("Paste it wherever you need it."));
     notification->setIconName(QStringLiteral("wildos-capture"));
     // Kept in the list after the toast goes, with its buttons still working
     // while this program waits for them.
@@ -534,17 +536,17 @@ void CaptureApp::finish(const QImage &image)
     notification->setHint(QStringLiteral("desktop-entry"), QStringLiteral("org.wildos.screenshot"));
     if (saved) {
         notification->setUrls({file});
-        auto *open = notification->addDefaultAction(QStringLiteral("Open"));
+        auto *open = notification->addDefaultAction(tr("Open"));
         connect(open, &KNotificationAction::activated, this, [this, file, notification] {
             openFile(file);
             notification->close();
         });
-        auto *edit = notification->addAction(QStringLiteral("Edit"));
+        auto *edit = notification->addAction(tr("Edit"));
         connect(edit, &KNotificationAction::activated, this, [this, file, notification] {
             openEditorFor(file);
             notification->close();
         });
-        auto *share = notification->addAction(QStringLiteral("Share"));
+        auto *share = notification->addAction(tr("Share"));
         connect(share, &KNotificationAction::activated, this, [this, file, notification] {
             openShare(file);
             notification->close();
@@ -560,23 +562,23 @@ void CaptureApp::recordingFinished(const QString &path)
     const QUrl file = QUrl::fromLocalFile(path);
     auto *notification = new KNotification(QStringLiteral("recorded"));
     notification->setComponentName(QStringLiteral("wildos-screenshot"));
-    notification->setTitle(QStringLiteral("Screen recording saved"));
-    notification->setText(QStringLiteral("In Videos › Screen recordings."));
+    notification->setTitle(tr("Screen recording saved"));
+    notification->setText(tr("In Videos › Screen recordings."));
     notification->setIconName(QStringLiteral("wildos-capture"));
     notification->setHint(QStringLiteral("resident"), true);
     notification->setHint(QStringLiteral("desktop-entry"), QStringLiteral("org.wildos.screenshot"));
     notification->setUrls({file});
-    auto *play = notification->addDefaultAction(QStringLiteral("Play"));
+    auto *play = notification->addDefaultAction(tr("Play"));
     connect(play, &KNotificationAction::activated, this, [this, file, notification] {
         openFile(file);
         notification->close();
     });
-    auto *folder = notification->addAction(QStringLiteral("Show in folder"));
+    auto *folder = notification->addAction(tr("Show in folder"));
     connect(folder, &KNotificationAction::activated, this, [this, file, notification] {
         showInFolder(file);
         notification->close();
     });
-    auto *share = notification->addAction(QStringLiteral("Share"));
+    auto *share = notification->addAction(tr("Share"));
     connect(share, &KNotificationAction::activated, this, [this, file, notification] {
         openShare(file);
         notification->close();
@@ -617,6 +619,36 @@ bool CaptureApp::saveImage(const QVariant &image, const QRectF &crop, const QStr
     }
     QDir().mkpath(QFileInfo(path).absolutePath());
     return picture.save(path, "PNG");
+}
+
+QString CaptureApp::chooseSavePath(const QString &current)
+{
+    const QFileInfo now(current);
+    QFileDialog dialog;
+    dialog.setWindowTitle(tr("Save as"));
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilter(tr("PNG pictures (*.png)"));
+    dialog.setDefaultSuffix(QStringLiteral("png"));
+    // A screenshot not saved yet may have no Screenshots folder to start in.
+    dialog.setDirectory(now.absoluteDir().exists() ? now.absolutePath() : QStandardPaths::writableLocation(QStandardPaths::PicturesLocation));
+    dialog.selectFile(now.fileName());
+    // The dialog is a widget and the editor is not, so it is told which
+    // window it belongs over.
+    QWindow *owner = QGuiApplication::focusWindow();
+    dialog.winId();
+    if (owner && dialog.windowHandle()) {
+        dialog.windowHandle()->setTransientParent(owner);
+    }
+    if (dialog.exec() != QDialog::Accepted) {
+        return {};
+    }
+    QString path = dialog.selectedFiles().value(0);
+    // Save writes a PNG whatever the name says, so the name says PNG.
+    if (!path.isEmpty() && !path.endsWith(QLatin1String(".png"), Qt::CaseInsensitive)) {
+        path += QStringLiteral(".png");
+    }
+    return path;
 }
 
 void CaptureApp::openEditorFor(const QUrl &file)

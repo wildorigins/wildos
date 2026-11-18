@@ -29,15 +29,15 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "lock"
-                title: "Lock the screen after"
-                description: "When the computer has not been used for this long"
+                title: qsTr("Lock the screen after")
+                description: qsTr("When the computer has not been used for this long")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Lock the screen after"
+                    Accessible.name: qsTr("Lock the screen after")
                     model: [0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60]
                         .concat([0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60].includes(page.timeout) ? [] : [page.timeout])
-                        .map(m => ({ value: m, text: m === 0 ? "Never" : m === 60 ? "1 hour" : Format.plural(m, "minute", "minutes") }))
+                        .map(m => ({ value: m, text: m === 0 ? qsTr("Never") : m === 60 ? qsTr("1 hour") : (m === 1 ? qsTr("1 minute") : qsTr("%1 minutes").arg(m)) }))
                     readonly property var choice: page.autoLock ? page.timeout : 0
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
                     onActivated: index => {
@@ -53,28 +53,28 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Lock after waking from sleep"
-                description: "Ask for your password when the computer wakes up"
-                status: (page.lockOnResume) ? "On" : "Off"
+                title: qsTr("Lock after waking from sleep")
+                description: qsTr("Ask for your password when the computer wakes up")
+                status: (page.lockOnResume) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: page.lockOnResume
-                    Accessible.name: "Lock after waking from sleep"
+                    Accessible.name: qsTr("Lock after waking from sleep")
                     onToggled: page.set("LockOnResume", checked)
                 }
             }
 
             UI.SettingRow {
-                title: "Ask for the password"
-                description: "How soon after the screen locks your password is needed"
+                title: qsTr("Ask for the password")
+                description: qsTr("How soon after the screen locks your password is needed")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Ask for the password"
+                    Accessible.name: qsTr("Ask for the password")
                     model: [0, 5, 10, 30, 60]
                         .concat([0, 5, 10, 30, 60].includes(page.grace) ? [] : [page.grace])
-                        .map(s => ({ value: s, text: s === 0 ? "Straight away" : s === 60 ? "After 1 minute" : "After " + s + " seconds" }))
+                        .map(s => ({ value: s, text: s === 0 ? qsTr("Straight away") : s === 60 ? qsTr("After 1 minute") : qsTr("After %1 seconds").arg(s) }))
                     readonly property var choice: page.grace
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
                     onActivated: index => page.set("LockGrace", model[index].value)
@@ -91,8 +91,8 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "image"
-                title: "Lock screen picture"
-                description: "The picture behind the clock"
+                title: qsTr("Lock screen picture")
+                description: qsTr("The picture behind the clock")
                 chevron: true
                 onClicked: Navigator.open("lockscreen")
             }

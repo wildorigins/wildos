@@ -96,6 +96,12 @@ void toNode(const QVariant &value, mpv_node *node, std::list<QByteArray> &store)
     }
 }
 
+// The picture shapes the menu offers; anything else saved is ignored.
+QStringList shapes()
+{
+    return {QStringLiteral("16:9"), QStringLiteral("4:3"), QStringLiteral("21:9")};
+}
+
 QString languageName(const QString &code)
 {
     if (code.isEmpty() || code == QLatin1String("und")) {
@@ -117,6 +123,11 @@ Player::Player(QObject *parent)
     QSettings settings;
     m_volume = std::clamp(settings.value(QStringLiteral("Player/volume"), 100).toInt(), 0, 100);
     m_muted = settings.value(QStringLiteral("Player/muted"), false).toBool();
+    m_speed = std::clamp(std::round(settings.value(QStringLiteral("Player/speed"), 1.0).toDouble() / speedStep) * speedStep, minimumSpeed, maximumSpeed);
+    m_aspect = settings.value(QStringLiteral("Player/aspect")).toString();
+    if (!shapes().contains(m_aspect)) {
+        m_aspect.clear();
+    }
 
     m_mpv = mpv_create();
     if (!m_mpv) {
@@ -159,6 +170,10 @@ Player::Player(QObject *parent)
     }
     mpv_set_option_string(m_mpv, "volume", QByteArray::number(m_volume).constData());
     mpv_set_option_string(m_mpv, "mute", m_muted ? "yes" : "no");
+    mpv_set_option_string(m_mpv, "speed", QByteArray::number(m_speed, 'f', 2).constData());
+    if (!m_aspect.isEmpty()) {
+        mpv_set_option_string(m_mpv, "video-aspect-override", m_aspect.toLatin1().constData());
+    }
 
     if (mpv_initialize(m_mpv) < 0) {
         qFatal("Videos could not start its player (libmpv).");
@@ -308,6 +323,9 @@ void Player::handleEvent(const mpv_event *event)
                     Positions::instance()->markWatched(m_path, m_duration);
                 }
                 Q_EMIT playingChanged();
+                if (ended && m_queued && canNext()) {
+                    next();
+                }
             }
             break;
         }
@@ -467,8 +485,14 @@ void Player::readChapters(const QVariant &list)
 
 void Player::readFolder()
 {
-    const QStringList videos = Library::instance()->videosIn(folder());
-    if (videos != m_folderVideos) {
+    // Opening a video that is not in the queue leaves the queue behind.
+    const bool wasQueued = m_queued;
+    if (!m_queue.contains(m_path)) {
+        m_queue.clear();
+    }
+    m_queued = !m_queue.isEmpty();
+    const QStringList videos = m_queued ? m_queue : Library::instance()->videosIn(folder());
+    if (videos != m_folderVideos || wasQueued != m_queued) {
         m_folderVideos = videos;
         Q_EMIT folderVideosChanged();
     }
@@ -562,6 +586,33 @@ void Player::open(const QString &pathOrUrl)
     }
 }
 
+void Player::openFiles(const QStringList &pathsOrUrls)
+{
+    if (pathsOrUrls.isEmpty()) {
+        return;
+    }
+    QStringList files;
+    for (const QString &item : pathsOrUrls) {
+        const QUrl url(item);
+        const QFileInfo info(url.isLocalFile() ? url.toLocalFile() : item);
+        if (info.isDir()) {
+            files.append(Library::instance()->videosIn(info.absoluteFilePath()));
+        } else if (info.isFile()) {
+            files.append(info.absoluteFilePath());
+        }
+    }
+    files.removeDuplicates();
+    if (files.size() < 2) {
+        // One file, or nothing that can be played: open() says why.
+        open(files.isEmpty() ? pathsOrUrls.first() : files.first());
+        return;
+    }
+    m_queue = files;
+    open(files.first());
+    // open() does nothing more for the video already playing.
+    readFolder();
+}
+
 void Player::load()
 {
     command({QStringLiteral("loadfile"), m_path, QStringLiteral("replace")});
@@ -610,6 +661,35 @@ void Player::stop()
 {
     pause();
     seek(0);
+}
+
+void Player::close()
+{
+    if (m_path.isEmpty()) {
+        return;
+    }
+    rememberPosition();
+    mpv_set_property_string(m_mpv, "start", "none");
+    command({QStringLiteral("stop")});
+    m_path.clear();
+    m_loaded = false;
+    m_ended = false;
+    m_position = 0;
+    m_duration = 0;
+    m_resumeAt = 0;
+    m_chapters.clear();
+    m_chapter = -1;
+    m_folderVideos.clear();
+    m_queue.clear();
+    m_queued = false;
+    Q_EMIT fileChanged();
+    Q_EMIT loadedChanged();
+    Q_EMIT playingChanged();
+    Q_EMIT positionChanged();
+    Q_EMIT durationChanged();
+    Q_EMIT chaptersChanged();
+    Q_EMIT chapterChanged();
+    Q_EMIT folderVideosChanged();
 }
 
 void Player::seek(double seconds)
@@ -679,6 +759,7 @@ void Player::setSpeed(double speed)
     if (speed != m_speed) {
         m_speed = speed;
         Q_EMIT speedChanged();
+        m_settings.start();
     }
     setMpv("speed", speed);
 }
@@ -724,6 +805,7 @@ void Player::setAspect(const QString &aspect)
     }
     m_aspect = aspect;
     Q_EMIT aspectChanged();
+    m_settings.start();
     setMpv("video-aspect-override", aspect.isEmpty() ? QStringLiteral("no") : aspect);
 }
 
@@ -757,6 +839,8 @@ void Player::saveSettings()
     QSettings settings;
     settings.setValue(QStringLiteral("Player/volume"), m_volume);
     settings.setValue(QStringLiteral("Player/muted"), m_muted);
+    settings.setValue(QStringLiteral("Player/speed"), m_speed);
+    settings.setValue(QStringLiteral("Player/aspect"), m_aspect);
 }
 
 void Player::setMpv(const char *name, const QVariant &value)

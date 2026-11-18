@@ -17,9 +17,19 @@ Item {
     signal menuRequested(real x, real y)
 
     implicitHeight: 34
+    activeFocusOnTab: true
     Accessible.role: Accessible.ListItem
     Accessible.name: count >= 0 ? qsTr("%1, %2").arg(text).arg(count) : text
     Accessible.selected: current
+    Accessible.onPressAction: row.clicked()
+    Keys.onReturnPressed: row.clicked()
+    Keys.onEnterPressed: row.clicked()
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            row.menuRequested(18, row.height);
+            event.accepted = true;
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -39,6 +49,11 @@ Item {
             height: parent.height - 18
             radius: 2
             color: UI.Style.accent
+        }
+
+        UI.FocusRing {
+            visible: row.activeFocus
+            targetRadius: UI.Style.radiusXs
         }
     }
 

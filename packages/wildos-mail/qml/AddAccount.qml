@@ -269,7 +269,7 @@ Item {
                             Layout.fillWidth: true
                             Layout.preferredWidth: 1
                             implicitHeight: 54
-                            radius: 8
+                            radius: UI.Style.radiusSm
                             color: tileMouse.containsMouse && available ? UI.Style.surfaceHover : UI.Style.surfaceRaised
                             border.width: 1
                             border.color: UI.Style.borderSubtle
@@ -333,7 +333,7 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: 64
-                        radius: 8
+                        radius: UI.Style.radiusSm
                         color: UI.Style.surfaceRaised
                         border.width: 1
                         border.color: UI.Style.borderSubtle

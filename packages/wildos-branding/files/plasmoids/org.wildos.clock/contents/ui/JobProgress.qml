@@ -71,9 +71,9 @@ ColumnLayout {
             return "";
         }
         if (path === home) {
-            return "Home";
+            return qsTr("Home");
         }
-        const parts = path.startsWith(home + "/") ? ["Home"].concat(path.slice(home.length + 1).split("/"))
+        const parts = path.startsWith(home + "/") ? [qsTr("Home")].concat(path.slice(home.length + 1).split("/"))
             : path.startsWith("//") ? path.split("/").filter(p => p.length > 0)
             : ["Wild OS"].concat(path.split("/").filter(p => p.length > 0));
         return parts.join(" › ");
@@ -81,7 +81,7 @@ ColumnLayout {
 
     function lastName(path: string): string {
         if (path === home) {
-            return "Home";
+            return qsTr("Home");
         }
         const name = path.substring(path.lastIndexOf("/") + 1);
         return name.length > 0 ? name : "Wild OS";
@@ -89,9 +89,9 @@ ColumnLayout {
 
     function size(bytes: real): string {
         if (bytes < 1024 * 1024) {
-            return Math.max(bytes > 0 ? 1 : 0, Math.ceil(bytes / 1024)) + " KB";
+            return qsTr("%1 KB").arg(Math.max(bytes > 0 ? 1 : 0, Math.ceil(bytes / 1024)));
         }
-        const units = ["MB", "GB", "TB"];
+        const units = [qsTr("%1 MB"), qsTr("%1 GB"), qsTr("%1 TB")];
         let value = bytes / (1024 * 1024);
         let unit = 0;
         while (value >= 1024 && unit < units.length - 1) {
@@ -100,12 +100,12 @@ ColumnLayout {
         }
         const decimals = value < 10 ? 1 : 0;
         const rounded = Number(value.toFixed(decimals));
-        return rounded.toLocaleString(Qt.locale(), "f", rounded % 1 === 0 ? 0 : decimals) + " " + units[unit];
+        return units[unit].arg(rounded.toLocaleString(Qt.locale(), "f", rounded % 1 === 0 ? 0 : decimals));
     }
 
     function timeLeft(): string {
         if (suspended) {
-            return "Paused";
+            return qsTr("Paused");
         }
         let seconds = -1;
         if (bytesKnown && speed > 0) {
@@ -122,30 +122,30 @@ ColumnLayout {
             }
         }
         if (seconds < 0) {
-            return percent > 0 ? "Working out the time left" : "Getting ready";
+            return percent > 0 ? qsTr("Working out the time left") : qsTr("Getting ready");
         }
         if (seconds < 50) {
-            return "About " + Math.max(5, Math.round(seconds / 5) * 5) + " seconds left";
+            return qsTr("About %1 seconds left").arg(Math.max(5, Math.round(seconds / 5) * 5));
         }
         if (seconds < 90) {
-            return "About 1 minute left";
+            return qsTr("About 1 minute left");
         }
         if (seconds < 3600) {
-            return "About " + Math.round(seconds / 60) + " minutes left";
+            return qsTr("About %1 minutes left").arg(Math.round(seconds / 60));
         }
         const hours = Math.round(seconds / 3600);
-        return hours === 1 ? "About 1 hour left" : "About " + hours + " hours left";
+        return hours === 1 ? qsTr("About 1 hour left") : qsTr("About %1 hours left").arg(hours);
     }
 
     readonly property string verb: {
         const summary = String(n?.summary || "").replace(/[.…]+$/, "").trim();
-        return summary.length > 0 ? summary : "Working";
+        return summary.length > 0 ? summary : qsTr("Working");
     }
     readonly property string heading: {
         // KIO names the job with one word ("Copying", "Moving"); the count
         // makes it the design's "Copying 214 items".
         if (totalItems > 1 && verb.indexOf(" ") < 0) {
-            return verb + " " + totalItems.toLocaleString(Qt.locale(), "f", 0) + " items";
+            return qsTr("%1 %2 items").arg(verb).arg(totalItems.toLocaleString(Qt.locale(), "f", 0));
         }
         return verb;
     }
@@ -214,7 +214,7 @@ ColumnLayout {
             implicitHeight: 30
             iconName: "close"
             iconSize: 12
-            tip: "Hide"
+            tip: qsTr("Hide")
             // The copy carries on and stays in the notification list.
             onClicked: job.n.dismissed = true
         }
@@ -231,8 +231,10 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.topMargin: job.toast ? 0 : 6
         visible: job.fromFolder.length > 0 || job.toFolder.length > 0
-        text: (job.fromFolder.length > 0 ? "From <b>" + job.friendly(job.fromFolder) + "</b> " : "")
-            + (job.toFolder.length > 0 ? "to <b>" + job.lastName(job.toFolder) + "</b>" : "")
+        text: job.fromFolder.length > 0 && job.toFolder.length > 0
+            ? qsTr("From <b>%1</b> to <b>%2</b>").arg(job.friendly(job.fromFolder)).arg(job.lastName(job.toFolder))
+            : job.fromFolder.length > 0 ? qsTr("From <b>%1</b>").arg(job.friendly(job.fromFolder))
+            : job.toFolder.length > 0 ? qsTr("to <b>%1</b>").arg(job.lastName(job.toFolder)) : ""
         textFormat: Text.StyledText
         wrapMode: Text.Wrap
         elide: Text.ElideNone
@@ -244,7 +246,7 @@ ColumnLayout {
         Layout.topMargin: 12
 
         UI.Label {
-            text: job.suspended ? "Paused at " + Math.round(job.percent) + "%" : Math.round(job.percent) + "% complete"
+            text: job.suspended ? qsTr("Paused at %1%").arg(Math.round(job.percent)) : qsTr("%1% complete").arg(Math.round(job.percent))
             size: job.toast ? 22 : 18
             font.weight: UI.Style.weightSemiBold
         }
@@ -329,7 +331,7 @@ ColumnLayout {
 
         UI.Label {
             visible: job.speed > 0 && !job.suspended
-            text: "Speed: " + job.size(job.speed) + "/s"
+            text: qsTr("Speed: %1/s").arg(job.size(job.speed))
             size: 12
             color: UI.Style.inkStatus
         }
@@ -340,8 +342,10 @@ ColumnLayout {
 
         UI.Label {
             visible: job.totalItems > 0
-            text: "Items left: " + Math.max(0, job.totalItems - job.processedItems).toLocaleString(Qt.locale(), "f", 0)
-                + (job.bytesKnown ? " (" + job.size(Math.max(0, job.totalBytes - job.processedBytes)) + ")" : "")
+            text: job.bytesKnown
+                ? qsTr("Items left: %1 (%2)").arg(Math.max(0, job.totalItems - job.processedItems).toLocaleString(Qt.locale(), "f", 0))
+                    .arg(job.size(Math.max(0, job.totalBytes - job.processedBytes)))
+                : qsTr("Items left: %1").arg(Math.max(0, job.totalItems - job.processedItems).toLocaleString(Qt.locale(), "f", 0))
             size: 12
             color: UI.Style.inkStatus
         }
@@ -370,7 +374,7 @@ ColumnLayout {
         spacing: 10
 
         UI.LinkButton {
-            text: job.expanded ? "Fewer details" : "More details"
+            text: job.expanded ? qsTr("Fewer details") : qsTr("More details")
             onClicked: job.expanded = !job.expanded
         }
 
@@ -382,7 +386,7 @@ ColumnLayout {
             id: pauseButton
             visible: !!job.n?.suspendable && !!job.details
             size: job.toast ? "medium" : "small"
-            text: job.suspended ? "Resume" : "Pause"
+            text: job.suspended ? qsTr("Resume") : qsTr("Pause")
             onClicked: job.suspended ? job.details.resume() : job.details.suspend()
         }
 
@@ -390,7 +394,7 @@ ColumnLayout {
             id: cancelButton
             visible: !!job.n?.killable
             size: job.toast ? "medium" : "small"
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: job.killRequested()
         }
     }

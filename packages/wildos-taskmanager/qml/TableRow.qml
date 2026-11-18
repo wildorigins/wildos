@@ -9,6 +9,8 @@ T.ItemDelegate {
     id: row
 
     property bool selected: false
+    // The selected row while the keyboard is what moves the selection.
+    property bool focused: false
     default property alias cells: content.data
 
     signal menuRequested(point at)
@@ -29,12 +31,21 @@ T.ItemDelegate {
 
     background: Rectangle {
         color: row.selected ? UI.Style.tone(0.08) : row.hovered ? UI.Style.surfaceRaised : "transparent"
+        Behavior on color {
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
 
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width
             height: 1
             color: UI.Style.tone(0.04)
+        }
+
+        UI.FocusRing {
+            visible: row.focused
+            anchors.margins: 2
+            targetRadius: 4
         }
     }
 

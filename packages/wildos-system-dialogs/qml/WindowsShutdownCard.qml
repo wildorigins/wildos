@@ -29,20 +29,25 @@ Item {
 
     readonly property bool windowsOnly: action.startsWith("windows-")
     readonly property bool canKeep: action !== "windows-restart"
-    readonly property string keepText: action === "windows-shutdown" ? "Save to disk instead"
-        : action === "restart" ? "Keep my work and restart" : action === "signout" ? "Keep my work and sign out" : "Keep my work and shut down"
+    readonly property string keepText: action === "windows-shutdown" ? qsTr("Save to disk instead")
+        : action === "restart" ? qsTr("Keep my work and restart") : action === "signout" ? qsTr("Keep my work and sign out") : qsTr("Keep my work and shut down")
+    // reopen is the session service's "Excel opens with Budget 2027 just as
+    // you left them.", or empty when it names no one app.
     readonly property string keepDetail: action === "windows-shutdown"
-        ? "Windows mode is saved to disk as it is, in about 5 seconds, and uses no memory until you open a Windows app."
-        : "Windows mode is saved to disk as it is, in about 5 seconds. Next time, " + (card.reopen.startsWith("Your ") ? "your " + card.reopen.slice(5) : card.reopen)
-    readonly property string discardText: action === "windows-restart" ? "Restart without saving"
-        : action === "windows-shutdown" ? "Shut down without saving" : "Close without saving"
+        ? qsTr("Windows mode is saved to disk as it is, in about 5 seconds, and uses no memory until you open a Windows app.")
+        : card.reopen.length > 0
+        ? qsTr("Windows mode is saved to disk as it is, in about 5 seconds. Next time, %1").arg(card.reopen)
+        : qsTr("Windows mode is saved to disk as it is, in about 5 seconds. Next time, your Windows apps open just as you left them.")
+    readonly property string discardText: action === "windows-restart" ? qsTr("Restart without saving")
+        : action === "windows-shutdown" ? qsTr("Shut down without saving") : qsTr("Close without saving")
     readonly property string body: action === "windows-restart"
-        ? "Restarting Windows closes them, and changes that aren't saved are lost. Save your work in them first, then restart."
+        ? qsTr("Restarting Windows closes them, and changes that aren't saved are lost. Save your work in them first, then restart.")
         : action === "windows-shutdown"
-        ? "Shutting down Windows closes them, and changes that aren't saved are lost. Save your work in them first, or save Windows mode to disk instead, which keeps everything as it is."
-        : "Nothing will be lost. Wild OS can keep them exactly as they are, unsaved changes included, and reopen them next time you "
-            + (action === "signout" ? "sign in." : "switch on.")
-    readonly property string title: "Your Windows apps are still open"
+        ? qsTr("Shutting down Windows closes them, and changes that aren't saved are lost. Save your work in them first, or save Windows mode to disk instead, which keeps everything as it is.")
+        : action === "signout"
+        ? qsTr("Nothing will be lost. Wild OS can keep them exactly as they are, unsaved changes included, and reopen them next time you sign in.")
+        : qsTr("Nothing will be lost. Wild OS can keep them exactly as they are, unsaved changes included, and reopen them next time you switch on.")
+    readonly property string title: qsTr("Your Windows apps are still open")
 
     width: 640
     implicitHeight: column.implicitHeight
@@ -122,7 +127,7 @@ Item {
 
                             UI.Label {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.state === "unsaved" ? "Unsaved changes" : modelData.state === "saved" ? "Saved" : "Open"
+                                text: modelData.state === "unsaved" ? qsTr("Unsaved changes") : modelData.state === "saved" ? qsTr("Saved") : qsTr("Open")
                                 size: 12
                                 color: modelData.state === "unsaved" ? UI.Style.warning : UI.Style.inkMuted
                             }
@@ -193,7 +198,7 @@ Item {
             UI.Label {
                 Layout.fillWidth: true
                 visible: card.seconds > 0
-                text: "If you don't choose, Wild OS keeps your work in " + card.seconds + (card.seconds === 1 ? " second." : " seconds.")
+                text: card.seconds === 1 ? qsTr("If you don't choose, Wild OS keeps your work in 1 second.") : qsTr("If you don't choose, Wild OS keeps your work in %1 seconds.").arg(card.seconds)
                 size: 12
                 color: UI.Style.inkMuted
             }
@@ -232,7 +237,7 @@ Item {
                 UI.Button {
                     id: backButton
                     kind: card.canKeep ? "secondary" : "primary"
-                    text: "Go back"
+                    text: qsTr("Go back")
                     onClicked: card.back()
                 }
 

@@ -29,7 +29,7 @@
 
 #include <unistd.h>
 
-bool Office::s_tables = false;
+Office::App Office::s_app = Office::Write;
 
 namespace
 {
@@ -43,6 +43,25 @@ const QStringList tablesTypes = {
     QStringLiteral("xlsm"), QStringLiteral("xltx"), QStringLiteral("xlt"), QStringLiteral("csv"), QStringLiteral("tsv"),
     QStringLiteral("numbers"), QStringLiteral("gnumeric"),
 };
+const QStringList slidesTypes = {
+    QStringLiteral("odp"), QStringLiteral("otp"), QStringLiteral("fodp"), QStringLiteral("pptx"), QStringLiteral("ppt"),
+    QStringLiteral("pptm"), QStringLiteral("ppsx"), QStringLiteral("pps"), QStringLiteral("potx"), QStringLiteral("pot"),
+    QStringLiteral("key"),
+};
+
+// The one of three that belongs to the app this is.
+template<typename T>
+T pick(const T &write, const T &tables, const T &slides)
+{
+    switch (Office::app()) {
+    case Office::Tables:
+        return tables;
+    case Office::Slides:
+        return slides;
+    default:
+        return write;
+    }
+}
 
 const QString pickListPath = QStringLiteral("/org.openoffice.Office.Histories/Histories/org.openoffice.Office.Histories:HistoryInfo['PickList']");
 
@@ -79,14 +98,19 @@ bool libreOfficeRunning()
 }
 }
 
-void Office::setMode(bool tables)
+void Office::setApp(App app)
 {
-    s_tables = tables;
+    s_app = app;
 }
 
-bool Office::modeTables()
+Office::App Office::app()
 {
-    return s_tables;
+    return s_app;
+}
+
+QString Office::moduleSwitch()
+{
+    return pick(QStringLiteral("--writer"), QStringLiteral("--calc"), QStringLiteral("--impress"));
 }
 
 bool Office::running()
@@ -189,32 +213,33 @@ Office::Office(QObject *parent)
 
 QString Office::appName() const
 {
-    return s_tables ? tr("Tables") : tr("Write");
+    return pick(tr("Write"), tr("Tables"), tr("Slides"));
 }
 
 QString Office::iconName() const
 {
-    return s_tables ? QStringLiteral("org.wildos.tables") : QStringLiteral("org.wildos.write");
+    return pick(QStringLiteral("org.wildos.write"), QStringLiteral("org.wildos.tables"), QStringLiteral("org.wildos.slides"));
 }
 
 QString Office::formatName() const
 {
-    return s_tables ? tr("Works with Excel files") : tr("Works with Word files");
+    return pick(tr("Works with Word files"), tr("Works with Excel files"), tr("Works with PowerPoint files"));
 }
 
 QString Office::formatNote() const
 {
-    return s_tables ? tr("Opens .xlsx and saves as .xlsx by default, so files still open in Excel.")
-                    : tr("Opens .docx and saves as .docx by default, so files still open in Word.");
+    return pick(tr("Opens .docx and saves as .docx by default, so files still open in Word."),
+                tr("Opens .xlsx and saves as .xlsx by default, so files still open in Excel."),
+                tr("Opens .pptx and saves as .pptx by default, so files still open in PowerPoint."));
 }
 
 QStringList Office::nameFilters() const
 {
     QStringList patterns;
-    for (const QString &type : s_tables ? tablesTypes : writeTypes) {
+    for (const QString &type : pick(writeTypes, tablesTypes, slidesTypes)) {
         patterns << QStringLiteral("*.") + type;
     }
-    return {(s_tables ? tr("Spreadsheets") : tr("Documents")) + QStringLiteral(" (") + patterns.join(QLatin1Char(' ')) + QLatin1Char(')'),
+    return {pick(tr("Documents"), tr("Spreadsheets"), tr("Presentations")) + QStringLiteral(" (") + patterns.join(QLatin1Char(' ')) + QLatin1Char(')'),
             tr("All files") + QStringLiteral(" (*)")};
 }
 
@@ -236,7 +261,9 @@ void Office::loadTemplates()
         QString name;
         QString description;
     };
-    const QList<Builtin> builtins = s_tables
+    // Slides has no templates of its own yet: its start screen offers the
+    // blank presentation and whatever the person saved as a template.
+    const QList<Builtin> builtins = s_app == Slides ? QList<Builtin>{} : s_app == Tables
         ? QList<Builtin>{
               {"budget", tr("Budget"), tr("A month's income and spending, planned against actual.")},
               {"invoice", tr("Invoice"), tr("Bill a customer, with VAT and the total worked out for you.")},
@@ -251,8 +278,8 @@ void Office::loadTemplates()
               {"newsletter", tr("Newsletter"), tr("A masthead and two columns of news for a club or group.")},
               {"meeting-notes", tr("Meeting notes"), tr("Who came, the agenda, what was said and who does what next.")},
           };
-    const QString folder = dataDir() + (s_tables ? QStringLiteral("/templates/tables/") : QStringLiteral("/templates/write/"));
-    const QString ext = s_tables ? QStringLiteral(".ots") : QStringLiteral(".ott");
+    const QString folder = dataDir() + pick(QStringLiteral("/templates/write/"), QStringLiteral("/templates/tables/"), QStringLiteral("/templates/slides/"));
+    const QString ext = pick(QStringLiteral(".ott"), QStringLiteral(".ots"), QStringLiteral(".otp"));
     for (const Builtin &b : builtins) {
         const QString file = folder + QLatin1String(b.id) + ext;
         if (!QFileInfo::exists(file)) {
@@ -271,7 +298,7 @@ void Office::loadTemplates()
 
 bool Office::ownsFile(const QString &path) const
 {
-    return (s_tables ? tablesTypes : writeTypes).contains(QFileInfo(path).suffix().toLower());
+    return pick(writeTypes, tablesTypes, slidesTypes).contains(QFileInfo(path).suffix().toLower());
 }
 
 QString Office::whenText(const QDateTime &time)
@@ -433,8 +460,9 @@ void Office::reload()
         QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/libreoffice/4/user/template"),
         QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + QStringLiteral("/Templates"),
     };
-    const QStringList templateTypes = s_tables ? QStringList{QStringLiteral("*.ots"), QStringLiteral("*.xltx"), QStringLiteral("*.xlt")}
-                                               : QStringList{QStringLiteral("*.ott"), QStringLiteral("*.dotx"), QStringLiteral("*.dot")};
+    const QStringList templateTypes = pick(QStringList{QStringLiteral("*.ott"), QStringLiteral("*.dotx"), QStringLiteral("*.dot")},
+                                           QStringList{QStringLiteral("*.ots"), QStringLiteral("*.xltx"), QStringLiteral("*.xlt")},
+                                           QStringList{QStringLiteral("*.otp"), QStringLiteral("*.potx"), QStringLiteral("*.pot")});
     for (const QString &folder : folders) {
         QDirIterator it(folder, templateTypes, QDir::Files, QDirIterator::Subdirectories);
         while (it.hasNext()) {
@@ -476,7 +504,7 @@ bool Office::open(const QString &pathOrUrl)
         reload();
         return false;
     }
-    return launch({s_tables ? QStringLiteral("--calc") : QStringLiteral("--writer"), path});
+    return launch({moduleSwitch(), path});
 }
 
 bool Office::openTemplate(const QString &path)
@@ -487,7 +515,7 @@ bool Office::openTemplate(const QString &path)
 
 bool Office::newBlank()
 {
-    return launch({s_tables ? QStringLiteral("--calc") : QStringLiteral("--writer")});
+    return launch({moduleSwitch()});
 }
 
 void Office::showInFolder(const QString &path)
@@ -626,7 +654,7 @@ void Office::search(const QString &text)
     m_searching = true;
     Q_EMIT resultsChanged();
 
-    const QStringList types = s_tables ? tablesTypes : writeTypes;
+    const QStringList types = pick(writeTypes, tablesTypes, slidesTypes);
     QPointer<Office> self(this);
     QThread *thread = QThread::create([self, generation, words, types, known, matches]() {
         QStringList found;

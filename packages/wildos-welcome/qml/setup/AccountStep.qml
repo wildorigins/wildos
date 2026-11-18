@@ -24,18 +24,17 @@ StepPage {
 
     readonly property bool nameOk: nameField.text.trim().length > 0 && !/[:,=\\]/.test(nameField.text)
     readonly property bool computerOk: FirstBoot.validComputerName(computerField.text)
-    readonly property bool passwordShort: passwordField.text.length > 0 && passwordField.text.length < 8
     readonly property bool mismatch: confirmField.text.length > 0 && confirmField.text !== passwordField.text
     readonly property bool hintBad: hintField.text.length > 0 && passwordField.text.length > 0 && hintField.text.indexOf(passwordField.text) >= 0
-    readonly property bool ready: nameOk && computerOk && passwordField.text.length >= 8 && confirmField.text === passwordField.text && !hintBad
+    readonly property bool ready: nameOk && computerOk && passwordField.text.length > 0 && confirmField.text === passwordField.text && !hintBad
 
     gap: 18
-    title: "Create your account"
-    subtitle: "This account lives on this computer only. Wild OS never asks you to sign in online."
+    title: qsTr("Create your account")
+    subtitle: qsTr("This account lives on this computer only. Wild OS never asks you to sign in online.")
     note: state === "failed" ? FirstBoot.error
-        : working ? "Creating your account."
-        : hintBad ? "The hint can't contain the password itself."
-        : "This is also the password for installing software and changing settings."
+        : working ? qsTr("Creating your account.")
+        : hintBad ? qsTr("The hint can't contain the password itself.")
+        : qsTr("This is also the password for installing software and changing settings.")
     noteColor: state === "failed" || hintBad ? UI.Style.danger : UI.Style.inkMuted
     Component.onCompleted: nameField.forceActiveFocus()
 
@@ -116,7 +115,7 @@ StepPage {
             UI.LinkButton {
                 Layout.alignment: Qt.AlignHCenter
                 visible: FirstBoot.pictures.length > 1
-                text: "Choose picture"
+                text: qsTr("Choose picture")
                 onClicked: pictureDialog.open()
             }
         }
@@ -129,22 +128,22 @@ StepPage {
             rowSpacing: 14
 
             Field {
-                label: "Your name"
+                label: qsTr("Your name")
                 UI.TextField {
                     id: nameField
                     Layout.fillWidth: true
                     size: "large"
                     maximumLength: 100
                     error: nameField.text.length > 0 && !page.nameOk
-                    Accessible.name: "Your name"
+                    Accessible.name: qsTr("Your name")
                     onAccepted: page.submit()
                 }
-                hint: nameField.text.length > 0 && !page.nameOk ? "A name can't contain a colon, comma, equals sign or backslash." : ""
+                hint: nameField.text.length > 0 && !page.nameOk ? qsTr("A name can't contain a colon, comma, equals sign or backslash.") : ""
                 hintError: true
             }
 
             Field {
-                label: "Computer name"
+                label: qsTr("Computer name")
                 UI.TextField {
                     id: computerField
                     Layout.fillWidth: true
@@ -154,24 +153,23 @@ StepPage {
                     text: FirstBoot.suggestedComputerName
                     maximumLength: 63
                     error: !page.computerOk
-                    Accessible.name: "Computer name"
-                    Accessible.description: "How it appears on your network"
+                    Accessible.name: qsTr("Computer name")
+                    Accessible.description: qsTr("How it appears on your network")
                     onAccepted: page.submit()
                 }
-                hint: page.computerOk ? "How it appears on your network" : "Use letters, numbers and hyphens, not starting or ending with a hyphen."
+                hint: page.computerOk ? qsTr("How it appears on your network") : qsTr("Use letters, numbers and hyphens, not starting or ending with a hyphen.")
                 hintError: !page.computerOk
             }
 
             Field {
-                label: "Password"
+                label: qsTr("Password")
                 UI.TextField {
                     id: passwordField
                     Layout.fillWidth: true
                     size: "large"
                     revealable: true
                     UI.NoPaste {}
-                    error: page.passwordShort && !activeFocus
-                    Accessible.name: "Password"
+                    Accessible.name: qsTr("Password")
                     onAccepted: page.submit()
                 }
                 StrengthLine {
@@ -180,12 +178,10 @@ StepPage {
                     password: passwordField.text
                     names: [nameField.text]
                 }
-                hint: page.passwordShort ? "Use at least 8 characters." : ""
-                hintError: !passwordField.activeFocus
             }
 
             Field {
-                label: "Type it again"
+                label: qsTr("Type it again")
                 UI.TextField {
                     id: confirmField
                     Layout.fillWidth: true
@@ -193,10 +189,10 @@ StepPage {
                     revealable: true
                     UI.NoPaste {}
                     error: page.mismatch && !activeFocus
-                    Accessible.name: "Type the password again"
+                    Accessible.name: qsTr("Type the password again")
                     onAccepted: page.submit()
                 }
-                hint: page.mismatch ? "The passwords don't match." : ""
+                hint: page.mismatch ? qsTr("The passwords don't match.") : ""
                 hintError: !confirmField.activeFocus
             }
         }
@@ -214,30 +210,30 @@ StepPage {
             UI.ListRow {
                 visible: FirstBoot.encrypted
                 minHeight: 60
-                title: "Use my disk password to sign in"
-                description: "One password at start-up instead of two. You'll go straight to the desktop after unlocking."
+                title: qsTr("Use my disk password to sign in")
+                description: qsTr("One password at start-up instead of two. You'll go straight to the desktop after unlocking.")
 
                 UI.Toggle {
                     id: diskSignIn
                     anchors.verticalCenter: parent.verticalCenter
                     checked: FirstBoot.encrypted
-                    Accessible.name: "Use my disk password to sign in"
+                    Accessible.name: qsTr("Use my disk password to sign in")
                 }
             }
 
             UI.ListRow {
                 minHeight: 60
-                title: "Password hint"
-                description: "Shown on the sign-in screen after a wrong attempt"
+                title: qsTr("Password hint")
+                description: qsTr("Shown on the sign-in screen after a wrong attempt")
 
                 UI.TextField {
                     id: hintField
                     width: 220
                     anchors.verticalCenter: parent.verticalCenter
-                    placeholderText: "Optional"
+                    placeholderText: qsTr("Optional")
                     maximumLength: 200
                     error: page.hintBad
-                    Accessible.name: "Password hint"
+                    Accessible.name: qsTr("Password hint")
                 }
             }
         }
@@ -245,8 +241,8 @@ StepPage {
 
     UI.Dialog {
         id: pictureDialog
-        title: "Choose a picture"
-        text: "You can use one of your own photos later, in Settings > Accounts."
+        title: qsTr("Choose a picture")
+        text: qsTr("You can use one of your own photos later, in Settings > Accounts.")
 
         Flow {
             Layout.fillWidth: true
@@ -312,7 +308,7 @@ StepPage {
 
         buttons: [
             UI.Button {
-                text: "Close"
+                text: qsTr("Close")
                 onClicked: pictureDialog.close()
             }
         ]
@@ -320,12 +316,12 @@ StepPage {
 
     buttons: [
         UI.Button {
-            text: "Back"
+            text: qsTr("Back")
             enabled: !page.working
             onClicked: page.back()
         },
         UI.Button {
-            text: "Continue"
+            text: qsTr("Continue")
             kind: "primary"
             enabled: page.ready
             busy: page.working

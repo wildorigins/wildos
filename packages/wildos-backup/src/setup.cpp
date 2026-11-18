@@ -67,13 +67,15 @@ void Setup::setState(const QString &state, const QString &step)
     m_step = step;
     if (state != QLatin1String("failed") && state != QLatin1String("needPassword")) {
         m_error.clear();
+        m_errorDetail.clear();
     }
     Q_EMIT changed();
 }
 
-void Setup::failed(const QString &error)
+void Setup::failed(const QString &error, const QString &detail)
 {
     m_error = error;
+    m_errorDetail = detail;
     m_password.fill('\0');
     m_password.clear();
     m_shown.fill('\0');
@@ -216,7 +218,7 @@ void Setup::initRepository()
     runRestic(this, m_repo, m_password, {QStringLiteral("init"), QStringLiteral("--json")}, [this](int code, Restic *restic) {
         if (code != Restic::Ok) {
             m_shown.clear();
-            failed(Restic::explain(code, restic->errorText()));
+            failed(Restic::explain(code, restic->errorText()), Restic::detail(code, restic->errorText()));
             return;
         }
         added(!m_shown.isEmpty());
@@ -249,7 +251,7 @@ void Setup::verify(const QByteArray &password, bool fromKeyring)
             setState(QStringLiteral("needPassword"));
             return;
         }
-        failed(Restic::explain(code, restic->errorText()));
+        failed(Restic::explain(code, restic->errorText()), Restic::detail(code, restic->errorText()));
     });
 }
 
@@ -321,11 +323,13 @@ void Setup::check()
     const QString uuid = Drives::instance()->pluggedIn();
     m_checking = true;
     m_checkResult.clear();
+    m_checkDetail.clear();
     Q_EMIT checkChanged();
-    const auto finish = [this](bool ok, const QString &text) {
+    const auto finish = [this](bool ok, const QString &text, const QString &detail = QString()) {
         m_checking = false;
         m_checkOk = ok;
         m_checkResult = text;
+        m_checkDetail = detail;
         Q_EMIT checkChanged();
     };
     if (uuid.isEmpty()) {
@@ -350,7 +354,7 @@ void Setup::check()
                           if (code == Restic::Ok) {
                               finish(true, tr("Your backups can be read and nothing is damaged."));
                           } else {
-                              finish(false, Restic::explain(code, restic->errorText()));
+                              finish(false, Restic::explain(code, restic->errorText()), Restic::detail(code, restic->errorText()));
                           }
                       });
         });

@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 
     if (app.arguments().contains(QStringLiteral("/args-from:stdin"))) {
         QList<QByteArray> args;
-        QString title = QStringLiteral("Windows desktop");
+        QString title;
         QFile in;
         if (in.open(stdin, QIODevice::ReadOnly)) {
             while (!in.atEnd()) {
@@ -98,6 +98,10 @@ int main(int argc, char *argv[])
         App::instance()->setDesktopOnly(true);
         QQmlApplicationEngine engine;
         engine.loadFromModule("WildOS.Remote", "Main");
+        // Translated only now: the translators come with WildOS.UI.
+        if (title.isEmpty()) {
+            title = QCoreApplication::translate("main", "Windows desktop");
+        }
         Desktops::instance()->startWithArguments(title, args);
         for (QByteArray &a : args) {
             a.fill('\0');

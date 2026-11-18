@@ -22,19 +22,19 @@ PageScroll {
         const rows = [];
         for (const p of Printers.printers) {
             rows.push({ key: "queue:" + p.name, kind: "printer", name: p.info || p.name, icon: "printer-round",
-                line: p.status || "Ready", state: "ok", badge: "", problem: "", action: "", actionLabel: "",
+                line: p.status || qsTr("Ready"), state: "ok", badge: "", problem: "", action: "", actionLabel: "",
                 model: p.model || "", maker: "", driver: "CUPS", hardwareId: "",
-                connection: /^usb:/.test(p.uri || "") ? "USB" : /^(ipp:\/\/localhost|ipps?:\/\/\[?::1)/.test(p.uri || "") ? "USB, through ipp-usb" : "Your network",
-                extra: p.location ? [{ label: "Location", value: p.location }] : [] });
+                connection: /^usb:/.test(p.uri || "") ? "USB" : /^(ipp:\/\/localhost|ipps?:\/\/\[?::1)/.test(p.uri || "") ? qsTr("USB, through ipp-usb") : qsTr("Your network"),
+                extra: p.location ? [{ label: qsTr("Location"), value: p.location }] : [] });
         }
         // A search that started before the queues were read lists a printer
         // already set up as found; its queue says otherwise.
         const queued = Printers.printers.map(p => p.uri).concat(Printers.printers.map(p => p.info), Printers.printers.map(p => p.name));
         for (const f of Printers.found.filter(f => !queued.includes(f.uri) && !queued.includes(f.name))) {
             rows.push({ key: "found:" + f.uri, kind: "printer", name: f.name, icon: "printer-round",
-                line: "", state: "attention", badge: "Not set up", problem: "Found on your network, but not set up yet.",
-                action: "printers", actionLabel: "Set up", model: f.model || "", maker: "", driver: "", hardwareId: "",
-                connection: "Your network", extra: f.location ? [{ label: "Location", value: f.location }] : [] });
+                line: "", state: "attention", badge: qsTr("Not set up"), problem: qsTr("Found on your network, but not set up yet."),
+                action: "printers", actionLabel: qsTr("Set up"), model: f.model || "", maker: "", driver: "", hardwareId: "",
+                connection: qsTr("Your network"), extra: f.location ? [{ label: qsTr("Location"), value: f.location }] : [] });
         }
         return rows;
     }
@@ -47,15 +47,15 @@ PageScroll {
             const row = Object.assign({}, d);
             if (row.kind === "fingerprint" && row.state === "ok") {
                 const n = Fingerprint.fingers.length;
-                row.line = Fingerprint.windowsKey ? "Holds a key from Windows Hello" : n === 0 ? "No fingers saved yet" : Format.plural(n, "finger", "fingers") + " saved";
+                row.line = Fingerprint.windowsKey ? qsTr("Holds a key from Windows Hello") : n === 0 ? qsTr("No fingers saved yet") : n === 1 ? qsTr("1 finger saved") : qsTr("%1 fingers saved").arg(n);
             }
             if (row.kind === "printer" && row.state === "ok") {
                 if (page.usbQueues.length === 0) {
                     row.state = "attention";
-                    row.badge = "Not set up";
-                    row.problem = "Plugged in, but not set up yet.";
+                    row.badge = qsTr("Not set up");
+                    row.problem = qsTr("Plugged in, but not set up yet.");
                     row.action = "printers";
-                    row.actionLabel = "Set up";
+                    row.actionLabel = qsTr("Set up");
                 } else {
                     // Its queue's row says the rest.
                     continue;
@@ -82,7 +82,7 @@ PageScroll {
             Navigator.open(row.action);
         } else if (row.action === "backup") {
             if (!Devices.openBackup()) {
-                notice.show("Backup isn't installed", "Install it from the Store to copy your files to another drive.", true);
+                notice.show(qsTr("Backup isn't installed"), qsTr("Install it from the Store to copy your files to another drive."), true);
             }
         } else if (row.action === "restart") {
             Updates.restart();
@@ -90,7 +90,7 @@ PageScroll {
             Devices.allow(row.port);
         } else if (row.action === "report") {
             if (!Devices.openReport()) {
-                notice.show("Report a problem isn't installed", "Install it from the Store to send a report.", true);
+                notice.show(qsTr("Report a problem isn't installed"), qsTr("Install it from the Store to send a report."), true);
             }
         }
     }
@@ -122,7 +122,7 @@ PageScroll {
     Connections {
         target: Devices
         function onFailed(message) {
-            notice.show("The device wasn't allowed", message, true);
+            notice.show(qsTr("The device wasn't allowed"), message, true);
         }
     }
 
@@ -162,7 +162,7 @@ PageScroll {
                         name: hero.worry ? "triangle-alert" : "status-ok"
                         size: 24
                         strokeWidth: 2.1
-                        color: hero.worry ? (UI.Style.dark ? "#ffc46a" : UI.Style.warning) : (UI.Style.dark ? "#5fd38d" : "#1d7a4c")
+                        color: hero.worry ? UI.Style.warning : UI.Style.success
                     }
                 }
 
@@ -172,9 +172,9 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: !Devices.ready ? "Looking at the devices in this PC"
-                            : hero.worry ? Format.plural(page.attention.length, "device needs", "devices need") + " you"
-                            : "Every device is working"
+                        text: !Devices.ready ? qsTr("Looking at the devices in this PC")
+                            : hero.worry ? (page.attention.length === 1 ? qsTr("1 device needs you") : qsTr("%1 devices need you").arg(page.attention.length))
+                            : qsTr("Every device is working")
                         size: 16.5
                         font.weight: UI.Style.weightBold
                         wrapMode: Text.Wrap
@@ -182,9 +182,9 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: !Devices.ready ? "This takes a moment."
-                            : (hero.worry ? "Everything else in this PC is working." : "Nothing in this PC needs you.")
-                              + " Select a device to see its details and driver."
+                        text: !Devices.ready ? qsTr("This takes a moment.")
+                            : hero.worry ? qsTr("Everything else in this PC is working. Select a device to see its details and driver.")
+                            : qsTr("Nothing in this PC needs you. Select a device to see its details and driver.")
                         size: 13
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
@@ -194,7 +194,7 @@ PageScroll {
                 UI.Button {
                     implicitHeight: 32
                     iconName: "refresh"
-                    text: "Check again"
+                    text: qsTr("Check again")
                     busy: Devices.scanning
                     enabled: !Devices.scanning
                     onClicked: page.checkAgain()
@@ -207,7 +207,7 @@ PageScroll {
             Layout.bottomMargin: -4
             Layout.fillWidth: true
             visible: page.attention.length > 0
-            text: "Needs attention"
+            text: qsTr("Needs attention")
         }
 
         DeviceList {
@@ -226,12 +226,12 @@ PageScroll {
 
             SectionTitle {
                 Layout.fillWidth: true
-                text: "Working"
+                text: qsTr("Working")
             }
 
             UI.LinkButton {
                 visible: page.working.length > page.shortList
-                text: page.showAll ? "Show fewer" : "Show all " + page.working.length
+                text: page.showAll ? qsTr("Show fewer") : qsTr("Show all %1").arg(page.working.length)
                 onClicked: page.showAll = !page.showAll
             }
         }

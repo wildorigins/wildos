@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QStringList>
+#include <QWindow>
 
 namespace KScreen
 {
@@ -41,11 +42,20 @@ public:
     // sign-in splash can go (wildos-wait-desktop, before KSplash's "ready").
     Q_INVOKABLE void desktopReady();
 
+    // The window is this one or one opened from it (its own menu or dialog).
+    Q_INVOKABLE bool windowWithin(QWindow *window, QWindow *ancestor) const;
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 Q_SIGNALS:
     void lockedChanged();
     void powerSaverChanged();
     void screensOffChanged();
     void splashShowingChanged();
+    // A mouse button or a finger went down on one of the desktop shell's
+    // windows, at this place in the window, before anything in it acts.
+    void pressed(QWindow *window, qreal x, qreal y);
 
 private Q_SLOTS:
     void setLocked(bool locked);

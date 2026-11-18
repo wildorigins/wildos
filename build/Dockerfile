@@ -170,3 +170,17 @@ RUN apt-get update \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libopusenc-dev libopusfile-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# The start-up manager (wildos-startup) draws with cairo and pango, looks
+# for other systems with libblkid and checks a password with libcrypt.
+# Last, so the LibreOffice layer stays cached.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libcairo2-dev libpango1.0-dev libblkid-dev libcrypt-dev pkgconf \
+    && rm -rf /var/lib/apt/lists/*
+
+# Cooler (wildos-cooler) compiles its screen faces' shaders with Qt's shader
+# tools and dims the cooler's screen when KIdleTime says the PC is idle.
+# Last, so no layer above is built again.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends qt6-shadertools-dev libkf6idletime-dev \
+    && rm -rf /var/lib/apt/lists/*

@@ -75,15 +75,15 @@ FocusScope {
                     active: model.Connected
                     subtitle: {
                         if (model.Connecting) {
-                            return model.Connected ? "Disconnecting" : "Connecting";
+                            return model.Connected ? qsTr("Disconnecting") : qsTr("Connecting");
                         }
                         if (model.Connected) {
-                            return model.Battery ? "Connected, battery " + model.Battery.percentage + "%" : "Connected";
+                            return model.Battery ? qsTr("Connected, battery %1%").arg(model.Battery.percentage) : qsTr("Connected");
                         }
                         if (model.ConnectionFailed) {
-                            return "Could not connect";
+                            return qsTr("Could not connect");
                         }
-                        return model.Paired ? "Paired" : "Not paired, choose to pair";
+                        return model.Paired ? qsTr("Paired") : qsTr("Not paired, choose to pair");
                     }
                     icon: Component {
                         UI.Glyph {
@@ -106,15 +106,15 @@ FocusScope {
                 width: Math.min(parent.width - 24, 320)
                 visible: !list.visible
                 iconPath: Icons.bluetooth
-                heading: page.bluetooth === null || !page.bluetooth.available ? "Bluetooth is not available"
-                    : !page.bluetooth.enabled ? "Bluetooth is off"
-                    : page.searching ? "Looking for devices" : "No devices yet"
-                explanation: page.bluetooth === null || !page.bluetooth.available ? "This computer has no Bluetooth adapter."
-                    : !page.bluetooth.enabled ? "Turn it on to use your headphones, mouse or keyboard."
-                    : page.searching ? "Devices in pairing mode nearby will appear here."
-                    : "Put your device in pairing mode, then add it here."
+                heading: page.bluetooth === null || !page.bluetooth.available ? qsTr("Bluetooth is not available")
+                    : !page.bluetooth.enabled ? qsTr("Bluetooth is off")
+                    : page.searching ? qsTr("Looking for devices") : qsTr("No devices yet")
+                explanation: page.bluetooth === null || !page.bluetooth.available ? qsTr("This computer has no Bluetooth adapter.")
+                    : !page.bluetooth.enabled ? qsTr("Turn it on to use your headphones, mouse or keyboard.")
+                    : page.searching ? qsTr("Devices in pairing mode nearby will appear here.")
+                    : qsTr("Put your device in pairing mode, then add it here.")
                 actionText: page.bluetooth === null || !page.bluetooth.available ? ""
-                    : !page.bluetooth.enabled ? "Turn on Bluetooth" : "Add a device"
+                    : !page.bluetooth.enabled ? qsTr("Turn on Bluetooth") : qsTr("Add a device")
                 busy: page.searching
                 onAction: page.bluetooth.enabled ? page.bluetooth.addDevice() : page.bluetooth.setEnabled(true)
             }
@@ -126,7 +126,7 @@ FocusScope {
 
             UI.LinkButton {
                 Layout.leftMargin: -4
-                text: "More Bluetooth settings"
+                text: qsTr("More Bluetooth settings")
                 onClicked: page.quick.openSettings("bluetooth")
             }
 
@@ -138,7 +138,7 @@ FocusScope {
                 visible: list.visible
                 enabled: !page.searching
                 Layout.rightMargin: -4
-                text: page.searching ? "Looking for devices" : "Add a device"
+                text: page.searching ? qsTr("Looking for devices") : qsTr("Add a device")
                 onClicked: page.bluetooth.addDevice()
             }
         }

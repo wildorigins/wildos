@@ -3,6 +3,7 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import WildOS.UI as UI
 import WildOS.WinMode.Setup
+import "ServiceText.js" as ServiceText
 
 // 9.1, Check this PC (WinModeCheck.dc): the licence card and the checks
 // first run shows too (CheckList), and what happens next.
@@ -17,17 +18,17 @@ Page {
     // A Windows 11 file the person already has, in place of the download.
     readonly property bool ownIso: Setup.isoState === "ok"
 
-    title: "Set up Windows mode"
-    text: "Run Windows programs like Word, Excel and Photoshop in their own windows, next to your other apps. Windows stays hidden in the background and only wakes when you open one."
+    title: qsTr("Set up Windows mode")
+    text: qsTr("Run Windows programs like Word, Excel and Photoshop in their own windows, next to your other apps. Windows stays hidden in the background and only wakes when you open one.")
     // Only a download can be matched to Microsoft's signature, so a file
     // someone brings is never called genuine, only Windows 11 Pro.
-    note: page.ownIso && page.ready ? "Your file is checked to be Windows 11 Pro. Unlike a download, it can't be checked against Microsoft's signature."
-        : page.ready || Setup.checking ? "Windows downloads straight from Microsoft and uses your own licence."
-        : Setup.virtualisation !== "ok" ? "Windows mode can't start until virtualisation is switched on."
-        : !Setup.spaceOk ? "Windows mode needs about " + Setup.needLabel + " free to set up."
-        : !Setup.coresOk ? "Windows mode needs a processor with 4 cores or more."
-        : Setup.internet === "offline" ? "Connect to the internet to download Windows."
-        : "This PC doesn't have enough memory for Windows mode."
+    note: page.ownIso && page.ready ? qsTr("Your file is checked to be Windows 11 Pro. Unlike a download, it can't be checked against Microsoft's signature.")
+        : page.ready || Setup.checking ? qsTr("Windows downloads straight from Microsoft and uses your own licence.")
+        : Setup.virtualisation !== "ok" ? qsTr("Windows mode can't start until virtualisation is switched on.")
+        : !Setup.spaceOk ? qsTr("Windows mode needs about %1 free to set up.").arg(Setup.needLabel)
+        : !Setup.coresOk ? qsTr("Windows mode needs a processor with 4 cores or more.")
+        : Setup.internet === "offline" ? qsTr("Connect to the internet to download Windows.")
+        : qsTr("This PC doesn't have enough memory for Windows mode.")
 
     CheckList {
         spacing: page.spacing
@@ -40,7 +41,7 @@ Page {
         spacing: 10
 
         UI.Label {
-            text: "What happens next"
+            text: qsTr("What happens next")
             size: 15
             font.weight: UI.Style.weightSemiBold
             Accessible.role: Accessible.Heading
@@ -52,8 +53,8 @@ Page {
             columnSpacing: 10
 
             Repeater {
-                model: [page.ownIso ? "Windows comes from your file" : "Windows downloads from Microsoft", "It installs and activates itself",
-                        "We strip out adverts and tracking", "Your apps appear in Start"]
+                model: [page.ownIso ? qsTr("Windows comes from your file") : qsTr("Windows downloads from Microsoft"), qsTr("It installs and activates itself"),
+                        qsTr("We strip out adverts and tracking"), qsTr("Your apps appear in Start")]
 
                 Rectangle {
                     required property int index
@@ -98,26 +99,26 @@ Page {
 
     FileDialog {
         id: isoDialog
-        title: "Choose a Windows 11 file"
-        nameFilters: ["Windows 11 files (*.iso *.ISO)"]
+        title: qsTr("Choose a Windows 11 file")
+        nameFilters: [qsTr("Windows 11 files (*.iso *.ISO)")]
         currentFolder: Setup.downloadsFolder
         onAccepted: Setup.checkIso(selectedFile)
     }
 
     UI.Dialog {
         id: isoRefused
-        title: "This file can't be used"
+        title: qsTr("This file can't be used")
         buttons: [
             UI.Button {
                 kind: "primary"
-                text: "Choose another file"
+                text: qsTr("Choose another file")
                 onClicked: {
                     isoRefused.close();
                     isoDialog.open();
                 }
             },
             UI.Button {
-                text: "Close"
+                text: qsTr("Close")
                 onClicked: isoRefused.close()
             }
         ]
@@ -126,19 +127,19 @@ Page {
     Connections {
         target: Setup
         function onIsoRefused(text) {
-            isoRefused.text = text;
+            isoRefused.text = ServiceText.tr(text);
             isoRefused.open();
         }
     }
 
     buttons: [
         UI.Button {
-            text: "Not now"
+            text: qsTr("Not now")
             onClicked: page.later()
         },
         UI.Button {
             kind: "primary"
-            text: "Continue"
+            text: qsTr("Continue")
             enabled: page.ready
             busy: Setup.checking
             onClicked: page.next()

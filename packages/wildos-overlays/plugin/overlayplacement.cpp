@@ -116,6 +116,11 @@ void OverlayPlacement::setSlideFrom(Edge value)
     SETTER(slideFrom, m_slide)
 }
 
+void OverlayPlacement::setFromScreenEdge(bool value)
+{
+    SETTER(fromScreenEdge, m_fromScreenEdge)
+}
+
 #undef SETTER
 
 bool OverlayPlacement::eventFilter(QObject *watched, QEvent *event)
@@ -166,8 +171,10 @@ void OverlayPlacement::apply()
     surface->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivity(m_keyboard));
     surface->setAnchors(LayerShellQt::Window::Anchors(int(m_edges)));
     surface->setMargins(m_margins);
-    // Never push other windows aside; these float over them.
-    surface->setExclusiveZone(m_edges == (Top | Bottom | Left | Right) ? -1 : 0);
+    // Never push other windows aside; these float over them. 0 places the
+    // surface inside the space the taskbar leaves free, -1 on the whole
+    // screen.
+    surface->setExclusiveZone(m_fromScreenEdge || m_edges == (Top | Bottom | Left | Right) ? -1 : 0);
     surface->setScreenConfiguration(LayerShellQt::Window::ScreenFromQWindow);
 }
 

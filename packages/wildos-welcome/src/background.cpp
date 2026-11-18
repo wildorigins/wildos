@@ -35,7 +35,7 @@ QString joinNames(const QStringList &names)
     if (names.size() <= 1) {
         return names.value(0);
     }
-    return QStringList(names.mid(0, names.size() - 1)).join(QStringLiteral(", ")) + QStringLiteral(" and ") + names.last();
+    return QStringList(names.mid(0, names.size() - 1)).join(QCoreApplication::translate("Background", ", ")) + QCoreApplication::translate("Background", " and ") + names.last();
 }
 
 // "Report.docx" becomes "Report (from Windows).docx", then
@@ -96,35 +96,35 @@ int runCopy(const QString &jobFile)
         const QStringList names = copy->folderNames();
         QStringList lines;
         if (copy->error() == KJob::KilledJobError) {
-            notify(QStringLiteral("Copying from Windows stopped"),
-                   QStringLiteral("Anything already copied is in your Home folder. Nothing was changed on Windows."));
+            notify(QCoreApplication::translate("Background", "Copying from Windows stopped"),
+                   QCoreApplication::translate("Background", "Anything already copied is in your Home folder. Nothing was changed on Windows."));
             code = 1;
             return;
         }
         if (!names.isEmpty()) {
-            lines << QStringLiteral("%1 %2 in your Home folder.").arg(joinNames(names), names.size() == 1 ? QStringLiteral("is") : QStringLiteral("are"));
+            lines << (names.size() == 1 ? QCoreApplication::translate("Background", "%1 is in your Home folder.") : QCoreApplication::translate("Background", "%1 are in your Home folder.")).arg(joinNames(names));
         }
         if (copy->bookmarksAdded() > 0 && copy->historyAdded() > 0) {
-            lines << QStringLiteral("Your bookmarks are in Brave, on the bookmarks bar, and so is your history.");
+            lines << QCoreApplication::translate("Background", "Your bookmarks are in Brave, on the bookmarks bar, and so is your history.");
         } else if (copy->bookmarksAdded() > 0) {
-            lines << QStringLiteral("Your bookmarks are in Brave, on the bookmarks bar.");
+            lines << QCoreApplication::translate("Background", "Your bookmarks are in Brave, on the bookmarks bar.");
         } else if (copy->historyAdded() > 0) {
-            lines << QStringLiteral("Your browsing history is in Brave.");
+            lines << QCoreApplication::translate("Background", "Your browsing history is in Brave.");
         }
         if (copy->bookmarksAdded() == -1 || copy->historyAdded() == -1) {
-            lines << QStringLiteral("Some of your browser's bookmarks or history couldn't be added to Brave.");
+            lines << QCoreApplication::translate("Background", "Some of your browser's bookmarks or history couldn't be added to Brave.");
         }
         // Edge and Chrome lock saved passwords to the Windows account, so
         // they can't be read from here.
         if (copy->bookmarksAdded() != -2) {
-            lines << QStringLiteral("Saved passwords can't be copied from Windows: export them in Edge or Chrome on Windows, "
+            lines << QCoreApplication::translate("Background", "Saved passwords can't be copied from Windows: export them in Edge or Chrome on Windows, "
                                     "or use a password manager you can sign in to here.");
         }
         if (copy->failures() > 0) {
-            lines << (copy->failures() == 1 ? QStringLiteral("1 file couldn't be read from Windows and was left out.")
-                                            : QStringLiteral("%1 files couldn't be read from Windows and were left out.").arg(copy->failures()));
+            lines << (copy->failures() == 1 ? QCoreApplication::translate("Background", "1 file couldn't be read from Windows and was left out.")
+                                            : QCoreApplication::translate("Background", "%1 files couldn't be read from Windows and were left out.").arg(copy->failures()));
         }
-        notify(copy->failures() > 0 ? QStringLiteral("Most of your files are here") : QStringLiteral("Your files from Windows are here"),
+        notify(copy->failures() > 0 ? QCoreApplication::translate("Background", "Most of your files are here") : QCoreApplication::translate("Background", "Your files from Windows are here"),
                lines.join(QLatin1Char(' ')));
     });
     QObject::connect(copy, &KJob::result, qApp, &QCoreApplication::quit, Qt::QueuedConnection);
@@ -150,14 +150,14 @@ int runInstall(const QString &jobFile)
         const QStringList done = install->installed();
         const QStringList failed = install->failed();
         if (failed.isEmpty()) {
-            notify(QStringLiteral("Your apps are ready"),
-                   QStringLiteral("%1 %2 installed. Find them in Start.").arg(joinNames(done), done.size() == 1 ? QStringLiteral("is") : QStringLiteral("are")));
+            notify(QCoreApplication::translate("Background", "Your apps are ready"),
+                   (done.size() == 1 ? QCoreApplication::translate("Background", "%1 is installed. Find them in Start.") : QCoreApplication::translate("Background", "%1 are installed. Find them in Start.")).arg(joinNames(done)));
         } else {
-            QString body = QStringLiteral("%1 couldn't be installed. Try again from the Store.").arg(joinNames(failed));
+            QString body = QCoreApplication::translate("Background", "%1 couldn't be installed. Try again from the Store.").arg(joinNames(failed));
             if (!done.isEmpty()) {
-                body = QStringLiteral("%1 %2 installed. ").arg(joinNames(done), done.size() == 1 ? QStringLiteral("is") : QStringLiteral("are")) + body;
+                body = (done.size() == 1 ? QCoreApplication::translate("Background", "%1 is installed. %2") : QCoreApplication::translate("Background", "%1 are installed. %2")).arg(joinNames(done), body);
             }
-            notify(QStringLiteral("Some apps weren't installed"), body);
+            notify(QCoreApplication::translate("Background", "Some apps weren't installed"), body);
         }
     });
     QObject::connect(install, &KJob::result, qApp, &QCoreApplication::quit, Qt::QueuedConnection);
@@ -180,9 +180,9 @@ CopyJob::CopyJob(const QJsonObject &job, QObject *parent)
 
 void CopyJob::start()
 {
-    Q_EMIT description(this, QStringLiteral("Copying your files from Windows"),
-                       {QStringLiteral("From"), m_job.value(QStringLiteral("drive")).toString(QStringLiteral("Windows"))},
-                       {QStringLiteral("To"), QStringLiteral("Your Home folder")});
+    Q_EMIT description(this, QCoreApplication::translate("Background", "Copying your files from Windows"),
+                       {QCoreApplication::translate("Background", "From"), m_job.value(QStringLiteral("drive")).toString(QStringLiteral("Windows"))},
+                       {QCoreApplication::translate("Background", "To"), QCoreApplication::translate("Background", "Your Home folder")});
     setTotalAmount(KJob::Bytes, qMax<qint64>(m_total, 0));
     setProcessedAmount(KJob::Bytes, 0);
 
@@ -318,7 +318,7 @@ void CopyJob::importBookmarks()
     // would be lost if it went in while Brave was open, and it keeps its
     // history locked. Wait for it.
     if (Bookmarks::braveRunning()) {
-        Q_EMIT infoMessage(this, QStringLiteral("Waiting for Brave to close to add your bookmarks and history"));
+        Q_EMIT infoMessage(this, QCoreApplication::translate("Background", "Waiting for Brave to close to add your bookmarks and history"));
         QTimer::singleShot(10000, this, &CopyJob::importBookmarks);
         return;
     }
@@ -326,7 +326,7 @@ void CopyJob::importBookmarks()
     // Brave has run. Done before the bookmarks, because Brave writes its
     // bookmarks file when it quits.
     if (!QFileInfo::exists(History::braveHistoryFile())) {
-        Q_EMIT infoMessage(this, QStringLiteral("Getting Brave ready for your bookmarks and history"));
+        Q_EMIT infoMessage(this, QCoreApplication::translate("Background", "Getting Brave ready for your bookmarks and history"));
         History::createBraveProfile();
     }
     m_history = History::importInto(History::braveHistoryFile(), profiles);
@@ -346,8 +346,8 @@ void InstallJob::start()
     for (const QJsonValue &value : std::as_const(m_apps)) {
         names << value.toObject().value(QStringLiteral("name")).toString();
     }
-    Q_EMIT description(this, names.size() == 1 ? QStringLiteral("Installing %1").arg(names.first()) : QStringLiteral("Installing your apps"),
-                       {QStringLiteral("Apps"), joinNames(names)});
+    Q_EMIT description(this, names.size() == 1 ? QCoreApplication::translate("Background", "Installing %1").arg(names.first()) : QCoreApplication::translate("Background", "Installing your apps"),
+                       {QCoreApplication::translate("Background", "Apps"), joinNames(names)});
     QTimer::singleShot(0, this, &InstallJob::resolve);
 }
 
@@ -459,7 +459,7 @@ void InstallJob::installFlatpaks()
         installFlatpaks();
         return;
     }
-    Q_EMIT infoMessage(this, QStringLiteral("Installing %1").arg(name));
+    Q_EMIT infoMessage(this, QCoreApplication::translate("Background", "Installing %1").arg(name));
     auto process = new QProcess(this);
     connect(process, &QProcess::finished, this, [this, process, name](int exitCode, QProcess::ExitStatus status) {
         process->deleteLater();

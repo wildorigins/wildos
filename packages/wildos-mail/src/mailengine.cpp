@@ -14,6 +14,8 @@
 
 #include "camelsession.h"
 
+#include <gio/gio.h>
+
 #include <pwd.h>
 #include <unistd.h>
 
@@ -26,11 +28,6 @@ const QChar keySep = QLatin1Char('\x1f');
 QString str(const gchar *s)
 {
     return s ? QString::fromUtf8(s) : QString();
-}
-
-QString errorText(GError *error)
-{
-    return error ? QString::fromUtf8(error->message) : QString();
 }
 
 CamelNetworkSecurityMethod securityOf(const QString &security)
@@ -205,6 +202,58 @@ const char *trackerDayKey(const QDate &d)
     key = "trackers/" + d.toString(Qt::ISODate).toLatin1();
     return key.constData();
 }
+}
+
+// What went wrong, in words the person can act on. What the server or Camel
+// said goes to the log and not the screen: it is English, technical and can
+// carry server names and addresses. `otherwise` is the sentence for a reason
+// that isn't one of the common ones.
+QString MailEngine::plainError(const GError *error, const QString &otherwise)
+{
+    if (!error) {
+        return otherwise;
+    }
+    qCWarning(mailLog) << g_quark_to_string(error->domain) << error->code << error->message;
+    const QString text = QString::fromUtf8(error->message).toLower();
+    const auto says = [&text](const char *words) {
+        return text.contains(QLatin1String(words));
+    };
+    const auto io = [error](int code) {
+        return g_error_matches(error, G_IO_ERROR, code);
+    };
+    if (g_error_matches(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE) || says("authenticationfailed") || says("invalid credentials")) {
+        return tr("Your email provider didn't accept the password. Sign in again.");
+    }
+    if (says("alreadyexists") || says("already exists")) {
+        return tr("There is already a folder with that name.");
+    }
+    if (says("overquota") || says("quota")) {
+        return tr("Your mailbox is full. Delete some mail to make room.");
+    }
+    if (says("nonexistent") || g_error_matches(error, CAMEL_STORE_ERROR, CAMEL_STORE_ERROR_NO_FOLDER)) {
+        return tr("That folder isn't there any more.");
+    }
+    if (says("noperm") || io(G_IO_ERROR_PERMISSION_DENIED) || g_error_matches(error, CAMEL_FOLDER_ERROR, CAMEL_FOLDER_ERROR_INSUFFICIENT_PERMISSION)) {
+        return tr("Your email provider doesn't allow that.");
+    }
+    if (io(G_IO_ERROR_NO_SPACE)) {
+        return tr("This PC has run out of space.");
+    }
+    if (io(G_IO_ERROR_TIMED_OUT)) {
+        return tr("Your email provider took too long to answer. Try again in a moment.");
+    }
+    if (error->domain == G_TLS_ERROR) {
+        return tr("Couldn't make a secure connection to your email provider.");
+    }
+    if (error->domain == G_RESOLVER_ERROR || io(G_IO_ERROR_HOST_NOT_FOUND)) {
+        return tr("Couldn't find your email provider's server. Check that this PC is online.");
+    }
+    if (io(G_IO_ERROR_HOST_UNREACHABLE) || io(G_IO_ERROR_NETWORK_UNREACHABLE) || io(G_IO_ERROR_CONNECTION_REFUSED) || io(G_IO_ERROR_NOT_CONNECTED)
+        || io(G_IO_ERROR_CONNECTION_CLOSED) || g_error_matches(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_UNAVAILABLE)
+        || g_error_matches(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_NOT_CONNECTED)) {
+        return tr("Couldn't reach your email provider. Check that this PC is online.");
+    }
+    return otherwise;
 }
 
 MailEngine *MailEngine::instance()
@@ -460,7 +509,7 @@ void MailEngine::startAccount(const Account &account)
     if (!live.store) {
         CamelService *service = camel_session_add_service(session, account.id.toUtf8().constData(), "imapx", CAMEL_PROVIDER_STORE, &error);
         if (!service) {
-            const QString text = errorText(error);
+            const QString text = plainError(error, tr("Mail couldn't start this account. Close Mail and open it again."));
             g_clear_error(&error);
             lock.unlock();
             setProblem(account.id, QStringLiteral("unreachable"), text);
@@ -539,7 +588,7 @@ void MailEngine::connectAccount(const QString &id)
         GError *error = nullptr;
         camel_offline_store_set_online_sync(CAMEL_OFFLINE_STORE(store), TRUE, nullptr, nullptr);
         if (!camel_service_connect_sync(CAMEL_SERVICE(store), nullptr, &error)) {
-            *problem = errorText(error);
+            *problem = plainError(error, tr("Couldn't reach your email provider."));
             const bool auth = error && error->domain == CAMEL_SERVICE_ERROR && error->code == CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE;
             *kind = auth ? QStringLiteral("password") : QStringLiteral("unreachable");
             g_clear_error(&error);
@@ -744,9 +793,23 @@ void MailEngine::listFolders(const QString &id)
                 });
             }
         }
-        // The first folder list after start-up: open the Inbox.
-        if (m_folderRole == QLatin1String("inbox") && m_folderAccount.isEmpty() && m_folderFullName.isEmpty()) {
+        // The first folder list after start-up: open the Inbox, or whichever
+        // of Favourites was open last time.
+        if (m_folderAccount.isEmpty() && m_folderFullName.isEmpty()) {
             reloadMessages();
+        }
+        if (m_restoringFolder && m_folderAccount == id && !entries->isEmpty()) {
+            m_restoringFolder = false;
+            const auto found = std::find_if(entries->cbegin(), entries->cend(), [this](const FolderEntry &e) {
+                return e.fullName == m_folderFullName;
+            });
+            if (found == entries->cend()) {
+                // Deleted or renamed somewhere else since.
+                openFolder({}, QStringLiteral("inbox"));
+            } else {
+                m_folderRole = found->role;
+                Q_EMIT folderChanged();
+            }
         }
         rebuildFolderModel();
     });
@@ -832,6 +895,32 @@ void MailEngine::toggleExpanded(const QString &accountId)
     rebuildFolderModel();
 }
 
+int MailEngine::accountIndex(const QString &accountId) const
+{
+    const QList<Account> &accounts = m_store.accounts();
+    for (int i = 0; i < accounts.size(); ++i) {
+        if (accounts.at(i).id == accountId) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void MailEngine::moveAccount(const QString &accountId, int to)
+{
+    const QList<Account> &accounts = m_store.accounts();
+    // An account nobody has opened or closed is open only while it is the
+    // first one. Moving must not open or close any, so each keeps what it
+    // shows now.
+    for (const Account &a : accounts) {
+        if (!m_expanded.contains(a.id)) {
+            m_expanded.insert(a.id, accounts.size() == 1 || &a == &accounts.first());
+        }
+    }
+    m_store.move(accountId, to);
+    rebuildFolderModel();
+}
+
 QString MailEngine::roleFullName(const QString &accountId, const QString &role) const
 {
     for (const FolderEntry &f : m_live.value(accountId).folders) {
@@ -858,8 +947,34 @@ QList<QPair<QString, QString>> MailEngine::currentFolders() const
     return list;
 }
 
+void MailEngine::openLastFolder()
+{
+    QSettings settings;
+    const QString account = settings.value(QStringLiteral("mail/folderAccount")).toString();
+    const QString folder = settings.value(QStringLiteral("mail/folder")).toString();
+    if (account.isEmpty()) {
+        const bool favourite = folder == QLatin1String("sent") || folder == QLatin1String("drafts");
+        openFolder({}, favourite ? folder : QStringLiteral("inbox"));
+    } else if (!m_store.find(account) || folder.isEmpty() || folder == QLatin1String(".outbox")) {
+        // The account has gone, or it was the Outbox, which is only there
+        // while something waits in it.
+        openFolder({}, QStringLiteral("inbox"));
+    } else {
+        openFolder(account, folder);
+        m_restoringFolder = true;
+        // Its account is shown open, so the folder can be seen in the pane.
+        if (!m_expanded.contains(account)) {
+            m_expanded.insert(account, true);
+        }
+    }
+}
+
 void MailEngine::openFolder(const QString &accountId, const QString &fullName)
 {
+    m_restoringFolder = false;
+    QSettings settings;
+    settings.setValue(QStringLiteral("mail/folderAccount"), accountId);
+    settings.setValue(QStringLiteral("mail/folder"), fullName);
     m_searchText.clear();
     m_folderAccount = accountId;
     if (accountId.isEmpty()) {
@@ -918,7 +1033,7 @@ CamelFolder *MailEngine::folderSync(const QString &accountId, const QString &ful
         }
         store = m_live.value(accountId).store;
         if (!store) {
-            g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "No such account");
+            g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, MailEngine::tr("No such account").toUtf8().constData());
             return nullptr;
         }
         g_object_ref(store);
@@ -948,7 +1063,7 @@ CamelFolder *MailEngine::roleFolderSync(const QString &accountId, const QString 
         full = roleFullName(accountId, role);
     }
     if (full.isEmpty()) {
-        g_set_error(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "This account has no %s folder", role.toUtf8().constData());
+        g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, MailEngine::tr("This account has no %1 folder").arg(role).toUtf8().constData());
         return nullptr;
     }
     return folderSync(accountId, full, error);
@@ -1315,7 +1430,7 @@ void MailEngine::transfer(const QStringList &keys, const QString &targetRole, co
             const QString accountId = it.key().first;
             CamelFolder *source = folderSync(accountId, it.key().second, &gerror);
             if (!source) {
-                *error = errorText(gerror);
+                *error = plainError(gerror, tr("Those messages couldn't be moved. Try again in a moment."));
                 g_clear_error(&gerror);
                 continue;
             }
@@ -1338,7 +1453,7 @@ void MailEngine::transfer(const QStringList &keys, const QString &targetRole, co
                     }
                 }
                 if (!dest) {
-                    *error = errorText(gerror);
+                    *error = plainError(gerror, tr("Those messages couldn't be moved. Try again in a moment."));
                     g_clear_error(&gerror);
                     continue;
                 }
@@ -1353,7 +1468,7 @@ void MailEngine::transfer(const QStringList &keys, const QString &targetRole, co
                 }
                 GPtrArray *newUids = nullptr;
                 if (!camel_folder_transfer_messages_to_sync(source, uids, dest, TRUE, &newUids, nullptr, &gerror)) {
-                    *error = errorText(gerror);
+                    *error = plainError(gerror, tr("Those messages couldn't be moved. Try again in a moment."));
                     g_clear_error(&gerror);
                 } else if (newUids) {
                     for (guint i = 0; i < newUids->len; ++i) {
@@ -1396,7 +1511,7 @@ void MailEngine::undo()
             CamelFolder *from = folderSync(m.accountId, m.to, &gerror);
             CamelFolder *back = from ? folderSync(m.accountId, m.from, &gerror) : nullptr;
             if (!from || !back) {
-                *error = errorText(gerror);
+                *error = plainError(gerror, tr("That couldn't be put back. Try again in a moment."));
                 g_clear_error(&gerror);
                 continue;
             }
@@ -1406,7 +1521,7 @@ void MailEngine::undo()
             g_ptr_array_add(uids, u.data());
             camel_folder_set_message_flags(from, u.constData(), CAMEL_MESSAGE_JUNK, 0);
             if (!camel_folder_transfer_messages_to_sync(from, uids, back, TRUE, nullptr, nullptr, &gerror)) {
-                *error = errorText(gerror);
+                *error = plainError(gerror, tr("That couldn't be put back. Try again in a moment."));
                 g_clear_error(&gerror);
             }
             g_ptr_array_free(uids, TRUE);
@@ -1561,7 +1676,7 @@ void MailEngine::renameFolder(const QString &accountId, const QString &fullName,
         }
         GError *gerror = nullptr;
         if (!camel_store_rename_folder_sync(store, fullName.toUtf8().constData(), target.toUtf8().constData(), nullptr, &gerror)) {
-            *error = errorText(gerror);
+            *error = plainError(gerror, tr("The folder couldn't be renamed. Try again in a moment."));
             g_clear_error(&gerror);
         }
         g_object_unref(store);
@@ -1593,7 +1708,7 @@ void MailEngine::deleteFolder(const QString &accountId, const QString &fullName)
         }
         GError *gerror = nullptr;
         if (!camel_store_delete_folder_sync(store, fullName.toUtf8().constData(), nullptr, &gerror)) {
-            *error = errorText(gerror);
+            *error = plainError(gerror, tr("The folder couldn't be deleted. Try again in a moment."));
             g_clear_error(&gerror);
         }
         g_object_unref(store);
@@ -1658,7 +1773,7 @@ void MailEngine::createFolder(const QString &accountId, const QString &name)
         if (CamelFolderInfo *fi = camel_store_create_folder_sync(store, nullptr, n.constData(), nullptr, &gerror)) {
             camel_folder_info_free(fi);
         } else {
-            *error = errorText(gerror);
+            *error = plainError(gerror, tr("The folder couldn't be created. Try again in a moment."));
             g_clear_error(&gerror);
         }
         g_object_unref(store);
@@ -1876,18 +1991,19 @@ void MailEngine::testAccount(const QVariantMap &settings, const QString &passwor
     CamelSession *session = Session::instance().camel();
     GError *error = nullptr;
     CamelService *store = camel_session_add_service(session, testId.toUtf8().constData(), "imapx", CAMEL_PROVIDER_STORE, &error);
-    QString why = errorText(error);
+    if (error) {
+        qCWarning(mailLog) << "couldn't create the incoming mail service:" << error->message;
+    }
     g_clear_error(&error);
     CamelService *smtp = camel_session_add_service(session, (testId + QStringLiteral(".smtp")).toUtf8().constData(), "smtp", CAMEL_PROVIDER_TRANSPORT, &error);
-    if (why.isEmpty()) {
-        why = errorText(error);
+    if (error) {
+        qCWarning(mailLog) << "couldn't create the outgoing mail service:" << error->message;
     }
     g_clear_error(&error);
     if (!store || !smtp) {
-        qCWarning(mailLog) << "couldn't create the mail services:" << why;
         g_clear_object(&store);
         g_clear_object(&smtp);
-        Q_EMIT accountTested(false, tr("Mail couldn't start a connection. %1").arg(why));
+        Q_EMIT accountTested(false, tr("Mail couldn't start a connection. Close Mail and open it again."));
         return;
     }
     configure(store, smtp, account);
@@ -1908,14 +2024,13 @@ void MailEngine::testAccount(const QVariantMap &settings, const QString &passwor
         camel_offline_store_set_online_sync(CAMEL_OFFLINE_STORE(store), TRUE, cancellable, nullptr);
         qCInfo(mailLog) << "connecting to incoming server";
         if (!camel_service_connect_sync(store, cancellable, &gerror)) {
-            qCWarning(mailLog) << "incoming server:" << errorText(gerror);
             if (g_cancellable_is_cancelled(cancellable)) {
                 *message = MailEngine::tr("The incoming mail server didn't answer. Check the server name and port, and that this PC is online.");
                 g_clear_error(&gerror);
                 return;
             }
             const bool auth = gerror->domain == CAMEL_SERVICE_ERROR && gerror->code == CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE;
-            *message = auth ? MailEngine::tr("Your email provider didn't accept that password.") : MailEngine::tr("Couldn't reach the incoming mail server: %1").arg(errorText(gerror));
+            *message = auth ? MailEngine::tr("Your email provider didn't accept that password.") : MailEngine::tr("The incoming mail server couldn't be reached. %1").arg(plainError(gerror, MailEngine::tr("Check the server name, the port and the security setting.")));
             g_clear_error(&gerror);
             return;
         }
@@ -1949,14 +2064,13 @@ void MailEngine::testAccount(const QVariantMap &settings, const QString &passwor
         }
         qCInfo(mailLog) << "connecting to outgoing server with" << (mechanism ? mechanism : (keep ? "XOAUTH2" : "default"));
         if (!camel_service_connect_sync(smtp, cancellable, &gerror)) {
-            qCWarning(mailLog) << "outgoing server:" << errorText(gerror);
             if (g_cancellable_is_cancelled(cancellable)) {
                 *message = MailEngine::tr("The outgoing mail server didn't answer. Check the server name and port, and that this PC is online.");
                 g_clear_error(&gerror);
                 return;
             }
             const bool auth = gerror->domain == CAMEL_SERVICE_ERROR && gerror->code == CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE;
-            *message = auth ? MailEngine::tr("The outgoing mail server didn't accept that password.") : MailEngine::tr("Couldn't reach the outgoing mail server: %1").arg(errorText(gerror));
+            *message = auth ? MailEngine::tr("The outgoing mail server didn't accept that password.") : MailEngine::tr("The outgoing mail server couldn't be reached. %1").arg(plainError(gerror, MailEngine::tr("Check the server name, the port and the security setting.")));
             g_clear_error(&gerror);
             return;
         }
@@ -2060,8 +2174,9 @@ void MailEngine::sendOutbox()
         g_object_ref(smtp);
         const QString id = a.id;
         const bool gmail = a.provider == QLatin1String("gmail");
+        auto failed = std::make_shared<bool>(false);
         auto failure = std::make_shared<QString>();
-        run([this, smtp, files, id, gmail, failure]() {
+        run([this, smtp, files, id, gmail, failed, failure]() {
             for (const QFileInfo &file : files) {
                 CamelMimeMessage *message = camel_mime_message_new();
                 CamelStream *stream = camel_stream_fs_new_with_name(file.filePath().toUtf8().constData(), O_RDONLY, 0, nullptr);
@@ -2080,7 +2195,8 @@ void MailEngine::sendOutbox()
                         sent = camel_transport_send_to_sync(CAMEL_TRANSPORT(smtp), message, from, recipients, &saved, nullptr, &error);
                     }
                     if (!sent) {
-                        *failure = errorText(error);
+                        *failed = true;
+                        *failure = plainError(error, QString());
                     }
                     g_clear_error(&error);
                     g_object_unref(recipients);
@@ -2101,9 +2217,9 @@ void MailEngine::sendOutbox()
                 QFile::remove(file.filePath());
             }
             g_object_unref(smtp);
-        }, [this, failure]() {
-            if (!failure->isEmpty()) {
-                Q_EMIT notice(tr("Couldn't send yet, so it's waiting in the Outbox. %1").arg(*failure));
+        }, [this, failed, failure]() {
+            if (*failed) {
+                Q_EMIT notice(tr("Couldn't send yet, so it's waiting in the Outbox. %1").arg(*failure).trimmed());
             }
             Q_EMIT outboxChanged();
             rebuildFolderModel();

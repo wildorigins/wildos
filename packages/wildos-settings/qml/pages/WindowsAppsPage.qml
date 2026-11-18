@@ -16,7 +16,7 @@ PageScroll {
     UI.Label {
         Layout.fillWidth: true
         Layout.maximumWidth: 720
-        text: "Windows apps run in their own sandbox. Each one only reaches what you allow, and you can change that at any time."
+        text: qsTr("Windows apps run in their own sandbox. Each one only reaches what you allow, and you can change that at any time.")
         size: 14
         lineHeightMode: Text.FixedHeight
         lineHeight: 22 * UI.Style.textScale
@@ -32,33 +32,33 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
-                title: "Windows app support"
+                title: qsTr("Windows app support")
                 description: WindowsApps.installed
-                    ? "Runs Windows apps in a sandbox. Turn off to block every Windows app."
-                    : "The part of Wild OS that runs Windows apps is not installed on this computer yet."
+                    ? qsTr("Runs Windows apps in a sandbox. Turn off to block every Windows app.")
+                    : qsTr("The part of Wild OS that runs Windows apps is not installed on this computer yet.")
                 enabled: WindowsApps.installed
-                status: (WindowsApps.installed && WindowsApps.enabled) ? "On" : "Off"
+                status: (WindowsApps.installed && WindowsApps.enabled) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: WindowsApps.installed && WindowsApps.enabled
-                    Accessible.name: "Windows app support"
+                    Accessible.name: qsTr("Windows app support")
                     onToggled: WindowsApps.setEnabled(checked)
                 }
             }
 
             UI.SettingRow {
-                title: "Starting permissions for new apps"
-                description: "What a newly installed Windows app can reach until you change it"
+                title: qsTr("Starting permissions for new apps")
+                description: qsTr("What a newly installed Windows app can reach until you change it")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Starting permissions"
+                    Accessible.name: qsTr("Starting permissions")
                     enabled: WindowsApps.installed && WindowsApps.enabled
                     model: [
-                        { value: "documents-offline", text: "Documents only, no internet" },
-                        { value: "documents-online", text: "Documents and internet" },
-                        { value: "own-offline", text: "Its own folder only, no internet" }
+                        { value: "documents-offline", text: qsTr("Documents only, no internet") },
+                        { value: "documents-online", text: qsTr("Documents and internet") },
+                        { value: "own-offline", text: qsTr("Its own folder only, no internet") }
                     ]
                     readonly property var choice: WindowsApps.startingPermissions
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -73,7 +73,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Installed Windows apps"
+            text: qsTr("Installed Windows apps")
         }
 
         UI.Card {
@@ -96,7 +96,7 @@ PageScroll {
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Uninstall"
+                            text: qsTr("Uninstall")
                             onClicked: {
                                 page.removing = app.modelData;
                                 appDialog.open();
@@ -127,16 +127,16 @@ PageScroll {
                         iconName: "windowsapps"
                         themeIcon: modelData.icon
                         title: modelData.name
-                        description: "Runs in Windows mode. To uninstall it, open the Windows desktop from the Windows mode page."
+                        description: qsTr("Runs in Windows mode. To uninstall it, open the Windows desktop from the Windows mode page.")
                     }
                 }
 
                 UI.SettingRow {
                     visible: WindowsApps.apps.length === 0 && page.windowsModeApps.length === 0
-                    title: "No Windows apps yet"
+                    title: qsTr("No Windows apps yet")
                     description: WindowsApps.installed
-                        ? "Open a Windows installer, an .exe or .msi file, and Wild OS offers to set it up here."
-                        : "Once Windows app support is installed, apps you set up appear here."
+                        ? qsTr("Open a Windows installer, an .exe or .msi file, and Wild OS offers to set it up here.")
+                        : qsTr("Once Windows app support is installed, apps you set up appear here.")
                 }
             }
         }
@@ -147,7 +147,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "When a Windows app won't run"
+            text: qsTr("When a Windows app won't run")
         }
 
         UI.Card {
@@ -159,10 +159,10 @@ PageScroll {
                 // Windows mode, the background Windows VM, has a page of
                 // its own (WinModeSettings.dc).
                 UI.SettingRow {
-                    title: "Windows mode"
-                    description: WindowsMode.state === "ready" ? "Set up. Office and other Windows programs open in their own windows."
-                        : WindowsMode.state === "setup" ? "Setting up in the background"
-                        : "Runs the hardest apps in a real copy of Windows, using the licence built into this PC"
+                    title: qsTr("Windows mode")
+                    description: WindowsMode.state === "ready" ? qsTr("Set up. Office and other Windows programs open in their own windows.")
+                        : WindowsMode.state === "setup" ? qsTr("Setting up in the background")
+                        : qsTr("Runs the hardest apps in a real copy of Windows, using the licence built into this PC")
                     chevron: true
                     onClicked: Navigator.open("windowsmode")
                 }
@@ -172,11 +172,11 @@ PageScroll {
 
     UI.Dialog {
         id: appDialog
-        title: page.removing ? "Uninstall " + page.removing.title + "?" : ""
-        text: "Uninstalling removes the app and everything saved inside its sandbox. Files it saved to your Documents stay where they are. You can bring it back from the Recycle Bin."
+        title: page.removing ? qsTr("Uninstall %1?").arg(page.removing.title) : ""
+        text: qsTr("Uninstalling removes the app and everything saved inside its sandbox. Files it saved to your Documents stay where they are. You can bring it back from the Recycle Bin.")
         buttons: [
             UI.Button {
-                text: "Uninstall"
+                text: qsTr("Uninstall")
                 kind: "primary"
                 onClicked: {
                     WindowsApps.uninstall(page.removing.name);
@@ -184,7 +184,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: appDialog.close()
             }
         ]

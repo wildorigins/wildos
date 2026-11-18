@@ -15,7 +15,8 @@ FocusScope {
     required property var quick
 
     // "" is the tiles and sliders; "wifi", "bluetooth" and "vpn" are the
-    // detail pages a tile's chevron opens in place.
+    // detail pages a tile's chevron opens in place, and "output" the one
+    // the chevron beside the volume opens.
     property string page: ""
     property bool editing: false
 
@@ -59,9 +60,57 @@ FocusScope {
     // does, rather than shown greyed out (EmptyStates.dc): on a desktop PC
     // Ethernet moves up to the first slot. Cast and Accessibility fill the
     // free slots of a six-tile grid, or stay once someone adds them.
-    readonly property var allTiles: ["wifi", "ethernet", "bluetooth", "flight", "dnd", "nightlight", "vpn", "cast", "accessibility", "awake"]
+    readonly property var builtInTiles: ["wifi", "ethernet", "bluetooth", "flight", "dnd", "nightlight", "vpn", "cast", "accessibility", "awake"]
+    // In the order they were dragged into in edit mode, with any tile that
+    // order does not name after them.
+    readonly property var allTiles: {
+        const saved = Array.from(quick.tileOrder || []).filter(id => builtInTiles.indexOf(id) >= 0);
+        return saved.concat(builtInTiles.filter(id => saved.indexOf(id) < 0));
+    }
     readonly property var fillers: ["cast", "accessibility", "awake"]
     readonly property var presentTiles: allTiles.filter(id => tileApplies(id))
+
+    // Edit mode: the tile being dragged and the one whose place it would take.
+    property string dragTile: ""
+    property string dropTile: ""
+
+    function tileAt(x: real, y: real): string {
+        for (let i = 0; i < tiles.count; i++) {
+            const tile = tiles.itemAt(i);
+            if (tile && x >= tile.x && x < tile.x + tile.width && y >= tile.y && y < tile.y + tile.height) {
+                return tile.modelData;
+            }
+        }
+        return "";
+    }
+
+    // Puts one tile in another's place; the ones between shuffle along.
+    function moveTile(id: string, onto: string): void {
+        const order = allTiles.filter(t => t !== id);
+        const from = allTiles.indexOf(id);
+        const to = allTiles.indexOf(onto);
+        if (from < 0 || to < 0 || from === to) {
+            return;
+        }
+        order.splice(to, 0, id);
+        quick.setTileOrder(order);
+    }
+
+    // The keyboard's way: one place earlier or later among the tiles shown.
+    function stepTile(id: string, step: int): void {
+        const at = shownTiles.indexOf(id);
+        const to = at + step;
+        if (at < 0 || to < 0 || to >= shownTiles.length) {
+            return;
+        }
+        moveTile(id, shownTiles[to]);
+        Qt.callLater(() => {
+            const tile = tiles.itemAt(to);
+            if (tile) {
+                tile.toggleButton.forceActiveFocus(Qt.TabFocusReason);
+            }
+        });
+    }
     readonly property var visibleTiles: {
         const core = presentTiles.filter(id => fillers.indexOf(id) < 0 && quick.hiddenTiles.indexOf(id) < 0);
         const extra = presentTiles.filter(id => fillers.indexOf(id) >= 0 && quick.hiddenTiles.indexOf(id) < 0);
@@ -101,8 +150,8 @@ FocusScope {
         const net = network;
         switch (id) {
         case "wifi": {
-            const status = !net.wifiEnabled ? "Off"
-                : net.wifiConnected ? quick.connectionWords : "Not connected";
+            const status = !net.wifiEnabled ? qsTr("Off")
+                : net.wifiConnected ? quick.connectionWords : qsTr("Not connected");
             return {
                 label: net.wifiConnected ? net.activeWifiName : "Wi-Fi",
                 status: status,
@@ -110,12 +159,12 @@ FocusScope {
                 fill: Icons.wifiDot,
                 checked: net.wifiEnabled,
                 hasPage: true,
-                pageName: "Show Wi-Fi networks",
-                description: (net.wifiConnected ? "Wi-Fi, " + net.activeWifiName + ", " : "Wi-Fi, ") + status
+                pageName: qsTr("Show Wi-Fi networks"),
+                description: net.wifiConnected ? qsTr("Wi-Fi, %1, %2").arg(net.activeWifiName).arg(status) : qsTr("Wi-Fi, %1").arg(status)
             };
         }
         case "ethernet": {
-            const status = net.wiredConnected ? quick.connectionWords : "Not connected";
+            const status = net.wiredConnected ? quick.connectionWords : qsTr("Not connected");
             return {
                 label: "Ethernet",
                 status: status,
@@ -125,57 +174,57 @@ FocusScope {
                 switchable: false,
                 hasPage: false,
                 pageName: "",
-                description: "Ethernet, " + status + ". Opens network settings"
+                description: qsTr("Ethernet, %1. Opens network settings").arg(status)
             };
         }
         case "bluetooth": {
             const device = bluetooth.connectedDevices.length > 0 ? bluetooth.connectedDevices[0].name : "";
             return {
                 label: "Bluetooth",
-                status: !bluetooth.enabled ? "Off" : device.length > 0 ? device : "Not connected",
+                status: !bluetooth.enabled ? qsTr("Off") : device.length > 0 ? device : qsTr("Not connected"),
                 icon: Icons.bluetooth,
                 fill: "",
                 checked: bluetooth.enabled,
                 hasPage: true,
-                pageName: "Show Bluetooth devices",
-                description: "Bluetooth, " + (!bluetooth.enabled ? "off" : device.length > 0 ? "connected to " + device : "on")
+                pageName: qsTr("Show Bluetooth devices"),
+                description: !bluetooth.enabled ? qsTr("Bluetooth, off") : device.length > 0 ? qsTr("Bluetooth, connected to %1").arg(device) : qsTr("Bluetooth, on")
             };
         }
         case "flight":
             return {
-                label: "Flight mode",
+                label: qsTr("Flight mode"),
                 status: "",
                 icon: Icons.flight,
                 fill: "",
                 checked: net.flightMode,
                 hasPage: false,
                 pageName: "",
-                description: net.flightMode ? "Wireless connections are off" : "Off"
+                description: net.flightMode ? qsTr("Wireless connections are off") : qsTr("Off")
             };
         case "dnd":
             return {
-                label: "Do not disturb",
+                label: qsTr("Do not disturb"),
                 status: "",
                 icon: Icons.moon,
                 fill: "",
                 checked: dnd.active,
                 hasPage: false,
                 pageName: "",
-                description: dnd.active ? "Notifications are kept quiet" : "Off"
+                description: dnd.active ? qsTr("Notifications are kept quiet") : qsTr("Off")
             };
         case "nightlight":
             return {
-                label: "Night light",
+                label: qsTr("Night light"),
                 status: "",
                 icon: Icons.sun,
                 fill: "",
                 checked: quick.nightLightOn,
                 hasPage: false,
                 pageName: "",
-                description: quick.nightLightOn ? "Warmer colours on" : "Off"
+                description: quick.nightLightOn ? qsTr("Warmer colours on") : qsTr("Off")
             };
         case "vpn": {
-            const status = net.vpnActive ? "Connected" : net.vpnConfigured ? "Not connected" : "Not set up";
+            const status = net.vpnActive ? qsTr("Connected") : net.vpnConfigured ? qsTr("Not connected") : qsTr("Not set up");
             return {
                 label: "VPN",
                 status: status,
@@ -183,8 +232,8 @@ FocusScope {
                 fill: "",
                 checked: net.vpnActive,
                 hasPage: true,
-                pageName: "Show VPN connections",
-                description: net.vpnActive ? "VPN, connected to " + net.activeVpnName : "VPN, " + status.toLowerCase()
+                pageName: qsTr("Show VPN connections"),
+                description: net.vpnActive ? qsTr("VPN, connected to %1").arg(net.activeVpnName) : qsTr("VPN, %1").arg(status.toLowerCase())
             };
         }
         // Wild OS has no wireless display (Miracast) support yet, so Cast
@@ -192,7 +241,7 @@ FocusScope {
         // cable is set up, rather than pretending to search.
         case "cast":
             return {
-                label: "Cast",
+                label: qsTr("Cast"),
                 status: "",
                 icon: Icons.cast,
                 fill: "",
@@ -200,11 +249,11 @@ FocusScope {
                 switchable: false,
                 hasPage: false,
                 pageName: "",
-                description: "Opens display settings to set up another screen"
+                description: qsTr("Opens display settings to set up another screen")
             };
         case "accessibility":
             return {
-                label: "Accessibility",
+                label: qsTr("Accessibility"),
                 status: "",
                 icon: Icons.accessibility,
                 fill: "",
@@ -212,22 +261,22 @@ FocusScope {
                 switchable: false,
                 hasPage: false,
                 pageName: "",
-                description: quick.access.anyOn ? "Some accessibility features are on. Opens the list" : "Opens magnifier and colour settings"
+                description: quick.access.anyOn ? qsTr("Some accessibility features are on. Opens the list") : qsTr("Opens magnifier and colour settings")
             };
         case "awake": {
             const until = quick.keepAwakeUntil > 0
-                ? "Until " + Qt.locale().toString(new Date(quick.keepAwakeUntil), UI.TimeFormat.shortFormat) : "";
+                ? qsTr("Until %1").arg(Qt.locale().toString(new Date(quick.keepAwakeUntil), UI.TimeFormat.shortFormat)) : "";
             return {
-                label: "Keep awake",
+                label: qsTr("Keep awake"),
                 status: quick.keepingAwake ? until : "",
                 icon: Icons.coffee,
                 fill: "",
                 checked: quick.keepingAwake,
                 hasPage: false,
                 pageName: "",
-                description: !quick.keepingAwake ? "Off"
-                    : until.length > 0 ? "The screen stays on and the computer won't sleep " + until.toLowerCase()
-                    : "The screen stays on and the computer won't sleep until you turn this off"
+                description: !quick.keepingAwake ? qsTr("Off")
+                    : until.length > 0 ? qsTr("The screen stays on and the computer won't sleep %1").arg(until.toLowerCase())
+                    : qsTr("The screen stays on and the computer won't sleep until you turn this off")
             };
         }
         }
@@ -275,33 +324,33 @@ FocusScope {
     // The settings page each tile's menu offers; a tile with no page of its
     // own in Settings has no settings row.
     readonly property var tileSettings: ({
-        "wifi": ["Wi-Fi settings", "network"],
-        "ethernet": ["Network settings", "network"],
-        "flight": ["Network settings", "network"],
-        "vpn": ["Network settings", "network"],
-        "bluetooth": ["Bluetooth settings", "bluetooth"],
-        "dnd": ["Notification settings", "notifications"],
-        "nightlight": ["Night light settings", "nightlight"],
-        "cast": ["Display settings", "display"]
+        "wifi": [qsTr("Wi-Fi settings"), "network"],
+        "ethernet": [qsTr("Network settings"), "network"],
+        "flight": [qsTr("Network settings"), "network"],
+        "vpn": [qsTr("Network settings"), "network"],
+        "bluetooth": [qsTr("Bluetooth settings"), "bluetooth"],
+        "dnd": [qsTr("Notification settings"), "notifications"],
+        "nightlight": [qsTr("Night light settings"), "nightlight"],
+        "cast": [qsTr("Display settings"), "display"]
     })
 
     function openTileMenu(id: string, item: Item, x: real, y: real): void {
         const info = tileInfo(id);
         const entries = [];
         if (info.switchable !== false) {
-            entries.push({ text: info.checked ? "Turn off" : "Turn on", icon: "menu-power", run: () => flyout.toggle(id) });
+            entries.push({ text: info.checked ? qsTr("Turn off") : qsTr("Turn on"), icon: "menu-power", run: () => flyout.toggle(id) });
         }
         if (id === "awake") {
-            entries.push({ text: "For 1 hour", icon: "clock", run: () => flyout.quick.keepAwake(60) });
-            entries.push({ text: "For 4 hours", icon: "clock", run: () => flyout.quick.keepAwake(240) });
-            entries.push({ text: "Until I turn it off", icon: "clock", run: () => flyout.quick.keepAwake(0) });
+            entries.push({ text: qsTr("For 1 hour"), icon: "clock", run: () => flyout.quick.keepAwake(60) });
+            entries.push({ text: qsTr("For 4 hours"), icon: "clock", run: () => flyout.quick.keepAwake(240) });
+            entries.push({ text: qsTr("Until I turn it off"), icon: "clock", run: () => flyout.quick.keepAwake(0) });
             if (info.checked) {
-                entries.push({ text: "Turn off", icon: "menu-power", run: () => flyout.quick.keepAwake(-1) });
+                entries.push({ text: qsTr("Turn off"), icon: "menu-power", run: () => flyout.quick.keepAwake(-1) });
             }
             entries.push({ separator: true });
-            entries.push({ text: "Power settings", icon: "menu-settings", run: () => flyout.quick.openSettings("power") });
+            entries.push({ text: qsTr("Power settings"), icon: "menu-settings", run: () => flyout.quick.openSettings("power") });
             entries.push({ separator: true });
-            entries.push({ text: "Edit quick settings", icon: "menu-apps", run: () => flyout.editing = true });
+            entries.push({ text: qsTr("Edit quick settings"), icon: "menu-apps", run: () => flyout.editing = true });
             tileMenu.entries = entries;
             tileMenu.popup(item, x, y);
             return;
@@ -313,7 +362,7 @@ FocusScope {
         if (entries.length > 0) {
             entries.push({ separator: true });
         }
-        entries.push({ text: "Edit quick settings", icon: "menu-apps", run: () => flyout.editing = true });
+        entries.push({ text: qsTr("Edit quick settings"), icon: "menu-apps", run: () => flyout.editing = true });
         tileMenu.entries = entries;
         tileMenu.popup(item, x, y);
     }
@@ -325,9 +374,9 @@ FocusScope {
 
     // Windows' names for the three power-profiles-daemon modes.
     function modeLabel(mode: string): string {
-        return mode === "power-saver" ? "Best power efficiency"
-            : mode === "performance" ? "Best performance"
-            : mode === "balanced" ? "Balanced" : mode;
+        return mode === "power-saver" ? qsTr("Best power efficiency")
+            : mode === "performance" ? qsTr("Best performance")
+            : mode === "balanced" ? qsTr("Balanced") : mode;
     }
 
     function showPage(name: string): void {
@@ -341,7 +390,9 @@ FocusScope {
     function showMain(): void {
         const from = page;
         page = "";
-        if (Nav.keyboard) {
+        if (Nav.keyboard && from === "output") {
+            outputButton.forceActiveFocus(Qt.BacktabFocusReason);
+        } else if (Nav.keyboard) {
             const index = shownTiles.indexOf(from);
             const tile = index >= 0 ? tiles.itemAt(index) : null;
             if (tile) {
@@ -413,13 +464,26 @@ FocusScope {
             // under the tiles. A row for hardware that is not there (no
             // sound device, no built-in screen) is left out entirely.
             readonly property real gridHeight: grid.visible ? grid.implicitHeight : 0
-            readonly property real slidersTop: (grid.visible ? gridHeight + Metrics.sectionGap : 0) - 13
+            // What is playing sits above the tiles, a section of its own.
+            readonly property real mediaHeight: mediaLoader.item && mediaLoader.item.available ? mediaLoader.item.implicitHeight : 0
+            readonly property real gridTop: mediaHeight > 0 ? mediaHeight + Metrics.sectionGap : 0
+            readonly property real slidersTop: gridTop + (grid.visible ? gridHeight + Metrics.sectionGap : 0) - 13
             implicitHeight: volumeRow.visible ? volumeRow.y + 44 - 13
                 : brightnessRow.visible ? brightnessRow.y + 44 - 13
-                : gridHeight
+                : grid.visible ? gridTop + gridHeight
+                : mediaHeight
+
+            // Loaded on its own, like the backends, so a computer without
+            // Plasma's media player support still gets the rest.
+            Loader {
+                id: mediaLoader
+                width: parent.width
+                source: "MediaCard.qml"
+            }
 
             GridLayout {
                 id: grid
+                y: mainBody.gridTop
                 width: parent.width
                 visible: tiles.count > 0
                 columns: 3
@@ -451,6 +515,25 @@ FocusScope {
                         description: info.description
                         editing: flyout.editing
                         shown: flyout.visibleTiles.indexOf(modelData) >= 0
+                        dragging: flyout.dragTile === modelData
+                        dropTarget: flyout.dropTile === modelData && flyout.dragTile !== modelData
+                        onDragStarted: flyout.dragTile = modelData
+                        onDragMoved: (x, y) => {
+                            const at = tile.mapToItem(grid, x, y);
+                            flyout.dropTile = flyout.tileAt(at.x, at.y);
+                        }
+                        onDragEnded: drop => {
+                            const id = flyout.dragTile;
+                            const onto = flyout.dropTile;
+                            flyout.dragTile = "";
+                            flyout.dropTile = "";
+                            // After this tile's own handler has returned:
+                            // the new order rebuilds every tile.
+                            if (drop && onto.length > 0) {
+                                Qt.callLater(() => flyout.moveTile(id, onto));
+                            }
+                        }
+                        onMoveRequested: step => flyout.stepTile(modelData, step)
                         onToggled: flyout.toggle(modelData)
                         onPageRequested: flyout.showPage(modelData)
                         onEditToggled: flyout.quick.setTileShown(modelData, !shown)
@@ -483,7 +566,8 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     height: 44
                     flat: true
-                    accessibleName: "Brightness"
+                    wheelEnabled: true
+                    accessibleName: qsTr("Brightness")
                     from: 1
                     value: flyout.power ? flyout.power.brightnessPercent : 0
                     onMoved: flyout.power.setBrightnessPercent(value)
@@ -503,7 +587,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 32
                     height: 32
-                    tip: flyout.hasVolume && flyout.audio.muted ? "Unmute" : "Mute"
+                    tip: flyout.hasVolume && flyout.audio.muted ? qsTr("Unmute") : qsTr("Mute")
 
                     VolumeGlyph {
                         anchors.centerIn: parent
@@ -522,13 +606,31 @@ FocusScope {
                     anchors.left: parent.left
                     anchors.leftMargin: 32
                     anchors.right: parent.right
+                    anchors.rightMargin: 32
                     anchors.verticalCenter: parent.verticalCenter
                     height: 44
                     flat: true
-                    accessibleName: "Volume"
+                    wheelEnabled: true
+                    accessibleName: qsTr("Volume")
                     dimmed: flyout.hasVolume && flyout.audio.muted
                     value: flyout.hasVolume ? flyout.audio.percent : 0
                     onMoved: flyout.audio.setPercent(value)
+                }
+
+                // Speakers or headphones: the list of where sound can play,
+                // as the chevron beside Windows' volume slider opens.
+                UI.IconButton {
+                    id: outputButton
+                    // Its chevron mirrors the speaker at the other end.
+                    x: parent.width - 9 - width / 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 32
+                    height: 32
+                    iconName: "chevron"
+                    iconSize: 14
+                    stroke: 2.2
+                    tip: qsTr("Choose a sound output")
+                    onClicked: flyout.showPage("output")
                 }
             }
         }
@@ -545,6 +647,7 @@ FocusScope {
             sourceComponent: flyout.page === "wifi" ? wifiPage
                 : flyout.page === "bluetooth" ? bluetoothPage
                 : flyout.page === "vpn" ? vpnPage
+                : flyout.page === "output" ? outputPage
                 : flyout.page === "accessibility" ? accessibilityPage : null
         }
     }
@@ -568,6 +671,14 @@ FocusScope {
     Component {
         id: accessibilityPage
         AccessibilityPage {
+            quick: flyout.quick
+            onBack: flyout.showMain()
+        }
+    }
+
+    Component {
+        id: outputPage
+        OutputPage {
             quick: flyout.quick
             onBack: flyout.showMain()
         }
@@ -622,9 +733,9 @@ FocusScope {
             }
 
             UI.Label {
-                text: (flyout.power ? flyout.power.percent : 0) + "%"
+                text: qsTr("%1%").arg(flyout.power ? flyout.power.percent : 0)
                 font.weight: UI.Style.weightMedium
-                Accessible.name: "Battery " + text
+                Accessible.name: qsTr("Battery %1").arg(text)
             }
 
             UI.Label {
@@ -650,7 +761,7 @@ FocusScope {
             hoverEnabled: true
             focusPolicy: Qt.StrongFocus
             Accessible.role: Accessible.ButtonMenu
-            Accessible.name: "Power mode, " + modeRow.modeName
+            Accessible.name: qsTr("Power mode, %1").arg(modeRow.modeName)
             onClicked: powerMenu.popup(powerModeButton, 0, -powerMenu.height - 6)
 
             background: Rectangle {
@@ -682,7 +793,7 @@ FocusScope {
                     }
 
                     UI.Label {
-                        text: "Power mode"
+                        text: qsTr("Power mode")
                         font.weight: UI.Style.weightMedium
                     }
 
@@ -710,7 +821,7 @@ FocusScope {
             anchors.leftMargin: 20
             anchors.right: buttons.left
             anchors.verticalCenter: parent.verticalCenter
-            text: "Choose the tiles to show"
+            text: qsTr("Choose the tiles to show. Drag to rearrange.")
             size: 12
             color: UI.Style.inkMuted
         }
@@ -733,7 +844,7 @@ FocusScope {
                 iconSize: 17
                 stroke: flyout.editing ? 2 : 1.8
                 checked: flyout.editing
-                tip: flyout.editing ? "Done editing quick settings" : "Edit quick settings"
+                tip: flyout.editing ? qsTr("Done editing quick settings") : qsTr("Edit quick settings")
                 onClicked: flyout.editing = !flyout.editing
             }
 
@@ -744,7 +855,7 @@ FocusScope {
                 iconName: "cog"
                 iconSize: 17
                 stroke: 1.6
-                tip: "Open Settings"
+                tip: qsTr("Open Settings")
                 onClicked: flyout.quick.openSettings("")
             }
         }

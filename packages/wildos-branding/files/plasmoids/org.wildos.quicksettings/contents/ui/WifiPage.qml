@@ -45,7 +45,7 @@ FocusScope {
                 hiddenName.text = "";
                 hiddenPassword.text = "";
             } else {
-                page.failure = "Couldn't join that network. Check its name and password, and that it's in range.";
+                page.failure = qsTr("Couldn't join that network. Check its name and password, and that it's in range.");
                 failureTimer.restart();
             }
         }
@@ -77,7 +77,7 @@ FocusScope {
         target: page.network
         function onActivationFailed(message) {
             // NetworkManager's own wording is technical, so say it plainly.
-            page.failure = "That did not work. Check the password and try again.";
+            page.failure = qsTr("That did not work. Check the password and try again.");
             failureTimer.restart();
         }
     }
@@ -99,8 +99,8 @@ FocusScope {
         Banner {
             Layout.fillWidth: true
             visible: page.network !== null && page.network.portal
-            text: "This network needs you to sign in."
-            actionText: "Open sign-in page"
+            text: qsTr("This network needs you to sign in.")
+            actionText: qsTr("Open sign-in page")
             onAction: {
                 Qt.openUrlExternally(page.network.networkCheckUrl);
                 page.quick.expanded = false;
@@ -154,11 +154,11 @@ FocusScope {
                     title: model.ItemUniqueName
                     active: connState === PlasmaNM.Enums.Activated
                     expanded: page.openRow === index
-                    subtitle: connState === PlasmaNM.Enums.Activated ? (secured ? "Connected, secured" : "Connected")
-                        : connState === PlasmaNM.Enums.Activating ? "Connecting"
-                        : connState === PlasmaNM.Enums.Deactivating ? "Disconnecting"
-                        : saved ? "Saved"
-                        : secured ? "Secured" : "Open"
+                    subtitle: connState === PlasmaNM.Enums.Activated ? (secured ? qsTr("Connected, secured") : qsTr("Connected"))
+                        : connState === PlasmaNM.Enums.Activating ? qsTr("Connecting")
+                        : connState === PlasmaNM.Enums.Deactivating ? qsTr("Disconnecting")
+                        : saved ? qsTr("Saved")
+                        : secured ? qsTr("Secured") : qsTr("Open")
                     icon: Component {
                         WifiGlyph {
                             bars: row.model.Signal >= 70 ? 3 : row.model.Signal >= 45 ? 2 : row.model.Signal >= 20 ? 1 : 0
@@ -205,8 +205,8 @@ FocusScope {
                         revealable: true
                         UI.NoPaste {}
                         inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
-                        placeholderText: "Password"
-                        Accessible.name: "Password for " + row.title
+                        placeholderText: qsTr("Password")
+                        Accessible.name: qsTr("Password for %1").arg(row.title)
                         onAccepted: {
                             if (connectButton.enabled) {
                                 row.connect();
@@ -224,7 +224,7 @@ FocusScope {
                             Layout.fillWidth: true
                             visible: row.connState === PlasmaNM.Enums.Deactivated
                             kind: "primary"
-                            text: "Connect"
+                            text: qsTr("Connect")
                             // WPA needs 8 to 63 characters; WEP keys are shorter.
                             enabled: !password.visible || password.text.length >= (row.security === PlasmaNM.Enums.StaticWep ? 5 : 8)
                             onClicked: row.connect()
@@ -234,7 +234,7 @@ FocusScope {
                             size: "small"
                             Layout.fillWidth: true
                             visible: row.connState !== PlasmaNM.Enums.Deactivated
-                            text: row.connState === PlasmaNM.Enums.Activating ? "Cancel" : "Disconnect"
+                            text: row.connState === PlasmaNM.Enums.Activating ? qsTr("Cancel") : qsTr("Disconnect")
                             onClicked: {
                                 page.network.deactivate(row.model.ConnectionPath, row.model.DevicePath);
                                 page.openRow = -1;
@@ -245,7 +245,7 @@ FocusScope {
                             size: "small"
                             Layout.fillWidth: true
                             visible: row.saved
-                            text: "Forget"
+                            text: qsTr("Forget")
                             onClicked: {
                                 page.network.forget(row.model.ConnectionPath);
                                 page.openRow = -1;
@@ -262,18 +262,18 @@ FocusScope {
                 visible: !list.visible && !page.joiningHidden
                 iconPath: page.network !== null && page.network.flightMode && !page.network.wifiEnabled ? Icons.flight : Icons.wifi
                 iconFill: page.network !== null && page.network.flightMode && !page.network.wifiEnabled ? "" : Icons.wifiDot
-                heading: page.network === null ? "Wi-Fi is not available"
-                    : !page.network.wifiEnabled && page.network.flightMode ? "Flight mode is on"
-                    : !page.network.wifiEnabled ? "Wi-Fi is off"
-                    : page.network.scanning ? "Looking for networks" : "No networks found"
-                explanation: page.network === null ? "Network management isn't running, so Wi-Fi can't be used right now."
-                    : !page.network.wifiEnabled && page.network.flightMode ? "Wireless connections are off. Turn off flight mode to use Wi-Fi."
-                    : !page.network.wifiEnabled ? "Turn it on to see networks nearby."
-                    : "Move closer to your router, or check it's switched on. You can also plug in a network cable."
+                heading: page.network === null ? qsTr("Wi-Fi is not available")
+                    : !page.network.wifiEnabled && page.network.flightMode ? qsTr("Flight mode is on")
+                    : !page.network.wifiEnabled ? qsTr("Wi-Fi is off")
+                    : page.network.scanning ? qsTr("Looking for networks") : qsTr("No networks found")
+                explanation: page.network === null ? qsTr("Network management isn't running, so Wi-Fi can't be used right now.")
+                    : !page.network.wifiEnabled && page.network.flightMode ? qsTr("Wireless connections are off. Turn off flight mode to use Wi-Fi.")
+                    : !page.network.wifiEnabled ? qsTr("Turn it on to see networks nearby.")
+                    : qsTr("Move closer to your router, or check it's switched on. You can also plug in a network cable.")
                 actionText: page.network === null ? ""
-                    : !page.network.wifiEnabled && page.network.flightMode ? "Turn off flight mode"
-                    : !page.network.wifiEnabled ? "Turn on Wi-Fi"
-                    : "Search again"
+                    : !page.network.wifiEnabled && page.network.flightMode ? qsTr("Turn off flight mode")
+                    : !page.network.wifiEnabled ? qsTr("Turn on Wi-Fi")
+                    : qsTr("Search again")
                 busy: page.network !== null && page.network.wifiEnabled && page.network.scanning
                 onAction: {
                     if (!page.network.wifiEnabled && page.network.flightMode) {
@@ -295,7 +295,7 @@ FocusScope {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Join a hidden network"
+                    text: qsTr("Join a hidden network")
                     size: 15
                     font.weight: UI.Style.weightSemiBold
                     Accessible.role: Accessible.Heading
@@ -303,7 +303,7 @@ FocusScope {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Type the network's name exactly as it was set up on the router."
+                    text: qsTr("Type the network's name exactly as it was set up on the router.")
                     color: UI.Style.inkMuted
                     wrapMode: Text.WordWrap
                     elide: Text.ElideNone
@@ -312,7 +312,7 @@ FocusScope {
                 UI.TextField {
                     id: hiddenName
                     Layout.fillWidth: true
-                    placeholderText: "Network name"
+                    placeholderText: qsTr("Network name")
                     onAccepted: hiddenPassword.forceActiveFocus()
                 }
 
@@ -321,7 +321,7 @@ FocusScope {
                     Layout.fillWidth: true
                     revealable: true
                     UI.NoPaste {}
-                    placeholderText: "Password, if it has one"
+                    placeholderText: qsTr("Password, if it has one")
                     inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                     onAccepted: {
                         if (joinButton.enabled) {
@@ -335,14 +335,14 @@ FocusScope {
                     spacing: 8
 
                     UI.Button {
-                        text: "Cancel"
+                        text: qsTr("Cancel")
                         onClicked: page.joiningHidden = false
                     }
 
                     UI.Button {
                         id: joinButton
                         kind: "primary"
-                        text: "Join"
+                        text: qsTr("Join")
                         busy: page.joinBusy
                         enabled: hiddenName.text.length > 0 && !page.joinBusy
                             && (hiddenPassword.text.length === 0 || hiddenPassword.text.length >= 8)
@@ -359,7 +359,7 @@ FocusScope {
             UI.LinkButton {
                 Layout.leftMargin: -4
                 visible: !page.joiningHidden && page.network !== null && page.network.wifiEnabled
-                text: "Join a hidden network"
+                text: qsTr("Join a hidden network")
                 onClicked: {
                     page.joiningHidden = true;
                     hiddenName.forceActiveFocus();
@@ -372,7 +372,7 @@ FocusScope {
 
             UI.LinkButton {
                 Layout.rightMargin: -4
-                text: "Network settings"
+                text: qsTr("Network settings")
                 onClicked: page.quick.openSettings("network")
             }
         }

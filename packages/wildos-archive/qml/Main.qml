@@ -17,6 +17,8 @@ UI.AppWindow {
     // archive (Files' Compress...).
     property string startPath
     property var compressUrls: []
+    // The row being dragged out, while its files are got ready.
+    property int dragRow: -1
     // Still on the start view, so ArchiveApp may open an archive here.
     readonly property bool idle: archive.state === "empty" && !newDialog.visible
 
@@ -24,6 +26,9 @@ UI.AppWindow {
     readonly property bool ready: archive.state === "ready"
 
     objectName: "main"
+    // Named, since an Extract here window can be the first one Archive
+    // makes, and every archive window opens at the same size.
+    stateKey: "main"
     width: 1384
     height: 802
     minimumWidth: 940
@@ -77,6 +82,13 @@ UI.AppWindow {
     Archive {
         id: archive
         onPasswordNeeded: wrong => passwordDialog.ask(wrong)
+        onDragReady: urls => {
+            const row = list.itemAtIndex(window.dragRow);
+            window.dragRow = -1;
+            if (row) {
+                row.carry(urls);
+            }
+        }
         onFinished: (job, ok, heading, message, details) => {
             if (heading.length === 0) {
                 window.say(message);
@@ -103,6 +115,10 @@ UI.AppWindow {
         anchors.fill: parent
         keys: ["text/uri-list"]
         onDropped: drop => {
+            // Rows dragged out of this window and let go over it again.
+            if (drop.source) {
+                return;
+            }
             if (drop.hasUrls && drop.urls.length > 0) {
                 if (window.ready) {
                     // Dropped on an open archive: a new archive with both.
@@ -121,10 +137,9 @@ UI.AppWindow {
 
         UI.TitleBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
+            tall: true
             frame: window.frame
             showTitle: false
-            buttons.buttonHeight: 44
 
             // The title bar puts its content 16px in; the board's icon is 14.
             Row {
@@ -600,6 +615,18 @@ UI.AppWindow {
                     delegate: EntryRow {
                         id: entryRow
                         width: ListView.view.width
+                        draggable: !archive.lockedFormat && kind !== "unsafe"
+                        onDragRequested: {
+                            if (archive.busy) {
+                                return;
+                            }
+                            list.currentIndex = index;
+                            if (!checked) {
+                                archive.select(index, 0);
+                            }
+                            window.dragRow = index;
+                            archive.extractForDrag(index);
+                        }
                         onPressed: modifiers => {
                             list.currentIndex = index;
                             list.forceActiveFocus();
@@ -814,7 +841,6 @@ UI.AppWindow {
         UI.TextField {
             id: passwordField
             Layout.fillWidth: true
-            echoMode: TextInput.Password
             revealable: true
             placeholderText: qsTr("Password")
             onTextEdited: error = false

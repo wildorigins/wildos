@@ -19,7 +19,7 @@ HomeCard {
     property bool compact: true
     property date now: new Date()
 
-    readonly property var levelNames: ({ standard: "Standard", strict: "Strict", maximum: "Maximum" })
+    readonly property var levelNames: ({ standard: qsTr("Standard"), strict: qsTr("Strict"), maximum: qsTr("Maximum") })
 
     // On Home the three most important, needs-a-look first; on Privacy and
     // security the three the design names plus anything else needing a look.
@@ -49,27 +49,27 @@ HomeCard {
 
     function rowValue(item) {
         if (!compact && item.key === "updates" && Protection.status.updates === "current" && System.updatePolicy.auto === true) {
-            return "Up to date, installed automatically";
+            return qsTr("Up to date, installed automatically");
         }
         return Protection.value(item);
     }
 
     readonly property string summary: {
         if (!Protection.checked) {
-            return "Couldn't check.";
+            return qsTr("Couldn't check.");
         }
         const n = Protection.attention.length;
         // 32-bit apps lower protection by choice, so the card says so
         // rather than "All on".
         if (n === 0 && Protection.compat32) {
-            return "32-bit apps allowed.";
+            return qsTr("32-bit apps allowed.");
         }
-        return n === 0 ? "All on." : n === 1 ? "1 needs a look." : n + " need a look.";
+        return n === 0 ? qsTr("All on.") : n === 1 ? qsTr("1 needs a look.") : qsTr("%1 need a look.").arg(n);
     }
 
     iconName: "shield-check"
     headerPadding: compact ? 11 : 13
-    title: "Security"
+    title: qsTr("Security")
     caption: {
         card.now;
         if (Protection.busy) {
@@ -82,11 +82,11 @@ HomeCard {
             if (!level) {
                 return summary;
             }
-            return Protection.allOn ? summary + " Protection level: " + level : summary + " " + level + " protection";
+            return Protection.allOn ? qsTr("%1 Protection level: %2").arg(summary).arg(level) : qsTr("%1 %2 protection").arg(summary).arg(level);
         }
         const when = Format.ago(System.securityChecked);
         const note = Protection.checkNote.length > 0 ? " " + Protection.checkNote : "";
-        return (when.length > 0 ? summary + " Checked " + when + "." : summary) + note;
+        return (when.length > 0 ? qsTr("%1 Checked %2.").arg(summary).arg(when) : summary) + note;
     }
 
     Timer {
@@ -98,7 +98,7 @@ HomeCard {
 
     trailing: UI.Button {
         size: "small"
-        text: Protection.busy ? "Checking" : "Check now"
+        text: Protection.busy ? qsTr("Checking") : qsTr("Check now")
         busy: Protection.busy
         implicitHeight: 30
         onClicked: Protection.checkNow()
@@ -131,9 +131,9 @@ HomeCard {
         chevron: false
         enabled: !Protection.busy
         rowHeight: card.compact ? 30 : 40
-        title: Protection.busy ? "Results show here in a moment" : "Wild OS couldn't read your protection"
+        title: Protection.busy ? qsTr("Results show here in a moment") : qsTr("Wild OS couldn't read your protection")
         titleColor: UI.Style.inkMuted
-        value: Protection.busy ? "" : "Check again"
+        value: Protection.busy ? "" : qsTr("Check again")
         valueColor: UI.Style.accentText
         onClicked: Protection.checkNow()
     }
@@ -144,16 +144,18 @@ HomeCard {
         title: {
             const rest = card.hiddenAttention;
             if (rest.length === 1) {
-                return rest[0].title + " needs a look";
+                return qsTr("%1 needs a look").arg(rest[0].title);
             }
             if (rest.length > 1) {
-                return rest.length + " more need a look";
+                return qsTr("%1 more need a look").arg(rest.length);
             }
             const others = card.hidden.length - 1;
             const allOn = card.hidden.every(item => item.key !== "compat32" && (Protection.status[item.key] === "on" || Protection.status[item.key] === "current"));
             const head = card.hidden.length > 0 ? card.hidden[0].title : "";
-            const more = others > 0 ? head + " and " + others + " more" : head;
-            return more + (allOn ? (others > 0 ? ", all on" : ", on") : ", all fine");
+            if (others > 0) {
+                return (allOn ? qsTr("%1 and %2 more, all on") : qsTr("%1 and %2 more, all fine")).arg(head).arg(others);
+            }
+            return (allOn ? qsTr("%1, on") : qsTr("%1, all fine")).arg(head);
         }
         titleColor: card.hiddenAttention.length > 0 ? UI.Style.warning : UI.Style.accentText
         onClicked: Navigator.open("privacy")

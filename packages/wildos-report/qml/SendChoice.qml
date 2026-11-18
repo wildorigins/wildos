@@ -16,7 +16,7 @@ Rectangle {
     signal clicked()
 
     implicitHeight: content.implicitHeight + 28
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: checked ? UI.Style.accentAlpha(0.08, 0.06) : mouse.containsMouse ? UI.Style.tone(0.05) : UI.Style.tone(0.03)
     border.width: checked ? 2 : 1
     border.color: checked ? UI.Style.accent : Look.hairline

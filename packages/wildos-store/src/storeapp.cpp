@@ -15,6 +15,7 @@
 #include <KService>
 #include <KSycoca>
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -141,18 +142,18 @@ struct PermissionDef {
 const QList<PermissionDef> &permissionDefs()
 {
     static const QList<PermissionDef> defs = {
-        {"filesystems", "fs", "host", "Every file on this computer", false},
-        {"filesystems", "fs", "home", "Your home folder", false},
-        {"filesystems", "fs", "xdg-documents", "Your Documents folder", false},
-        {"filesystems", "fs", "xdg-pictures", "Your Pictures folder", false},
-        {"filesystems", "fs", "xdg-music", "Your Music folder", false},
-        {"filesystems", "fs", "xdg-videos", "Your Videos folder", false},
-        {"filesystems", "fs", "xdg-download", "Your Downloads folder", false},
-        {"filesystems", "fs", "xdg-desktop", "Your Desktop", false},
-        {"sockets", "sockets", "cups", "Printer", false},
-        {"shared", "shared", "network", "Internet", true},
-        {"devices", "devices", "all", "Camera and other devices", false},
-        {"sockets", "sockets", "pulseaudio", "Sound and microphone", false},
+        {"filesystems", "fs", "host", QT_TRANSLATE_NOOP("StoreApp", "Every file on this computer"), false},
+        {"filesystems", "fs", "home", QT_TRANSLATE_NOOP("StoreApp", "Your home folder"), false},
+        {"filesystems", "fs", "xdg-documents", QT_TRANSLATE_NOOP("StoreApp", "Your Documents folder"), false},
+        {"filesystems", "fs", "xdg-pictures", QT_TRANSLATE_NOOP("StoreApp", "Your Pictures folder"), false},
+        {"filesystems", "fs", "xdg-music", QT_TRANSLATE_NOOP("StoreApp", "Your Music folder"), false},
+        {"filesystems", "fs", "xdg-videos", QT_TRANSLATE_NOOP("StoreApp", "Your Videos folder"), false},
+        {"filesystems", "fs", "xdg-download", QT_TRANSLATE_NOOP("StoreApp", "Your Downloads folder"), false},
+        {"filesystems", "fs", "xdg-desktop", QT_TRANSLATE_NOOP("StoreApp", "Your Desktop"), false},
+        {"sockets", "sockets", "cups", QT_TRANSLATE_NOOP("StoreApp", "Printer"), false},
+        {"shared", "shared", "network", QT_TRANSLATE_NOOP("StoreApp", "Internet"), true},
+        {"devices", "devices", "all", QT_TRANSLATE_NOOP("StoreApp", "Camera and other devices"), false},
+        {"sockets", "sockets", "pulseaudio", QT_TRANSLATE_NOOP("StoreApp", "Sound and microphone"), false},
     };
     return defs;
 }
@@ -382,7 +383,7 @@ QString StoreApp::categoryLabel() const
         return {};
     }
     if (r->categories.contains(QStringLiteral("Game"))) {
-        return QStringLiteral("Games");
+        return tr("Games");
     }
     if (r->curated && !r->curated->category.isEmpty()) {
         return m_catalog->categoryLabel(r->curated->category);
@@ -517,14 +518,14 @@ QString StoreApp::sizeText() const
     const QLocale locale;
     if (isInstalled()) {
         const qint64 size = m_catalog->installedSize(m_key);
-        return size > 0 ? QStringLiteral("Uses %1").arg(locale.formattedDataSize(size, 0, QLocale::DataSizeTraditionalFormat)) : QString();
+        return size > 0 ? tr("Uses %1").arg(locale.formattedDataSize(size, 0, QLocale::DataSizeTraditionalFormat)) : QString();
     }
     const AppState &s = m_catalog->state(m_key);
     // PackageKit sizes the Wild OS package; Flathub's figure is everything
     // the install would download, shared parts included.
     const qint64 download = source() == QLatin1String("apt") ? s.downloadSize : s.planTotal;
     if (download > 0) {
-        return QStringLiteral("About %1 to download").arg(locale.formattedDataSize(download, 0, QLocale::DataSizeTraditionalFormat));
+        return tr("About %1 to download").arg(locale.formattedDataSize(download, 0, QLocale::DataSizeTraditionalFormat));
     }
     return {};
 }
@@ -536,7 +537,7 @@ QString StoreApp::progressText() const
         return s.error;
     }
     if (s.queued) {
-        return QStringLiteral("Waiting for the apps before it");
+        return tr("Waiting for the apps before it");
     }
     if (!s.busy) {
         return {};
@@ -546,22 +547,22 @@ QString StoreApp::progressText() const
         return locale.formattedDataSize(bytes, 0, QLocale::DataSizeTraditionalFormat);
     };
     if (s.phase == QLatin1String("auth")) {
-        return QStringLiteral("Waiting for the administrator password");
+        return tr("Waiting for the administrator password");
     }
     if (s.action == QLatin1String("remove")) {
-        return QStringLiteral("Uninstalling");
+        return tr("Uninstalling");
     }
     const bool downloading = s.phase == QLatin1String("download") && s.totalBytes > 0 && s.doneBytes < s.totalBytes;
     if (downloading) {
-        return QStringLiteral("Downloading %1 of %2").arg(size(qMax<qint64>(0, s.doneBytes)), size(s.totalBytes));
+        return tr("Downloading %1 of %2").arg(size(qMax<qint64>(0, s.doneBytes)), size(s.totalBytes));
     }
     if (s.phase == QLatin1String("download")) {
-        return QStringLiteral("Downloading");
+        return tr("Downloading");
     }
     if (s.phase == QLatin1String("install") || s.progress >= 99) {
-        return s.action == QLatin1String("update") ? QStringLiteral("Updating") : QStringLiteral("Installing");
+        return s.action == QLatin1String("update") ? tr("Updating") : tr("Installing");
     }
-    return QStringLiteral("Getting ready");
+    return tr("Getting ready");
 }
 
 QString StoreApp::sharedNote() const
@@ -578,9 +579,9 @@ QString StoreApp::sharedNote() const
     }
     if (!s.busy && !s.queued && s.planShared > 0) {
         const QLocale locale;
-        return QStringLiteral("Includes %1 (%2), shared with other apps").arg(runtime, locale.formattedDataSize(s.planShared, 0, QLocale::DataSizeTraditionalFormat));
+        return tr("Includes %1 (%2), shared with other apps").arg(runtime, locale.formattedDataSize(s.planShared, 0, QLocale::DataSizeTraditionalFormat));
     }
-    return QStringLiteral("Includes %1, shared with other apps").arg(runtime);
+    return tr("Includes %1, shared with other apps").arg(runtime);
 }
 
 bool StoreApp::cancellable() const
@@ -663,26 +664,26 @@ struct Reach {
 const QList<Reach> &reaches()
 {
     static const QList<Reach> list = {
-        {"filesystems", "host", "drive", "Every file on this computer", "Including other people's files it can open"},
-        {"filesystems", "home", "home", "Your home folder", "All your documents, pictures and settings"},
-        {"filesystems", "xdg-documents", "folder", "Documents folder", "To open and save documents there"},
-        {"filesystems", "xdg-pictures", "image", "Pictures folder", "To open and save pictures there"},
-        {"filesystems", "xdg-music", "music", "Music folder", "To open and save music there"},
-        {"filesystems", "xdg-videos", "film", "Videos folder", "To open and save videos there"},
-        {"filesystems", "xdg-download", "download", "Downloads folder", "To open and save downloads there"},
-        {"filesystems", "xdg-desktop", "desktop", "Desktop", "To open and save files there"},
-        {"devices", "dri", "gpu", "Your graphics card", ""},
-        {"devices", "all", "camera", "Camera and other devices", "Webcams, game controllers and USB devices"},
-        {"sockets", "pulseaudio", "mic", "Sound and microphone", "To play sound and hear your microphone"},
-        {"sockets", "cups", "printer", "Printer", "To print"},
-        {"shared", "network", "globe", "The internet", "To go online"},
+        {"filesystems", "host", "drive", QT_TRANSLATE_NOOP("StoreApp", "Every file on this computer"), QT_TRANSLATE_NOOP("StoreApp", "Including other people's files it can open")},
+        {"filesystems", "home", "home", QT_TRANSLATE_NOOP("StoreApp", "Your home folder"), QT_TRANSLATE_NOOP("StoreApp", "All your documents, pictures and settings")},
+        {"filesystems", "xdg-documents", "folder", QT_TRANSLATE_NOOP("StoreApp", "Documents folder"), QT_TRANSLATE_NOOP("StoreApp", "To open and save documents there")},
+        {"filesystems", "xdg-pictures", "image", QT_TRANSLATE_NOOP("StoreApp", "Pictures folder"), QT_TRANSLATE_NOOP("StoreApp", "To open and save pictures there")},
+        {"filesystems", "xdg-music", "music", QT_TRANSLATE_NOOP("StoreApp", "Music folder"), QT_TRANSLATE_NOOP("StoreApp", "To open and save music there")},
+        {"filesystems", "xdg-videos", "film", QT_TRANSLATE_NOOP("StoreApp", "Videos folder"), QT_TRANSLATE_NOOP("StoreApp", "To open and save videos there")},
+        {"filesystems", "xdg-download", "download", QT_TRANSLATE_NOOP("StoreApp", "Downloads folder"), QT_TRANSLATE_NOOP("StoreApp", "To open and save downloads there")},
+        {"filesystems", "xdg-desktop", "desktop", QT_TRANSLATE_NOOP("StoreApp", "Desktop"), QT_TRANSLATE_NOOP("StoreApp", "To open and save files there")},
+        {"devices", "dri", "gpu", QT_TRANSLATE_NOOP("StoreApp", "Your graphics card"), ""},
+        {"devices", "all", "camera", QT_TRANSLATE_NOOP("StoreApp", "Camera and other devices"), QT_TRANSLATE_NOOP("StoreApp", "Webcams, game controllers and USB devices")},
+        {"sockets", "pulseaudio", "mic", QT_TRANSLATE_NOOP("StoreApp", "Sound and microphone"), QT_TRANSLATE_NOOP("StoreApp", "To play sound and hear your microphone")},
+        {"sockets", "cups", "printer", QT_TRANSLATE_NOOP("StoreApp", "Printer"), QT_TRANSLATE_NOOP("StoreApp", "To print")},
+        {"shared", "network", "globe", QT_TRANSLATE_NOOP("StoreApp", "The internet"), QT_TRANSLATE_NOOP("StoreApp", "To go online")},
     };
     return list;
 }
 
 QVariantMap reachEntry(const Reach &r)
 {
-    return {{QStringLiteral("icon"), QString::fromLatin1(r.icon)}, {QStringLiteral("label"), QString::fromLatin1(r.label)}};
+    return {{QStringLiteral("icon"), QString::fromLatin1(r.icon)}, {QStringLiteral("label"), QCoreApplication::translate("StoreApp", r.label)}};
 }
 }
 
@@ -713,7 +714,7 @@ QVariantList StoreApp::canReach() const
     }
     const Access a = accessOf(m_catalog->state(m_key).flatpakMetadata, flatpakOverridePath());
     // The file picker always works: it is how a sandboxed app opens anything.
-    out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("file")}, {QStringLiteral("label"), QStringLiteral("Files you open with it")}};
+    out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("file")}, {QStringLiteral("label"), tr("Files you open with it")}};
     const bool wholeHome = a.granted.value(QStringLiteral("filesystems")).contains(QStringLiteral("home"))
         || a.granted.value(QStringLiteral("filesystems")).contains(QStringLiteral("host"));
     for (const Reach &r : reaches()) {
@@ -725,7 +726,7 @@ QVariantList StoreApp::canReach() const
         }
     }
     if (a.busNames.contains(QStringLiteral("org.freedesktop.GeoClue2"))) {
-        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("location")}, {QStringLiteral("label"), QStringLiteral("Your location")}};
+        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("location")}, {QStringLiteral("label"), tr("Your location")}};
     }
     return out;
 }
@@ -741,20 +742,20 @@ QVariantList StoreApp::cantReach() const
         return a.granted.value(QString::fromLatin1(group)).contains(QString::fromLatin1(base));
     };
     if (!has("shared", "network")) {
-        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("globe")}, {QStringLiteral("label"), QStringLiteral("The internet")}};
+        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("globe")}, {QStringLiteral("label"), tr("The internet")}};
     }
     const bool camera = has("devices", "all");
     const bool microphone = has("sockets", "pulseaudio");
     if (!camera && !microphone) {
-        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("camera")}, {QStringLiteral("label"), QStringLiteral("Camera and microphone")}};
+        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("camera")}, {QStringLiteral("label"), tr("Camera and microphone")}};
     } else if (!camera) {
-        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("camera")}, {QStringLiteral("label"), QStringLiteral("Your camera")}};
+        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("camera")}, {QStringLiteral("label"), tr("Your camera")}};
     }
     if (!a.busNames.contains(QStringLiteral("org.freedesktop.GeoClue2"))) {
-        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("location")}, {QStringLiteral("label"), QStringLiteral("Your location")}};
+        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("location")}, {QStringLiteral("label"), tr("Your location")}};
     }
     if (!has("filesystems", "home") && !has("filesystems", "host")) {
-        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("home")}, {QStringLiteral("label"), QStringLiteral("The rest of your files")}};
+        out << QVariantMap{{QStringLiteral("icon"), QStringLiteral("home")}, {QStringLiteral("label"), tr("The rest of your files")}};
     }
     return out.mid(0, 3);
 }
@@ -785,8 +786,8 @@ QVariantList StoreApp::consentItems() const
         out << QVariantMap{
             {QStringLiteral("token"), token},
             {QStringLiteral("icon"), QString::fromLatin1(r.icon)},
-            {QStringLiteral("label"), QString::fromLatin1(r.label)},
-            {QStringLiteral("detail"), QString::fromLatin1(r.detail)},
+            {QStringLiteral("label"), tr(r.label)},
+            {QStringLiteral("detail"), tr(r.detail)},
             {QStringLiteral("allowed"), a.granted.value(QString::fromLatin1(r.group)).contains(QString::fromLatin1(r.base))},
             {QStringLiteral("required"), false},
         };
@@ -866,13 +867,13 @@ QString StoreApp::statusLine() const
 {
     const QString state = buttonState();
     if (state == QLatin1String("nospace")) {
-        return QStringLiteral("Needs %1 free").arg(m_catalog->sizeText(m_catalog->state(m_key).planInstalled));
+        return tr("Needs %1 free").arg(m_catalog->sizeText(m_catalog->state(m_key).planInstalled));
     }
     if (state == QLatin1String("retry")) {
-        return QStringLiteral("Download failed");
+        return tr("Download failed");
     }
     if (state == QLatin1String("paused")) {
-        return QStringLiteral("Paused");
+        return tr("Paused");
     }
     return {};
 }
@@ -886,9 +887,9 @@ QString StoreApp::bytesText() const
     const QLocale locale;
     // Both in the larger unit, as "412 of 1,080 MB" reads.
     if (s.totalBytes >= qint64(10) * 1000 * 1000 * 1000) {
-        return QStringLiteral("%1 of %2 GB").arg(locale.toString(double(s.doneBytes) / 1e9, 'f', 1), locale.toString(double(s.totalBytes) / 1e9, 'f', 1));
+        return tr("%1 of %2 GB").arg(locale.toString(double(s.doneBytes) / 1e9, 'f', 1), locale.toString(double(s.totalBytes) / 1e9, 'f', 1));
     }
-    return QStringLiteral("%1 of %2 MB").arg(locale.toString(qRound64(double(s.doneBytes) / 1e6)), locale.toString(qMax<qint64>(1, qRound64(double(s.totalBytes) / 1e6))));
+    return tr("%1 of %2 MB").arg(locale.toString(qRound64(double(s.doneBytes) / 1e6)), locale.toString(qMax<qint64>(1, qRound64(double(s.totalBytes) / 1e6))));
 }
 
 QString StoreApp::timeLeftText() const
@@ -898,15 +899,15 @@ QString StoreApp::timeLeftText() const
         return {};
     }
     if (left < 45) {
-        return QStringLiteral("Less than a minute left");
+        return tr("Less than a minute left");
     }
     if (left < 90) {
-        return QStringLiteral("About a minute left");
+        return tr("About a minute left");
     }
     if (left < 90 * 60) {
-        return QStringLiteral("About %1 minutes left").arg((left + 30) / 60);
+        return tr("About %1 minutes left").arg((left + 30) / 60);
     }
-    return QStringLiteral("About %1 hours left").arg((left + 1800) / 3600);
+    return tr("About %1 hours left").arg((left + 1800) / 3600);
 }
 
 QString StoreApp::downloadText() const
@@ -1047,7 +1048,7 @@ QVariantList StoreApp::permissions() const
         const bool allowed = user >= 0 ? user == 1 : def == 1;
         out << QVariantMap{
             {QStringLiteral("token"), QString::fromLatin1(d.group) + QLatin1Char(':') + base},
-            {QStringLiteral("label"), QString::fromLatin1(d.label)},
+            {QStringLiteral("label"), tr(d.label)},
             {QStringLiteral("allowed"), allowed},
             {QStringLiteral("editable"), editable},
             {QStringLiteral("fixed"), false},
@@ -1057,7 +1058,7 @@ QVariantList StoreApp::permissions() const
         if (qstrcmp(d.key, "fs") == 0 && base == QLatin1String("xdg-desktop")) {
             out << QVariantMap{
                 {QStringLiteral("token"), QString()},
-                {QStringLiteral("label"), QStringLiteral("Files you open with it")},
+                {QStringLiteral("label"), tr("Files you open with it")},
                 {QStringLiteral("allowed"), true},
                 {QStringLiteral("editable"), false},
                 {QStringLiteral("fixed"), true},
@@ -1075,7 +1076,7 @@ QVariantList StoreApp::permissions() const
         }
         out.insert(at, QVariantMap{
                            {QStringLiteral("token"), QString()},
-                           {QStringLiteral("label"), QStringLiteral("Files you open with it")},
+                           {QStringLiteral("label"), tr("Files you open with it")},
                            {QStringLiteral("allowed"), true},
                            {QStringLiteral("editable"), false},
                            {QStringLiteral("fixed"), true},

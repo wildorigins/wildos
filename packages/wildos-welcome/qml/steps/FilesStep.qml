@@ -17,23 +17,23 @@ StepPage {
     readonly property var source: WindowsImport.sources[WindowsImport.current]
     readonly property bool tooBig: WindowsImport.selectedBytes > WindowsImport.freeBytes
 
-    title: "Bring your files across"
-    subtitle: found ? "We found Windows on this computer. Choose what to copy into Wild OS. Nothing is removed from Windows."
-                    : state === "scanning" ? "Looking for Windows on this computer. Nothing on it will be changed."
-                    : "Copy your documents, photos and music from Windows. Nothing is removed from Windows."
+    title: qsTr("Bring your files across")
+    subtitle: found ? qsTr("We found Windows on this computer. Choose what to copy into Wild OS. Nothing is removed from Windows.")
+                    : state === "scanning" ? qsTr("Looking for Windows on this computer. Nothing on it will be changed.")
+                    : qsTr("Copy your documents, photos and music from Windows. Nothing is removed from Windows.")
     note: {
         if (WindowsImport.started) {
-            return WindowsImport.planning ? "Copies in the background once you're signed in. You'll get a notification when it's done."
-                                          : "Copying in the background. You'll get a notification when it's done.";
+            return WindowsImport.planning ? qsTr("Copies in the background once you're signed in. You'll get a notification when it's done.")
+                                          : qsTr("Copying in the background. You'll get a notification when it's done.");
         }
         if (!found) {
             return "";
         }
         if (WindowsImport.sizing) {
-            return "Working out how much there is to copy.";
+            return qsTr("Working out how much there is to copy.");
         }
         if (tooBig) {
-            return "That's more than the " + WindowsImport.formatBytes(WindowsImport.freeBytes, true) + " free on this computer. Untick something to make room.";
+            return qsTr("That's more than the %1 free on this computer. Untick something to make room.").arg(WindowsImport.formatBytes(WindowsImport.freeBytes, true));
         }
         return WindowsImport.estimate();
     }
@@ -45,12 +45,12 @@ StepPage {
         UI.ListRow {
             minHeight: 78
             title: page.found ? page.source.label
-                : page.state === "scanning" ? "Looking for Windows"
-                : page.state === "locked" ? "Windows is locked"
-                : page.state === "error" ? "Windows can't be read right now"
-                : "No Windows found"
+                : page.state === "scanning" ? qsTr("Looking for Windows")
+                : page.state === "locked" ? qsTr("Windows is locked")
+                : page.state === "error" ? qsTr("Windows can't be read right now")
+                : qsTr("No Windows found")
             description: page.found ? page.source.detail
-                : page.state === "scanning" ? "This takes a few seconds."
+                : page.state === "scanning" ? qsTr("This takes a few seconds.")
                 : WindowsImport.message
 
             leading: Rectangle {
@@ -72,7 +72,7 @@ StepPage {
                 id: chooseButton
                 visible: (page.found && WindowsImport.sources.length > 1) || page.state === "error" || page.state === "locked"
                 enabled: !WindowsImport.started
-                text: page.found ? "Choose another drive" : "Look again"
+                text: page.found ? qsTr("Choose another drive") : qsTr("Look again")
                 dropDown: page.found
                 onClicked: {
                     if (page.found) {
@@ -103,8 +103,8 @@ StepPage {
                     minHeight: 50
                     title: modelData.name
                     status: modelData.detail ? modelData.detail
-                        : modelData.sized ? WindowsImport.formatBytes(modelData.size) + (modelData.also ? ", also from " + modelData.also : "")
-                        : "Measuring"
+                        : modelData.sized ? (modelData.also ? qsTr("%1, also from %2").arg(WindowsImport.formatBytes(modelData.size)).arg(modelData.also) : WindowsImport.formatBytes(modelData.size))
+                        : qsTr("Measuring")
                     interactive: true
                     enabled: modelData.enabled && !WindowsImport.started
                     Accessible.role: Accessible.CheckBox
@@ -129,7 +129,7 @@ StepPage {
 
     buttons: [
         UI.Button {
-            text: page.found && !WindowsImport.started ? "Skip" : "Back"
+            text: page.found && !WindowsImport.started ? qsTr("Skip") : qsTr("Back")
             onClicked: {
                 if (page.found && !WindowsImport.started) {
                     WindowsImport.release();
@@ -142,7 +142,7 @@ StepPage {
         UI.Button {
             id: primaryButton
             kind: "primary"
-            text: page.found && !WindowsImport.started ? "Copy and continue" : "Continue"
+            text: page.found && !WindowsImport.started ? qsTr("Copy and continue") : qsTr("Continue")
             enabled: !page.found || WindowsImport.started
                      || (!WindowsImport.sizing && !page.tooBig && WindowsImport.selectedBytes > 0)
                      || (!WindowsImport.sizing && WindowsImport.folders.some(f => f.key === "bookmarks" && f.checked))
@@ -165,7 +165,7 @@ StepPage {
         id: chooser
         minimumWidth: 320
         entries: WindowsImport.sources.map((source, index) => ({
-            text: source.label + ", user folder \"" + source.user + "\"",
+            text: qsTr("%1, user folder \"%2\"").arg(source.label).arg(source.user),
             icon: "drive",
             checked: index === WindowsImport.current,
             run: () => WindowsImport.choose(index)

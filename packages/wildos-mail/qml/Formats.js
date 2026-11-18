@@ -1,12 +1,15 @@
 // Dates and times in the regional format chosen in Settings > Language and
 // region (LC_TIME, which Qt.locale() follows), with day and month names in
-// English because the rest of Wild OS is in English. Times also follow the
+// the display language chosen in Settings (LANGUAGE), so a French Mail
+// says "lundi" whatever the regional format. Times also follow the
 // 12 or 24-hour clock chosen in Settings > Date and time, through UI, the
 // WildOS.UI import of the file that imports this one. The taskbar
 // clock's Formats.js works the same way.
 
 function names() {
-    return Qt.locale("en_GB");
+    const languages = Qt.locale().uiLanguages;
+    const first = languages.length > 0 ? languages[0] : "";
+    return first === "" || first === "C" || first.startsWith("en") ? Qt.locale("en_GB") : Qt.locale(first.replace("-", "_"));
 }
 
 function time(when) {

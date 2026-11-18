@@ -123,7 +123,8 @@ application/vnd.microsoft.portable-executable=org.wildos.run.desktop
 # Shortcuts Windows apps put on the shared Desktop open in Windows mode.
 application/x-ms-shortcut=org.wildos.winmode.shortcut.desktop
 
-# Documents and spreadsheets open in Write and Tables, under LibreOffice's
+# Documents, spreadsheets and presentations open in Write, Tables and Slides,
+# under LibreOffice's
 # launcher ids. Windows mode's "Open Windows files in Windows apps" writes
 # its own lines to the person's mimeapps.list, which win over these.
 application/vnd.openxmlformats-officedocument.wordprocessingml.document=libreoffice-writer.desktop
@@ -145,3 +146,14 @@ application/vnd.oasis.opendocument.spreadsheet=libreoffice-calc.desktop
 application/vnd.oasis.opendocument.spreadsheet-template=libreoffice-calc.desktop
 application/vnd.oasis.opendocument.spreadsheet-flat-xml=libreoffice-calc.desktop
 text/csv=libreoffice-calc.desktop
+application/vnd.openxmlformats-officedocument.presentationml.presentation=libreoffice-impress.desktop
+application/vnd.openxmlformats-officedocument.presentationml.slideshow=libreoffice-impress.desktop
+application/vnd.openxmlformats-officedocument.presentationml.template=libreoffice-impress.desktop
+application/vnd.ms-powerpoint.presentation.macroEnabled.12=libreoffice-impress.desktop
+application/vnd.ms-powerpoint.slideshow.macroEnabled.12=libreoffice-impress.desktop
+application/vnd.ms-powerpoint.template.macroEnabled.12=libreoffice-impress.desktop
+application/vnd.ms-powerpoint=libreoffice-impress.desktop
+application/mspowerpoint=libreoffice-impress.desktop
+application/vnd.oasis.opendocument.presentation=libreoffice-impress.desktop
+application/vnd.oasis.opendocument.presentation-template=libreoffice-impress.desktop
+application/vnd.oasis.opendocument.presentation-flat-xml=libreoffice-impress.desktop

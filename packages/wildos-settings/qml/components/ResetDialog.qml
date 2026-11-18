@@ -22,7 +22,7 @@ RecoveryDialog {
         open();
     }
 
-    title: "Reset Wild OS"
+    title: qsTr("Reset Wild OS")
     iconName: "rotate-ccw"
     dialogWidth: 520
 
@@ -34,18 +34,18 @@ RecoveryDialog {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Choose what happens to your files."
+            text: qsTr("Choose what happens to your files.")
             size: 13.5
             wrapMode: Text.Wrap
         }
 
         Repeater {
             model: [
-                { key: "keep", icon: "folder-check", title: "Keep my files",
-                  text: "The system and apps go back to how they were when installed. Your home folder, Mail and Windows mode stay." },
-                { key: "everything", icon: "trash-round", title: "Remove everything",
-                  text: Recovery.wipeFits ? "Wipes the whole disk and sets up encryption again with a new key. For selling or giving the PC away."
-                      : "Needs at least 4 GB of memory, because Wild OS runs from memory while the disk is wiped." }
+                { key: "keep", icon: "folder-check", title: qsTr("Keep my files"),
+                  text: qsTr("The system and apps go back to how they were when installed. Your home folder, Mail and Windows mode stay.") },
+                { key: "everything", icon: "trash-round", title: qsTr("Remove everything"),
+                  text: Recovery.wipeFits ? qsTr("Wipes the whole disk and sets up encryption again with a new key. For selling or giving the PC away.")
+                      : qsTr("Needs at least 4 GB of memory, because Wild OS runs from memory while the disk is wiped.") }
             ]
 
             T.AbstractButton {
@@ -155,7 +155,7 @@ RecoveryDialog {
                 spacing: 10
 
                 UI.Label {
-                    text: "REMOVED"
+                    text: qsTr("REMOVED")
                     size: 12.5
                     font.weight: UI.Style.weightSemiBold
                     color: UI.Style.inkSubtle
@@ -163,8 +163,8 @@ RecoveryDialog {
 
                 Repeater {
                     model: dialog.how === "keep"
-                        ? ["Apps you installed. A list goes on your Desktop so you can get them back.", "System settings, back to default"]
-                        : ["Everything on this PC: your files, apps, accounts and Windows mode", "The disk password and recovery key; you choose new ones"]
+                        ? [qsTr("Apps you installed. A list goes on your Desktop so you can get them back."), qsTr("System settings, back to default")]
+                        : [qsTr("Everything on this PC: your files, apps, accounts and Windows mode"), qsTr("The disk password and recovery key; you choose new ones")]
 
                     RowLayout {
                         required property string modelData
@@ -177,7 +177,7 @@ RecoveryDialog {
                             name: "x-mark"
                             size: 15
                             strokeWidth: 2.4
-                            color: "#ffc46a"
+                            color: UI.Style.warning
                         }
 
                         UI.Label {
@@ -200,14 +200,14 @@ RecoveryDialog {
                 spacing: 10
 
                 UI.Label {
-                    text: "KEPT"
+                    text: qsTr("KEPT")
                     size: 12.5
                     font.weight: UI.Style.weightSemiBold
                     color: UI.Style.inkSubtle
                 }
 
                 Repeater {
-                    model: ["Your home folder", "Mail, Calendar and Notes", "Windows mode and its apps", "Wi-Fi and your password"]
+                    model: [qsTr("Your home folder"), qsTr("Mail, Calendar and Notes"), qsTr("Windows mode and its apps"), qsTr("Wi-Fi and your password")]
 
                     RowLayout {
                         required property string modelData
@@ -220,7 +220,7 @@ RecoveryDialog {
                             name: "check"
                             size: 15
                             strokeWidth: 2.4
-                            color: "#5fd38d"
+                            color: UI.Style.success
                         }
 
                         UI.Label {
@@ -253,20 +253,20 @@ RecoveryDialog {
                 PathIcon {
                     name: "hard-drive"
                     size: 16
-                    color: "#5fd38d"
+                    color: UI.Style.success
                 }
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: Format.isValid(Recovery.lastBackup) ? "Last backup " + Format.day(Recovery.lastBackup) + " at " + Format.time(Recovery.lastBackup)
-                        : Recovery.backupInstalled ? "No backup yet" : "Back up anything that matters to you first"
+                    text: Format.isValid(Recovery.lastBackup) ? qsTr("Last backup %1 at %2").arg(Format.dayText(Recovery.lastBackup)).arg(Format.time(Recovery.lastBackup))
+                        : Recovery.backupInstalled ? qsTr("No backup yet") : qsTr("Back up anything that matters to you first")
                     size: 12.5
                     elide: Text.ElideRight
                 }
 
                 UI.LinkButton {
                     visible: Recovery.backupInstalled
-                    text: "Back up now"
+                    text: qsTr("Back up now")
                     onClicked: Recovery.openBackup()
                 }
             }
@@ -292,13 +292,13 @@ RecoveryDialog {
                 name: dialog.how === "keep" ? "rotate-ccw" : "trash-round"
                 size: 30
                 strokeWidth: 1.8
-                color: dialog.how === "keep" ? UI.Style.accent : "#ffc46a"
+                color: dialog.how === "keep" ? UI.Style.accent : UI.Style.warning
             }
         }
 
         UI.Label {
             Layout.alignment: Qt.AlignHCenter
-            text: dialog.how === "keep" ? "Ready to reset" : "Remove everything?"
+            text: dialog.how === "keep" ? qsTr("Ready to reset") : qsTr("Remove everything?")
             size: 18
             font.weight: UI.Style.weightMedium
         }
@@ -309,8 +309,8 @@ RecoveryDialog {
             Layout.alignment: Qt.AlignHCenter
             horizontalAlignment: Text.AlignHCenter
             text: dialog.how === "keep"
-                ? "Takes about 15 minutes and the PC restarts once. It uses the copy of Wild OS kept on this PC, so it works without the internet."
-                : "Every file on this PC is deleted for good, then Wild OS sets up again from the copy kept on this PC. You choose a new disk password and get a new recovery key."
+                ? qsTr("Takes about 15 minutes and the PC restarts once. It uses the copy of Wild OS kept on this PC, so it works without the internet.")
+                : qsTr("Every file on this PC is deleted for good, then Wild OS sets up again from the copy kept on this PC. You choose a new disk password and get a new recovery key.")
             size: 13
             lineHeight: 1.5
             color: UI.Style.inkMuted
@@ -321,7 +321,7 @@ RecoveryDialog {
         UI.CheckBox {
             Layout.alignment: Qt.AlignHCenter
             visible: dialog.how === "everything"
-            text: "I understand my files will be deleted"
+            text: qsTr("I understand my files will be deleted")
             checked: dialog.sure
             onToggled: dialog.sure = checked
         }
@@ -331,8 +331,8 @@ RecoveryDialog {
             visible: !Recovery.resetReady
             horizontalAlignment: Text.AlignHCenter
             text: Recovery.resetWhy === "missing" || Recovery.resetWhy === ""
-                ? "The copy of Wild OS isn't on this PC yet. It arrives with the next Wild OS release."
-                : "The copy of Wild OS on this PC didn't pass its check, so it can't be used. A new one arrives with the next release."
+                ? qsTr("The copy of Wild OS isn't on this PC yet. It arrives with the next Wild OS release.")
+                : qsTr("The copy of Wild OS on this PC didn't pass its check, so it can't be used. A new one arrives with the next release.")
             size: 12.5
             color: UI.Style.danger
             wrapMode: Text.Wrap
@@ -352,7 +352,7 @@ RecoveryDialog {
     buttons: [
         UI.Button {
             implicitHeight: 32
-            text: dialog.step === 0 || dialog.step === 2 ? "Cancel" : "Back"
+            text: dialog.step === 0 || dialog.step === 2 ? qsTr("Cancel") : qsTr("Back")
             enabled: !Recovery.busy
             onClicked: dialog.step === 1 ? dialog.step = 0 : dialog.close()
         },
@@ -360,7 +360,7 @@ RecoveryDialog {
             implicitHeight: 32
             kind: "primary"
             danger: dialog.step === 2 && dialog.how === "everything"
-            text: dialog.step < 2 ? "Next" : dialog.how === "keep" ? "Reset" : "Remove everything"
+            text: dialog.step < 2 ? qsTr("Next") : dialog.how === "keep" ? qsTr("Reset") : qsTr("Remove everything")
             busy: Recovery.busy
             enabled: dialog.step < 2 || (Recovery.resetReady && (dialog.how === "keep" || dialog.sure))
             onClicked: {

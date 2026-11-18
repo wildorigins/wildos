@@ -14,6 +14,8 @@ UI.AppWindow {
     property var bars: []
     // Closed while a transcript was still being finished: hidden until it is.
     property bool closing: false
+    // What the button on the note at the foot of the window does.
+    property var toastAction: null
 
     readonly property string mode: Recorder.active && (selectedPath.length === 0 || selectedPath === Recorder.path) ? "record"
         : selectedPath.length > 0 && selected.path !== undefined ? "play" : "idle"
@@ -24,9 +26,10 @@ UI.AppWindow {
     minimumHeight: 620
     title: qsTr("Voice")
 
-    function say(message) {
+    function say(message, action, run) {
         if (message.length > 0) {
-            toast.show(message);
+            toastAction = run ?? null;
+            toast.show(message, action);
         }
     }
     function pick(path) {
@@ -151,6 +154,16 @@ UI.AppWindow {
         }
     }
     Connections {
+        target: toast
+        function onActionClicked() {
+            const run = window.toastAction;
+            window.toastAction = null;
+            if (run) {
+                run();
+            }
+        }
+    }
+    Connections {
         target: VoiceApp
         function onPendingPathChanged() {
             if (VoiceApp.pendingPath.length > 0) {
@@ -225,10 +238,9 @@ UI.AppWindow {
 
         UI.TitleBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
+            tall: true
             frame: window.frame
             showTitle: false
-            buttons.buttonHeight: 44
 
             // The title bar puts its content 16px in; the board's icon is 14.
             Row {
@@ -354,7 +366,11 @@ UI.AppWindow {
                     deleteDialog.close();
                     Player.load("");
                     if (Recordings.remove(path)) {
-                        window.say(qsTr("%1 moved to the bin").arg(title));
+                        window.say(qsTr("%1 moved to the bin").arg(title), qsTr("Undo"), () => {
+                            if (Recordings.restore(path)) {
+                                window.pick(path);
+                            }
+                        });
                     }
                 }
             }

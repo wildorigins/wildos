@@ -4,7 +4,8 @@ import WildOS.Remote
 import WildOS.UI as UI
 
 // The side column (RemoteHosts.dc): every host, favourites, the groups,
-// then the tools, and what Remote keeps where at the foot.
+// then the tools, what Remote keeps where, and Settings at the foot, where
+// Windows apps keep it.
 Item {
     id: side
 
@@ -44,7 +45,7 @@ Item {
 
     Flickable {
         anchors.fill: parent
-        anchors.bottomMargin: footCard.height + 28
+        anchors.bottomMargin: footCard.height + settingsRow.height + 34
         contentHeight: column.height + 24
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -155,9 +156,10 @@ Item {
         id: footCard
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        anchors.bottom: settingsRow.top
         anchors.margins: 14
         anchors.rightMargin: 15
+        anchors.bottomMargin: 10
         height: footText.implicitHeight + 28
         radius: 12
         color: UI.Style.surfaceRest
@@ -196,6 +198,21 @@ Item {
         }
     }
 
+    NavRow {
+        id: settingsRow
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: 10
+        anchors.rightMargin: 11
+        anchors.bottomMargin: 10
+        text: qsTr("Settings")
+        iconName: "cog"
+        count: -1
+        current: side.page === "settings"
+        onClicked: side.pageChosen("settings")
+    }
+
     component NavRow: Rectangle {
         id: row
         property string text
@@ -209,9 +226,19 @@ Item {
 
         height: 36
         radius: UI.Style.radiusSm
-        color: current ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        color: mouse.pressed ? UI.Style.surfacePressed : current ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        activeFocusOnTab: true
         Accessible.role: Accessible.Button
         Accessible.name: text
+        Keys.onReturnPressed: row.clicked()
+        Keys.onEnterPressed: row.clicked()
+        Keys.onSpacePressed: row.clicked()
+
+        UI.FocusRing {
+            visible: row.activeFocus
+            anchors.margins: -2
+            targetRadius: row.radius
+        }
 
         UI.Icon {
             visible: row.glyph.length === 0

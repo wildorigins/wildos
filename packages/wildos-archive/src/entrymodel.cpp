@@ -3,6 +3,7 @@
 #include "format.h"
 
 #include <QCollator>
+#include <QCoreApplication>
 
 EntryModel::EntryModel(QObject *parent)
     : QAbstractListModel(parent)
@@ -36,9 +37,9 @@ QVariant EntryModel::data(const QModelIndex &index, int role) const
         return Format::date(e.modified);
     case TypeRole:
         if (e.unsafe) {
-            return QStringLiteral("Unsafe path");
+            return QCoreApplication::translate("EntryModel", "Unsafe path");
         }
-        return e.symlink ? QStringLiteral("Link") : Format::typeName(e.name, e.dir);
+        return e.symlink ? QCoreApplication::translate("EntryModel", "Link") : Format::typeName(e.name, e.dir);
     case KindRole:
         if (e.unsafe) {
             return QStringLiteral("unsafe");

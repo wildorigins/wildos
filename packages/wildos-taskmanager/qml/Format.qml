@@ -17,16 +17,16 @@ QtObject {
     }
 
     function memory(bytes) {
-        return Number(Math.round((bytes || 0) / 1048576)).toLocaleString(locale, "f", 0) + " MB";
+        return qsTr("%1 MB").arg(Number(Math.round((bytes || 0) / 1048576)).toLocaleString(locale, "f", 0));
     }
 
     function disk(bytesPerSecond) {
         const mb = (bytesPerSecond || 0) / 1048576;
-        return (mb === 0 ? "0" : Number(Math.max(mb, 0.1)).toLocaleString(locale, "f", 1)) + " MB/s";
+        return qsTr("%1 MB/s").arg(mb === 0 ? "0" : Number(Math.max(mb, 0.1)).toLocaleString(locale, "f", 1));
     }
 
     function network(bytesPerSecond) {
         const mbps = (bytesPerSecond || 0) * 8 / 1000000;
-        return (mbps === 0 ? "0" : Number(Math.max(mbps, 0.1)).toLocaleString(locale, "f", 1)) + " Mbps";
+        return qsTr("%1 Mbps").arg(mbps === 0 ? "0" : Number(Math.max(mbps, 0.1)).toLocaleString(locale, "f", 1));
     }
 }

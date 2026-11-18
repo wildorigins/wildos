@@ -13,5 +13,15 @@ if [ "$1" = configure ] && [ -n "${2:-}" ] && dpkg --compare-versions "$2" lt 0.
             systemctl start --no-block wildos-office-split.service || true
     fi
 fi
+# Slides came with 0.1.6. A PC that already had Write and Tables gets it
+# once, the same way; removed afterwards, it stays removed.
+if [ "$1" = configure ] && [ -n "${2:-}" ] && dpkg --compare-versions "$2" lt 0.1.6~; then
+    mkdir -p /var/lib/wildos
+    touch /var/lib/wildos/office-slides
+    if [ -d /run/systemd/system ]; then
+        systemd-run --quiet --on-active=90 --unit=wildos-office-slides-soon \
+            systemctl start --no-block wildos-office-slides.service || true
+    fi
+fi
 #DEBHELPER#
 exit 0

@@ -1,0 +1,18 @@
+# An NZXT Kraken with a screen, of the kinds liquidctl can drive. Nobody
+# gets the device itself: only wildos-coolerd, as root, opens it.
+#
+# The device is named /dev/wildos-cooler, so the service and the session can
+# tell whether one is plugged in. Plugging one in starts wildos-coolerd,
+# which puts the pump and fan curves back (the cooler keeps them only while
+# it has power), and, in a session that is already running, the program
+# that draws the faces on its screen. The service leaves when the cooler is
+# unplugged, so plugging it in again starts it afresh.
+#
+# Every event but the unplugging sets these again: udev keeps only what the
+# newest event gave a device, and systemd would take a cooler whose later
+# event carried no tag for unplugged.
+ACTION=="remove", GOTO="wildos_cooler_end"
+SUBSYSTEM!="usb", GOTO="wildos_cooler_end"
+ENV{DEVTYPE}!="usb_device", GOTO="wildos_cooler_end"
+ATTR{idVendor}=="1e71", ATTR{idProduct}=="3008|300c|300e|3012", SYMLINK+="wildos-cooler", TAG+="systemd", ENV{SYSTEMD_WANTS}+="wildos-coolerd.service", ENV{SYSTEMD_USER_WANTS}+="wildos-cooler-faces.service"
+LABEL="wildos_cooler_end"

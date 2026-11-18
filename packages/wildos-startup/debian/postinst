@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    # On an installed PC (not the image build, not the live system): the
+    # start-up files get the manager and the menu learns to start it.
+    if [ -d /run/systemd/system ] && [ ! -e /run/initramfs/live ] \
+        && ! systemd-detect-virt --chroot --quiet; then
+        /usr/libexec/wildos/startup-ctl sync || true
+        dracut --force >/dev/null 2>&1 || echo "wildos-startup: the start-up files are updated at the next kernel update" >&2
+        if [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null; then
+            update-grub >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+#DEBHELPER#

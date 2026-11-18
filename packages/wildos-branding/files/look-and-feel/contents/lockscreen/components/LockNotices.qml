@@ -27,7 +27,7 @@ Item {
     Accessible.role: Accessible.StaticText
     Accessible.name: summaryText
 
-    readonly property string summaryText: count === 1 ? "1 new notification" : count + " new notifications"
+    readonly property string summaryText: count === 1 ? qsTr("1 new notification") : qsTr("%1 new notifications").arg(count)
 
     Item {
         id: pill
@@ -153,7 +153,7 @@ Item {
         UI.Label {
             anchors.horizontalCenter: parent.horizontalCenter
             visible: notices.count > notices.cardsShown
-            text: notices.count - notices.cardsShown + " more"
+            text: qsTr("%1 more").arg(notices.count - notices.cardsShown)
             size: 12
             color: UI.Style.inkOnWallpaperMuted
         }

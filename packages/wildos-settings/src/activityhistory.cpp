@@ -161,7 +161,7 @@ void ActivityHistory::clear()
         m_clearing = false;
         Q_EMIT clearingChanged();
         if (reply.isError()) {
-            Q_EMIT failed(QStringLiteral("The activity service did not answer. Try again in a moment."));
+            Q_EMIT failed(tr("The activity service did not answer. Try again in a moment."));
         } else {
             Q_EMIT cleared();
         }

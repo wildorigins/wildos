@@ -26,6 +26,22 @@ Rectangle {
         color: UI.Style.borderSubtle
     }
 
+    // Tab can reach a row that is scrolled out of sight.
+    Connections {
+        target: sidebar.Window.window
+        function onActiveFocusItemChanged() {
+            const row = sidebar.Window.window.activeFocusItem;
+            if (!row || row.parent !== column) {
+                return;
+            }
+            if (row.y < flick.contentY) {
+                flick.contentY = row.y;
+            } else if (row.y + row.height > flick.contentY + flick.height) {
+                flick.contentY = row.y + row.height - flick.height;
+            }
+        }
+    }
+
     Flickable {
         id: flick
         anchors.top: parent.top

@@ -728,3 +728,67 @@ res/sx03255.png@16    app:write
 res/sx03163.png@16    app:write
 res/sx03250.png@16    app:tables
 res/sx03254.png@16    app:tables
+
+# Slides
+InsertPage                  lucide/square-plus
+InsertSlide                 lucide/square-plus
+AssignLayout                lucide/layout-panel-left
+DuplicateSlide              lucide/copy-plus
+DuplicatePage               lucide/copy-plus
+ImportSlideFromFile         lucide/file-input
+RenameSlide                 lucide/pencil-line
+HideSlide                   lucide/eye-off
+ShowSlide                   lucide/eye
+Presentation                lucide/presentation
+PresentationCurrentSlide    lucide/play
+PresentationDialog          lucide/settings-2
+RehearseTimings             lucide/timer
+CustomShowDialog            lucide/list-video
+SlideChangeWindow           lucide/blend
+CustomAnimation             lucide/sparkles
+AnimationEffects            lucide/mouse-pointer-click
+AnimationObjects            lucide/film
+MasterSlidesPanel           lucide/layout-grid
+PresentationLayout          lucide/swatch-book
+SlideMasterPage             lucide/layers
+NotesMasterPage             lucide/file-text
+HandoutMode                 lucide/printer
+ThemeDialog                 lucide/palette
+SlideSetup                  lucide/scaling
+SelectBackground            lucide/image-up
+SaveBackground              lucide/image-down
+DisplayMasterBackground     lucide/image-up
+DisplayMasterObjects        lucide/shapes
+NormalMultiPaneGUI          lucide/panels-top-left
+OutlineMode                 lucide/list-tree
+DiaMode                     lucide/grid-3x3
+NotesMode                   lucide/sticky-note
+LeftPaneImpress             lucide/panels-top-left
+BottomPaneImpress           lucide/panel-bottom
+ShowRuler                   lucide/ruler
+HelplinesVisible            lucide/ruler-dimension-line
+OutputQualityColor          lucide/palette
+OutputQualityGrayscale      lucide/contrast
+OutputQualityBlackWhite     lucide/circle
+PhotoAlbumDialog            lucide/images
+InsertAVMedia               lucide/video
+InsertSlideField            lucide/hash
+HeaderAndFooter             lucide/panels-top-bottom
+FontworkGalleryFloater      lucide/type-outline
+LineToolbox                 lucide/pen-tool
+ConnectorToolbox            lucide/spline
+ArrowShapes                 lucide/move-right
+PreviousAnnotation          lucide/arrow-left
+NextAnnotation              lucide/arrow-right
+DeleteAnnotation            lucide/message-square-x
+DeleteAllAnnotation         lucide/message-square-off
+Hyphenation                 lucide/whole-word
+NewWindow                   lucide/app-window
+
+# Slides' presenter view (always dark, so always light strokes)
+sd/res/presenterscreen-WildOSBack.png@18      lucide/arrow-left     presenter
+sd/res/presenterscreen-WildOSNext.png@18      lucide/arrow-right    presenter
+sd/res/presenterscreen-WildOSPointer.png@18   lucide/mouse-pointer-click presenter
+sd/res/presenterscreen-WildOSPen.png@18       lucide/pencil         presenter
+sd/res/presenterscreen-WildOSBlack.png@18     lucide/square         presenter
+sd/res/presenterscreen-WildOSEnd.png@18       lucide/x              presenter-end

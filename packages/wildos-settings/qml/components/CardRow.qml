@@ -31,7 +31,7 @@ T.AbstractButton {
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
     Accessible.role: link ? Accessible.Link : Accessible.Button
-    Accessible.name: value.length > 0 ? title + ", " + value : title
+    Accessible.name: value.length > 0 ? qsTr("%1, %2").arg(title).arg(value) : title
 
     background: Rectangle {
         color: row.down ? UI.Style.surfacePressed : row.hovered ? UI.Style.surfaceHover : "transparent"

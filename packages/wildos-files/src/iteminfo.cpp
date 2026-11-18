@@ -9,6 +9,7 @@
 #include <KIO/DirectorySizeJob>
 #include <KIO/PreviewJob>
 #include <KIO/SimpleJob>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -29,7 +30,7 @@ QString friendlyFolder(const QString &path)
         return parts.isEmpty() ? start : start + separator + parts.join(separator);
     };
     if (path == home || path.startsWith(home + QLatin1Char('/'))) {
-        return join(QStringLiteral("Home"), path.mid(home.size()));
+        return join(QCoreApplication::translate("ItemInfo", "Home"), path.mid(home.size()));
     }
     const Drive drive = Drives::instance()->driveFor(path);
     const QString root = drive.mountPath == QStringLiteral("/") ? QString() : drive.mountPath;
@@ -140,7 +141,7 @@ void ItemInfo::reload()
             files = 1;
         }
     } else if (!m_urls.isEmpty()) {
-        m_name = Format::count(m_urls.size(), QStringLiteral("item"), QStringLiteral("items"));
+        m_name = Format::count(m_urls.size(), QCoreApplication::translate("ItemInfo", "item"), QCoreApplication::translate("ItemInfo", "items"));
         m_icon = QStringLiteral("folder,folder");
         bool allDirs = true;
         for (const QUrl &url : std::as_const(m_urls)) {
@@ -153,7 +154,7 @@ void ItemInfo::reload()
                 ++files;
             }
         }
-        m_type = allDirs ? QStringLiteral("Folders") : folders.isEmpty() ? QStringLiteral("Files") : QStringLiteral("Files and folders");
+        m_type = allDirs ? QCoreApplication::translate("ItemInfo", "Folders") : folders.isEmpty() ? QCoreApplication::translate("ItemInfo", "Files") : QCoreApplication::translate("ItemInfo", "Files and folders");
         m_location = m_urls.constFirst().isLocalFile() ? friendlyFolder(QFileInfo(m_urls.constFirst().toLocalFile()).absolutePath()) : QString();
     }
     Q_EMIT changed();
@@ -167,7 +168,7 @@ void ItemInfo::count(const QList<QUrl> &folders, qint64 filesBytes, int files)
         Q_EMIT sizeChanged();
         return;
     }
-    m_size = QStringLiteral("Working it out");
+    m_size = QCoreApplication::translate("ItemInfo", "Working it out");
     KFileItemList items;
     for (const QUrl &url : folders) {
         items.append(KFileItem(url));
@@ -180,7 +181,7 @@ void ItemInfo::count(const QList<QUrl> &folders, qint64 filesBytes, int files)
         }
         m_job = nullptr;
         if (job->error()) {
-            m_size = QStringLiteral("Unknown");
+            m_size = QCoreApplication::translate("ItemInfo", "Unknown");
         } else {
             const qint64 total = qint64(job->totalSize()) + filesBytes;
             m_size = Format::exactSize(total);
@@ -188,8 +189,8 @@ void ItemInfo::count(const QList<QUrl> &folders, qint64 filesBytes, int files)
             // DirectorySizeJob counts what is inside the folders it was given;
             // for a selection the selected folders count too, as on Windows.
             const qint64 folderCount = qint64(job->totalSubdirs()) + (m_urls.size() > 1 ? folders.size() : 0);
-            m_contains = Format::count(fileCount, QStringLiteral("file"), QStringLiteral("files")) + QStringLiteral(", ")
-                + Format::count(folderCount, QStringLiteral("folder"), QStringLiteral("folders"));
+            m_contains = Format::count(fileCount, QCoreApplication::translate("ItemInfo", "file"), QCoreApplication::translate("ItemInfo", "files")) + QStringLiteral(", ")
+                + Format::count(folderCount, QCoreApplication::translate("ItemInfo", "folder"), QCoreApplication::translate("ItemInfo", "folders"));
         }
         Q_EMIT sizeChanged();
     });

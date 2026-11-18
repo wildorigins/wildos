@@ -13,7 +13,10 @@ if [ "$1" = "configure" ]; then
         if [ -d /var/lib/wildos/reset ]; then
             /usr/libexec/wildos/reset-copy boot-files >/dev/null 2>&1 || true
         fi
-        if [ "$(findmnt -no FSTYPE /)" != btrfs ]; then
+        # Btrfs PCs carry the hook from installation; they are rebuilt once
+        # for 0.1.10, whose hook is the first that can start a restore point
+        # on its layer in memory.
+        if [ "$(findmnt -no FSTYPE /)" != btrfs ] || { [ -n "$2" ] && dpkg --compare-versions "$2" lt 0.1.10; }; then
             dracut --force >/dev/null 2>&1 || echo "wildos-recovery: the start-up files are updated at the next kernel update" >&2
         fi
         # The kernel running now works, so a newer one installed later gets
@@ -23,6 +26,11 @@ if [ "$1" = "configure" ]; then
         fi
         if [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null; then
             update-grub >/dev/null 2>&1 || true
+        fi
+        # As the installer now does (install-nocow): no copy-on-write for
+        # temporary files made from now on. Files already there keep theirs.
+        if [ -d /var/tmp ] && [ "$(stat -f -c %T /var/tmp)" = btrfs ]; then
+            chattr +C /var/tmp 2>/dev/null || true
         fi
         systemctl daemon-reload >/dev/null 2>&1 || true
         systemctl start wildos-restore-points.service >/dev/null 2>&1 || true

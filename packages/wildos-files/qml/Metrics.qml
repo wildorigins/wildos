@@ -34,7 +34,6 @@ QtObject {
     readonly property color separator: UI.Style.tone(0.12)
     readonly property color hoverSoft: UI.Style.tone(0.05)
 
-    readonly property color rowBorder: UI.Style.accentAlpha(0.50, 0.38)
     readonly property color bandFill: UI.Style.accentAlpha(0.16, 0.12)
     readonly property color bandBorder: UI.Style.accentAlpha(0.70, 0.55)
     // The trust chip's words sit most of the way to white (Glacier gives

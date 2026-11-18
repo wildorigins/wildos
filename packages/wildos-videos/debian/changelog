@@ -1,3 +1,10 @@
+wildos-videos (0.1.2) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-videos (0.1.1) trixie; urgency=medium
 
   * The message for an empty Videos folder sits in the middle of the window.

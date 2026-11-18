@@ -10,6 +10,7 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets DBus Network Qml Quick
 # window, which Qt 6.8 offers no public way to reach.
 find_package(Qt6Keychain REQUIRED)
 find_package(qtermwidget6 REQUIRED)
+find_package(KF6Config REQUIRED)
 find_package(KF6WindowSystem REQUIRED)
 
 # The Remote Desktop engine Windows mode draws its apps with. The package
@@ -75,10 +76,12 @@ qt_add_qml_module(wildos-remote
         src/remotedesktop.cpp src/remotedesktop.h
         src/secrets.cpp src/secrets.h
         src/sessionwindow.cpp src/sessionwindow.h
+        src/settings.cpp src/settings.h
         src/sftp.cpp src/sftp.h
         src/shortcuts.cpp src/shortcuts.h
         src/snippets.cpp src/snippets.h
         src/terminalview.cpp src/terminalview.h
+        src/termlinks.cpp src/termlinks.h
         src/windowframe.cpp src/windowframe.h
         ${CMAKE_CURRENT_BINARY_DIR}/keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h
         ${CMAKE_CURRENT_BINARY_DIR}/keyboard-shortcuts-inhibit-unstable-v1-protocol.c
@@ -94,10 +97,27 @@ target_link_libraries(wildos-remote PRIVATE
     Qt6::Widgets Qt6::DBus Qt6::Network Qt6::Qml Qt6::Quick Qt6::QuickWidgets Qt6::QuickControls2
     qt6keychain
     qtermwidget6
-    KF6::WindowSystem
+    KF6::ConfigCore KF6::WindowSystem
 )
 
 install(TARGETS wildos-remote RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.remote.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/org.wildos.remote.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 install(FILES data/Remote.colorscheme DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos-remote)
+
+# Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
+# WildOS.UI for the language chosen in Settings.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

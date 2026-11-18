@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+# liquidctl's udev rules hand every cooler, fan controller and power supply
+# it knows, whole, to whoever is at the screen, so that its command line
+# works without sudo. Here only wildos-coolerd talks to the cooler, as
+# root, so they are diverted under a name udev does not read. The diversion
+# also catches a liquidctl installed or updated later.
+if [ "$1" = "install" ] || [ "$1" = "upgrade" ]; then
+    dpkg-divert --package wildos-cooler --add --rename \
+        --divert /usr/lib/udev/rules.d/71-liquidctl.rules.stock \
+        /usr/lib/udev/rules.d/71-liquidctl.rules >/dev/null
+fi
+
+#DEBHELPER#

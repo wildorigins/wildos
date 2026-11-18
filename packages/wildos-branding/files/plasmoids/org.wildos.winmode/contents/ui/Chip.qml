@@ -1,11 +1,12 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Templates as T
 import WildOS.UI as UI
 import org.wildos.shell as WildOS
 
 // The taskbar item from board 4.13: the window-with-shield mark that
 // Settings uses for Windows apps, its status dot, and two lines, "Windows
-// mode" and the state. A 40 px button with 10 px corners, 10 px in on the
+// mode" and the state. A 40 px button with the taskbar's 8 px corners, 10 px in on the
 // left and 12 on the right. It sits at the left end of the bar in both
 // styles and carries its own gap from the screen edge, so the bar needs no
 // spacer before it: 8 px docked; 13 px floating, where its pill starts 5 px
@@ -30,14 +31,57 @@ MouseArea {
     enabled: winmode.shown
 
     hoverEnabled: true
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
     Accessible.role: Accessible.Button
-    Accessible.name: "Windows mode: " + winmode.stateText
+    Accessible.name: qsTr("Windows mode: %1").arg(winmode.stateText)
     Accessible.description: winmode.toolTipSubText
 
     // Remembering the state at press time stops a click that closes the popup
     // (it loses focus first) from opening it again straight away.
-    onPressed: wasExpanded = winmode.expanded
-    onClicked: winmode.expanded = !wasExpanded
+    onPressed: mouse => {
+        if (mouse.button === Qt.LeftButton) {
+            wasExpanded = winmode.expanded;
+        }
+    }
+    onClicked: mouse => {
+        if (mouse.button === Qt.RightButton) {
+            openMenu(mouse.x);
+        } else {
+            winmode.expanded = !wasExpanded;
+        }
+    }
+
+    // A right click gives the one thing the state calls for and the way to
+    // its settings; everything else stays in the panel a left click opens.
+    // It opens in a window of its own, above the taskbar, as the taskbar is
+    // too short to hold it.
+    function openMenu(px: real): void {
+        const entries = [];
+        const base = winmode.settingUp ? "" : winmode.baseLevel;
+        const free = !winmode.busyAction;
+        if (base === "off") {
+            entries.push({ text: qsTr("Start Windows mode"), icon: "play", enabled: free, run: () => winmode.power("start") });
+        } else if (base === "paused" || base === "saved") {
+            entries.push({ text: qsTr("Resume"), icon: "play", enabled: free, run: () => winmode.power("resume") });
+        } else if (base === "running" && winmode.system !== null && winmode.system.vm === "running") {
+            entries.push({ text: qsTr("Pause"), icon: "media-pause", enabled: free, run: () => winmode.power("pause") });
+        }
+        if (entries.length > 0) {
+            entries.push({ separator: true });
+        }
+        entries.push({ text: qsTr("Windows mode settings"), icon: "menu-settings", run: () => winmode.openSettings() });
+        menu.entries = entries;
+        const scene = chip.mapToItem(null, 0, 0);
+        menu.x = Math.round(Math.max(chip.edge, px - menu.implicitWidth / 2));
+        menu.y = Math.round(-scene.y - 12 - menu.implicitHeight);
+        menu.open();
+    }
+
+    UI.Menu {
+        id: menu
+        popupType: T.Popup.Window
+        minimumWidth: 220
+    }
 
     Rectangle {
         id: button
@@ -46,7 +90,7 @@ MouseArea {
         anchors.verticalCenter: parent.verticalCenter
         width: row.implicitWidth + 22
         height: 40
-        radius: 10
+        radius: UI.Style.radiusSm
         color: chip.pressed ? UI.Style.surfacePressed
             : chip.winmode.expanded || chip.containsMouse ? UI.Style.tone(0.12) : UI.Style.tone(0.07)
         border.width: 1
@@ -115,7 +159,7 @@ MouseArea {
                 spacing: 1
 
                 UI.Label {
-                    text: "Windows mode"
+                    text: qsTr("Windows mode")
                     size: 12
                     font.weight: UI.Style.weightSemiBold
                     lineHeight: 1.2

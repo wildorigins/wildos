@@ -1,0 +1,102 @@
+#!/bin/sh
+# The start-up manager's side of the start-up menu (wildos-startup).
+#
+# GRUB stays the first thing this PC runs and stays unseen. From what
+# Settings > System > Start-up disk and the manager have written to GRUB's
+# environment block, it decides where this start goes:
+#
+#   wsm_mode       "always": the manager shows at every start. "off": never.
+#                  Anything else: only when Space is held (the manager's
+#                  entry in 10_wildos has Space as its key).
+#   wsm_def_*      another system starts by default: the file system its
+#                  boot loader is on, the loader's path and kind.
+#   wsm_def_linux  that system must be started by the PC's firmware rather
+#                  than from here (Windows with BitLocker, which asks for
+#                  its recovery key when started through another loader),
+#                  so the manager starts just far enough to ask for that.
+#   wsm_once_*     a system to start once, now. The manager and "Restart
+#                  into Windows" set these with next_entry.
+#   wsm_lock       "Ask for my password before starting another system":
+#                  GRUB's own menu, command line and editing are closed to
+#                  everyone, and only entries marked --unrestricted start.
+set -e
+
+. "$pkgdatadir/grub-mkconfig_lib"
+
+[ -x /usr/lib/wildos/startup-manager ] || exit 0
+
+device_id=$(grub_get_device_id "$GRUB_DEVICE")
+
+cat <<EOF
+function wsm_uncount {
+	set wildos_tries="\${wsm_t0}"
+	set wildos_kernel_tried="\${wsm_k0}"
+	save_env wildos_tries wildos_kernel_tried
+}
+function wsm_chain {
+	search --no-floppy --fs-uuid --set=root "\$1"
+	if [ "\$3" = ntldr ]; then
+		insmod ntfs
+		insmod ntldr
+		ntldr "\$2"
+	else
+		insmod fat
+		insmod chain
+		chainloader "\$2"
+	fi
+}
+if [ "\${wsm_lock}" = 1 ]; then
+	set superusers="wildos-owner"
+	export superusers
+fi
+# The one-off system is taken out of the block here, before its entry runs,
+# so it is asked for once however that start goes.
+set wsm_u="\${wsm_once_uuid}"
+set wsm_p="\${wsm_once_path}"
+set wsm_k="\${wsm_once_kind}"
+if [ -n "\${wsm_u}" ]; then
+	set wsm_once_uuid=
+	set wsm_once_path=
+	set wsm_once_kind=
+	save_env wsm_once_uuid wsm_once_path wsm_once_kind
+	menuentry 'Another system (this once)' --class wildos-other --unrestricted \$menuentry_id_option 'wildos-start-once' {
+		wsm_chain "\${wsm_u}" "\${wsm_p}" "\${wsm_k}"
+	}
+fi
+if [ -n "\${wsm_def_uuid}" ]; then
+	menuentry 'Another system' --class wildos-other --unrestricted \$menuentry_id_option 'wildos-start-default' {
+		wsm_chain "\${wsm_def_uuid}" "\${wsm_def_path}" "\${wsm_def_kind}"
+	}
+fi
+
+set wsm_how=
+if [ "\${boot_once}" = true ]; then
+	# Start-up recovery's count may have taken the start for itself.
+	set default="\${wsm_once}"
+	wsm_uncount
+elif [ -n "\${wildos_reason}" -a "\${wildos_reason}" != failed ]; then
+	# Settings, Shift or safe mode asked for this start.
+	true
+elif [ -n "\${wsm_def_uuid}" -a "\${wsm_mode}" != always ]; then
+	if [ "\${wsm_def_linux}" = 1 ]; then
+		set default="wildos-manager-$device_id"
+		set wsm_how=default
+	else
+		set default=wildos-start-default
+		wsm_uncount
+		# A second for Space to be noticed before the other system has
+		# the PC. Wild OS needs none: it looks again as it starts.
+		if [ "\${wsm_mode}" != off ]; then
+			set timeout=1
+		fi
+	fi
+elif [ "\${wsm_mode}" = always -a -z "\${wildos_reason}" ]; then
+	if [ "\${default}" = "wildos-previous-$device_id" ]; then
+		set default="wildos-manager-previous-$device_id"
+	else
+		set default="wildos-manager-$device_id"
+	fi
+	set wsm_how=always
+fi
+export wsm_how
+EOF

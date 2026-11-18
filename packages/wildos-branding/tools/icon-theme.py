@@ -765,11 +765,12 @@ DRAWN_MIMETYPES = {
 # Apps that install their icon into hicolor themselves, with any generic
 # names that should show it too. The theme carries a copy so it holds every
 # Wild OS app icon; run this again after changing one. Board 16.9 draws Mail,
-# Write, Tables and Remote exactly as these files.
+# Write, Tables and Remote exactly as these files, and 12.17 Slides.
 PACKAGE_APPS = {
     "wildos-mail/data/org.wildos.mail.svg": ["internet-mail"],
     "wildos-office/data/org.wildos.write.svg": [],
     "wildos-office/data/org.wildos.tables.svg": [],
+    "wildos-office/data/org.wildos.slides.svg": [],
     "wildos-remote/data/org.wildos.remote.svg": [],
 }
 

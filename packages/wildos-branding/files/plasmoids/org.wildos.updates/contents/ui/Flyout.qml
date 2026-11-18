@@ -154,7 +154,7 @@ FocusScope {
                         text: {
                             const u = flyout.updates;
                             const when = u.loaded && ["na", "checking", "error"].indexOf(u.phase) < 0 && u.number(u.status.checked) > 0
-                                ? u.checkedText + "." : "";
+                                ? qsTr("%1.").arg(u.checkedText) : "";
                             return [u.detail, when].filter(t => t.length > 0).join("\n");
                         }
                         color: UI.Style.inkStatus
@@ -177,10 +177,10 @@ FocusScope {
 
                     UI.ListRow {
                         iconName: "refresh"
-                        title: flyout.updates.ready ? flyout.updates.plural(flyout.updates.count, "update", "updates") + " ready"
-                            : flyout.updates.phase === "checking" ? "Checking now"
-                            : flyout.updates.phase === "installing" ? "Installing now"
-                            : "System updates"
+                        title: flyout.updates.ready ? flyout.updates.plural(flyout.updates.count, qsTr("1 update ready"), qsTr("%1 updates ready"))
+                            : flyout.updates.phase === "checking" ? qsTr("Checking now")
+                            : flyout.updates.phase === "installing" ? qsTr("Installing now")
+                            : qsTr("System updates")
                         interactive: true
                         onClicked: flyout.updates.openUpdates()
 
@@ -192,7 +192,7 @@ FocusScope {
                                 visible: flyout.updates.phase !== "installing"
                                 size: "small"
                                 kind: flyout.updates.ready ? "text" : "secondary"
-                                text: flyout.updates.phase === "checking" ? "Checking" : flyout.updates.failed ? "Try again" : "Check now"
+                                text: flyout.updates.phase === "checking" ? qsTr("Checking") : flyout.updates.failed ? qsTr("Try again") : qsTr("Check now")
                                 busy: flyout.updates.phase === "checking"
                                 enabled: flyout.updates.canCheck
                                 focusPolicy: Qt.NoFocus
@@ -202,7 +202,7 @@ FocusScope {
                             UI.Button {
                                 visible: flyout.updates.ready
                                 size: "small"
-                                text: "Install"
+                                text: qsTr("Install")
                                 focusPolicy: Qt.NoFocus
                                 onClicked: flyout.updates.install()
                             }
@@ -212,9 +212,9 @@ FocusScope {
                     UI.ListRow {
                         visible: flyout.updates.status.auto !== undefined
                         iconName: "shield"
-                        title: "Automatic security updates"
+                        title: qsTr("Automatic security updates")
                         description: flyout.updates.status.auto === "on"
-                            ? "Security fixes install by themselves" : "Off, security fixes wait for you"
+                            ? qsTr("Security fixes install by themselves") : qsTr("Off, security fixes wait for you")
                         chevron: true
                         onClicked: flyout.updates.openUpdates()
                     }
@@ -249,7 +249,7 @@ FocusScope {
             // The link's text lines up with the content edge above it.
             x: Metrics.pad - 4
             anchors.verticalCenter: parent.verticalCenter
-            text: "Open Updates settings"
+            text: qsTr("Open Updates settings")
             onClicked: flyout.updates.openUpdates()
         }
     }

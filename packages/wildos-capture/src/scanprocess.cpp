@@ -1,6 +1,7 @@
 #include "scanprocess.h"
 
 #include <QColor>
+#include <QCoreApplication>
 #include <QList>
 #include <QStringList>
 #include <QPainter>
@@ -172,7 +173,7 @@ QImage ScanProcess::straightenAndCrop(const QImage &page, QString *note)
             painter.drawImage(0, 0, page);
         }
         result = page.format() == QImage::Format_Grayscale8 ? turned.convertToFormat(QImage::Format_Grayscale8) : turned.convertToFormat(QImage::Format_RGB888);
-        done << QStringLiteral("straightened");
+        done << QCoreApplication::translate("ScanProcess", "straightened");
     }
 
     // Dark bands round the paper: the lid's shadow, the glass's edge, or
@@ -220,7 +221,7 @@ QImage ScanProcess::straightenAndCrop(const QImage &page, QString *note)
                                .intersected(result.rect());
         if (keep.width() > result.width() / 2 && keep.height() > result.height() / 2 && keep != result.rect()) {
             result = result.copy(keep);
-            done << QStringLiteral("edges trimmed");
+            done << QCoreApplication::translate("ScanProcess", "edges trimmed");
         }
     }
     if (note) {

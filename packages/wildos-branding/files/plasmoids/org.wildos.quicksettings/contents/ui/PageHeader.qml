@@ -28,7 +28,7 @@ Item {
         iconName: "chevron-left"
         iconSize: 16
         stroke: 2
-        tip: "Back to quick settings"
+        tip: qsTr("Back to quick settings")
         onClicked: header.back()
     }
 

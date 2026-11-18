@@ -13,5 +13,13 @@
             <label>Status icon ids or titles never shown: desktop plumbing that means nothing to people.</label>
             <default>xwaylandvideobridge,org.kde.xwaylandvideobridge,Wayland to X11 Video bridge,kscreen,org.kde.kscreen,kded6,org.kde.kded6,plasmashell,org.kde.plasmashell,polkit-kde-authentication-agent-1</default>
         </entry>
+        <entry name="iconPlaces" type="String">
+            <label>Where the person wants each app icon, as JSON: the icon's key to "bar" or "overflow". An icon with no entry follows the app's own status. Settings, Taskbar writes it.</label>
+            <default></default>
+        </entry>
+        <entry name="seenIcons" type="String">
+            <label>The app icons there are to choose from, as JSON, for Settings to list: key, title, icon name and whether the icon is on the taskbar now.</label>
+            <default></default>
+        </entry>
     </group>
 </kcfg>

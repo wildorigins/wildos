@@ -6,6 +6,7 @@
 #include <processcore/process_controller.h>
 #include <processcore/process_data_model.h>
 
+#include <QCoreApplication>
 #include <QCollator>
 #include <QDateTime>
 #include <QDir>
@@ -49,124 +50,124 @@ struct Known {
 const QHash<QString, Known> &known()
 {
     static const QHash<QString, Known> table = {
-        {QStringLiteral("plasmashell"), {"Wild OS desktop", false, false, true}},
-        {QStringLiteral("kwin_wayland"), {"Window manager", false, true}},
-        {QStringLiteral("kwin_wayland_wrapper"), {"Window manager", false, true}},
-        {QStringLiteral("ksmserver"), {"Session manager", false, true}},
-        {QStringLiteral("plasma_session"), {"Session manager", false, true}},
-        {QStringLiteral("startplasma-wayland"), {"Session manager", false, true}},
-        {QStringLiteral("Xwayland"), {"Display for older apps", false, true}},
-        {QStringLiteral("kded6"), {"Desktop services"}},
-        {QStringLiteral("kglobalacceld"), {"Keyboard shortcuts"}},
-        {QStringLiteral("kactivitymanagerd"), {"Recent files and activities"}},
-        {QStringLiteral("kwalletd6"), {"Password storage"}},
-        {QStringLiteral("ksecretd"), {"Password storage"}},
-        {QStringLiteral("baloo_file"), {"File search"}},
-        {QStringLiteral("baloo_file_extractor"), {"File search"}},
-        {QStringLiteral("polkit-kde-authentication-agent-1"), {"Permission prompts"}},
-        {QStringLiteral("org_kde_powerdevil"), {"Power management"}},
-        {QStringLiteral("ksystemstats"), {"System monitor service"}},
-        {QStringLiteral("kscreen_backend_launcher"), {"Display settings service"}},
-        {QStringLiteral("xdg-desktop-portal"), {"App permissions portal"}},
-        {QStringLiteral("xdg-desktop-portal-kde"), {"App permissions portal"}},
-        {QStringLiteral("xdg-document-portal"), {"File sharing portal"}},
-        {QStringLiteral("xdg-permission-store"), {"App permissions store"}},
-        {QStringLiteral("pipewire"), {"Sound and video"}},
-        {QStringLiteral("pipewire-pulse"), {"Sound for older apps"}},
-        {QStringLiteral("wireplumber"), {"Sound devices"}},
-        {QStringLiteral("dbus-daemon"), {"Message bus", false, true}},
-        {QStringLiteral("dbus-broker"), {"Message bus", false, true}},
-        {QStringLiteral("dbus-broker-launch"), {"Message bus", false, true}},
-        {QStringLiteral("gmenudbusmenuproxy"), {"App menu helper"}},
-        {QStringLiteral("xembedsniproxy"), {"Tray icon helper"}},
-        {QStringLiteral("kaccess"), {"Accessibility"}},
-        {QStringLiteral("at-spi-bus-launcher"), {"Accessibility"}},
-        {QStringLiteral("at-spi2-registryd"), {"Accessibility"}},
-        {QStringLiteral("wildos-launchd"), {"App start helper"}},
-        {QStringLiteral("DiscoverNotifier"), {"Update notifier"}},
-        {QStringLiteral("ksgrd_network_helper"), {"Network use monitor"}},
+        {QStringLiteral("plasmashell"), {QT_TRANSLATE_NOOP("Processes", "Wild OS desktop"), false, false, true}},
+        {QStringLiteral("kwin_wayland"), {QT_TRANSLATE_NOOP("Processes", "Window manager"), false, true}},
+        {QStringLiteral("kwin_wayland_wrapper"), {QT_TRANSLATE_NOOP("Processes", "Window manager"), false, true}},
+        {QStringLiteral("ksmserver"), {QT_TRANSLATE_NOOP("Processes", "Session manager"), false, true}},
+        {QStringLiteral("plasma_session"), {QT_TRANSLATE_NOOP("Processes", "Session manager"), false, true}},
+        {QStringLiteral("startplasma-wayland"), {QT_TRANSLATE_NOOP("Processes", "Session manager"), false, true}},
+        {QStringLiteral("Xwayland"), {QT_TRANSLATE_NOOP("Processes", "Display for older apps"), false, true}},
+        {QStringLiteral("kded6"), {QT_TRANSLATE_NOOP("Processes", "Desktop services")}},
+        {QStringLiteral("kglobalacceld"), {QT_TRANSLATE_NOOP("Processes", "Keyboard shortcuts")}},
+        {QStringLiteral("kactivitymanagerd"), {QT_TRANSLATE_NOOP("Processes", "Recent files and activities")}},
+        {QStringLiteral("kwalletd6"), {QT_TRANSLATE_NOOP("Processes", "Password storage")}},
+        {QStringLiteral("ksecretd"), {QT_TRANSLATE_NOOP("Processes", "Password storage")}},
+        {QStringLiteral("baloo_file"), {QT_TRANSLATE_NOOP("Processes", "File search")}},
+        {QStringLiteral("baloo_file_extractor"), {QT_TRANSLATE_NOOP("Processes", "File search")}},
+        {QStringLiteral("polkit-kde-authentication-agent-1"), {QT_TRANSLATE_NOOP("Processes", "Permission prompts")}},
+        {QStringLiteral("org_kde_powerdevil"), {QT_TRANSLATE_NOOP("Processes", "Power management")}},
+        {QStringLiteral("ksystemstats"), {QT_TRANSLATE_NOOP("Processes", "System monitor service")}},
+        {QStringLiteral("kscreen_backend_launcher"), {QT_TRANSLATE_NOOP("Processes", "Display settings service")}},
+        {QStringLiteral("xdg-desktop-portal"), {QT_TRANSLATE_NOOP("Processes", "App permissions portal")}},
+        {QStringLiteral("xdg-desktop-portal-kde"), {QT_TRANSLATE_NOOP("Processes", "App permissions portal")}},
+        {QStringLiteral("xdg-document-portal"), {QT_TRANSLATE_NOOP("Processes", "File sharing portal")}},
+        {QStringLiteral("xdg-permission-store"), {QT_TRANSLATE_NOOP("Processes", "App permissions store")}},
+        {QStringLiteral("pipewire"), {QT_TRANSLATE_NOOP("Processes", "Sound and video")}},
+        {QStringLiteral("pipewire-pulse"), {QT_TRANSLATE_NOOP("Processes", "Sound for older apps")}},
+        {QStringLiteral("wireplumber"), {QT_TRANSLATE_NOOP("Processes", "Sound devices")}},
+        {QStringLiteral("dbus-daemon"), {QT_TRANSLATE_NOOP("Processes", "Message bus"), false, true}},
+        {QStringLiteral("dbus-broker"), {QT_TRANSLATE_NOOP("Processes", "Message bus"), false, true}},
+        {QStringLiteral("dbus-broker-launch"), {QT_TRANSLATE_NOOP("Processes", "Message bus"), false, true}},
+        {QStringLiteral("gmenudbusmenuproxy"), {QT_TRANSLATE_NOOP("Processes", "App menu helper")}},
+        {QStringLiteral("xembedsniproxy"), {QT_TRANSLATE_NOOP("Processes", "Tray icon helper")}},
+        {QStringLiteral("kaccess"), {QT_TRANSLATE_NOOP("Processes", "Accessibility")}},
+        {QStringLiteral("at-spi-bus-launcher"), {QT_TRANSLATE_NOOP("Processes", "Accessibility")}},
+        {QStringLiteral("at-spi2-registryd"), {QT_TRANSLATE_NOOP("Processes", "Accessibility")}},
+        {QStringLiteral("wildos-launchd"), {QT_TRANSLATE_NOOP("Processes", "App start helper")}},
+        {QStringLiteral("DiscoverNotifier"), {QT_TRANSLATE_NOOP("Processes", "Update notifier")}},
+        {QStringLiteral("ksgrd_network_helper"), {QT_TRANSLATE_NOOP("Processes", "Network use monitor")}},
         {QStringLiteral("systemd"), {"Wild OS", false, true}},
-        {QStringLiteral("unattended-upgr"), {"Security updates", true, false, false, "Working"}},
-        {QStringLiteral("unattended-upgrade"), {"Security updates", true, false, false, "Working"}},
-        {QStringLiteral("apt-get"), {"Security updates", true, false, false, "Working"}},
-        {QStringLiteral("apt.systemd.dai"), {"Security updates", true, false, false, "Working"}},
-        {QStringLiteral("packagekitd"), {"Software updates", true}},
-        {QStringLiteral("firewalld"), {"Firewall", true}},
-        {QStringLiteral("ufw"), {"Firewall", true}},
-        {QStringLiteral("sdwdate"), {"Secure time", true}},
-        {QStringLiteral("NetworkManager"), {"Network"}},
-        {QStringLiteral("wpa_supplicant"), {"Wi-Fi security"}},
-        {QStringLiteral("ModemManager"), {"Mobile broadband"}},
-        {QStringLiteral("bluetoothd"), {"Bluetooth"}},
-        {QStringLiteral("cupsd"), {"Printing"}},
-        {QStringLiteral("cups-browsed"), {"Printer discovery"}},
-        {QStringLiteral("avahi-daemon"), {"Network discovery"}},
-        {QStringLiteral("upowerd"), {"Battery and power"}},
-        {QStringLiteral("power-profiles-daemon"), {"Power modes"}},
-        {QStringLiteral("udisksd"), {"Drives"}},
-        {QStringLiteral("accounts-daemon"), {"Accounts"}},
-        {QStringLiteral("polkitd"), {"Permissions"}},
-        {QStringLiteral("rtkit-daemon"), {"Sound timing"}},
-        {QStringLiteral("colord"), {"Colour profiles"}},
-        {QStringLiteral("thermald"), {"Temperature control"}},
-        {QStringLiteral("fwupd"), {"Firmware updates"}},
-        {QStringLiteral("cron"), {"Scheduled tasks"}},
-        {QStringLiteral("sddm"), {"Sign-in screen", false, true}},
-        {QStringLiteral("sddm-helper"), {"Sign-in screen", false, true}},
-        {QStringLiteral("systemd-journald"), {"System log", false, true}},
-        {QStringLiteral("systemd-logind"), {"Sign-in manager", false, true}},
-        {QStringLiteral("systemd-udevd"), {"Device manager", false, true}},
-        {QStringLiteral("systemd-resolved"), {"Name lookup"}},
-        {QStringLiteral("systemd-timesyncd"), {"Clock sync"}},
-        {QStringLiteral("systemd-oomd"), {"Low memory guard"}},
+        {QStringLiteral("unattended-upgr"), {QT_TRANSLATE_NOOP("Processes", "Security updates"), true, false, false, "Working"}},
+        {QStringLiteral("unattended-upgrade"), {QT_TRANSLATE_NOOP("Processes", "Security updates"), true, false, false, "Working"}},
+        {QStringLiteral("apt-get"), {QT_TRANSLATE_NOOP("Processes", "Security updates"), true, false, false, "Working"}},
+        {QStringLiteral("apt.systemd.dai"), {QT_TRANSLATE_NOOP("Processes", "Security updates"), true, false, false, "Working"}},
+        {QStringLiteral("packagekitd"), {QT_TRANSLATE_NOOP("Processes", "Software updates"), true}},
+        {QStringLiteral("firewalld"), {QT_TRANSLATE_NOOP("Processes", "Firewall"), true}},
+        {QStringLiteral("ufw"), {QT_TRANSLATE_NOOP("Processes", "Firewall"), true}},
+        {QStringLiteral("sdwdate"), {QT_TRANSLATE_NOOP("Processes", "Secure time"), true}},
+        {QStringLiteral("NetworkManager"), {QT_TRANSLATE_NOOP("Processes", "Network")}},
+        {QStringLiteral("wpa_supplicant"), {QT_TRANSLATE_NOOP("Processes", "Wi-Fi security")}},
+        {QStringLiteral("ModemManager"), {QT_TRANSLATE_NOOP("Processes", "Mobile broadband")}},
+        {QStringLiteral("bluetoothd"), {QT_TRANSLATE_NOOP("Processes", "Bluetooth")}},
+        {QStringLiteral("cupsd"), {QT_TRANSLATE_NOOP("Processes", "Printing")}},
+        {QStringLiteral("cups-browsed"), {QT_TRANSLATE_NOOP("Processes", "Printer discovery")}},
+        {QStringLiteral("avahi-daemon"), {QT_TRANSLATE_NOOP("Processes", "Network discovery")}},
+        {QStringLiteral("upowerd"), {QT_TRANSLATE_NOOP("Processes", "Battery and power")}},
+        {QStringLiteral("power-profiles-daemon"), {QT_TRANSLATE_NOOP("Processes", "Power modes")}},
+        {QStringLiteral("udisksd"), {QT_TRANSLATE_NOOP("Processes", "Drives")}},
+        {QStringLiteral("accounts-daemon"), {QT_TRANSLATE_NOOP("Processes", "Accounts")}},
+        {QStringLiteral("polkitd"), {QT_TRANSLATE_NOOP("Processes", "Permissions")}},
+        {QStringLiteral("rtkit-daemon"), {QT_TRANSLATE_NOOP("Processes", "Sound timing")}},
+        {QStringLiteral("colord"), {QT_TRANSLATE_NOOP("Processes", "Colour profiles")}},
+        {QStringLiteral("thermald"), {QT_TRANSLATE_NOOP("Processes", "Temperature control")}},
+        {QStringLiteral("fwupd"), {QT_TRANSLATE_NOOP("Processes", "Firmware updates")}},
+        {QStringLiteral("cron"), {QT_TRANSLATE_NOOP("Processes", "Scheduled tasks")}},
+        {QStringLiteral("sddm"), {QT_TRANSLATE_NOOP("Processes", "Sign-in screen"), false, true}},
+        {QStringLiteral("sddm-helper"), {QT_TRANSLATE_NOOP("Processes", "Sign-in screen"), false, true}},
+        {QStringLiteral("systemd-journald"), {QT_TRANSLATE_NOOP("Processes", "System log"), false, true}},
+        {QStringLiteral("systemd-logind"), {QT_TRANSLATE_NOOP("Processes", "Sign-in manager"), false, true}},
+        {QStringLiteral("systemd-udevd"), {QT_TRANSLATE_NOOP("Processes", "Device manager"), false, true}},
+        {QStringLiteral("systemd-resolved"), {QT_TRANSLATE_NOOP("Processes", "Name lookup")}},
+        {QStringLiteral("systemd-timesyncd"), {QT_TRANSLATE_NOOP("Processes", "Clock sync")}},
+        {QStringLiteral("systemd-oomd"), {QT_TRANSLATE_NOOP("Processes", "Low memory guard")}},
         {QStringLiteral("tor"), {"Tor"}},
-        {QStringLiteral("flatpak-session-helper"), {"Sandboxed app helper"}},
-        {QStringLiteral("flatpak-portal"), {"Sandboxed app helper"}},
-        {QStringLiteral("winmoded"), {"Windows mode"}},
-        {QStringLiteral("wildos-rdp"), {"Windows mode"}},
-        {QStringLiteral("(sd-pam)"), {"Session helper", false, true}},
-        {QStringLiteral("dconf-service"), {"App settings storage"}},
-        {QStringLiteral("drkonqi-coredump-processor"), {"Crash reporter"}},
-        {QStringLiteral("drkonqi-coredump-launcher"), {"Crash reporter"}},
-        {QStringLiteral("kioworker"), {"File access helper"}},
-        {QStringLiteral("fm-shim"), {"Open in Files helper"}},
-        {QStringLiteral("filter-chain"), {"Sound effects"}},
-        {QStringLiteral("obexd"), {"Bluetooth file transfer"}},
-        {QStringLiteral("mpris-proxy"), {"Bluetooth media controls"}},
-        {QStringLiteral("usbguard-notifier"), {"USB protection alerts"}},
-        {QStringLiteral("usbguard-daemon"), {"USB protection", false, true}},
-        {QStringLiteral("usbguard-dbus"), {"USB protection", false, true}},
-        {QStringLiteral("privleapd"), {"Permission helper", false, true}},
-        {QStringLiteral("haveged"), {"Randomness for encryption", false, true}},
-        {QStringLiteral("jitterentropy-r"), {"Randomness for encryption", false, true}},
-        {QStringLiteral("canary-daemon"), {"System check", false, true}},
-        {QStringLiteral("iscsiuio"), {"Network storage"}},
-        {QStringLiteral("blkmapd"), {"Network storage"}},
-        {QStringLiteral("acpid"), {"Power button"}},
-        {QStringLiteral("qemu-ga"), {"Virtual machine helper"}},
+        {QStringLiteral("flatpak-session-helper"), {QT_TRANSLATE_NOOP("Processes", "Sandboxed app helper")}},
+        {QStringLiteral("flatpak-portal"), {QT_TRANSLATE_NOOP("Processes", "Sandboxed app helper")}},
+        {QStringLiteral("winmoded"), {QT_TRANSLATE_NOOP("Processes", "Windows mode")}},
+        {QStringLiteral("wildos-rdp"), {QT_TRANSLATE_NOOP("Processes", "Windows mode")}},
+        {QStringLiteral("(sd-pam)"), {QT_TRANSLATE_NOOP("Processes", "Session helper"), false, true}},
+        {QStringLiteral("dconf-service"), {QT_TRANSLATE_NOOP("Processes", "App settings storage")}},
+        {QStringLiteral("drkonqi-coredump-processor"), {QT_TRANSLATE_NOOP("Processes", "Crash reporter")}},
+        {QStringLiteral("drkonqi-coredump-launcher"), {QT_TRANSLATE_NOOP("Processes", "Crash reporter")}},
+        {QStringLiteral("kioworker"), {QT_TRANSLATE_NOOP("Processes", "File access helper")}},
+        {QStringLiteral("fm-shim"), {QT_TRANSLATE_NOOP("Processes", "Open in Files helper")}},
+        {QStringLiteral("filter-chain"), {QT_TRANSLATE_NOOP("Processes", "Sound effects")}},
+        {QStringLiteral("obexd"), {QT_TRANSLATE_NOOP("Processes", "Bluetooth file transfer")}},
+        {QStringLiteral("mpris-proxy"), {QT_TRANSLATE_NOOP("Processes", "Bluetooth media controls")}},
+        {QStringLiteral("usbguard-notifier"), {QT_TRANSLATE_NOOP("Processes", "USB protection alerts")}},
+        {QStringLiteral("usbguard-daemon"), {QT_TRANSLATE_NOOP("Processes", "USB protection"), false, true}},
+        {QStringLiteral("usbguard-dbus"), {QT_TRANSLATE_NOOP("Processes", "USB protection"), false, true}},
+        {QStringLiteral("privleapd"), {QT_TRANSLATE_NOOP("Processes", "Permission helper"), false, true}},
+        {QStringLiteral("haveged"), {QT_TRANSLATE_NOOP("Processes", "Randomness for encryption"), false, true}},
+        {QStringLiteral("jitterentropy-r"), {QT_TRANSLATE_NOOP("Processes", "Randomness for encryption"), false, true}},
+        {QStringLiteral("canary-daemon"), {QT_TRANSLATE_NOOP("Processes", "System check"), false, true}},
+        {QStringLiteral("iscsiuio"), {QT_TRANSLATE_NOOP("Processes", "Network storage")}},
+        {QStringLiteral("blkmapd"), {QT_TRANSLATE_NOOP("Processes", "Network storage")}},
+        {QStringLiteral("acpid"), {QT_TRANSLATE_NOOP("Processes", "Power button")}},
+        {QStringLiteral("qemu-ga"), {QT_TRANSLATE_NOOP("Processes", "Virtual machine helper")}},
         // The kernel cuts process names to 15 characters, so the short
         // forms are listed alongside the full ones.
-        {QStringLiteral("drkonqi-coredum"), {"Crash reporter"}},
-        {QStringLiteral("usbguard-notifi"), {"USB protection alerts"}},
-        {QStringLiteral("fm-shim-backend"), {"Open in Files helper"}},
-        {QStringLiteral("kio-fuse"), {"File access helper"}},
-        {QStringLiteral("ksmserver"), {"Session manager", false, true}},
-        {QStringLiteral("Xwayland"), {"Older app support"}},
-        {QStringLiteral("xsettingsd"), {"Settings for older apps"}},
-        {QStringLiteral("ssh-agent"), {"SSH keys"}},
-        {QStringLiteral("switcheroo-cont"), {"Graphics switching"}},
-        {QStringLiteral("switcheroo-control"), {"Graphics switching"}},
-        {QStringLiteral("emerg-shutdown"), {"Emergency shutdown", false, true}},
-        {QStringLiteral("memlockd"), {"Memory lock service", false, true}},
-        {QStringLiteral("watchdogd"), {"System watchdog", false, true}},
-        {QStringLiteral("psimon"), {"System pressure monitor", false, true}},
-        {QStringLiteral("msgdispatcher"), {"System messages", false, true}},
-        {QStringLiteral("acpi_fakekeyd"), {"Power keys", false, true}},
-        {QStringLiteral("sdwdate-start-a"), {"Secure time", true}},
-        {QStringLiteral("wildos-clipboar"), {"Clipboard history"}},
-        {QStringLiteral("wildos-clipboard"), {"Clipboard history"}},
-        {QStringLiteral("wildos-dialogs"), {"System dialogs"}},
-        {QStringLiteral("wildos-portal"), {"File dialogs"}},
+        {QStringLiteral("drkonqi-coredum"), {QT_TRANSLATE_NOOP("Processes", "Crash reporter")}},
+        {QStringLiteral("usbguard-notifi"), {QT_TRANSLATE_NOOP("Processes", "USB protection alerts")}},
+        {QStringLiteral("fm-shim-backend"), {QT_TRANSLATE_NOOP("Processes", "Open in Files helper")}},
+        {QStringLiteral("kio-fuse"), {QT_TRANSLATE_NOOP("Processes", "File access helper")}},
+        {QStringLiteral("ksmserver"), {QT_TRANSLATE_NOOP("Processes", "Session manager"), false, true}},
+        {QStringLiteral("Xwayland"), {QT_TRANSLATE_NOOP("Processes", "Older app support")}},
+        {QStringLiteral("xsettingsd"), {QT_TRANSLATE_NOOP("Processes", "Settings for older apps")}},
+        {QStringLiteral("ssh-agent"), {QT_TRANSLATE_NOOP("Processes", "SSH keys")}},
+        {QStringLiteral("switcheroo-cont"), {QT_TRANSLATE_NOOP("Processes", "Graphics switching")}},
+        {QStringLiteral("switcheroo-control"), {QT_TRANSLATE_NOOP("Processes", "Graphics switching")}},
+        {QStringLiteral("emerg-shutdown"), {QT_TRANSLATE_NOOP("Processes", "Emergency shutdown"), false, true}},
+        {QStringLiteral("memlockd"), {QT_TRANSLATE_NOOP("Processes", "Memory lock service"), false, true}},
+        {QStringLiteral("watchdogd"), {QT_TRANSLATE_NOOP("Processes", "System watchdog"), false, true}},
+        {QStringLiteral("psimon"), {QT_TRANSLATE_NOOP("Processes", "System pressure monitor"), false, true}},
+        {QStringLiteral("msgdispatcher"), {QT_TRANSLATE_NOOP("Processes", "System messages"), false, true}},
+        {QStringLiteral("acpi_fakekeyd"), {QT_TRANSLATE_NOOP("Processes", "Power keys"), false, true}},
+        {QStringLiteral("sdwdate-start-a"), {QT_TRANSLATE_NOOP("Processes", "Secure time"), true}},
+        {QStringLiteral("wildos-clipboar"), {QT_TRANSLATE_NOOP("Processes", "Clipboard history")}},
+        {QStringLiteral("wildos-clipboard"), {QT_TRANSLATE_NOOP("Processes", "Clipboard history")}},
+        {QStringLiteral("wildos-dialogs"), {QT_TRANSLATE_NOOP("Processes", "System dialogs")}},
+        {QStringLiteral("wildos-portal"), {QT_TRANSLATE_NOOP("Processes", "File dialogs")}},
     };
     return table;
 }
@@ -236,15 +237,15 @@ QString resultText(KSysGuard::ProcessController::Result result)
     case R::NoSuchProcess:
         return {};
     case R::InsufficientPermissions:
-        return QStringLiteral("Task Manager was not allowed to do that.");
+        return QCoreApplication::translate("Processes", "Task Manager was not allowed to do that.");
     case R::UserCancelled:
-        return QStringLiteral("Nothing was changed.");
+        return QCoreApplication::translate("Processes", "Nothing was changed.");
     case R::Unsupported:
     case R::Unknown:
     case R::Error:
         break;
     }
-    return QStringLiteral("That did not work. Try again in a moment.");
+    return QCoreApplication::translate("Processes", "That did not work. Try again in a moment.");
 }
 }
 
@@ -593,7 +594,7 @@ void Processes::refresh()
         // plain name, else after its first process.
         if (k.name && !named.contains(key)) {
             named.insert(key);
-            item.name = QString::fromUtf8(k.name);
+            item.name = QCoreApplication::translate("Processes", k.name);
             item.status = QString::fromUtf8(k.status);
             item.canEnd = !k.critical;
             item.restart = k.restart;
@@ -672,7 +673,7 @@ void Processes::refresh()
         m_winMemory = m_winStatus.memory;
         Item mode;
         mode.key = QStringLiteral("winmode");
-        mode.name = QStringLiteral("Windows mode");
+        mode.name = QCoreApplication::translate("Processes", "Windows mode");
         mode.icon = QStringLiteral("wildos-windows-mode");
         mode.chip = QStringLiteral("Windows");
         mode.group = 0;
@@ -743,7 +744,8 @@ void Processes::rebuild()
         return collator.compare(a.name, b.name) < 0;
     };
 
-    static const char *titles[] = {"Apps", "Background processes", "Wild OS processes"};
+    static const char *titles[] = {QT_TRANSLATE_NOOP("Processes", "Apps"), QT_TRANSLATE_NOOP("Processes", "Background processes"),
+                                   QT_TRANSLATE_NOOP("Processes", "Wild OS processes")};
     QList<Row> rows;
     for (int group = 0; group < (m_showSystem ? 3 : 2); ++group) {
         QList<const Item *> members;
@@ -762,7 +764,7 @@ void Processes::rebuild()
         header.key = QStringLiteral("group:%1").arg(group);
         header.kind = Header;
         header.group = group;
-        header.name = QString::fromLatin1(titles[group]);
+        header.name = QCoreApplication::translate("Processes", titles[group]);
         header.count = members.size();
         rows << header;
         for (const Item *item : std::as_const(members)) {

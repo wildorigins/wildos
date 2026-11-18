@@ -33,8 +33,8 @@ UI.Dialog {
         open();
     }
 
-    title: "Choose your picture"
-    text: "Drag the photo to choose the part inside the circle."
+    title: qsTr("Choose your picture")
+    text: qsTr("Drag the photo to choose the part inside the circle.")
     onZoomChanged: {
         // Zoom about the middle of the circle.
         const cx = frameSize / 2;
@@ -129,7 +129,7 @@ UI.Dialog {
         UI.Slider {
             id: zoomSlider
             Layout.fillWidth: true
-            accessibleName: "Zoom"
+            accessibleName: qsTr("Zoom")
             from: 1
             to: 4
             stepSize: 0
@@ -146,7 +146,7 @@ UI.Dialog {
 
     buttons: [
         UI.Button {
-            text: "Use this picture"
+            text: qsTr("Use this picture")
             kind: "primary"
             enabled: photo.status === Image.Ready
             onClicked: {
@@ -156,7 +156,7 @@ UI.Dialog {
             }
         },
         UI.Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: dialog.close()
         }
     ]

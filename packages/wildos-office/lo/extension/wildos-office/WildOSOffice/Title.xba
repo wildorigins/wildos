@@ -18,6 +18,8 @@ Sub Update(oEvent As Object)
 		sApp = &quot;Tables&quot;
 	ElseIf oDoc.supportsService(&quot;com.sun.star.text.TextDocument&quot;) Then
 		sApp = &quot;Write&quot;
+	ElseIf oDoc.supportsService(&quot;com.sun.star.presentation.PresentationDocument&quot;) Then
+		sApp = &quot;Slides&quot;
 	Else
 		Exit Sub
 	End If

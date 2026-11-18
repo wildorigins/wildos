@@ -20,6 +20,10 @@ Item {
     property int sharpWidth: 0
     property var fields: []
     property var inkPoints: []
+    // The page's links ({ x, y, width, height, page, top, url }), and the
+    // one under the pointer.
+    property var links: []
+    property Item hoveredLink: null
 
     // Paper colours: these sit on the page itself, which is white in either
     // scheme, so they are the document's colours rather than the window's.
@@ -42,6 +46,7 @@ Item {
     Component.onCompleted: {
         sharpWidth = Math.round(width * Screen.devicePixelRatio);
         refreshFields();
+        PdfDocument.findLinks(index);
     }
     onWidthChanged: {
         if (sharpWidth === 0) {
@@ -55,6 +60,13 @@ Item {
         target: PdfDocument
         function onLoadedChanged() {
             page.refreshFields();
+            page.links = [];
+            PdfDocument.findLinks(page.index);
+        }
+        function onLinksFound(index, links) {
+            if (index === page.index) {
+                page.links = links;
+            }
         }
     }
 
@@ -208,6 +220,60 @@ Item {
                 selectionMenu.popup();
             }
         }
+    }
+
+    // The PDF's links, followed with a click while Select is the tool: to
+    // a page of this file, or to a web or mail address, which the tip
+    // shows before it is opened.
+    Repeater {
+        model: page.tool === "select" ? page.links : []
+        delegate: MouseArea {
+            id: linkArea
+            required property var modelData
+            readonly property string tip: modelData.page >= 0 ? qsTr("Go to page %1").arg(modelData.page + 1) : modelData.url
+
+            x: modelData.x * page.width
+            y: modelData.y * page.height
+            width: modelData.width * page.width
+            height: modelData.height * page.height
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            activeFocusOnTab: true
+            Accessible.role: Accessible.Link
+            Accessible.name: tip
+            Accessible.onPressAction: page.app.followLink(modelData)
+            onContainsMouseChanged: {
+                if (containsMouse) {
+                    page.hoveredLink = linkArea;
+                } else if (page.hoveredLink === linkArea) {
+                    page.hoveredLink = null;
+                }
+            }
+            Component.onDestruction: {
+                if (page.hoveredLink === linkArea) {
+                    page.hoveredLink = null;
+                }
+            }
+            onClicked: page.app.followLink(modelData)
+            Keys.onReturnPressed: page.app.followLink(modelData)
+            Keys.onEnterPressed: page.app.followLink(modelData)
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -2
+                visible: linkArea.activeFocus
+                radius: 3
+                color: "transparent"
+                border.width: 2
+                border.color: UI.Style.accent
+            }
+        }
+    }
+
+    UI.Tooltip {
+        parent: page.hoveredLink ?? page
+        visible: page.hoveredLink !== null
+        text: page.hoveredLink ? page.hoveredLink.tip : ""
     }
 
     UI.Menu {

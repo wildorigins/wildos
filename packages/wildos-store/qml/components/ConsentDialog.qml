@@ -61,7 +61,7 @@ T.Popup {
         radius: UI.Style.radiusDialog
         color: Metrics.dialog
         border.width: 1
-        border.color: UI.Style.tone(0.12)
+        border.color: UI.Style.borderDialog
         layer.enabled: true
         layer.effect: MultiEffect {
             shadowEnabled: true
@@ -74,7 +74,7 @@ T.Popup {
 
     contentItem: Flickable {
         Accessible.role: Accessible.Dialog
-        Accessible.name: dialog.app ? "Before " + dialog.app.name + " installs" : ""
+        Accessible.name: dialog.app ? qsTr("Before %1 installs").arg(dialog.app.name) : ""
         contentHeight: content.implicitHeight
         clip: contentHeight > height
         boundsBehavior: Flickable.StopAtBounds
@@ -98,7 +98,7 @@ T.Popup {
                 UI.Label {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: dialog.app ? "Before " + dialog.app.name + " installs" : ""
+                    text: dialog.app ? qsTr("Before %1 installs").arg(dialog.app.name) : ""
                     size: 20
                     font.weight: UI.Style.weightBold
                     wrapMode: Text.Wrap
@@ -109,7 +109,7 @@ T.Popup {
                 UI.Label {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: "Choose what it can reach. Anything you leave off, it simply can't see. You can change this later in Settings."
+                    text: qsTr("Choose what it can reach. Anything you leave off, it simply can't see. You can change this later in Settings.")
                     size: 13.5
                     lineHeight: 1.5
                     color: Metrics.inkSecondary
@@ -194,7 +194,7 @@ T.Popup {
                                 visible: choice.modelData.required
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "Required"
+                                text: qsTr("Required")
                                 size: 12
                                 color: Metrics.inkTertiary
                             }
@@ -257,13 +257,13 @@ T.Popup {
                 }
 
                 DialogButton {
-                    text: "Cancel"
+                    text: qsTr("Cancel")
                     onClicked: dialog.close()
                 }
 
                 DialogButton {
                     primary: true
-                    text: "Install"
+                    text: qsTr("Install")
                     focus: true
                     onClicked: dialog.install()
                 }

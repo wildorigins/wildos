@@ -25,7 +25,7 @@ PageScroll {
                     required property var modelData
                     iconName: modelData.icon
                     title: modelData.title
-                    description: modelData.apps.length === 0 ? "No app installed can open these" : modelData.description
+                    description: modelData.apps.length === 0 ? qsTr("No app installed can open these") : modelData.description
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
@@ -51,8 +51,8 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "document"
-                title: "Choose defaults by file type"
-                description: "Pick the app for .pdf, .docx and every other kind of file"
+                title: qsTr("Choose defaults by file type")
+                description: qsTr("Pick the app for .pdf, .docx and every other kind of file")
                 chevron: true
                 onClicked: Navigator.open("filetypes")
             }
@@ -60,8 +60,8 @@ PageScroll {
             UI.SettingRow {
                 visible: System.storeApp.length > 0
                 iconName: "store"
-                title: "Get more apps"
-                description: "Find another browser, music player or photo app in the Store"
+                title: qsTr("Get more apps")
+                description: qsTr("Find another browser, music player or photo app in the Store")
                 chevron: true
                 onClicked: System.openStore()
             }

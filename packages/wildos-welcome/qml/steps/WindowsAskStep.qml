@@ -19,25 +19,25 @@ StepPage {
     signal next()
     signal finished()
 
-    title: "Use your Windows programs here?"
-    subtitle: "Windows mode runs Windows programs, like Microsoft Office, in their own windows next to your other apps. Windows stays hidden and only wakes when you open one."
+    title: qsTr("Use your Windows programs here?")
+    subtitle: qsTr("Windows mode runs Windows programs, like Microsoft Office, in their own windows next to your other apps. Windows stays hidden and only wakes when you open one.")
     gap: 16
-    note: page.setUp ? "Next: choose options, including Office and your Windows licence."
+    note: page.setUp ? qsTr("Next: choose options, including Office and your Windows licence.")
         : WindowsImport.planning && FirstBoot.state === "failed" ? FirstBoot.error
-        : FirstBoot.state === "signing-in" ? "Signing you in." : ""
+        : FirstBoot.state === "signing-in" ? qsTr("Signing you in.") : ""
     noteColor: WindowsImport.planning && FirstBoot.state === "failed" ? UI.Style.danger : UI.Style.inkMuted
     Component.onCompleted: focusQuietly(nextButton)
 
     // "about an hour" reads better than "about 66 minutes".
     function about(minutes) {
-        return minutes >= 55 && minutes <= 75 ? "about an hour" : "about " + Math.round(minutes / 5) * 5 + " minutes";
+        return minutes >= 55 && minutes <= 75 ? qsTr("about an hour") : qsTr("about %1 minutes").arg(Math.round(minutes / 5) * 5);
     }
 
     RowLayout {
         Layout.fillWidth: true
         spacing: 10
         Accessible.role: Accessible.Grouping
-        Accessible.name: "Set up Windows mode"
+        Accessible.name: qsTr("Set up Windows mode")
 
         WinMode.RadioCard {
             Layout.fillWidth: true
@@ -46,11 +46,10 @@ StepPage {
             dense: true
             checked: page.setUp
             enabled: WinMode.Setup.requirementsMet
-            title: "Set up Windows mode"
-            chip: "Recommended"
-            description: "About " + WinMode.Setup.needLabel + ". Sets itself up in the background in " + page.about(WinMode.Setup.setupMinutes)
-                + ", and you can use Wild OS straight away."
-            reason: WinMode.Setup.requirementsMet ? "" : "This PC doesn't meet everything below yet."
+            title: qsTr("Set up Windows mode")
+            chip: qsTr("Recommended")
+            description: qsTr("About %1. Sets itself up in the background in %2, and you can use Wild OS straight away.").arg(WinMode.Setup.needLabel).arg(page.about(WinMode.Setup.setupMinutes))
+            reason: WinMode.Setup.requirementsMet ? "" : qsTr("This PC doesn't meet everything below yet.")
             onClicked: page.setUp = true
         }
 
@@ -60,8 +59,8 @@ StepPage {
             Layout.fillHeight: true
             dense: true
             checked: !page.setUp
-            title: "Not now"
-            description: "You can set it up any time in Settings, under Windows apps."
+            title: qsTr("Not now")
+            description: qsTr("You can set it up any time in Settings, under Windows apps.")
             onClicked: page.setUp = false
         }
     }
@@ -72,14 +71,14 @@ StepPage {
 
     buttons: [
         UI.Button {
-            text: "Back"
+            text: qsTr("Back")
             enabled: !page.finishing
             onClicked: page.back()
         },
         UI.Button {
             id: nextButton
             kind: "primary"
-            text: page.setUp ? "Next" : "Finish"
+            text: page.setUp ? qsTr("Next") : qsTr("Finish")
             busy: page.finishing
             onClicked: page.setUp ? page.next() : page.finished()
         }

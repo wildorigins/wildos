@@ -1,5 +1,6 @@
 #include "passwordcheck.h"
 
+#include <QCoreApplication>
 #include <QRegularExpression>
 
 #include <pwquality.h>
@@ -16,35 +17,35 @@ QString reasonFor(int error, const QString &cracklib)
     switch (error) {
     case PWQ_ERROR_CRACKLIB_CHECK:
         if (cracklib.contains(QLatin1String("dictionary word"))) {
-            return QStringLiteral("it's based on a dictionary word");
+            return QCoreApplication::translate("PasswordCheck", "it's based on a dictionary word");
         }
         if (cracklib.contains(QLatin1String("simplistic"))) {
-            return QStringLiteral("it follows a simple pattern");
+            return QCoreApplication::translate("PasswordCheck", "it follows a simple pattern");
         }
         if (cracklib.contains(QLatin1String("DIFFERENT"))) {
-            return QStringLiteral("it uses too few different characters");
+            return QCoreApplication::translate("PasswordCheck", "it uses too few different characters");
         }
         if (cracklib.contains(QLatin1String("whitespace"))) {
-            return QStringLiteral("it's all spaces");
+            return QCoreApplication::translate("PasswordCheck", "it's all spaces");
         }
         if (cracklib.contains(QLatin1String("short"))) {
-            return QStringLiteral("it's short");
+            return QCoreApplication::translate("PasswordCheck", "it's short");
         }
-        return QStringLiteral("it's easy to guess");
+        return QCoreApplication::translate("PasswordCheck", "it's easy to guess");
     case PWQ_ERROR_PALINDROME:
-        return QStringLiteral("it reads the same backwards");
+        return QCoreApplication::translate("PasswordCheck", "it reads the same backwards");
     case PWQ_ERROR_USER_CHECK:
     case PWQ_ERROR_GECOS_CHECK:
-        return QStringLiteral("it contains your name");
+        return QCoreApplication::translate("PasswordCheck", "it contains your name");
     case PWQ_ERROR_SAME_PASSWORD:
     case PWQ_ERROR_CASE_CHANGES_ONLY:
     case PWQ_ERROR_TOO_SIMILAR:
     case PWQ_ERROR_ROTATED:
-        return QStringLiteral("it's too close to your current password");
+        return QCoreApplication::translate("PasswordCheck", "it's too close to your current password");
     case PWQ_ERROR_MIN_LENGTH:
-        return QStringLiteral("it's short");
+        return QCoreApplication::translate("PasswordCheck", "it's short");
     default:
-        return QStringLiteral("it's easy to guess");
+        return QCoreApplication::translate("PasswordCheck", "it's easy to guess");
     }
 }
 
@@ -65,7 +66,7 @@ QVariantMap PasswordCheck::check(const QString &password, const QString &oldPass
     for (const QString &name : names) {
         for (const QString &part : name.split(separators, Qt::SkipEmptyParts)) {
             if (part.size() >= 3 && password.contains(part, Qt::CaseInsensitive)) {
-                return weak(QStringLiteral("it contains your name"));
+                return weak(tr("it contains your name"));
             }
         }
     }

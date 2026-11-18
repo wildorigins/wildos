@@ -1,0 +1,3 @@
+# zlib1g ships this link; whenever it is installed or updated, the check
+# decides again whether this build still fits the system's zlib.
+interest-noawait /usr/lib/x86_64-linux-gnu/libz.so.1

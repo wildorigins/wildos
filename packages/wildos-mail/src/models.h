@@ -51,6 +51,8 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     void reset(const QList<FolderEntry> &entries);
+    // The row of an account's heading, for keeping the keyboard on it.
+    Q_INVOKABLE int headerRow(const QString &accountId) const;
     const QList<FolderEntry> &entries() const
     {
         return m_entries;

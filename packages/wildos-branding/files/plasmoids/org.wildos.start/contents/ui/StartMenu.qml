@@ -31,10 +31,11 @@ FocusScope {
     // The design measures padding inside a 1px glass border.
     readonly property real border: 1
     readonly property real homeGlassHeight: 2 * border + Style.padTop + 46 + Style.sectionGap
-        + home.implicitHeight + Style.sectionGap + Style.footerHeight
-    readonly property real glassHeight: searching ? Style.searchHeight
-        : view === "apps" ? Math.max(homeGlassHeight, 640)
-        : homeGlassHeight
+        + Math.max(home.restHeight, home.implicitHeight) + Style.sectionGap + Style.footerHeight
+    // One height for the start page, All apps and search, as Windows 11's
+    // Start keeps, so the window never jumps as you move between them: the
+    // start page's own height, and never less than the search page needs.
+    readonly property real glassHeight: Math.max(homeGlassHeight, Style.searchHeight)
 
     readonly property real contentWidth: Style.menuWidth - edgeLeft - edgeRight
     readonly property real contentHeight: glassHeight - edgeTop - edgeBottom
@@ -59,13 +60,15 @@ FocusScope {
         home.pinnedGrid.currentIndex = -1;
         home.recentGrid.currentIndex = -1;
         home.showAllRecents = false;
+        allApps.picking = false;
         allApps.list.currentIndex = -1;
         allApps.list.positionViewAtBeginning();
         searchBox.input.forceActiveFocus();
     }
 
     // Without this Plasma centres the popup on the Start button, which is left
-    // of centre in the taskbar group. If the window type ever lacks a visual
+    // of centre in the taskbar group (the anchor is the button itself only
+    // with the taskbar aligned left). If the window type ever lacks a visual
     // parent the popup simply stays centred on the button.
     function centrePopup(): void {
         const popupWindow = menu.Window.window;
@@ -80,6 +83,7 @@ FocusScope {
     }
 
     function showAllApps(): void {
+        allApps.picking = false;
         view = "apps";
         allApps.list.positionViewAtBeginning();
         if (Nav.keyboard) {
@@ -157,7 +161,7 @@ FocusScope {
     // in Windows wording.
     function appEntries(item: Item, model: var, index: int): var {
         const data = "app" in item ? item.app : item.model;
-        const entries = [{ text: "Open", icon: "external", bold: true, run: () => {
+        const entries = [{ text: qsTr("Open"), icon: "external", bold: true, run: () => {
             model.trigger(index, "", null);
             launcher.close();
         } }];
@@ -167,22 +171,49 @@ FocusScope {
         return commands.length > 0 ? entries.concat({ separator: true }, commands) : entries;
     }
 
+    // Forgetting a file takes it out of the history, but the list is only
+    // told when the file's type can still be looked up, and by then it has
+    // been deleted with the rest (fixed in Plasma 6.6). So the list is read
+    // again, once the history service has had time to save, and once more
+    // for a slow disk.
+    Timer {
+        id: forgotten
+        property int rounds: 0
+        interval: 300
+        onTriggered: {
+            launcher.recentModel.refresh();
+            rounds += 1;
+            if (rounds < 2) {
+                interval = 1200;
+                start();
+            }
+        }
+        function begin(): void {
+            rounds = 0;
+            interval = 300;
+            restart();
+        }
+    }
+
     function documentEntries(item: Item, model: var, index: int): var {
         const actions = item.model.actionList ? Array.from(item.model.actionList) : [];
-        const entries = [{ text: "Open", icon: "external", bold: true, run: () => {
+        const entries = [{ text: qsTr("Open"), icon: "external", bold: true, run: () => {
             model.trigger(index, "", null);
             launcher.close();
         } }];
         const folder = actions.find(a => a.actionId === "openParentFolder");
         if (folder) {
-            entries.push({ text: "Open file location", icon: "open-folder", run: () => {
+            entries.push({ text: qsTr("Open file location"), icon: "open-folder", run: () => {
                 model.trigger(index, folder.actionId, folder.actionArgument);
                 launcher.close();
             } });
         }
         const forget = actions.find(a => a.actionId === "forget");
         if (forget) {
-            entries.push({ text: "Remove from list", icon: "delete", run: () => model.trigger(index, forget.actionId, forget.actionArgument) });
+            entries.push({ text: qsTr("Remove from list"), icon: "delete", run: () => {
+                model.trigger(index, forget.actionId, forget.actionArgument);
+                forgotten.begin();
+            } });
         }
         return entries;
     }
@@ -214,13 +245,13 @@ FocusScope {
         contextMenu.menuWidth = 250;
         contextMenu.rowHeight = 40;
         contextMenu.entries = [
-            { text: "Change account settings", icon: "cog", run: () => launcher.openAccountSettings() },
+            { text: qsTr("Change account settings"), icon: "cog", run: () => launcher.openAccountSettings() },
             { separator: true },
-            { text: "Lock", icon: "lock", run: () => {
+            { text: qsTr("Lock"), icon: "lock", run: () => {
                 launcher.close();
                 session.lock();
             } },
-            { text: "Sign out", icon: "sign-out", run: () => session.requestLogout(Sessions.SessionManagement.ConfirmationMode.Skip) },
+            { text: qsTr("Sign out"), icon: "sign-out", run: () => session.requestLogout(Sessions.SessionManagement.ConfirmationMode.Skip) },
         ];
         contextMenu.openAboveAt(footer.userButton, 0);
     }
@@ -232,22 +263,22 @@ FocusScope {
         }
         const session = launcher.session;
         const entries = [
-            { text: "Lock", icon: "lock", run: () => {
+            { text: qsTr("Lock"), icon: "lock", run: () => {
                 launcher.close();
                 session.lock();
             } },
-            { text: "Sign out", icon: "sign-out", run: () => session.requestLogout(Sessions.SessionManagement.ConfirmationMode.Skip) },
+            { text: qsTr("Sign out"), icon: "sign-out", run: () => session.requestLogout(Sessions.SessionManagement.ConfirmationMode.Skip) },
             { separator: true },
         ];
         if (session.canSuspend) {
-            entries.push({ text: "Sleep", icon: "moon", run: () => {
+            entries.push({ text: qsTr("Sleep"), icon: "moon", run: () => {
                 launcher.close();
                 session.suspend();
             } });
         }
         entries.push(
-            { text: "Restart", icon: "refresh", run: () => session.requestReboot(Sessions.SessionManagement.ConfirmationMode.Skip) },
-            { text: "Shut down", icon: "power", run: () => session.requestShutdown(Sessions.SessionManagement.ConfirmationMode.Skip) },
+            { text: qsTr("Restart"), icon: "refresh", run: () => session.requestReboot(Sessions.SessionManagement.ConfirmationMode.Skip) },
+            { text: qsTr("Shut down"), icon: "power", run: () => session.requestShutdown(Sessions.SessionManagement.ConfirmationMode.Skip) },
         );
         powerMenu.entries = entries;
         powerMenu.openAbove(footer.powerButton, 12);
@@ -274,6 +305,8 @@ FocusScope {
             if (searching) {
                 searchBox.clear();
                 searchBox.input.forceActiveFocus();
+            } else if (view === "apps" && allApps.picking) {
+                allApps.picking = false;
             } else if (view === "apps") {
                 showHome();
                 searchBox.input.forceActiveFocus();
@@ -353,7 +386,9 @@ FocusScope {
             }
             onMoveUp: footer.userButton.forceActiveFocus(Qt.BacktabFocusReason)
             onEscapePressed: {
-                if (menu.view === "apps") {
+                if (menu.view === "apps" && allApps.picking) {
+                    allApps.picking = false;
+                } else if (menu.view === "apps") {
                     menu.showHome();
                     searchBox.input.forceActiveFocus();
                 } else {
@@ -488,7 +523,7 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 size: 12
                 color: UI.Style.inkStatus
-                text: "Search stays on this computer. Nothing you type is sent online."
+                text: qsTr("Search stays on this computer. Nothing you type is sent online.")
             }
         }
     }

@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Archive
+Name[fr]=Archive
 GenericName=Archive manager
+GenericName[fr]=Gestionnaire d'archives
 Comment=Open, extract and make ZIP and 7z archives
+Comment[fr]=Ouvrir, extraire et créer des archives ZIP et 7z
 Exec=wildos-archive %F
 Icon=wildos-archive
 Terminal=false

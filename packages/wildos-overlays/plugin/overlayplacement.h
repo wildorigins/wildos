@@ -36,6 +36,11 @@ class OverlayPlacement : public QObject, public QQmlParserStatus
     // Windows. It honours the system animation speed, so reduced motion
     // turns it off with everything else.
     Q_PROPERTY(Edge slideFrom READ slideFrom WRITE setSlideFrom NOTIFY changed)
+    // Margins count from the edge of the screen itself rather than from
+    // the edge of the space the taskbar leaves free, so a surface can sit a
+    // set distance above the taskbar whether the taskbar keeps its strip
+    // of the screen or hides.
+    Q_PROPERTY(bool fromScreenEdge READ fromScreenEdge WRITE setFromScreenEdge NOTIFY changed)
     Q_PROPERTY(bool wayland READ wayland CONSTANT)
 
 public:
@@ -90,6 +95,8 @@ public:
     void setScope(const QString &scope);
     Edge slideFrom() const { return m_slide; }
     void setSlideFrom(Edge edge);
+    bool fromScreenEdge() const { return m_fromScreenEdge; }
+    void setFromScreenEdge(bool value);
     bool wayland() const;
 
 Q_SIGNALS:
@@ -109,6 +116,7 @@ private:
     Keyboard m_keyboard = NoKeyboard;
     QString m_scope = QStringLiteral("wildos-overlay");
     Edge m_slide = NoEdge;
+    bool m_fromScreenEdge = false;
     bool m_complete = false;
 };
 

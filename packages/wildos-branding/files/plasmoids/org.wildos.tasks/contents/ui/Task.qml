@@ -9,7 +9,7 @@
     from the Taskbar artboard (48 px square, 12 px corners, 34 px icon) with
     the four states of the LaunchStates artboard: the icon dips the moment it
     is pressed; a starting app gets a pale line that stretches and a faint
-    glow; a running app a short white line; the app in front an accent line
+    glow; a running app a short pale line; the app in front an accent line
     and a soft highlight. Nothing bounces and nothing spins.
 */
 
@@ -39,7 +39,7 @@ Item {
     readonly property bool orphaned: model.IsLauncher === true && String(model.AppId || "") === ""
 
     visible: !orphaned
-    width: Style.button
+    width: tasksRoot.buttonWidth
     height: Style.button
 
     activeFocusOnTab: !orphaned
@@ -113,10 +113,10 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: model.display || ""
-    Accessible.description: starting ? "Starting"
-        : isLauncher ? "Open " + (model.display || "")
-        : model.IsGroupParent ? model.ChildCount + " windows"
-        : isActive ? "In front" : "Running"
+    Accessible.description: starting ? qsTr("Starting")
+        : isLauncher ? qsTr("Open %1").arg(model.display || "")
+        : model.IsGroupParent ? qsTr("%n windows", "", model.ChildCount)
+        : isActive ? qsTr("In front") : qsTr("Running")
     Accessible.onPressAction: activate(0)
 
     function modelIndex(): var {
@@ -218,6 +218,7 @@ Item {
     }
 
     onXChanged: publishGeometry.restart()
+    onWidthChanged: publishGeometry.restart()
 
     Timer {
         id: publishGeometry
@@ -234,6 +235,7 @@ Item {
     // full size to 1.04, and back, 100 ms in all.
     onPressedChanged: {
         if (pressed) {
+            nameTip.hideImmediately();
             tasksRoot.mutePreview(task);
             if (!reducedMotion) {
                 dip.restart();
@@ -297,8 +299,8 @@ Item {
         source: task.model.decoration
     }
 
-    // The line under the icon. Starting: pale blue, stretching from 6 to
-    // 22 px and back. Running: 6 px of white at 70%. In front: 18 px in the
+    // The line under the icon. Starting: a pale accent, stretching from 6 to
+    // 22 px and back. Running: 6 px of the ink at 70%. In front: 18 px in the
     // accent. Progress that an app reports (a download, a copy) fills a
     // wider track in its place.
     readonly property real restingMarkWidth: starting ? Style.markWidth
@@ -457,7 +459,7 @@ Item {
         z: 2
 
         Accessible.role: Accessible.Button
-        Accessible.name: task.muted ? "Unmute " + (task.model.display || "") : "Mute " + (task.model.display || "")
+        Accessible.name: task.muted ? qsTr("Unmute %1").arg(task.model.display || "") : qsTr("Mute %1").arg(task.model.display || "")
         Accessible.onPressAction: task.toggleMuted()
 
         Glyph {
@@ -474,8 +476,23 @@ Item {
             anchors.fill: parent
             anchors.margins: -2
             hoverEnabled: true
+            onPressed: audioTip.hideImmediately()
             onClicked: task.toggleMuted()
+
+            TaskbarTip {
+                id: audioTip
+                text: audioBadge.Accessible.name
+            }
         }
+    }
+
+    // A running app shows its windows when pointed at; one that is not
+    // running, or still starting, has nothing to show but its name, as on
+    // Windows. Under the speaker badge, which has a label of its own.
+    TaskbarTip {
+        id: nameTip
+        z: 1
+        text: !task.isWindow && !task.menuOpen && task.tasksRoot.dragSource === null ? task.model.display || "" : ""
     }
 
     FocusRing {
@@ -555,8 +572,30 @@ Item {
         }
     }
 
+    // The preview never has the keyboard itself, so while the keyboard is
+    // in it the keys come here and are passed on.
+    onActiveFocusChanged: {
+        if (!activeFocus && tasksRoot.previewHasKeyboard(task)) {
+            tasksRoot.hidePreview();
+        }
+    }
+
     Keys.onPressed: event => {
+        if (tasksRoot.previewKey(task, event.key)) {
+            Nav.keyboard = true;
+            event.accepted = true;
+            return;
+        }
         switch (event.key) {
+        case Qt.Key_Up:
+            if (isWindow) {
+                Nav.keyboard = true;
+                tasksRoot.keyboardPreview(task);
+                event.accepted = true;
+            } else {
+                event.accepted = false;
+            }
+            break;
         case Qt.Key_Return:
         case Qt.Key_Enter:
         case Qt.Key_Space:

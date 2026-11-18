@@ -199,8 +199,8 @@ void HostKeys::check(const QString &host, int port, const QJSValue &callback)
             result.insert(QStringLiteral("state"), QStringLiteral("error"));
             const QString err = QString::fromUtf8(scan->readAllStandardError()).trimmed();
             result.insert(QStringLiteral("error"), err.contains(QLatin1String("Name or service not known")) || err.contains(QLatin1String("not known"))
-                                                       ? QStringLiteral("Remote couldn't find %1 on the network. Check the address.").arg(host)
-                                                       : QStringLiteral("%1 didn't answer on port %2. Check it's switched on and that SSH is running there.").arg(host).arg(port));
+                                                       ? tr("Remote couldn't find %1 on the network. Check the address.").arg(host)
+                                                       : tr("%1 didn't answer on port %2. Check it's switched on and that SSH is running there.").arg(host).arg(port));
             if (callback.isCallable()) {
                 callback.call({qjsEngine(this)->toScriptValue(result)});
             }

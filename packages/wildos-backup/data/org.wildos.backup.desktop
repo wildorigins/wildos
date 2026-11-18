@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Backup
+Name[fr]=Sauvegarde
 GenericName=Backup
+GenericName[fr]=Sauvegarde
 Comment=Back up your files to your own drive and get them back
+Comment[fr]=Sauvegardez vos fichiers sur votre propre disque et récupérez-les
 Exec=wildos-backup
 Icon=wildos-backup
 Terminal=false

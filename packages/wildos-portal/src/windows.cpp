@@ -12,8 +12,12 @@
 
 namespace
 {
-// Long enough that a second dialog straight after the first opens at once.
-constexpr int idleQuitMs = 5 * 60 * 1000;
+bool s_started = false;
+}
+
+bool Windows::started()
+{
+    return s_started;
 }
 
 Windows *Windows::instance()
@@ -26,6 +30,7 @@ Windows::Windows(QObject *parent)
     : QObject(parent)
     , m_engine(new QQmlApplicationEngine(this))
 {
+    s_started = true;
     m_engine->addImageProvider(QStringLiteral("thumb"), new ThumbnailProvider);
     m_idle.setSingleShot(true);
     m_idle.setInterval(idleQuitMs);

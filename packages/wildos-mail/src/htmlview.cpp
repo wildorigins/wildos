@@ -9,8 +9,12 @@
 #include <QNetworkReply>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPrintDialog>
+#include <QPrinter>
 #include <QRegularExpression>
 #include <QUrl>
+
+#include <utility>
 
 #include "messageview.h"
 
@@ -265,6 +269,174 @@ void HtmlView::paint(QPainter *painter)
     m_clips.clear();
 }
 
+void HtmlView::drawSlice(QPainter *painter, int top, int bottom)
+{
+    m_painter = painter;
+    m_slice = QRect(0, top, qMax(int(width()), m_contentWidth), bottom - top);
+    painter->setClipRect(m_slice);
+    litehtml::position clip(m_slice.x(), m_slice.y(), m_slice.width(), m_slice.height());
+    m_document->draw(reinterpret_cast<litehtml::uint_ptr>(painter), 0, 0, &clip);
+    m_painter = nullptr;
+    m_clips.clear();
+    m_slice = QRect();
+}
+
+// The top of the first sheet. Without a painter it only measures.
+int HtmlView::drawHeading(QPainter *painter, int width, const QString &subject, const QStringList &lines) const
+{
+    QFont title(QStringLiteral("Albert Sans"));
+    title.setPixelSize(20);
+    title.setWeight(QFont::DemiBold);
+    QFont plain(QStringLiteral("Albert Sans"));
+    plain.setPixelSize(13);
+    int y = 0;
+    // A subject or a list of recipients that runs on and on stops after a
+    // few lines instead of pushing the message off the first sheet.
+    const auto put = [&](const QFont &font, const QString &text, const QColor &colour, int maxLines) {
+        const QFontMetrics metrics(font);
+        const int limit = metrics.lineSpacing() * maxLines;
+        const int height = qMin(limit, metrics.boundingRect(QRect(0, 0, width, limit), Qt::TextWordWrap, text).height());
+        if (painter) {
+            painter->setFont(font);
+            painter->setPen(colour);
+            painter->drawText(QRect(0, y, width, height), Qt::TextWordWrap, text);
+        }
+        y += height;
+    };
+    put(title, subject, QColor(0x1f, 0x21, 0x25), 3);
+    y += 8;
+    for (const QString &line : lines) {
+        put(plain, line, QColor(0x5b, 0x62, 0x75), 4);
+        y += 2;
+    }
+    y += 10;
+    if (painter) {
+        painter->fillRect(QRect(0, y, width, 1), QColor(0x5b, 0x62, 0x75));
+    }
+    return y + 17;
+}
+
+bool HtmlView::print()
+{
+    if (!m_document || !m_message) {
+        return true;
+    }
+    // Everything is taken from the message now: the one in the pane can
+    // change while the print dialog is open.
+    const QString subject = m_message->subject().isEmpty() ? tr("(No subject)") : m_message->subject();
+    const QString from = m_message->fromName().isEmpty() || m_message->fromName() == m_message->fromAddress()
+        ? m_message->fromAddress()
+        : QStringLiteral("%1 <%2>").arg(m_message->fromName(), m_message->fromAddress());
+    QStringList lines = {tr("From: %1").arg(from), tr("To: %1").arg(m_message->to())};
+    if (!m_message->cc().isEmpty()) {
+        lines << tr("Cc: %1").arg(m_message->cc());
+    }
+    lines << tr("Sent: %1").arg(m_message->date());
+
+    // A second copy of the message, laid out for the paper. It is given the
+    // pictures already showing in the pane and fetches none of its own.
+    HtmlView page;
+    page.m_message = m_message;
+    page.m_html = m_html;
+    page.m_images = m_images;
+    page.m_paper = true;
+    page.m_fontSize = 14.5;
+    page.setWidth(720);
+    page.rebuild();
+    if (!page.m_document) {
+        return true;
+    }
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setDocName(subject);
+    QPrintDialog dialog(&printer);
+    dialog.setWindowTitle(tr("Print"));
+    // How many sheets there are depends on the paper chosen in the dialog.
+    dialog.setOption(QAbstractPrintDialog::PrintPageRange, false);
+    if (dialog.exec() != QDialog::Accepted) {
+        return true;
+    }
+    QPainter painter;
+    if (!painter.begin(&printer)) {
+        return false;
+    }
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    // The message is laid out as it is on screen, 96 to the inch, and
+    // scaled up to the printer's dots. Mail that insists on being wider
+    // than the paper (a newsletter with a fixed width) is shrunk to fit.
+    const QRectF sheet = printer.pageRect(QPrinter::DevicePixel);
+    const int width = qMax(100, qRound(sheet.width() * 96.0 / printer.resolution()));
+    page.setWidth(width);
+    page.relayout();
+    const int laidOut = qMax(width, page.m_contentWidth);
+    const qreal scale = sheet.width() / laidOut;
+    const int sheetHeight = qMax(200, int(sheet.height() / scale));
+    const int total = page.m_contentHeight;
+    const int heading = qMin(drawHeading(nullptr, laidOut, subject, lines), sheetHeight / 2);
+
+    // Drawn once onto nothing, to learn where the lines and pictures are.
+    QList<QPair<int, int>> boxes;
+    {
+        QImage nothing(1, 1, QImage::Format_ARGB32_Premultiplied);
+        QPainter measure(&nothing);
+        page.m_boxes = &boxes;
+        page.drawSlice(&measure, 0, total);
+        page.m_boxes = nullptr;
+    }
+
+    // Each sheet ends at the paper's height, pulled up to the top of any
+    // line or picture it would otherwise cut through.
+    QList<int> ends;
+    int top = 0;
+    int room = sheetHeight - heading;
+    while (top < total) {
+        int bottom = top + room;
+        if (bottom >= total) {
+            bottom = total;
+        } else {
+            for (bool moved = true; moved;) {
+                moved = false;
+                for (const auto &[start, end] : std::as_const(boxes)) {
+                    // Only what fits on a sheet of its own can be kept whole.
+                    if (start > top && start < bottom && end > bottom && end - start < sheetHeight) {
+                        bottom = start;
+                        moved = true;
+                    }
+                }
+            }
+        }
+        ends.append(bottom);
+        top = bottom;
+        room = sheetHeight;
+    }
+    if (ends.isEmpty()) {
+        ends.append(0);
+    }
+
+    for (int i = 0; i < ends.size(); ++i) {
+        if (i > 0) {
+            printer.newPage();
+        }
+        painter.save();
+        painter.scale(scale, scale);
+        const int start = i == 0 ? 0 : ends.at(i - 1);
+        if (i == 0) {
+            drawHeading(&painter, laidOut, subject, lines);
+            painter.translate(0, heading);
+        }
+        painter.translate(0, -start);
+        if (ends.at(i) > start) {
+            page.drawSlice(&painter, start, ends.at(i));
+        }
+        painter.restore();
+    }
+    painter.end();
+    return true;
+}
+
 void HtmlView::hoverMoveEvent(QHoverEvent *event)
 {
     if (!m_document) {
@@ -382,6 +554,9 @@ void HtmlView::draw_text(litehtml::uint_ptr hdc, const litehtml::tchar_t *text, 
     painter->setFont(font);
     painter->setPen(colourOf(color));
     painter->drawText(pos.x, pos.y + QFontMetrics(font).ascent(), utf8(text));
+    if (m_boxes) {
+        m_boxes->append(qMakePair(int(pos.y), int(pos.y + pos.height)));
+    }
 }
 
 int HtmlView::pt_to_px(int pt) const
@@ -517,6 +692,9 @@ void HtmlView::draw_background(litehtml::uint_ptr hdc, const litehtml::backgroun
         }
     }
     const QRectF box(bg.border_box.x, bg.border_box.y, bg.border_box.width, bg.border_box.height);
+    if (m_boxes && !bg.image.empty()) {
+        m_boxes->append(qMakePair(int(bg.border_box.y), int(bg.border_box.y + bg.border_box.height)));
+    }
     painter->save();
     painter->setClipRect(QRect(bg.clip_box.x, bg.clip_box.y, bg.clip_box.width, bg.clip_box.height), Qt::IntersectClip);
     if (bg.color.alpha > 0 && !bg.is_root) {
@@ -693,6 +871,8 @@ void HtmlView::set_clip(const litehtml::position &pos, const litehtml::border_ra
     }
     if (!m_clips.isEmpty()) {
         clip = clip.intersected(m_clips.top());
+    } else if (m_slice.isValid()) {
+        clip = clip.intersected(m_slice);
     }
     m_clips.push(clip);
     if (m_painter) {
@@ -706,7 +886,9 @@ void HtmlView::del_clip()
         m_clips.pop();
     }
     if (m_painter) {
-        if (m_clips.isEmpty()) {
+        if (m_clips.isEmpty() && m_slice.isValid()) {
+            m_painter->setClipRect(m_slice);
+        } else if (m_clips.isEmpty()) {
             m_painter->setClipping(false);
         } else {
             m_painter->setClipRect(m_clips.top());

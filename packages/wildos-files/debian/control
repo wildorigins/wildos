@@ -21,6 +21,8 @@ Build-Depends:
  pkgconf,
  qml6-module-qtmultimedia,
  qml6-module-qtquick-pdf,
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -53,7 +55,7 @@ Depends:
  qt6-svg-plugins,
  qpdf,
  udisks2,
- wildos-ui (>= 0.1.12),
+ wildos-ui (>= 0.1.19),
 Recommends:
  kio-extras,
  xdg-utils,

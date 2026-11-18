@@ -1,0 +1,19 @@
+[Unit]
+Description=Install Slides beside Write and Tables
+# Left by postinst on a PC updating from before Slides existed, and removed
+# once it is in.
+ConditionPathExists=/var/lib/wildos/office-slides
+Wants=network-online.target
+After=network-online.target wildos-office-split.service
+
+[Service]
+Type=oneshot
+Environment=DEBIAN_FRONTEND=noninteractive
+# apt-get install also marks it as chosen, so it is never taken away as no
+# longer needed.
+ExecStart=/usr/bin/apt-get -o DPkg::Lock::Timeout=1800 -o Dpkg::Options::=--force-confold install -y -q --no-install-recommends wildos-slides
+ExecStartPost=/usr/bin/rm -f /var/lib/wildos/office-slides
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

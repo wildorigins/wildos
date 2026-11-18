@@ -48,11 +48,51 @@ PlasmoidItem {
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.constraintHints: Plasmoid.CanFillArea
 
+    // Pins whose app was uninstalled stay in the model but are not drawn
+    // (Task.qml); they take no room, so they are not counted.
+    property int modelRevision: 0
+    readonly property int buttonCount: {
+        modelRevision;
+        let shown = 0;
+        for (let i = 0; i < tasksModel.count; ++i) {
+            const index = tasksModel.makeModelIndex(i);
+            if (tasksModel.data(index, atm.IsLauncher) !== true || String(tasksModel.data(index, atm.AppId) || "") !== "") {
+                shown++;
+            }
+        }
+        return shown + orphanLaunches.length;
+    }
+
+    Connections {
+        target: tasksModel
+        function onDataChanged(): void { tasks.modelRevision++; }
+        function onRowsInserted(): void { tasks.modelRevision++; }
+        function onRowsRemoved(): void { tasks.modelRevision++; }
+        function onModelReset(): void { tasks.modelRevision++; }
+    }
+
+    function rowWidth(button: int): int {
+        return buttonCount * button + Math.max(0, buttonCount - 1) * Style.gap;
+    }
+
+    // The buttons are 48 px wide while they fit. When more apps are open
+    // than the taskbar has room for, the panel gives this widget less than
+    // it asks for, down to the narrow row, and every button narrows by the
+    // same amount to fit what it was given. A pixel or two short is the
+    // panel rounding, not a full bar.
+    readonly property int buttonWidth: {
+        if (buttonCount === 0 || width <= 0 || width >= rowWidth(Style.button) - 2) {
+            return Style.button;
+        }
+        const fit = Math.floor((width - (buttonCount - 1) * Style.gap) / buttonCount);
+        return Math.max(Style.buttonNarrow, Math.min(Style.button, fit));
+    }
+
     Layout.fillWidth: false
     Layout.fillHeight: true
-    Layout.minimumWidth: shouldShrinkToZero ? 1 : taskRow.implicitWidth
-    Layout.preferredWidth: Layout.minimumWidth
-    Layout.maximumWidth: Layout.minimumWidth
+    Layout.minimumWidth: shouldShrinkToZero ? 1 : rowWidth(Style.buttonNarrow)
+    Layout.preferredWidth: shouldShrinkToZero ? 1 : rowWidth(Style.button)
+    Layout.maximumWidth: Layout.preferredWidth
     Layout.minimumHeight: Style.button
 
     function noteLaunch(keys: var): void {
@@ -252,6 +292,30 @@ PlasmoidItem {
         previewCloseTimer.stop();
         previewPending = null;
         windowPreview.shown = false;
+        windowPreview.currentIndex = -1;
+    }
+
+    // The up arrow on a running app's button opens its preview for the
+    // keyboard, on the window nearest the button: the first picture, or
+    // the last title of a list.
+    function keyboardPreview(task: Item): void {
+        if (!(task as Task).isWindow || menuTask !== null || dragSource !== null) {
+            return;
+        }
+        previewOpenTimer.stop();
+        previewCloseTimer.stop();
+        previewPending = null;
+        windowPreview.task = task;
+        windowPreview.shown = true;
+        windowPreview.currentIndex = windowPreview.listMode ? windowPreview.windowCount - 1 : 0;
+    }
+
+    function previewHasKeyboard(task: Item): bool {
+        return windowPreview.visible && windowPreview.task === task && windowPreview.currentIndex >= 0;
+    }
+
+    function previewKey(task: Item, key: int): bool {
+        return previewHasKeyboard(task) && windowPreview.keyPressed(key);
     }
 
     function mutePreview(task: Item): void {
@@ -276,8 +340,10 @@ PlasmoidItem {
         id: previewCloseTimer
         interval: 300
         onTriggered: {
+            // A preview the keyboard opened stays until the keyboard
+            // leaves it, wherever the pointer happens to be.
             const task = windowPreview.task as Task;
-            if (!windowPreview.hovered && !(task && task.hovered)) {
+            if (!windowPreview.hovered && !(task && task.hovered) && windowPreview.currentIndex < 0) {
                 tasks.hidePreview();
             }
         }
@@ -513,7 +579,9 @@ PlasmoidItem {
         Repeater {
             model: tasks.orphanLaunches
 
-            delegate: StartingTask {}
+            delegate: StartingTask {
+                tasksRoot: tasks
+            }
         }
     }
 
@@ -581,5 +649,33 @@ PlasmoidItem {
             }
         });
         menu.show();
+    }
+
+    readonly property Component windowMenuComponent: Qt.createComponent("WindowMenu.qml")
+
+    function showWindowMenu(task: Item, winId: string, title: string, icon: var, fromKeyboard: bool): void {
+        if (windowMenuComponent.status !== Component.Ready) {
+            console.warn("Wild OS taskbar window menu:", windowMenuComponent.errorString());
+            return;
+        }
+        const menu = windowMenuComponent.createObject(task, {
+            task: task,
+            tasksRoot: tasks,
+            winId: winId,
+            windowTitle: title,
+            windowIcon: icon,
+            keyboard: fromKeyboard
+        });
+        hidePreview();
+        if (!menu.show()) {
+            menu.destroy();
+            return;
+        }
+        menuTask = task;
+        menu.closed.connect(() => {
+            if (tasks.menuTask === task) {
+                tasks.menuTask = null;
+            }
+        });
     }
 }

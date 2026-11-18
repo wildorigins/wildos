@@ -68,7 +68,7 @@ Rectangle {
         font.pixelSize: UI.Style.px(12)
         selectByMouse: true
         Accessible.role: Accessible.EditableText
-        Accessible.name: "New name"
+        Accessible.name: qsTr("New name")
 
         Keys.onReturnPressed: field.finish(true)
         Keys.onEnterPressed: field.finish(true)

@@ -10,6 +10,7 @@ import WildOS.UI as UI
 UI.AppWindow {
     id: window
 
+    stateKey: "quicknote"
     width: 400
     height: 320
     minimumWidth: 300

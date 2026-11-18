@@ -123,7 +123,7 @@ Rectangle {
             Layout.leftMargin: 4
             Layout.rightMargin: 4
             implicitHeight: card.implicitHeight + 24
-            radius: 10
+            radius: UI.Style.radiusPanel
             color: Look.greenFill
             border.width: 1
             border.color: Look.greenEdge

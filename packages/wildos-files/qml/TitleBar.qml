@@ -84,6 +84,9 @@ Item {
             currentIndex: bar.view.currentIndex
             onCurrentIndexChanged: if (currentIndex >= 0 && currentIndex !== bar.view.currentIndex) bar.view.currentIndex = currentIndex
             onNewTabRequested: bar.view.newTab()
+            reorderable: true
+            onMoved: (from, to) => bar.view.moveTab(from, to)
+            onContextMenuRequested: (index, x, y) => bar.view.openTabMenu(index, tabs, x, y)
 
             Repeater {
                 model: bar.view.tabs

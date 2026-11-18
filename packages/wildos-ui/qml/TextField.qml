@@ -15,6 +15,8 @@ T.TextField {
     id: control
 
     property string size: "medium"
+    // What the field is for, when the placeholder does not say it.
+    property string accessibleName
     property bool revealable: false
     property bool revealed: false
     property bool error: false
@@ -46,8 +48,8 @@ T.TextField {
     font.pixelSize: Style.px(large ? 14 : 13)
     echoMode: revealable && !revealed ? TextInput.Password : TextInput.Normal
     passwordCharacter: "•"
-    opacity: enabled ? 1 : 0.5
-    Accessible.name: placeholderText
+    opacity: enabled ? 1 : Style.disabledOpacity
+    Accessible.name: accessibleName.length > 0 ? accessibleName : placeholderText
 
     function openTextMenu(px: real, py: real): void {
         menu.open(px, py);
@@ -119,7 +121,7 @@ T.TextField {
             radius: Style.radiusXs
             iconName: control.revealed ? "eye-off" : "eye"
             iconSize: 15
-            tip: control.revealed ? "Hide password" : "Show password"
+            tip: control.revealed ? qsTr("Hide password") : qsTr("Show password")
             focusPolicy: Qt.NoFocus
             onClicked: control.revealed = !control.revealed
         }

@@ -69,7 +69,7 @@ Item {
             UI.Label {
                 width: parent.width
                 visible: info.urls.length === 0
-                text: "Select a file to see its details."
+                text: qsTr("Select a file to see its details.")
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
                 horizontalAlignment: Text.AlignHCenter
@@ -84,13 +84,13 @@ Item {
 
             Repeater {
                 model: [
-                    { label: "Type", value: info.type },
-                    { label: "Size", value: info.size },
-                    { label: "Contains", value: info.contains },
-                    { label: "Opens with", value: info.opensWith },
-                    { label: "Location", value: info.location },
-                    { label: "Modified", value: info.modified },
-                    { label: "Created", value: info.created }
+                    { label: qsTr("Type"), value: info.type },
+                    { label: qsTr("Size"), value: info.size },
+                    { label: qsTr("Contains"), value: info.contains },
+                    { label: qsTr("Opens with"), value: info.opensWith },
+                    { label: qsTr("Location"), value: info.location },
+                    { label: qsTr("Modified"), value: info.modified },
+                    { label: qsTr("Created"), value: info.created }
                 ]
 
                 delegate: Column {

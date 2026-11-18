@@ -16,6 +16,7 @@ UI.AppWindow {
     property bool busy: false
 
     deep: true
+    rememberSize: false
     title: qsTr("Share")
     width: 400
     height: Math.min(560, 42 + 180 + 16 + Math.max(1, targets.length) * 49 + 72)

@@ -36,13 +36,13 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Local account, " + System.userName
+                    text: qsTr("Local account, %1").arg(System.userName)
                     color: UI.Style.inkMuted
                 }
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: Users.me.admin ? "Administrator" : "Standard user"
+                    text: Users.me.admin ? qsTr("Administrator") : qsTr("Standard user")
                     size: 12
                     color: UI.Style.accentText
                 }
@@ -55,7 +55,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Account settings"
+            text: qsTr("Account settings")
         }
 
         UI.Card {
@@ -66,25 +66,26 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "account"
-                    title: "Your info"
-                    description: "Your name and picture"
+                    title: qsTr("Your info")
+                    description: qsTr("Your name and picture")
                     chevron: true
                     onClicked: Navigator.open("users")
                 }
 
                 UI.SettingRow {
                     iconName: "lock"
-                    title: "Sign-in options"
-                    description: "Password, automatic sign-in and screen lock"
+                    title: qsTr("Sign-in options")
+                    description: qsTr("Password, automatic sign-in and screen lock")
                     chevron: true
                     onClicked: Navigator.open("signin")
                 }
 
                 UI.SettingRow {
                     iconName: "people"
-                    title: "Other users"
-                    description: Users.others.length === 0 ? "Add the people who share this computer"
-                        : Format.plural(Users.others.length, "other person uses", "other people use") + " this computer"
+                    title: qsTr("Other users")
+                    description: Users.others.length === 0 ? qsTr("Add the people who share this computer")
+                        : Users.others.length === 1 ? qsTr("1 other person uses this computer")
+                        : qsTr("%1 other people use this computer").arg(Users.others.length)
                     chevron: true
                     onClicked: Navigator.open("otherusers")
                 }

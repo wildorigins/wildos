@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import WildOS.Office
 import WildOS.UI as UI
 
-// The Write and Tables start screen (WriteStart.dc): the rail with Home,
+// The Write, Tables and Slides start screen (WriteStart.dc): the rail with Home,
 // New from template and Open, the templates, Search documents, and the
 // Recent and Pinned lists. Whatever is picked opens in LibreOffice, and
 // once its window has taken over this one goes.
@@ -98,7 +98,7 @@ UI.AppWindow {
 
     Shortcut {
         sequence: StandardKey.New
-        onActivated: window.openTemplate({ blank: true, name: Office.tables ? qsTr("Blank workbook") : qsTr("Blank document") })
+        onActivated: window.openTemplate({ blank: true, name: window.blankEntry.name })
     }
     Shortcut {
         sequence: StandardKey.Open
@@ -114,7 +114,7 @@ UI.AppWindow {
 
     FileDialog {
         id: openDialog
-        title: Office.tables ? qsTr("Open a spreadsheet") : qsTr("Open a document")
+        title: Office.tables ? qsTr("Open a spreadsheet") : Office.slides ? qsTr("Open a presentation") : qsTr("Open a document")
         fileMode: FileDialog.OpenFile
         currentFolder: Office.documentsFolder
         nameFilters: Office.nameFilters
@@ -126,8 +126,10 @@ UI.AppWindow {
 
     readonly property var blankEntry: ({
         blank: true,
-        name: Office.tables ? qsTr("Blank workbook") : qsTr("Blank document"),
-        description: Office.tables ? qsTr("An empty workbook in Carlito 11, ready for anything.") : qsTr("An empty A4 page with the Wild OS styles."),
+        name: Office.tables ? qsTr("Blank workbook") : Office.slides ? qsTr("Blank presentation") : qsTr("Blank document"),
+        description: Office.tables ? qsTr("An empty workbook in Carlito 11, ready for anything.")
+            : Office.slides ? qsTr("An empty widescreen slide, ready for a title.")
+            : qsTr("An empty A4 page with the Wild OS styles."),
         thumbnail: ""
     })
 
@@ -286,7 +288,7 @@ UI.AppWindow {
                         Layout.preferredWidth: 280
                         implicitHeight: 32
                         iconLeading: true
-                        placeholderText: Office.tables ? qsTr("Search spreadsheets") : qsTr("Search documents")
+                        placeholderText: Office.tables ? qsTr("Search spreadsheets") : Office.slides ? qsTr("Search presentations") : qsTr("Search documents")
                         onTextChanged: searchTimer.restart()
                         onAccepted: {
                             searchTimer.stop();
@@ -385,8 +387,12 @@ UI.AppWindow {
                         text: window.searchingNow
                             ? qsTr("Nothing called “%1” in Documents, Desktop or Downloads.").arg(search.text.trim())
                             : window.list === "pinned"
-                                ? (Office.tables ? qsTr("Pin a spreadsheet from its … menu to keep it here.") : qsTr("Pin a document from its … menu to keep it here."))
-                                : (Office.tables ? qsTr("Spreadsheets you open in Tables show up here.") : qsTr("Documents you open in Write show up here."))
+                                ? (Office.tables ? qsTr("Pin a spreadsheet from its … menu to keep it here.")
+                                   : Office.slides ? qsTr("Pin a presentation from its … menu to keep it here.")
+                                   : qsTr("Pin a document from its … menu to keep it here."))
+                                : (Office.tables ? qsTr("Spreadsheets you open in Tables show up here.")
+                                   : Office.slides ? qsTr("Presentations you open in Slides show up here.")
+                                   : qsTr("Documents you open in Write show up here."))
                     }
                 }
             }
@@ -418,6 +424,7 @@ UI.AppWindow {
                         width: parent.width
                         text: Office.tables
                             ? qsTr("Each one opens as a new workbook with example figures in it. Type over them; the sums keep up.")
+                            : Office.slides ? qsTr("Start from a blank presentation, or from one you saved as a template.")
                             : qsTr("Each one opens as a new document with example text in it. Type over it and save it as your own.")
                         color: UI.Style.inkMuted
                         wrapMode: Text.WordWrap

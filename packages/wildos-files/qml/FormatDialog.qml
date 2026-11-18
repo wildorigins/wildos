@@ -25,8 +25,8 @@ UI.Dialog {
 
     readonly property bool encrypt: encryptBox.checked
     readonly property string passwordProblem: !encrypt ? ""
-        : passwordField.text.length < 8 ? "Use at least 8 characters."
-        : passwordField.text !== confirmField.text ? "The passwords don't match."
+        : passwordField.text.length < 8 ? qsTr("Use at least 8 characters.")
+        : passwordField.text !== confirmField.text ? qsTr("The passwords don't match.")
         : ""
     readonly property int labelLimit: fs === "vfat" ? 11 : fs === "exfat" ? 15 : fs === "ntfs" ? 32 : 16
 
@@ -38,18 +38,18 @@ UI.Dialog {
         }
         const gb = bytes / 1073741824;
         if (gb >= 1024) {
-            return (gb / 1024).toLocaleString(Qt.locale(), "f", gb >= 10240 ? 0 : 1).replace(/\.0$/, "") + " TB";
+            return qsTr("%1 TB").arg((gb / 1024).toLocaleString(Qt.locale(), "f", gb >= 10240 ? 0 : 1).replace(/\.0$/, ""));
         }
         if (gb < 1) {
-            return Math.round(bytes / 1048576) + " MB";
+            return qsTr("%1 MB").arg(Math.round(bytes / 1048576));
         }
-        return gb.toLocaleString(Qt.locale(), "f", gb < 10 ? 1 : 0).replace(/\.0$/, "") + " GB";
+        return qsTr("%1 GB").arg(gb.toLocaleString(Qt.locale(), "f", gb < 10 ? 1 : 0).replace(/\.0$/, ""));
     }
 
     function show(target, name) {
         udi = target;
         info = DriveFormat.describe(target);
-        driveName = name.length > 0 ? name : info.label && info.label.length > 0 ? info.label : (info.kind ?? "Drive");
+        driveName = name.length > 0 ? name : info.label && info.label.length > 0 ? info.label : (info.kind ?? qsTr("Drive"));
         fs = "exfat";
         stage = "form";
         tried = false;
@@ -91,13 +91,13 @@ UI.Dialog {
         }
     }
 
-    title: stage === "working" ? "Formatting " + driveName
-        : stage === "done" ? "Format complete"
-        : stage === "failed" ? "Format didn't finish"
-        : "Format " + driveName
-    text: stage === "working" ? (quickBox.checked ? "This takes a few seconds. Don't unplug the drive."
-                                                   : "Writing over the whole drive. This can take a long time. Don't unplug the drive.")
-        : stage === "done" ? (labelField.text.trim().length > 0 ? labelField.text.trim() : driveName) + " is ready to use."
+    title: stage === "working" ? qsTr("Formatting %1").arg(driveName)
+        : stage === "done" ? qsTr("Format complete")
+        : stage === "failed" ? qsTr("Format didn't finish")
+        : qsTr("Format %1").arg(driveName)
+    text: stage === "working" ? (quickBox.checked ? qsTr("This takes a few seconds. Don't unplug the drive.")
+                                                   : qsTr("Writing over the whole drive. This can take a long time. Don't unplug the drive."))
+        : stage === "done" ? qsTr("%1 is ready to use.").arg(labelField.text.trim().length > 0 ? labelField.text.trim() : driveName)
         : stage === "failed" ? message
         : [sizeText(info.size), info.kind].filter(s => s && s.length > 0).join(" ")
     closePolicy: stage === "working" ? T.Popup.NoAutoClose : T.Popup.CloseOnEscape
@@ -138,7 +138,7 @@ UI.Dialog {
         UI.Label {
             Layout.fillWidth: true
             visible: dialog.info.readOnly === true
-            text: "This drive is write-protected, so it can't be formatted. If it has a lock switch, slide it off and plug it back in."
+            text: qsTr("This drive is write-protected, so it can't be formatted. If it has a lock switch, slide it off and plug it back in.")
             color: UI.Style.danger
             wrapMode: Text.Wrap
             elide: Text.ElideNone
@@ -146,7 +146,7 @@ UI.Dialog {
 
         Heading {
             Layout.topMargin: 0
-            text: "File system"
+            text: qsTr("File system")
         }
         RowLayout {
             Layout.fillWidth: true
@@ -173,56 +173,56 @@ UI.Dialog {
             }
         }
         Hint {
-            text: dialog.fs === "exfat" ? "Works on Windows, Mac and Linux. Best for most drives."
-                : dialog.fs === "ntfs" ? "Best for Windows. Macs can open it but can't save to it."
-                : dialog.fs === "vfat" ? "For older cameras, TVs and car stereos. No file can be over 4 GB."
-                : "Linux only."
+            text: dialog.fs === "exfat" ? qsTr("Works on Windows, Mac and Linux. Best for most drives.")
+                : dialog.fs === "ntfs" ? qsTr("Best for Windows. Macs can open it but can't save to it.")
+                : dialog.fs === "vfat" ? qsTr("For older cameras, TVs and car stereos. No file can be over 4 GB.")
+                : qsTr("Linux only.")
         }
         Hint {
             visible: dialog.info.fatAllowed === false
-            text: "FAT32 is only for drives up to 32 GB, and this one is bigger."
+            text: qsTr("FAT32 is only for drives up to 32 GB, and this one is bigger.")
         }
 
         Heading {
-            text: "Volume label"
+            text: qsTr("Volume label")
         }
         UI.TextField {
             id: labelField
             Layout.fillWidth: true
-            Accessible.name: "Volume label"
-            placeholderText: "A name for the drive"
+            Accessible.name: qsTr("Volume label")
+            placeholderText: qsTr("A name for the drive")
             maximumLength: dialog.labelLimit
         }
 
         UI.CheckBox {
             id: quickBox
             Layout.topMargin: 6
-            text: "Quick format"
+            text: qsTr("Quick format")
             checked: true
         }
         Hint {
             Layout.leftMargin: 30
             visible: !quickBox.checked
-            text: "Writes over the whole drive so nothing on it can be recovered. This takes much longer."
+            text: qsTr("Writes over the whole drive so nothing on it can be recovered. This takes much longer.")
         }
 
         UI.CheckBox {
             id: encryptBox
             visible: dialog.info.canEncrypt === true
-            text: "Encrypt this drive"
+            text: qsTr("Encrypt this drive")
         }
         Hint {
             Layout.leftMargin: 30
             visible: encryptBox.checked
-            text: "You'll need this password to open the drive. Only Linux PCs, like this one, can open it. If you forget the password, nothing on it can be recovered."
+            text: qsTr("You'll need this password to open the drive. Only Linux PCs, like this one, can open it. If you forget the password, nothing on it can be recovered.")
         }
         UI.TextField {
             id: passwordField
             Layout.fillWidth: true
             Layout.leftMargin: 30
             visible: encryptBox.checked
-            Accessible.name: "Password"
-            placeholderText: "Password"
+            Accessible.name: qsTr("Password")
+            placeholderText: qsTr("Password")
             revealable: true
             UI.NoPaste {}
             error: dialog.tried && dialog.passwordProblem.length > 0
@@ -232,8 +232,8 @@ UI.Dialog {
             Layout.fillWidth: true
             Layout.leftMargin: 30
             visible: encryptBox.checked
-            Accessible.name: "Type the password again"
-            placeholderText: "Type the password again"
+            Accessible.name: qsTr("Type the password again")
+            placeholderText: qsTr("Type the password again")
             revealable: true
             UI.NoPaste {}
             error: dialog.tried && dialog.passwordProblem.length > 0
@@ -261,7 +261,7 @@ UI.Dialog {
             }
             UI.Label {
                 Layout.fillWidth: true
-                text: "Everything on " + dialog.driveName + " will be erased."
+                text: qsTr("Everything on %1 will be erased.").arg(dialog.driveName)
                 font.weight: UI.Style.weightMedium
                 wrapMode: Text.Wrap
                 elide: Text.ElideNone
@@ -279,34 +279,34 @@ UI.Dialog {
     UI.Label {
         Layout.fillWidth: true
         visible: dialog.stage === "working" && DriveFormat.progress >= 0
-        text: Math.floor(DriveFormat.progress * 100) + "%"
+        text: qsTr("%1%").arg(Math.floor(DriveFormat.progress * 100))
         color: UI.Style.inkMuted
     }
 
     buttons: [
         UI.Button {
             visible: dialog.stage === "form"
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: dialog.close()
         },
         UI.Button {
             id: startButton
             visible: dialog.stage === "form"
             kind: "primary"
-            text: "Start"
+            text: qsTr("Start")
             enabled: dialog.info.ok === true && dialog.info.readOnly !== true
             onClicked: dialog.begin()
         },
         UI.Button {
             visible: dialog.stage === "done" || dialog.stage === "failed"
             kind: dialog.stage === "failed" || dialog.mountPath.length === 0 ? "primary" : "secondary"
-            text: "Close"
+            text: qsTr("Close")
             onClicked: dialog.close()
         },
         UI.Button {
             visible: dialog.stage === "done" && dialog.mountPath.length > 0
             kind: "primary"
-            text: "Open drive"
+            text: qsTr("Open drive")
             onClicked: {
                 dialog.close();
                 dialog.openDrive(dialog.mountPath);

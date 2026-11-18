@@ -1,3 +1,38 @@
+wildos-portal (0.1.11) trixie; urgency=medium
+
+  * Saving a PDF from a browser names it file.pdf. Before, the Save dialog
+    showed the type as PDF (.[pp][dd][ff]) and saved the file with that as
+    its ending.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 11:45:00 +0000
+
+wildos-portal (0.1.10) trixie; urgency=medium
+
+  * The Open and Save dialog service starts with the compositor, so the
+    desktop never waits on it while it starts.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 14:00:00 +0000
+
+wildos-portal (0.1.9) trixie; urgency=medium
+
+  * The Open and Save dialog service no longer stays in memory all session
+    when it was started without a dialog being opened.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 16:19:26 +0000
+
+wildos-portal (0.1.8) trixie; urgency=medium
+
+  * Open and Save dialogs list the folders pinned to the Files sidebar.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 15:16:12 +0000
+
+wildos-portal (0.1.7) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-portal (0.1.6) trixie; urgency=medium
 
   * The location box in open and save dialogs has the right-click menu

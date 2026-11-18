@@ -1,0 +1,14 @@
+[Unit]
+Description=PIN for the lock screen and the sign-in screen
+
+[Socket]
+# The lock screen and Settings run as the person, who must not read the
+# PIN's hash; they ask here, and each connection only ever reaches the
+# account that made it. The sign-in screen's helper asks as root.
+ListenStream=/run/wildos/pin.socket
+SocketMode=0666
+Accept=yes
+MaxConnections=8
+
+[Install]
+WantedBy=sockets.target

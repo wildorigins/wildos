@@ -7,14 +7,84 @@
 #include <QDBusReply>
 #include <QDBusVariant>
 #include <QFile>
+#include <QFileInfo>
+#include <QMimeDatabase>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QUrl>
 
+#include <KConfigGroup>
+#include <KDesktopFile>
+#include <KSharedConfig>
+
+#include <cstring>
+#include <pwd.h>
 #include <unistd.h>
 
 namespace
 {
 const QString windowMenuService = QStringLiteral("org.wildos.WindowMenu");
+const QString graphicsService = QStringLiteral("net.hadess.SwitcherooControl");
+const QString graphicsPath = QStringLiteral("/net/hadess/SwitcherooControl");
+const QString desktopSuffix = QStringLiteral(".desktop");
+
+QString localPath(const QString &target)
+{
+    QString path = target;
+    if (path.startsWith(QLatin1String("applications:"))) {
+        path = path.mid(13);
+    }
+    if (path.startsWith(QLatin1String("file:"))) {
+        path = QUrl(path).toLocalFile();
+    }
+    return path;
+}
+
+// The .desktop file the target names, or nothing when it is not an app.
+QString desktopFileOf(const QString &target)
+{
+    const QString path = localPath(target);
+    if (!path.endsWith(desktopSuffix)) {
+        return {};
+    }
+    if (path.startsWith(QLatin1Char('/'))) {
+        return QFile::exists(path) ? path : QString();
+    }
+    return QStandardPaths::locate(QStandardPaths::ApplicationsLocation, path);
+}
+
+// The Linux program the target names, or nothing when it is not one.
+QString programOf(const QString &target)
+{
+    const QString path = localPath(target);
+    if (!path.startsWith(QLatin1Char('/')) || path.endsWith(desktopSuffix) || !QFileInfo(path).isFile()) {
+        return {};
+    }
+    const QMimeType type = QMimeDatabase().mimeTypeForFile(path);
+    const bool program = type.name() == QLatin1String("application/x-executable") || type.name() == QLatin1String("application/x-pie-executable")
+        || type.inherits(QStringLiteral("application/vnd.appimage")) || type.inherits(QStringLiteral("application/x-iso9660-appimage"));
+    return program ? path : QString();
+}
+
+// What the list holds for the target: an installed app goes by its file
+// name, as KIO knows it, and anything else by its path.
+QString graphicsEntry(const QString &target)
+{
+    const QString path = localPath(target);
+    if (path.startsWith(QLatin1Char('/')) && path.endsWith(desktopSuffix)
+        && QStandardPaths::standardLocations(QStandardPaths::ApplicationsLocation).contains(QFileInfo(path).absolutePath())) {
+        return QFileInfo(path).fileName();
+    }
+    return path;
+}
+
+KConfigGroup graphicsChoices()
+{
+    const KSharedConfig::Ptr config = KSharedConfig::openConfig(QStringLiteral("wildosrc"));
+    // Another app's menu may have changed the list since this one read it.
+    config->reparseConfiguration();
+    return config->group(QStringLiteral("Graphics"));
+}
 }
 
 System::System(QObject *parent)
@@ -103,6 +173,36 @@ bool System::fingerprintReader() const
     return device.isValid();
 }
 
+bool System::pinSet() const
+{
+    const struct passwd *account = ::getpwuid(::getuid());
+    if (!account || !account->pw_name || ::strchr(account->pw_name, '/')) {
+        return false;
+    }
+    return QFile::exists(QStringLiteral("/var/lib/wildos/pin/") + QString::fromLocal8Bit(account->pw_name));
+}
+
+bool System::pinSignIn(const QString &userName) const
+{
+    if (userName.isEmpty() || userName == QLatin1String(".") || userName == QLatin1String("..") || userName.contains(QLatin1Char('/'))) {
+        return false;
+    }
+    if (!QFile::exists(QStringLiteral("/var/lib/wildos/pin/") + userName)) {
+        return false;
+    }
+    QFile store(QStringLiteral("/etc/wildos/advanced-protection"));
+    int hours = 0;
+    if (store.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        while (!store.atEnd()) {
+            const QByteArray line = store.readLine().trimmed();
+            if (line.startsWith("fingerprint_hours=")) {
+                hours = line.mid(18).toInt();
+            }
+        }
+    }
+    return hours <= 0;
+}
+
 bool System::fingerprintAllowed(const QString &userName) const
 {
     int hours = 0;
@@ -136,4 +236,53 @@ bool System::fingerprintAllowed(const QString &userName) const
     const qint64 typed = stamp.readAll().trimmed().toLongLong(&okStamp);
     const qint64 now = static_cast<qint64>(uptime.readAll().split(' ').value(0).toDouble(&okNow));
     return okStamp && okNow && now >= typed && now - typed < qint64(hours) * 3600;
+}
+
+bool System::twoGraphicsCards() const
+{
+    // Asked once per app: the cards a PC has do not change while it runs.
+    // An answer that never came is asked for again.
+    static int cards = -1;
+    if (cards < 0) {
+        QDBusMessage call = QDBusMessage::createMethodCall(graphicsService, graphicsPath, QStringLiteral("org.freedesktop.DBus.Properties"),
+                                                           QStringLiteral("Get"));
+        call << graphicsService << QStringLiteral("NumGPUs");
+        const QDBusReply<QDBusVariant> reply = QDBusConnection::systemBus().call(call, QDBus::Block, 1000);
+        if (!reply.isValid()) {
+            return false;
+        }
+        cards = reply.value().variant().toInt();
+    }
+    return cards > 1;
+}
+
+bool System::canChooseGraphics(const QString &target) const
+{
+    const QString desktopFile = desktopFileOf(target);
+    if (desktopFile.isEmpty()) {
+        return !programOf(target).isEmpty();
+    }
+    const KConfigGroup entry = KDesktopFile(desktopFile).desktopGroup();
+    return !entry.readEntry("PrefersNonDefaultGPU", false) && !entry.readEntry("X-KDE-RunOnDiscreteGpu", false);
+}
+
+bool System::dedicatedGraphics(const QString &target) const
+{
+    return graphicsChoices().readEntry("Dedicated", QStringList()).contains(graphicsEntry(target));
+}
+
+void System::setDedicatedGraphics(const QString &target, bool on) const
+{
+    if (!canChooseGraphics(target)) {
+        return;
+    }
+    KConfigGroup group = graphicsChoices();
+    QStringList chosen = group.readEntry("Dedicated", QStringList());
+    const QString entry = graphicsEntry(target);
+    chosen.removeAll(entry);
+    if (on) {
+        chosen.append(entry);
+    }
+    group.writeEntry("Dedicated", chosen);
+    group.sync();
 }

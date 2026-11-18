@@ -3,6 +3,7 @@ files/pam-kde etc/pam.d/
 files/pam-kde-fingerprint etc/pam.d/
 files/pam-configs/wildos-fingerprint usr/share/pam-configs/
 files/pam-configs/wildos-fingerprint-stamp usr/share/pam-configs/
+files/pam-configs/wildos-pin usr/share/pam-configs/
 files/fingerprint-turn usr/libexec/wildos/
 files/wildos-app-names usr/libexec/wildos/
 files/wildos-strings usr/libexec/wildos/
@@ -18,3 +19,8 @@ files/syntax-highlighting/* usr/share/org.kde.syntax-highlighting/themes/
 files/apt/21wildos-update-checks etc/apt/apt.conf.d/
 files/systemd/apt-daily.timer.d/wildos.conf usr/lib/systemd/system/apt-daily.timer.d/
 files/systemd/apt-daily.service.d/wildos.conf usr/lib/systemd/system/apt-daily.service.d/
+files/dbus/*.service usr/share/wildos/dbus-1/services/
+files/systemd/user/plasma-kaccess.service.d/90-wildos.conf usr/lib/systemd/user/plasma-kaccess.service.d/
+files/systemd/fprintd.service.d/wildos.conf usr/lib/systemd/system/fprintd.service.d/
+files/systemd/user/plasma-xdg-desktop-portal-kde.service usr/lib/systemd/user/
+files/environment.d/60-wildos-kpipewire-encoder usr/lib/systemd/user-environment-generators/

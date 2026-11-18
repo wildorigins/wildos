@@ -14,7 +14,7 @@ Window {
 
     visible: false
     color: "transparent"
-    title: "Allow changes"
+    title: qsTr("Allow changes")
 
     Surface {
         id: surface
@@ -24,6 +24,7 @@ Window {
     }
 
     Rectangle {
+        id: dim
         anchors.fill: parent
         color: Qt.rgba(UI.Style.scrim.r, UI.Style.scrim.g, UI.Style.scrim.b, surface.blurAvailable ? 0.55 : 0.8)
     }
@@ -42,11 +43,23 @@ Window {
         height: implicitHeight
     }
 
+    // The dim and the card arrive as every Wild OS dialog does. The password
+    // box has the keyboard from the first frame, so typing never waits.
+    ParallelAnimation {
+        id: arrive
+        NumberAnimation { target: dim; property: "opacity"; from: 0; to: 1; duration: UI.Style.motionFast; easing.type: Easing.OutCubic }
+        NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: UI.Style.motionFast; easing.type: Easing.OutCubic }
+        NumberAnimation { target: card; property: "scale"; from: UI.Style.scaleEnter; to: 1; duration: UI.Style.motionNormal; easing.type: UI.Style.easeEnter }
+    }
+
     Instantiator {
         model: Qt.application.screens
         delegate: Backdrop {
             required property var modelData
-            screen: modelData
+            required property int index
+            // From the list itself: the model's copy of a screen is not
+            // taken as one.
+            targetScreen: Qt.application.screens[index]
             open: Agent.active && modelData.name !== window.screen.name
         }
     }
@@ -57,6 +70,7 @@ Window {
             if (Agent.active) {
                 surface.show();
                 card.takeFocus();
+                arrive.restart();
             } else {
                 surface.hide();
             }
@@ -67,6 +81,7 @@ Window {
         if (Agent.active) {
             surface.show();
             card.takeFocus();
+            arrive.restart();
         }
     }
 }

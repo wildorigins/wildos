@@ -26,8 +26,11 @@ T.AbstractButton {
     onClicked: if (menu) menu.popup(control, 0, control.height + 4)
 
     background: Rectangle {
-        radius: control.iconOnly ? UI.Style.radiusSm : 6
+        radius: control.iconOnly ? UI.Style.radiusSm : UI.Style.radiusXs
         color: control.down ? UI.Style.surfacePressed : control.hovered ? UI.Style.surfaceHover : "transparent"
+        Behavior on color {
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
         UI.FocusRing {
             visible: control.visualFocus
             targetRadius: parent.radius

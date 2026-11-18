@@ -11,8 +11,28 @@ Item {
     property bool expanded: true
 
     implicitHeight: 36
+    activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: text
+    Keys.onPressed: function (event) {
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            heading.expanded = !heading.expanded;
+            event.accepted = true;
+        }
+    }
+
+    Item {
+        anchors.fill: parent
+        anchors.leftMargin: 6
+        anchors.rightMargin: 6
+        anchors.topMargin: 4
+        visible: heading.activeFocus
+
+        UI.FocusRing {
+            anchors.margins: 0
+            targetRadius: UI.Style.radiusXs - 4
+        }
+    }
 
     RowLayout {
         anchors.fill: parent

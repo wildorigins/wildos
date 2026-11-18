@@ -1,3 +1,32 @@
+wildos-desktop-view (0.1.12) trixie; urgency=medium
+
+  * New > Slides presentation on the desktop makes a .pptx that opens in
+    Slides.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 16:00:00 +0000
+
+wildos-desktop-view (0.1.11) trixie; urgency=medium
+
+  * On a PC with two graphics cards, the right-click menu of an app shortcut
+    or a program on the desktop has Dedicated graphics card.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 12:00:00 +0000
+
+wildos-desktop-view (0.1.10) trixie; urgency=medium
+
+  * Plasma widgets can go on the desktop once they are allowed in Settings >
+    Personalisation: Add widgets in the desktop's right-click menu, then
+    press and hold a widget to move, resize or remove it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 08:30:00 +0000
+
+wildos-desktop-view (0.1.9) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-desktop-view (0.1.8) trixie; urgency=medium
 
   * New in the right-click menu offers a Write document and a Tables

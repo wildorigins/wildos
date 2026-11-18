@@ -135,13 +135,13 @@ UI.Menu {
             const recent = places.length > 0 ? [] : qActions(backend.recentDocumentActions(launcherUrl, menu));
             const jump = qActions(backend.jumpListActions(launcherUrl, menu));
             if (places.length > 0) {
-                list.push({ header: "Pinned" }, ...places);
+                list.push({ header: qsTr("Pinned") }, ...places);
             }
             if (recent.length > 0) {
-                list.push({ header: "Recent" }, ...recent);
+                list.push({ header: qsTr("Recent") }, ...recent);
             }
             if (jump.length > 0) {
-                list.push({ header: "Tasks" }, ...jump);
+                list.push({ header: qsTr("Tasks") }, ...jump);
             }
         }
 
@@ -153,18 +153,18 @@ UI.Menu {
                 list.push({ separator: true });
             }
             const playing = player.playbackStatus === Mpris.PlaybackStatus.Playing;
-            list.push({ text: "Previous track", icon: "media-previous", run: () => player.Previous(), enabled: player.canGoPrevious });
+            list.push({ text: qsTr("Previous track"), icon: "media-previous", run: () => player.Previous(), enabled: player.canGoPrevious });
             if (playing && player.canPause) {
-                list.push({ text: "Pause", icon: "media-pause", run: () => player.Pause() });
+                list.push({ text: qsTr("Pause"), icon: "media-pause", run: () => player.Pause() });
             } else {
-                list.push({ text: "Play", icon: "play", run: () => player.Play(), enabled: player.canPlay });
+                list.push({ text: qsTr("Play"), icon: "play", run: () => player.Play(), enabled: player.canPlay });
             }
-            list.push({ text: "Next track", icon: "media-next", run: () => player.Next(), enabled: player.canGoNext });
+            list.push({ text: qsTr("Next track"), icon: "media-next", run: () => player.Next(), enabled: player.canGoNext });
         }
 
         if (task.hasAudioStream) {
             const muted = task.muted;
-            list.push({ text: muted ? "Unmute" : "Mute", icon: muted ? "sound" : "sound-off", run: () => task.toggleMuted() });
+            list.push({ text: muted ? qsTr("Unmute") : qsTr("Mute"), icon: muted ? "sound" : "sound-off", run: () => task.toggleMuted() });
         }
 
         if (list.length > 0) {
@@ -176,7 +176,7 @@ UI.Menu {
         if (!isStartup) {
             const canOpenAnother = !isLauncher && get(atm.CanLaunchNewInstance) !== false;
             list.push({
-                text: task.model.AppName || task.model.display || "Open",
+                text: task.model.AppName || task.model.display || qsTr("Open"),
                 iconSource: task.model.decoration,
                 bold: true,
                 run: () => canOpenAnother ? task.newInstance()
@@ -189,9 +189,9 @@ UI.Menu {
             && launcherUrl && String(launcherUrl).length > 0 && !isStartup;
         if (canPin) {
             if (tasksRoot.hasLauncher(launcherUrl)) {
-                list.push({ text: "Unpin from taskbar", icon: "menu-unpin", run: () => tasksModel.requestRemoveLauncher(launcherUrl) });
+                list.push({ text: qsTr("Unpin from taskbar"), icon: "menu-unpin", run: () => tasksModel.requestRemoveLauncher(launcherUrl) });
             } else {
-                list.push({ text: "Pin to taskbar", icon: "menu-pin", run: () => tasksModel.requestAddLauncher(get(atm.LauncherUrl)) });
+                list.push({ text: qsTr("Pin to taskbar"), icon: "menu-pin", run: () => tasksModel.requestAddLauncher(get(atm.LauncherUrl)) });
             }
         }
 
@@ -199,10 +199,18 @@ UI.Menu {
         // every one wildos-winapp-<app>.desktop.
         const windowsApp = /wildos-winapp-[^\/]*\.desktop$/.test(String(launcherUrl || ""));
 
+        // On a PC with two graphics cards. It counts from the app's next start.
+        const app = String(launcherUrl || "");
+        if (canPin && !windowsApp && UI.System.twoGraphicsCards() && UI.System.canChooseGraphics(app)) {
+            const dedicated = UI.System.dedicatedGraphics(app);
+            list.push({ text: qsTr("Dedicated graphics card"), checked: dedicated,
+                run: () => UI.System.setDedicatedGraphics(app, !dedicated) });
+        }
+
         if (!isLauncher && !isStartup) {
             const group = get(atm.IsGroupParent) === true;
             list.push({
-                text: group ? "Close all windows" : "Close window",
+                text: group ? qsTr("Close all windows") : qsTr("Close window"),
                 icon: "close",
                 shortcut: group && windowCount > 1 ? String(windowCount) : "",
                 run: () => tasksModel.requestClose(menu.modelIndex),
@@ -215,14 +223,14 @@ UI.Menu {
             // would close all of them at once.
             const pids = WildOS.TaskbarStyle.endTask === true && !windowsApp ? appPids(group) : [];
             if (pids.length > 0) {
-                list.push({ text: "End task", icon: "menu-task-manager", run: () => menu.endTask(pids) });
+                list.push({ text: qsTr("End task"), icon: "menu-task-manager", run: () => menu.endTask(pids) });
             }
         }
 
         if (windowsApp) {
             list.push({ separator: true },
-                { text: "Runs in Windows mode", icon: "menu-windows-mode", enabled: false },
-                { text: "Windows mode settings", icon: "menu-settings", run: () => menu.runner.connectSource(
+                { text: qsTr("Runs in Windows mode"), icon: "menu-windows-mode", enabled: false },
+                { text: qsTr("Windows mode settings"), icon: "menu-settings", run: () => menu.runner.connectSource(
                     "kstart --desktopfile org.wildos.settings -- wildos-settings --page windowsapps") });
         }
 

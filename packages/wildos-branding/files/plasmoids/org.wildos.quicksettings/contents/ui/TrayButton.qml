@@ -24,7 +24,7 @@ MouseArea {
     hoverEnabled: true
     acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
     Accessible.role: Accessible.Button
-    Accessible.name: "Network, volume and battery"
+    Accessible.name: qsTr("Network, volume and battery")
     Accessible.description: quick.tooltipLines.join(". ")
 
     // Remembering the state at press time stops a click that closes the popup
@@ -47,14 +47,14 @@ MouseArea {
         const entries = [];
         const outputs = showVolume ? quick.audio.outputs() : [];
         if (outputs.length > 0) {
-            entries.push({ text: "Output", icon: "menu-output", submenuWidth: 220, submenu: outputs.map(output => ({
+            entries.push({ text: qsTr("Output"), icon: "menu-output", submenuWidth: 220, submenu: outputs.map(output => ({
                 text: output.name,
                 checked: output.current,
                 run: () => output.device.default = true
             })) });
             entries.push({ separator: true });
         }
-        entries.push({ text: "Sound settings", icon: "menu-settings", run: () => quick.openSettings("sound") });
+        entries.push({ text: qsTr("Sound settings"), icon: "menu-settings", run: () => quick.openSettings("sound") });
         menu.entries = entries;
         const scene = button.mapToItem(null, 0, 0);
         menu.x = Math.round(px - menu.implicitWidth / 2);

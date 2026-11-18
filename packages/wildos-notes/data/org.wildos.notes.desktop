@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Notes
+Name[fr]=Notes
 GenericName=Notes
+GenericName[fr]=Notes
 Comment=Notes, checklists and ideas, kept as files on this PC
+Comment[fr]=Notes, listes et idées, enregistrées comme fichiers sur ce PC
 Exec=wildos-notes
 Icon=wildos-notes
 Terminal=false

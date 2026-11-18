@@ -289,11 +289,13 @@ T.Menu {
         }
     }
 
+    // As Dialog: the Style durations follow the system's animation speed and
+    // are 0 with reduced motion, when the menu also stops scaling.
     enter: Transition {
-        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutCubic }
-        NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 140; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.motionFast; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "scale"; from: Style.reducedMotion ? 1 : 0.97; to: 1; duration: Style.motionFast; easing.type: Style.easeEnter }
     }
     exit: Transition {
-        NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 100 }
+        NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Style.motionFast; easing.type: Style.easeExit }
     }
 }

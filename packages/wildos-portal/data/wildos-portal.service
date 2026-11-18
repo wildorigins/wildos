@@ -1,7 +1,10 @@
 [Unit]
 Description=Wild OS system dialogs (Open, Save and file clashes)
 PartOf=graphical-session.target
-After=graphical-session.target
+# Only the compositor is needed. Waiting for the graphical session would wait
+# for the desktop, and the desktop asks the portal for its settings while it
+# starts: the two waited on each other until a 25 second timeout gave way.
+After=plasma-kwin_wayland.service
 
 [Service]
 Type=dbus

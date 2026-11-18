@@ -32,7 +32,7 @@ Item {
     Accessible.name: title.text
 
     function gb(bytes) {
-        return (bytes / 1e9).toLocaleString(Qt.locale(), "f", 1) + " GB";
+        return qsTr("%1 GB").arg((bytes / 1e9).toLocaleString(Qt.locale(), "f", 1));
     }
 
     Rectangle {
@@ -87,12 +87,12 @@ Item {
                 Accessible.role: Accessible.Heading
                 text: {
                     switch (card.kind) {
-                    case "virtualisation": return "Virtualisation is switched off";
-                    case "unsupported": return "This PC can't run Windows mode";
-                    case "noaccess": return "Windows mode needs the PC's own screen";
-                    case "space": return "Not enough space";
-                    case "download": return card.offline ? "Download paused" : "Download stopped";
-                    default: return "Setup couldn't finish";
+                    case "virtualisation": return qsTr("Virtualisation is switched off");
+                    case "unsupported": return qsTr("This PC can't run Windows mode");
+                    case "noaccess": return qsTr("Windows mode needs the PC's own screen");
+                    case "space": return qsTr("Not enough space");
+                    case "download": return card.offline ? qsTr("Download paused") : qsTr("Download stopped");
+                    default: return qsTr("Setup couldn't finish");
                     }
                 }
             }
@@ -107,13 +107,13 @@ Item {
                 text: {
                     switch (card.kind) {
                     case "virtualisation":
-                        return "Windows mode needs a feature called virtualisation, which is switched off in this PC's firmware settings. It takes about a minute to turn on.";
+                        return qsTr("Windows mode needs a feature called virtualisation, which is switched off in this PC's firmware settings. It takes about a minute to turn on.");
                     case "unsupported":
-                        return "Its processor doesn't have the virtualisation feature Windows mode needs. Many Windows programs still run on the desktop without it, and Office works in the browser.";
+                        return qsTr("Its processor doesn't have the virtualisation feature Windows mode needs. Many Windows programs still run on the desktop without it, and Office works in the browser.");
                     case "noaccess":
-                        return "Virtualisation is on, but it can only be used by whoever is signed in at the PC itself, not from a remote session. Set up Windows mode from the PC.";
+                        return qsTr("Virtualisation is on, but it can only be used by whoever is signed in at the PC itself, not from a remote session. Set up Windows mode from the PC.");
                     case "space":
-                        return "Windows mode needs about " + Setup.needLabel + " and this PC has " + Setup.freeLabel + " free. Clearing the Downloads folder and emptying the Recycle Bin usually frees enough.";
+                        return qsTr("Windows mode needs about %1 and this PC has %2 free. Clearing the Downloads folder and emptying the Recycle Bin usually frees enough.").arg(Setup.needLabel).arg(Setup.freeLabel);
                     case "download":
                         // Offline: setup waits and carries on by itself once
                         // NetworkManager says the PC is back online. Anything
@@ -122,12 +122,12 @@ Item {
                         // and waits for Try again.
                         if (card.offline) {
                             return card.received > 0
-                                ? "The connection dropped at " + card.gb(card.received) + ". Nothing is lost; setup carries on from where it stopped as soon as you're back online."
-                                : "This PC is offline. Nothing is lost; setup carries on from where it stopped as soon as you're back online.";
+                                ? qsTr("The connection dropped at %1. Nothing is lost; setup carries on from where it stopped as soon as you're back online.").arg(card.gb(card.received))
+                                : qsTr("This PC is offline. Nothing is lost; setup carries on from where it stopped as soon as you're back online.");
                         }
-                        return (card.failure.length > 0 ? card.failure : "The download stopped.") + " Nothing is lost; Try again carries on from where it stopped.";
+                        return qsTr("%1 Nothing is lost; Try again carries on from where it stopped.").arg(card.failure.length > 0 ? card.failure : qsTr("The download stopped."));
                     default:
-                        return (card.failure.length > 0 ? card.failure + " " : "") + "Nothing was left half installed.";
+                        return card.failure.length > 0 ? qsTr("%1 Nothing was left half installed.").arg(card.failure) : qsTr("Nothing was left half installed.");
                     }
                 }
             }
@@ -135,7 +135,7 @@ Item {
             UI.Label {
                 Layout.fillWidth: true
                 visible: card.kind === "failed" && card.detail.length > 0
-                text: "Details: " + card.detail
+                text: qsTr("Details: %1").arg(card.detail)
                 size: 12
                 color: UI.Style.inkAlpha(0.66, 0.6)
                 wrapMode: Text.Wrap
@@ -145,7 +145,7 @@ Item {
             UI.Label {
                 Layout.fillWidth: true
                 visible: card.kind === "download" && Setup.internet === "metered"
-                text: "You're on a metered connection, so you can wait for Wi-Fi."
+                text: qsTr("You're on a metered connection, so you can wait for Wi-Fi.")
                 size: 13
                 color: UI.Style.inkAlpha(0.82, 0.76)
                 wrapMode: Text.Wrap
@@ -159,8 +159,8 @@ Item {
 
                 Repeater {
                     model: Setup.canRestartToFirmware
-                        ? ["Choose Restart to firmware settings", "Find Intel VT-x, AMD-V or SVM, usually under CPU or Advanced", "Set it to Enabled, then save and exit"]
-                        : ["Restart the PC and press its setup key as it starts, often F2, F10 or Delete", "Find Intel VT-x, AMD-V or SVM, usually under CPU or Advanced", "Set it to Enabled, then save and exit"]
+                        ? [qsTr("Choose Restart to firmware settings"), qsTr("Find Intel VT-x, AMD-V or SVM, usually under CPU or Advanced"), qsTr("Set it to Enabled, then save and exit")]
+                        : [qsTr("Restart the PC and press its setup key as it starts, often F2, F10 or Delete"), qsTr("Find Intel VT-x, AMD-V or SVM, usually under CPU or Advanced"), qsTr("Set it to Enabled, then save and exit")]
 
                     UI.Label {
                         required property int index
@@ -185,13 +185,13 @@ Item {
 
                     UI.ListRow {
                         minHeight: 48
-                        title: "Downloads"
+                        title: qsTr("Downloads")
                         description: Setup.downloadsLabel
                     }
 
                     UI.ListRow {
                         minHeight: 48
-                        title: "Recycle Bin"
+                        title: qsTr("Recycle Bin")
                         description: Setup.binLabel
                     }
                 }
@@ -221,7 +221,7 @@ Item {
                 UI.Button {
                     visible: card.kind === "virtualisation" || card.kind === "space" || card.kind === "failed"
                         || (card.kind === "download" && Setup.internet === "metered")
-                    text: card.kind === "virtualisation" ? "Not now" : card.kind === "download" ? "Wait for Wi-Fi" : card.kind === "failed" ? "Close" : "Cancel"
+                    text: card.kind === "virtualisation" ? qsTr("Not now") : card.kind === "download" ? qsTr("Wait for Wi-Fi") : card.kind === "failed" ? qsTr("Close") : qsTr("Cancel")
                     onClicked: card.dismissed()
                 }
 
@@ -231,11 +231,11 @@ Item {
                     visible: !(card.kind === "virtualisation" && !Setup.canRestartToFirmware)
                     text: {
                         switch (card.kind) {
-                        case "virtualisation": return "Restart to firmware settings";
-                        case "space": return "Open storage";
-                        case "download": return "Try again";
-                        case "failed": return "Try again";
-                        default: return "Close";
+                        case "virtualisation": return qsTr("Restart to firmware settings");
+                        case "space": return qsTr("Open storage");
+                        case "download": return qsTr("Try again");
+                        case "failed": return qsTr("Try again");
+                        default: return qsTr("Close");
                         }
                     }
                     onClicked: {
@@ -252,7 +252,7 @@ Item {
                 UI.Button {
                     visible: card.kind === "virtualisation" && !Setup.canRestartToFirmware
                     kind: "primary"
-                    text: "Close"
+                    text: qsTr("Close")
                     onClicked: card.dismissed()
                 }
             }

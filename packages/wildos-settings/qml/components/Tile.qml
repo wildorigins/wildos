@@ -23,7 +23,7 @@ T.AbstractButton {
     hoverEnabled: interactive
     focusPolicy: interactive ? Qt.StrongFocus : Qt.NoFocus
     Accessible.role: interactive ? Accessible.Button : Accessible.StaticText
-    Accessible.name: title + ", " + value
+    Accessible.name: qsTr("%1, %2").arg(title).arg(value)
 
     background: Rectangle {
         radius: UI.Style.radiusMd

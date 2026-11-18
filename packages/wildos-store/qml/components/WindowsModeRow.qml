@@ -9,7 +9,7 @@ import WildOS.UI as UI
 Item {
     id: row
 
-    property string title: "Need the Windows app itself?"
+    property string title: qsTr("Need the Windows app itself?")
 
     Layout.fillWidth: true
     implicitHeight: Math.max(56, texts.implicitHeight) + 32
@@ -54,7 +54,7 @@ Item {
 
         UI.Label {
             width: parent.width
-            text: "Wild OS can run many Windows programs in a sandbox. Open the .exe file from Files and Wild OS will offer to install it."
+            text: qsTr("Wild OS can run many Windows programs in a sandbox. Open the .exe file from Files and Wild OS will offer to install it.")
             size: 13
             lineHeight: 1.45
             color: Metrics.inkSecondary
@@ -67,7 +67,7 @@ Item {
         id: action
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        text: "Windows app settings"
+        text: qsTr("Windows app settings")
         onClicked: Catalog.openSettings("windowsapps")
     }
 }

@@ -10,6 +10,7 @@
 #include <KIO/ListJob>
 #include <KIO/PreviewJob>
 #include <KIO/UDSEntry>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -51,7 +52,7 @@ QString friendlyPath(const QString &path)
     const QString home = homePath();
     if (isUnder(path, home)) {
         const QString rest = path.mid(home.size());
-        return rest.isEmpty() ? QStringLiteral("Home") : QStringLiteral("Home") + rest;
+        return rest.isEmpty() ? QCoreApplication::translate("FolderModel", "Home") : QCoreApplication::translate("FolderModel", "Home") + rest;
     }
     const Drive drive = Drives::instance()->driveFor(path);
     const QString root = drive.mountPath == QStringLiteral("/") ? QString() : drive.mountPath;
@@ -270,12 +271,12 @@ QString FolderModel::kind() const
 QString FolderModel::title() const
 {
     if (isComputer(m_url)) {
-        return QStringLiteral("This computer");
+        return QCoreApplication::translate("FolderModel", "This computer");
     }
     if (isBin(m_url)) {
         const QString path = m_url.path();
         if (path.isEmpty() || path == QStringLiteral("/")) {
-            return QStringLiteral("Recycle Bin");
+            return QCoreApplication::translate("FolderModel", "Recycle Bin");
         }
         QString name = m_url.fileName();
         const auto dash = name.indexOf(QLatin1Char('-'));
@@ -288,7 +289,7 @@ QString FolderModel::title() const
         const QString path = m_url.toLocalFile();
         const QString clean = QDir::cleanPath(path);
         if (clean == homePath()) {
-            return QStringLiteral("Home");
+            return QCoreApplication::translate("FolderModel", "Home");
         }
         const auto drives = Drives::instance()->list();
         for (const Drive &drive : drives) {
@@ -325,10 +326,10 @@ QString FolderModel::iconName() const
 QString FolderModel::editText() const
 {
     if (isComputer(m_url)) {
-        return QStringLiteral("This computer");
+        return QCoreApplication::translate("FolderModel", "This computer");
     }
     if (isBin(m_url)) {
-        return QStringLiteral("Recycle Bin");
+        return QCoreApplication::translate("FolderModel", "Recycle Bin");
     }
     if (m_url.isLocalFile()) {
         // A real path is typed and pasted here, so it stays a real path,
@@ -350,11 +351,11 @@ QVariantList FolderModel::crumbs() const
         list.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("url"), url}});
     };
     if (isComputer(m_url)) {
-        add(QStringLiteral("This computer"), computerUrl());
+        add(QCoreApplication::translate("FolderModel", "This computer"), computerUrl());
         return list;
     }
     if (isBin(m_url)) {
-        add(QStringLiteral("Recycle Bin"), binUrl());
+        add(QCoreApplication::translate("FolderModel", "Recycle Bin"), binUrl());
         const QStringList parts = m_url.path().split(QLatin1Char('/'), Qt::SkipEmptyParts);
         QUrl url = binUrl();
         for (int i = 0; i < parts.size(); ++i) {
@@ -373,11 +374,11 @@ QVariantList FolderModel::crumbs() const
         QString base;
         if (isUnder(path, homePath())) {
             base = homePath();
-            add(QStringLiteral("Home"), QUrl::fromLocalFile(base));
+            add(QCoreApplication::translate("FolderModel", "Home"), QUrl::fromLocalFile(base));
         } else {
             const Drive drive = Drives::instance()->driveFor(path);
             base = drive.mountPath;
-            add(QStringLiteral("This computer"), computerUrl());
+            add(QCoreApplication::translate("FolderModel", "This computer"), computerUrl());
             add(drive.name, QUrl::fromLocalFile(base));
         }
         const QStringList parts = path.mid(base.size()).split(QLatin1Char('/'), Qt::SkipEmptyParts);
@@ -419,23 +420,23 @@ QString FolderModel::scope() const
         return QString();
     }
     if (isBin(m_url)) {
-        return QStringLiteral("Your Home folder only");
+        return QCoreApplication::translate("FolderModel", "Your Home folder only");
     }
     if (m_url.isLocalFile()) {
         const QString path = QDir::cleanPath(m_url.toLocalFile());
         if (isUnder(path, homePath())) {
-            return QStringLiteral("Your Home folder only");
+            return QCoreApplication::translate("FolderModel", "Your Home folder only");
         }
         const Drive drive = Drives::instance()->driveFor(path);
         if (drive.removable) {
-            return QStringLiteral("Removable drive");
+            return QCoreApplication::translate("FolderModel", "Removable drive");
         }
         if (!drive.system) {
             return drive.name;
         }
-        return writable() ? QStringLiteral("Shared on this computer") : QStringLiteral("System files");
+        return writable() ? QCoreApplication::translate("FolderModel", "Shared on this computer") : QCoreApplication::translate("FolderModel", "System files");
     }
-    return QStringLiteral("Network");
+    return QCoreApplication::translate("FolderModel", "Network");
 }
 
 QString FolderModel::scopeDetail() const
@@ -446,34 +447,34 @@ QString FolderModel::scopeDetail() const
     if (isBin(m_url) || (m_url.isLocalFile() && isUnder(QDir::cleanPath(m_url.toLocalFile()), homePath()))) {
         const QFileInfo home(homePath());
         const bool others = home.permissions() & (QFileDevice::ReadOther | QFileDevice::ExeOther);
-        return others ? QStringLiteral("You are in your Home folder. Other accounts on this computer can open it too, because its sharing settings allow that.")
-                      : QStringLiteral("You are in your Home folder. Only your account can open the files here; other people who use this computer cannot.");
+        return others ? QCoreApplication::translate("FolderModel", "You are in your Home folder. Other accounts on this computer can open it too, because its sharing settings allow that.")
+                      : QCoreApplication::translate("FolderModel", "You are in your Home folder. Only your account can open the files here; other people who use this computer cannot.");
     }
     const QString s = scope();
-    if (s == QStringLiteral("Removable drive")) {
-        return QStringLiteral("This folder is on a drive you can unplug. Anyone who plugs it into another computer can open these files.");
+    if (s == QCoreApplication::translate("FolderModel", "Removable drive")) {
+        return QCoreApplication::translate("FolderModel", "This folder is on a drive you can unplug. Anyone who plugs it into another computer can open these files.");
     }
-    if (s == QStringLiteral("System files")) {
-        return QStringLiteral("These folders belong to Wild OS. You can look around, but only an administrator can change them.");
+    if (s == QCoreApplication::translate("FolderModel", "System files")) {
+        return QCoreApplication::translate("FolderModel", "These folders belong to Wild OS. You can look around, but only an administrator can change them.");
     }
-    if (s == QStringLiteral("Network")) {
-        return QStringLiteral("This folder is on another computer. Whoever runs that computer decides who can open it.");
+    if (s == QCoreApplication::translate("FolderModel", "Network")) {
+        return QCoreApplication::translate("FolderModel", "This folder is on another computer. Whoever runs that computer decides who can open it.");
     }
-    return QStringLiteral("This folder is outside your Home folder, so other accounts on this computer may be able to open it.");
+    return QCoreApplication::translate("FolderModel", "This folder is outside your Home folder, so other accounts on this computer may be able to open it.");
 }
 
 QStringList FolderModel::columnTitles() const
 {
     if (isComputer(m_url)) {
-        return {QStringLiteral("Name"), QStringLiteral("Type"), QStringLiteral("Free space"), QStringLiteral("Total size")};
+        return {QCoreApplication::translate("FolderModel", "Name"), QCoreApplication::translate("FolderModel", "Type"), QCoreApplication::translate("FolderModel", "Free space"), QCoreApplication::translate("FolderModel", "Total size")};
     }
     if (isBin(m_url)) {
-        return {QStringLiteral("Name"), QStringLiteral("Date deleted"), QStringLiteral("Original location"), QStringLiteral("Size")};
+        return {QCoreApplication::translate("FolderModel", "Name"), QCoreApplication::translate("FolderModel", "Date deleted"), QCoreApplication::translate("FolderModel", "Original location"), QCoreApplication::translate("FolderModel", "Size")};
     }
     if (!m_searchText.isEmpty()) {
-        return {QStringLiteral("Name"), QStringLiteral("Date modified"), QStringLiteral("Folder"), QStringLiteral("Size")};
+        return {QCoreApplication::translate("FolderModel", "Name"), QCoreApplication::translate("FolderModel", "Date modified"), QCoreApplication::translate("FolderModel", "Folder"), QCoreApplication::translate("FolderModel", "Size")};
     }
-    return {QStringLiteral("Name"), QStringLiteral("Date modified"), QStringLiteral("Type"), QStringLiteral("Size")};
+    return {QCoreApplication::translate("FolderModel", "Name"), QCoreApplication::translate("FolderModel", "Date modified"), QCoreApplication::translate("FolderModel", "Type"), QCoreApplication::translate("FolderModel", "Size")};
 }
 
 bool FolderModel::canGoUp() const
@@ -502,8 +503,8 @@ QVariantList FolderModel::recent() const
         seen.append(*it);
         list.append(QVariantMap{{QStringLiteral("url"), *it},
                                 {QStringLiteral("name"), it->isLocalFile() ? friendlyPath(QDir::cleanPath(it->toLocalFile()))
-                                                         : isComputer(*it) ? QStringLiteral("This computer")
-                                                         : isBin(*it) ? QStringLiteral("Recycle Bin")
+                                                         : isComputer(*it) ? QCoreApplication::translate("FolderModel", "This computer")
+                                                         : isBin(*it) ? QCoreApplication::translate("FolderModel", "Recycle Bin")
                                                                       : it->toDisplayString()}});
     }
     return list;
@@ -550,11 +551,13 @@ bool FolderModel::openText(const QString &input)
         return false;
     }
     const QString lower = text.toLower();
-    if (lower == QStringLiteral("this computer") || lower == QStringLiteral("computer")) {
+    // The names this window shows, in the language it shows them in, are
+    // typed back too.
+    if (lower == QStringLiteral("this computer") || lower == QStringLiteral("computer") || lower == tr("This computer").toLower()) {
         openUrl(computerUrl());
         return true;
     }
-    if (lower == QStringLiteral("bin") || lower == QStringLiteral("recycle bin")) {
+    if (lower == QStringLiteral("bin") || lower == QStringLiteral("recycle bin") || lower == tr("Recycle Bin").toLower()) {
         openUrl(binUrl());
         return true;
     }
@@ -562,12 +565,29 @@ bool FolderModel::openText(const QString &input)
         openUrl(QUrl::fromLocalFile(QStringLiteral("/")));
         return true;
     }
-    if (lower == QStringLiteral("home")) {
+    if (lower == QStringLiteral("home") || lower == tr("Home").toLower()) {
         openUrl(QUrl::fromLocalFile(homePath()));
         return true;
     }
     if (text.startsWith(QLatin1Char('~'))) {
         text = homePath() + text.mid(1);
+    }
+    // A Windows network path, \\nas\share\folder, is the same place as
+    // smb://nas/share/folder.
+    if (text.startsWith(QStringLiteral("\\\\")) && text.size() > 2) {
+        QUrl smb;
+        smb.setScheme(QStringLiteral("smb"));
+        const QString rest = text.mid(2).replace(QLatin1Char('\\'), QLatin1Char('/'));
+        const int slash = rest.indexOf(QLatin1Char('/'));
+        smb.setHost(slash < 0 ? rest : rest.left(slash));
+        if (slash >= 0) {
+            smb.setPath(rest.mid(slash));
+        }
+        if (!smb.isValid() || smb.host().isEmpty()) {
+            return false;
+        }
+        openUrl(smb);
+        return true;
     }
     QUrl url;
     if (QDir::isAbsolutePath(text)) {
@@ -625,9 +645,15 @@ void FolderModel::navigate(const QUrl &target, bool record)
     m_current = -1;
     m_anchor = -1;
     m_listed = true;
+    const int sortedBy = m_sortColumn;
+    const bool wasDescending = m_descending;
+    Settings::instance()->sortFor(m_url, &m_sortColumn, &m_descending);
     setError(QString());
     rebuild();
 
+    if (m_sortColumn != sortedBy || m_descending != wasDescending) {
+        Q_EMIT sortChanged();
+    }
     Q_EMIT searchTextChanged();
     Q_EMIT urlChanged();
     Q_EMIT columnsChanged();
@@ -728,7 +754,7 @@ void FolderModel::activate(int row)
         return;
     }
     if (isBin(m_url)) {
-        Q_EMIT failed(QStringLiteral("Files in the Recycle Bin cannot be opened. Restore it first, then open it from where it was."));
+        Q_EMIT failed(QCoreApplication::translate("FolderModel", "Files in the Recycle Bin cannot be opened. Restore it first, then open it from where it was."));
         return;
     }
     // A shortcut to a folder opens that folder right here, as a .lnk to a
@@ -833,7 +859,7 @@ QList<FolderModel::Entry> FolderModel::driveEntries() const
         e.fileName = drive.name;
         e.icon = drive.themeIcon + QStringLiteral(",drive-harddisk");
         e.url = drive.mounted ? QUrl::fromLocalFile(drive.mountPath) : QUrl();
-        e.col2 = drive.system ? QStringLiteral("Local disk") : drive.removable ? QStringLiteral("Removable drive") : QStringLiteral("Drive");
+        e.col2 = drive.system ? QCoreApplication::translate("FolderModel", "Local disk") : drive.removable ? QCoreApplication::translate("FolderModel", "Removable drive") : QCoreApplication::translate("FolderModel", "Drive");
         e.chip = drive.chip;
         e.removable = drive.removable;
         e.col3 = drive.free >= 0 ? Format::size(drive.free) : QString();
@@ -841,15 +867,14 @@ QList<FolderModel::Entry> FolderModel::driveEntries() const
         e.sizeKey = drive.total;
         e.sizeText = drive.total > 0 ? Format::size(drive.total) : QString();
         if (drive.blank) {
-            e.subtitle = Format::size(drive.total) + QStringLiteral(", needs formatting before it can be used");
+            e.subtitle = QCoreApplication::translate("FolderModel", "%1, needs formatting before it can be used").arg(Format::size(drive.total));
         } else if (drive.free >= 0 && drive.total > 0) {
-            e.subtitle = Format::size(drive.free) + QStringLiteral(" free of ") + Format::size(drive.total);
-            if (drive.removable) {
-                e.subtitle += QStringLiteral(", remove safely before unplugging");
-            }
+            e.subtitle = drive.removable
+                ? QCoreApplication::translate("FolderModel", "%1 free of %2, remove safely before unplugging").arg(Format::size(drive.free), Format::size(drive.total))
+                : QCoreApplication::translate("FolderModel", "%1 free of %2").arg(Format::size(drive.free), Format::size(drive.total));
             e.usage = 1.0 - double(drive.free) / double(drive.total);
         } else {
-            e.subtitle = QStringLiteral("Not opened yet");
+            e.subtitle = QCoreApplication::translate("FolderModel", "Not opened yet");
         }
         list.append(e);
     }
@@ -1130,16 +1155,16 @@ void FolderModel::onJobError(KIO::Job *job)
     case KIO::ERR_ACCESS_DENIED:
     case KIO::ERR_CANNOT_ENTER_DIRECTORY:
     case KIO::ERR_CANNOT_OPEN_FOR_READING:
-        setError(QStringLiteral("You do not have permission to open this folder."));
+        setError(QCoreApplication::translate("FolderModel", "You do not have permission to open this folder."));
         break;
     case KIO::ERR_DOES_NOT_EXIST:
-        setError(QStringLiteral("This folder does not exist any more. It may have been moved or deleted."));
+        setError(QCoreApplication::translate("FolderModel", "This folder does not exist any more. It may have been moved or deleted."));
         break;
     case KIO::ERR_IS_FILE:
-        setError(QStringLiteral("This is a file, not a folder."));
+        setError(QCoreApplication::translate("FolderModel", "This is a file, not a folder."));
         break;
     default:
-        setError(job->errorString());
+        setError(QCoreApplication::translate("FolderModel", "Wild OS could not open this folder."), job->errorString());
         break;
     }
 }
@@ -1152,10 +1177,11 @@ void FolderModel::setLoading(bool on)
     }
 }
 
-void FolderModel::setError(const QString &text)
+void FolderModel::setError(const QString &text, const QString &detail)
 {
-    if (text != m_error) {
+    if (text != m_error || detail != m_errorDetail) {
         m_error = text;
+        m_errorDetail = detail;
         Q_EMIT errorChanged();
     }
 }
@@ -1288,6 +1314,7 @@ void FolderModel::setSortColumn(int column)
     m_sortColumn = column;
     // Dates and sizes read best newest and largest first.
     m_descending = column == 1 || column == 3;
+    Settings::instance()->setSortFor(m_url, m_sortColumn, m_descending);
     rebuild();
     Q_EMIT sortChanged();
 }
@@ -1296,6 +1323,7 @@ void FolderModel::setSortDescending(bool descending)
 {
     if (descending != m_descending) {
         m_descending = descending;
+        Settings::instance()->setSortFor(m_url, m_sortColumn, m_descending);
         rebuild();
         Q_EMIT sortChanged();
     }
@@ -1470,6 +1498,11 @@ QString FolderModel::iconAt(int row) const
     return row >= 0 && row < m_rows.size() ? m_rows.at(row).icon : QString();
 }
 
+QString FolderModel::mimeAt(int row) const
+{
+    return row >= 0 && row < m_rows.size() ? m_rows.at(row).mime : QString();
+}
+
 int FolderModel::rowForUrl(const QUrl &url) const
 {
     for (int i = 0; i < m_rows.size(); ++i) {
@@ -1511,6 +1544,48 @@ void FolderModel::selectWhenListed(const QList<QUrl> &urls, bool rename)
             m_pending.insert(url);
         }
     }
+}
+
+QStringList FolderModel::completions(const QString &input) const
+{
+    // Up to the last slash is the folder to look in, the rest the start of
+    // a name inside it. With no slash, it is a name in the open folder.
+    const auto slash = input.lastIndexOf(QLatin1Char('/'));
+    const QString typedFolder = input.left(slash + 1);
+    const QString start = input.mid(slash + 1);
+    QString path;
+    if (typedFolder.startsWith(QLatin1String("~/"))) {
+        path = homePath() + typedFolder.mid(1);
+    } else if (typedFolder.startsWith(QLatin1Char('/'))) {
+        path = typedFolder;
+    } else if (m_url.isLocalFile() && !input.isEmpty() && !input.contains(QLatin1String(":/"))) {
+        path = QDir(m_url.toLocalFile()).filePath(typedFolder);
+    } else {
+        return {};
+    }
+    const QDir dir(path);
+    if (!dir.exists()) {
+        return {};
+    }
+    QDir::Filters filters = QDir::Dirs | QDir::NoDotAndDotDot;
+    if (Settings::instance()->showHidden() || start.startsWith(QLatin1Char('.'))) {
+        filters |= QDir::Hidden;
+    }
+    QStringList names = dir.entryList(filters);
+    names.removeIf([&start](const QString &name) {
+        return isSystemItem(name) || !name.startsWith(start, Qt::CaseInsensitive) || name == start;
+    });
+    std::sort(names.begin(), names.end(), [this](const QString &a, const QString &b) {
+        return m_collator.compare(a, b) < 0;
+    });
+    QStringList list;
+    for (const QString &name : std::as_const(names)) {
+        if (list.size() >= 8) {
+            break;
+        }
+        list.append(typedFolder + name);
+    }
+    return list;
 }
 
 QVariantList FolderModel::subfolders(const QUrl &url) const

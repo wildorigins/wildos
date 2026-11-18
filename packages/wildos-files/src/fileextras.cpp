@@ -13,6 +13,7 @@
 #include <KIO/CopyJob>
 #include <KIO/JobTracker>
 #include <KJobTrackerInterface>
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
@@ -97,7 +98,7 @@ void FileOps::compress(const QList<QUrl> &urls)
     const QString base = first.isDir() ? first.fileName() : first.completeBaseName().isEmpty() ? first.fileName() : first.completeBaseName();
     const QUrl folder = QUrl::fromLocalFile(first.absolutePath());
     if (!QFileInfo(first.absolutePath()).isWritable()) {
-        Q_EMIT failed(QStringLiteral("You cannot save in this folder, so the ZIP file has nowhere to go. Copy the items somewhere of yours first."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "You cannot save in this folder, so the ZIP file has nowhere to go. Copy the items somewhere of yours first."));
         return;
     }
     QUrl target = folder;
@@ -169,7 +170,7 @@ void FileOps::compressWith(const QList<QUrl> &urls)
         }
     }
     if (!QProcess::startDetached(QStringLiteral("wildos-archive"), args)) {
-        Q_EMIT failed(QStringLiteral("Archive could not be opened."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "Archive could not be opened."));
     }
 }
 
@@ -182,11 +183,11 @@ void FileOps::extractHere(const QList<QUrl> &urls)
         }
     }
     if (!QFileInfo(QFileInfo(urls.value(0).toLocalFile()).absolutePath()).isWritable()) {
-        Q_EMIT failed(QStringLiteral("You cannot save in this folder, so there is nowhere to extract to. Copy the archive somewhere of yours first."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "You cannot save in this folder, so there is nowhere to extract to. Copy the archive somewhere of yours first."));
         return;
     }
     if (!QProcess::startDetached(QStringLiteral("wildos-archive"), args)) {
-        Q_EMIT failed(QStringLiteral("Archive could not be opened."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "Archive could not be opened."));
     }
 }
 
@@ -204,21 +205,21 @@ QVariantList FileOps::sendTargets(const QList<QUrl> &urls) const
     }
     const QString desktop = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
     if (local && !desktop.isEmpty() && QDir::cleanPath(desktop) != QDir::homePath() && QFileInfo(desktop).isDir()) {
-        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("desktop")}, {QStringLiteral("text"), QStringLiteral("Desktop (create shortcut)")},
+        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("desktop")}, {QStringLiteral("text"), QCoreApplication::translate("FileOps", "Desktop (create shortcut)")},
                                 {QStringLiteral("icon"), QStringLiteral("desktop")}});
     }
     if (local) {
-        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("zip")}, {QStringLiteral("text"), QStringLiteral("Compressed (zipped) folder")},
+        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("zip")}, {QStringLiteral("text"), QCoreApplication::translate("FileOps", "Compressed (zipped) folder")},
                                 {QStringLiteral("icon"), QStringLiteral("zip")}});
     }
     // Mail and Bluetooth carry files, not folders; each appears only when
     // the computer can actually do it.
     if (onlyFiles && mailPresent()) {
-        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("mail")}, {QStringLiteral("text"), QStringLiteral("Mail recipient")},
+        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("mail")}, {QStringLiteral("text"), QCoreApplication::translate("FileOps", "Mail recipient")},
                                 {QStringLiteral("icon"), QStringLiteral("mail")}});
     }
     if (onlyFiles && bluetoothPresent()) {
-        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("bluetooth")}, {QStringLiteral("text"), QStringLiteral("Bluetooth device")},
+        list.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("bluetooth")}, {QStringLiteral("text"), QCoreApplication::translate("FileOps", "Bluetooth device")},
                                 {QStringLiteral("icon"), QStringLiteral("bluetooth")}});
     }
     const auto drives = Drives::instance()->list();
@@ -243,7 +244,7 @@ void FileOps::sendTo(const QList<QUrl> &urls, const QString &kind, const QUrl &t
             const QFileInfo info(url.toLocalFile());
             newShortcut(desktop, info.absoluteFilePath(), Format::visibleName(info.fileName(), info.isDir(), Settings::instance()->showExtensions()));
         }
-        Q_EMIT notice(urls.size() == 1 ? QStringLiteral("Shortcut added to the desktop") : QStringLiteral("Shortcuts added to the desktop"));
+        Q_EMIT notice(urls.size() == 1 ? QCoreApplication::translate("FileOps", "Shortcut added to the desktop") : QCoreApplication::translate("FileOps", "Shortcuts added to the desktop"));
     } else if (kind == QLatin1String("zip")) {
         compress(urls);
     } else if (kind == QLatin1String("mail")) {
@@ -252,7 +253,7 @@ void FileOps::sendTo(const QList<QUrl> &urls, const QString &kind, const QUrl &t
             args << QStringLiteral("--attach") << url.toLocalFile();
         }
         if (!QProcess::startDetached(QStringLiteral("xdg-email"), args)) {
-            Q_EMIT failed(QStringLiteral("Your mail app could not be opened."));
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "Your mail app could not be opened."));
         }
     } else if (kind == QLatin1String("bluetooth")) {
         QStringList args;
@@ -260,7 +261,7 @@ void FileOps::sendTo(const QList<QUrl> &urls, const QString &kind, const QUrl &t
             args << QStringLiteral("-f") << url.toLocalFile();
         }
         if (!QProcess::startDetached(QStringLiteral("bluedevil-sendfile"), args)) {
-            Q_EMIT failed(QStringLiteral("Bluetooth could not be started."));
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "Bluetooth could not be started."));
         }
     } else if (kind == QLatin1String("drive") && target.isValid()) {
         drop(urls, target, Qt::CopyAction);
@@ -289,11 +290,11 @@ void FileOps::pinToStart(const QList<QUrl> &urls)
         message << QStringLiteral("org.kde.plasma.favorites.documents") << url.toString() << QStringLiteral(":global");
         const QDBusMessage reply = QDBusConnection::sessionBus().call(message, QDBus::Block, 3000);
         if (reply.type() == QDBusMessage::ErrorMessage) {
-            Q_EMIT failed(QStringLiteral("Start could not be reached, so nothing was pinned. Try again in a moment."));
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "Start could not be reached, so nothing was pinned. Try again in a moment."));
             return;
         }
     }
-    Q_EMIT notice(QStringLiteral("Pinned to Start"));
+    Q_EMIT notice(QCoreApplication::translate("FileOps", "Pinned to Start"));
 }
 
 QVariantMap FileOps::networkShare(const QUrl &folder) const
@@ -344,7 +345,7 @@ void FileOps::setNetworkShare(const QUrl &folder, bool shared)
         }
     }
     if (!error.isEmpty()) {
-        Q_EMIT failed(QStringLiteral("Network sharing did not change. Your account may need to be allowed to share folders (the sambashare group)."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "Network sharing did not change. Your account may need to be allowed to share folders (the sambashare group)."));
     }
 }
 
@@ -390,7 +391,7 @@ QVariantList FileOps::previousVersions(const QUrl &url) const
             continue;
         }
         list.append(QVariantMap{{QStringLiteral("label"), Format::longDate(f.when)},
-                                {QStringLiteral("detail"), current.isDir() ? QString() : Format::size(copy.size()) + QStringLiteral(", changed ") + Format::longDate(copy.lastModified())},
+                                {QStringLiteral("detail"), current.isDir() ? QString() : QCoreApplication::translate("FileOps", "%1, changed %2").arg(Format::size(copy.size()), Format::longDate(copy.lastModified()))},
                                 {QStringLiteral("url"), QUrl::fromLocalFile(f.path)}});
     }
     return list;
@@ -400,16 +401,16 @@ void FileOps::restoreVersion(const QUrl &version, const QUrl &current)
 {
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Restore this version?");
-    prompt[QStringLiteral("text")] = QStringLiteral("%1 will be replaced with the earlier copy. You cannot undo this.").arg(current.fileName());
-    prompt[QStringLiteral("primary")] = QStringLiteral("Restore");
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Restore this version?");
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "%1 will be replaced with the earlier copy. You cannot undo this.").arg(current.fileName());
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Restore");
     ask(prompt, [this, version, current](const QString &choice, bool) {
         if (choice != QLatin1String("primary")) {
             return;
         }
         auto job = KIO::copyAs(version, current, KIO::Overwrite);
         job->setUiDelegate(delegate());
-        watchJob(job, QStringLiteral("restore this"));
+        watchJob(job, QCoreApplication::translate("FileOps", "restore this"));
     });
 }
 
@@ -425,10 +426,10 @@ void FileOps::duplicate(const QUrl &url)
     job->setUiDelegate(delegate());
     connect(job, &KJob::result, this, [this, job, folder, target] {
         if (!job->error()) {
-            Q_EMIT notice(QStringLiteral("Copy made: %1").arg(target.fileName()));
+            Q_EMIT notice(QCoreApplication::translate("FileOps", "Copy made: %1").arg(target.fileName()));
         }
     });
-    watchJob(job, QStringLiteral("copy this"));
+    watchJob(job, QCoreApplication::translate("FileOps", "copy this"));
 }
 
 void FileOps::applyProperties(const QUrl &url, const QString &fileName, bool isDir, const QString &typed, bool hidden)
@@ -438,7 +439,7 @@ void FileOps::applyProperties(const QUrl &url, const QString &fileName, bool isD
     const QString visible = Format::visibleName(fileName, isDir, Settings::instance()->showExtensions());
     QString name = typed.trimmed().isEmpty() ? visible : typed.trimmed();
     if (name.contains(QLatin1Char('/'))) {
-        Q_EMIT failed(QStringLiteral("A name cannot contain /. Try a different name."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "A name cannot contain /. Try a different name."));
         return;
     }
     name += fileName.mid(visible.size());
@@ -446,7 +447,7 @@ void FileOps::applyProperties(const QUrl &url, const QString &fileName, bool isD
         name.remove(0, 1);
     }
     if (name.isEmpty()) {
-        Q_EMIT failed(QStringLiteral("A name cannot be just dots. Try a different name."));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "A name cannot be just dots. Try a different name."));
         return;
     }
     if (hidden) {
@@ -459,7 +460,7 @@ void FileOps::applyProperties(const QUrl &url, const QString &fileName, bool isD
     QUrl target = folder;
     target.setPath(folderPath(folder, name));
     if (target.isLocalFile() && QFileInfo::exists(target.toLocalFile())) {
-        Q_EMIT failed(QStringLiteral("There is already an item called \"%1\" here. Pick a different name.").arg(name));
+        Q_EMIT failed(QCoreApplication::translate("FileOps", "There is already an item called \"%1\" here. Pick a different name.").arg(name));
         return;
     }
     auto job = KIO::moveAs(url, target, KIO::HideProgressInfo);
@@ -469,5 +470,5 @@ void FileOps::applyProperties(const QUrl &url, const QString &fileName, bool isD
             Q_EMIT created(folder, {target}, false);
         }
     });
-    watchJob(job, QStringLiteral("rename this"));
+    watchJob(job, QCoreApplication::translate("FileOps", "rename this"));
 }

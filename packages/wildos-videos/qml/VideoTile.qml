@@ -18,8 +18,24 @@ Rectangle {
     implicitHeight: column.implicitHeight + 16
     radius: UI.Style.radiusSm
     color: mouse.containsMouse ? VideosStyle.rowHover : "transparent"
+    activeFocusOnTab: true
     Accessible.role: Accessible.ListItem
     Accessible.name: title.text
+    Accessible.onPressAction: Player.open(tile.path)
+    Keys.onReturnPressed: Player.open(tile.path)
+    Keys.onEnterPressed: Player.open(tile.path)
+    Keys.onSpacePressed: Player.open(tile.path)
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            tile.menuRequested(tile.path, tile, 24, 24);
+            event.accepted = true;
+        }
+    }
+
+    UI.FocusRing {
+        visible: tile.activeFocus
+        targetRadius: tile.radius
+    }
 
     ColumnLayout {
         id: column

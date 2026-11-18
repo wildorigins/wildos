@@ -6,6 +6,7 @@
 #include <KSharedConfig>
 
 #include <QColor>
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
@@ -188,10 +189,10 @@ struct PointerColour {
 // White and black are Breeze's own cursors; yellow and sea glass are
 // recoloured from Breeze Light when wildos-branding is built.
 const PointerColour pointerList[] = {
-    {"white", "White", "#ffffff", "Breeze_Light"},
-    {"black", "Black", "#111111", "breeze_cursors"},
-    {"yellow", "Yellow", "#f2d34a", "WildOS-Yellow"},
-    {"seaglass", "Sea glass", "#7fd6c8", "WildOS-SeaGlass"},
+    {"white", QT_TRANSLATE_NOOP("AccessCore", "White"), "#ffffff", "Breeze_Light"},
+    {"black", QT_TRANSLATE_NOOP("AccessCore", "Black"), "#111111", "breeze_cursors"},
+    {"yellow", QT_TRANSLATE_NOOP("AccessCore", "Yellow"), "#f2d34a", "WildOS-Yellow"},
+    {"seaglass", QT_TRANSLATE_NOOP("AccessCore", "Sea glass"), "#7fd6c8", "WildOS-SeaGlass"},
 };
 
 const QString customId = QStringLiteral("custom");
@@ -583,7 +584,7 @@ QVariantList pointerColours()
         }
         if (installed) {
             list.append(QVariantMap{{QStringLiteral("id"), QString::fromLatin1(p.id)},
-                                    {QStringLiteral("name"), QString::fromLatin1(p.name)},
+                                    {QStringLiteral("name"), QCoreApplication::translate("AccessCore", p.name)},
                                     {QStringLiteral("colour"), QColor(QString::fromLatin1(p.colour))},
                                     {QStringLiteral("theme"), QString::fromLatin1(p.theme)}});
         }

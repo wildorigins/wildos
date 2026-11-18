@@ -19,16 +19,16 @@ PageScroll {
             if (what === "add") {
                 addDialog.close();
                 page.target = null;
-                notice.show("Account added", message, false);
+                notice.show(qsTr("Account added"), message, false);
             } else if (what === "remove" || what === "type") {
-                notice.show(what === "remove" ? "Account removed" : "Account type changed", message, false);
+                notice.show(what === "remove" ? qsTr("Account removed") : qsTr("Account type changed"), message, false);
             }
         }
         function onFailed(what, reason) {
             if (what === "add") {
                 addDialog.error = reason;
             } else if (what === "remove" || what === "type") {
-                notice.show(what === "remove" ? "The account was not removed" : "The account type was not changed", reason, true);
+                notice.show(what === "remove" ? qsTr("The account was not removed") : qsTr("The account type was not changed"), reason, true);
             }
         }
     }
@@ -47,12 +47,12 @@ PageScroll {
                 iconName: "people"
                 iconTile: true
                 minHeight: 68
-                title: "Add other user"
-                description: "Each person gets their own files, settings and password"
+                title: qsTr("Add other user")
+                description: qsTr("Each person gets their own files, settings and password")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Add account"
+                    text: qsTr("Add account")
                     kind: "primary"
                     busy: Users.busy === "add"
                     enabled: Users.busy.length === 0
@@ -67,7 +67,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Other users"
+            text: qsTr("Other users")
         }
 
         UI.Card {
@@ -83,7 +83,7 @@ PageScroll {
                         id: userRow
                         required property var modelData
                         title: modelData.realName
-                        description: modelData.userName + ", " + (modelData.admin ? "administrator" : "standard user")
+                        description: modelData.admin ? qsTr("%1, administrator").arg(modelData.userName) : qsTr("%1, standard user").arg(modelData.userName)
                         minHeight: 68
 
                         leading: UI.Avatar {
@@ -93,7 +93,7 @@ PageScroll {
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Change account type"
+                            text: qsTr("Change account type")
                             busy: Users.busy === "type" && page.target !== null && page.target.userName === userRow.modelData.userName
                             enabled: Users.busy.length === 0
                             onClicked: {
@@ -104,7 +104,7 @@ PageScroll {
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Remove"
+                            text: qsTr("Remove")
                             busy: Users.busy === "remove" && page.target !== null && page.target.userName === userRow.modelData.userName
                             enabled: Users.busy.length === 0
                             onClicked: {
@@ -118,8 +118,8 @@ PageScroll {
                 UI.SettingRow {
                     visible: Users.others.length === 0
                     iconName: "account"
-                    title: "Nobody else has an account yet"
-                    description: "People you add appear here, and on the sign-in screen."
+                    title: qsTr("Nobody else has an account yet")
+                    description: qsTr("People you add appear here, and on the sign-in screen.")
                 }
             }
         }
@@ -128,7 +128,7 @@ PageScroll {
     UI.Label {
         Layout.fillWidth: true
         visible: !Users.me.admin
-        text: "You are a standard user, so Wild OS will ask for an administrator's password before changing other accounts."
+        text: qsTr("You are a standard user, so Wild OS will ask for an administrator's password before changing other accounts.")
         color: UI.Style.inkMuted
         wrapMode: Text.Wrap
         elide: Text.ElideNone
@@ -145,21 +145,18 @@ PageScroll {
                 return nameProblem;
             }
             if (/[:,]/.test(fullField.text)) {
-                return "A name can't contain a colon or comma.";
-            }
-            if (passwordField.text.length > 0 && passwordField.text.length < 8) {
-                return "Use at least 8 characters for the password.";
+                return qsTr("A name can't contain a colon or comma.");
             }
             if (confirmField.text.length > 0 && confirmField.text !== passwordField.text) {
-                return "The two passwords don't match.";
+                return qsTr("The two passwords don't match.");
             }
             return "";
         }
         readonly property bool ready: fullField.text.trim().length > 0 && userField.text.length > 0 && problem.length === 0
-            && passwordField.text.length >= 8 && confirmField.text === passwordField.text
+            && passwordField.text.length > 0 && confirmField.text === passwordField.text
 
-        title: "Create an account"
-        text: "Who will use this computer? They sign in with the user name and password you choose here, and can change the password later in Settings."
+        title: qsTr("Create an account")
+        text: qsTr("Who will use this computer? They sign in with the user name and password you choose here, and can change the password later in Settings.")
         onAboutToShow: {
             error = "";
             nameEdited = false;
@@ -174,7 +171,7 @@ PageScroll {
         UI.Label {
             Layout.fillWidth: true
             Layout.topMargin: 4
-            text: "Name"
+            text: qsTr("Name")
             size: 12
             color: UI.Style.inkMuted
         }
@@ -182,7 +179,7 @@ PageScroll {
         UI.TextField {
             id: fullField
             Layout.fillWidth: true
-            placeholderText: "For example Alex Morgan"
+            placeholderText: qsTr("For example Alex Morgan")
             onTextChanged: {
                 addDialog.error = "";
                 if (!addDialog.nameEdited) {
@@ -194,7 +191,7 @@ PageScroll {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "User name, for signing in"
+            text: qsTr("User name, for signing in")
             size: 12
             color: UI.Style.inkMuted
         }
@@ -202,7 +199,7 @@ PageScroll {
         UI.TextField {
             id: userField
             Layout.fillWidth: true
-            placeholderText: "For example alex"
+            placeholderText: qsTr("For example alex")
             error: addDialog.nameProblem.length > 0
             onTextEdited: addDialog.nameEdited = true
             onAccepted: passwordField.forceActiveFocus()
@@ -211,7 +208,7 @@ PageScroll {
         UI.Label {
             Layout.fillWidth: true
             Layout.topMargin: 6
-            text: "Password"
+            text: qsTr("Password")
             size: 12
             color: UI.Style.inkMuted
         }
@@ -219,10 +216,9 @@ PageScroll {
         UI.TextField {
             id: passwordField
             Layout.fillWidth: true
-            placeholderText: "Password"
+            placeholderText: qsTr("Password")
             revealable: true
             UI.NoPaste {}
-            error: text.length > 0 && text.length < 8
             onAccepted: confirmField.forceActiveFocus()
         }
 
@@ -235,7 +231,7 @@ PageScroll {
         UI.TextField {
             id: confirmField
             Layout.fillWidth: true
-            placeholderText: "Confirm the password"
+            placeholderText: qsTr("Confirm the password")
             revealable: true
             UI.NoPaste {}
             error: text.length > 0 && text !== passwordField.text
@@ -249,13 +245,13 @@ PageScroll {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Account type"
+                text: qsTr("Account type")
             }
 
             UI.ComboBox {
                 id: typeBox
-                Accessible.name: "Account type"
-                model: [{ value: false, text: "Standard user" }, { value: true, text: "Administrator" }]
+                Accessible.name: qsTr("Account type")
+                model: [{ value: false, text: qsTr("Standard user") }, { value: true, text: qsTr("Administrator") }]
             }
         }
 
@@ -272,7 +268,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: createButton
-                text: "Create account"
+                text: qsTr("Create account")
                 kind: "primary"
                 busy: Users.busy === "add"
                 enabled: addDialog.ready && Users.busy.length === 0
@@ -285,7 +281,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 enabled: Users.busy !== "add"
                 onClicked: addDialog.close()
             }
@@ -294,8 +290,8 @@ PageScroll {
 
     UI.Dialog {
         id: typeDialog
-        title: "Change account type"
-        text: page.target ? "Administrators can install apps, change settings for everyone and manage other accounts." : ""
+        title: qsTr("Change account type")
+        text: page.target ? qsTr("Administrators can install apps, change settings for everyone and manage other accounts.") : ""
         onAboutToShow: kindBox.currentIndex = page.target && page.target.admin ? 1 : 0
 
         RowLayout {
@@ -315,14 +311,14 @@ PageScroll {
 
             UI.ComboBox {
                 id: kindBox
-                Accessible.name: "Account type"
-                model: [{ value: false, text: "Standard user" }, { value: true, text: "Administrator" }]
+                Accessible.name: qsTr("Account type")
+                model: [{ value: false, text: qsTr("Standard user") }, { value: true, text: qsTr("Administrator") }]
             }
         }
 
         buttons: [
             UI.Button {
-                text: "OK"
+                text: qsTr("OK")
                 kind: "primary"
                 onClicked: {
                     typeDialog.close();
@@ -332,7 +328,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: typeDialog.close()
             }
         ]
@@ -340,11 +336,11 @@ PageScroll {
 
     UI.Dialog {
         id: removeDialog
-        title: page.target ? "Delete " + page.target.realName + "'s account and data?" : ""
-        text: "Deleting this account removes all of its files from this computer, including the desktop, documents, downloads, pictures, music and videos. Back up anything they want to keep first."
+        title: page.target ? qsTr("Delete %1's account and data?").arg(page.target.realName) : ""
+        text: qsTr("Deleting this account removes all of its files from this computer, including the desktop, documents, downloads, pictures, music and videos. Back up anything they want to keep first.")
         buttons: [
             UI.Button {
-                text: "Delete account and data"
+                text: qsTr("Delete account and data")
                 kind: "primary"
                 onClicked: {
                     removeDialog.close();
@@ -354,7 +350,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: removeDialog.close()
             }
         ]

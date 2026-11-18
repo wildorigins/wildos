@@ -23,6 +23,23 @@ Item {
     property bool syncing: false
     // The line the cursor is on, for the lit formatting buttons.
     property string lineKind: ""
+    // Typing in the note or in its find bar, where Ctrl+F means this note.
+    readonly property bool editing: titleEdit.activeFocus || body.textEdit.activeFocus || findBar.searching
+
+    function startFind() {
+        if (doc.open) {
+            findBar.start();
+        }
+    }
+    function print() {
+        if (doc.open) {
+            doc.print();
+        }
+    }
+    function exportPdf() {
+        pdfDialog.selectedFile = doc.pdfUrl();
+        pdfDialog.open();
+    }
 
     function focusTitle() {
         titleEdit.forceActiveFocus();
@@ -39,6 +56,7 @@ Item {
     Connections {
         target: pane.doc
         function onBodyReplaced() {
+            findBar.stop();
             pane.syncTitle();
             body.load(pane.doc.body());
             scroller.contentY = 0;
@@ -50,6 +68,7 @@ Item {
         }
         function onPathChanged() {
             if (!pane.doc.open) {
+                findBar.stop();
                 pane.syncTitle();
                 body.load("");
             }
@@ -200,6 +219,10 @@ Item {
                                 text: n.name, enabled: n.name !== pane.doc.notebook, run: () => pane.moveRequested(pane.doc.path, n.name)
                             })) },
                             { text: qsTr("Show in Files"), icon: "open-folder", run: () => NoteStore.showInFiles(pane.doc.path) },
+                            { separator: true },
+                            { text: qsTr("Find in this note"), icon: "search", shortcut: "Ctrl+F", run: () => pane.startFind() },
+                            { text: qsTr("Print"), shortcut: "Ctrl+P", run: () => pane.print() },
+                            { text: qsTr("Export as PDF"), run: () => pane.exportPdf() },
                             { separator: true },
                             { text: qsTr("Delete"), icon: "delete", danger: true, run: () => pane.deleteRequested(pane.doc.path) },
                             { separator: true },
@@ -363,6 +386,26 @@ Item {
             size: 13
             color: UI.Style.inkSubtle
         }
+    }
+
+    NoteFindBar {
+        id: findBar
+        anchors.top: parent.top
+        anchors.topMargin: 58
+        anchors.right: parent.right
+        anchors.rightMargin: 20
+        z: 5
+        edit: body.textEdit
+        flickable: scroller
+    }
+
+    FileDialog {
+        id: pdfDialog
+        title: qsTr("Export as PDF")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "pdf"
+        nameFilters: [qsTr("PDF files (*.pdf)")]
+        onAccepted: pane.said(pane.doc.exportPdf(selectedFile) ? qsTr("Saved as a PDF") : qsTr("Notes couldn't write the PDF there. Try another folder, such as Documents."))
     }
 
     FileDialog {

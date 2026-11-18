@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTcpSocket>
 #include <QThread>
@@ -361,11 +362,14 @@ bool SetupApp::canStart() const
 // Windows 11 runs in, is always offered.
 QVariantList SetupApp::memoryChoices() const
 {
-    const double fitted = PcCheck::memoryLabel(m_memory).section(QLatin1Char(' '), 0, 0).toDouble();
+    // The label is in the display language ("16 Go"), so only its leading
+    // number is read.
+    static const QRegularExpression leading(QStringLiteral("^[0-9.]+"));
+    const double fitted = leading.match(PcCheck::memoryLabel(m_memory)).captured().toDouble();
     QVariantList choices;
     for (int gb : {4, 6, 8, 12, 16, 24, 32}) {
         if (gb == 4 || gb <= fitted * 0.4) {
-            choices << QVariantMap{{QStringLiteral("value"), gb}, {QStringLiteral("text"), QStringLiteral("Up to %1 GB").arg(gb)}};
+            choices << QVariantMap{{QStringLiteral("value"), gb}, {QStringLiteral("text"), tr("Up to %1 GB").arg(gb)}};
         }
     }
     return choices;
@@ -500,7 +504,7 @@ QString SetupApp::startSetup(bool background)
     m_daemon->setTimeout(120000);
     const QDBusReply<QString> reply = m_daemon->call(QStringLiteral("StartSetup"), setupRequest(background));
     if (!reply.isValid()) {
-        return QStringLiteral("Windows mode's background service didn't start. Restart the PC, then try again.");
+        return tr("Windows mode's background service didn't start. Restart the PC, then try again.");
     }
     refreshStatus();
     return reply.value();
@@ -540,7 +544,7 @@ QString SetupApp::chooseIso(const QString &url)
         return {};
     }
     const QDBusReply<QString> reply = m_daemon->call(QStringLiteral("ChooseIso"), QUrl(url).toLocalFile());
-    return reply.isValid() ? reply.value() : QStringLiteral("Windows mode's background service didn't answer.");
+    return reply.isValid() ? reply.value() : tr("Windows mode's background service didn't answer.");
 }
 
 QString SetupApp::isoFile() const
@@ -585,7 +589,7 @@ void SetupApp::checkIso(const QString &url)
         m_isoPath.clear();
         m_isoState.clear();
         Q_EMIT isoChanged();
-        Q_EMIT isoRefused(why.isEmpty() ? QStringLiteral("This file couldn't be checked. Try again.") : why);
+        Q_EMIT isoRefused(why.isEmpty() ? tr("This file couldn't be checked. Try again.") : why);
     };
     connect(process, &QProcess::finished, this, [process, answer](int code, QProcess::ExitStatus status) {
         const bool clean = status == QProcess::NormalExit && code == 0;

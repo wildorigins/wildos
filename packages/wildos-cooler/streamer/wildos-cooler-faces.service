@@ -1,0 +1,22 @@
+[Unit]
+Description=Wild OS Cooler: the faces on the cooler's screen
+PartOf=graphical-session.target
+After=graphical-session.target
+# Only on a PC with a supported cooler (udev names its USB device, see
+# 70-wildos-cooler.rules, and starts this unit when one is plugged in), or
+# once more after one has gone, to take Cooler out of Start.
+ConditionPathExists=|/dev/wildos-cooler
+ConditionPathExists=|%C/wildos-cooler/offered
+
+[Service]
+Type=exec
+ExecStart=/usr/libexec/wildos/wildos-cooler-faces
+# It leaves by itself, without an error, when the session cannot draw the
+# faces; anything else is worth a few more tries and no more.
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=120
+StartLimitBurst=4
+
+[Install]
+WantedBy=graphical-session.target

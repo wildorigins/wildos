@@ -17,7 +17,7 @@ T.AbstractButton {
     hoverEnabled: true
     focusPolicy: Qt.TabFocus
     Accessible.role: Accessible.Button
-    Accessible.name: app ? "Instead of " + app.insteadOf + ", " + app.name : ""
+    Accessible.name: app ? qsTr("Instead of %1, %2").arg(app.insteadOf).arg(app.name) : ""
     onClicked: activated(appKey)
 
     AppMenuArea {
@@ -50,7 +50,7 @@ T.AbstractButton {
 
                 UI.Label {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: card.app ? "Instead of " + card.app.insteadOf : ""
+                    text: card.app ? qsTr("Instead of %1").arg(card.app.insteadOf) : ""
                     size: 12
                     color: Metrics.inkSecondary
                     width: Math.min(implicitWidth, column.width - 20)

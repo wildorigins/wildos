@@ -57,6 +57,9 @@ public:
     void add(const Account &account);
     void update(const Account &account);
     void remove(const QString &id);
+    // Puts the account at this place in the list, which is the order the
+    // folder pane shows and accounts.json keeps.
+    void move(const QString &id, int to);
 
     // The password store answers asynchronously; done gets "" when there is
     // none or the store is locked and the person said no.

@@ -11,28 +11,28 @@ PageScroll {
     id: page
 
     readonly property var composeChoices: [
-        { value: "", text: "None" },
-        { value: "compose:ralt", text: "Right Alt" },
-        { value: "compose:rwin", text: "Right Windows key" },
-        { value: "compose:menu", text: "Menu key" },
-        { value: "compose:rctrl", text: "Right Ctrl" },
-        { value: "compose:caps", text: "Caps Lock" },
-        { value: "compose:prsc", text: "Print Screen" },
-        { value: "compose:sclk", text: "Scroll Lock" },
-        { value: "compose:paus", text: "Pause" },
-        { value: "compose:ins", text: "Insert" }
+        { value: "", text: qsTr("None") },
+        { value: "compose:ralt", text: qsTr("Right Alt") },
+        { value: "compose:rwin", text: qsTr("Right Windows key") },
+        { value: "compose:menu", text: qsTr("Menu key") },
+        { value: "compose:rctrl", text: qsTr("Right Ctrl") },
+        { value: "compose:caps", text: qsTr("Caps Lock") },
+        { value: "compose:prsc", text: qsTr("Print Screen") },
+        { value: "compose:sclk", text: qsTr("Scroll Lock") },
+        { value: "compose:paus", text: qsTr("Pause") },
+        { value: "compose:ins", text: qsTr("Insert") }
     ]
 
     readonly property var altGrChoices: [
-        { value: "", text: "As the layout has it" },
-        { value: "lv3:ralt_switch", text: "Right Alt" },
-        { value: "lv3:lalt_switch", text: "Left Alt" },
-        { value: "lv3:alt_switch", text: "Either Alt" },
-        { value: "lv3:rwin_switch", text: "Right Windows key" },
-        { value: "lv3:menu_switch", text: "Menu key" },
-        { value: "lv3:switch", text: "Right Ctrl" },
-        { value: "lv3:caps_switch", text: "Caps Lock" },
-        { value: "lv3:ralt_alt", text: "None, Right Alt is a normal Alt" }
+        { value: "", text: qsTr("As the layout has it") },
+        { value: "lv3:ralt_switch", text: qsTr("Right Alt") },
+        { value: "lv3:lalt_switch", text: qsTr("Left Alt") },
+        { value: "lv3:alt_switch", text: qsTr("Either Alt") },
+        { value: "lv3:rwin_switch", text: qsTr("Right Windows key") },
+        { value: "lv3:menu_switch", text: qsTr("Menu key") },
+        { value: "lv3:switch", text: qsTr("Right Ctrl") },
+        { value: "lv3:caps_switch", text: qsTr("Caps Lock") },
+        { value: "lv3:ralt_alt", text: qsTr("None, Right Alt is a normal Alt") }
     ]
 
     // A choice made somewhere else, such as by hand in kxkbrc, still shows
@@ -41,7 +41,7 @@ PageScroll {
         if (choices.some(o => o.value === current)) {
             return choices;
         }
-        return choices.concat([{ value: current, text: "Another key" }]);
+        return choices.concat([{ value: current, text: qsTr("Another key") }]);
     }
 
     UI.Card {
@@ -52,12 +52,12 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "keyboard"
-                title: "Keyboard model"
+                title: qsTr("Keyboard model")
                 description: Keyboard.modelName
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Change"
+                    text: qsTr("Change")
                     onClicked: modelDialog.open()
                 }
             }
@@ -69,7 +69,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Special keys"
+            text: qsTr("Special keys")
         }
 
         UI.Card {
@@ -79,12 +79,12 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Compose key"
-                    description: "Press it, then two keys in turn, to type characters such as é, ñ or €"
+                    title: qsTr("Compose key")
+                    description: qsTr("Press it, then two keys in turn, to type characters such as é, ñ or €")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Compose key"
+                        Accessible.name: qsTr("Compose key")
                         readonly property string choice: Keyboard.compose
                         model: page.withCurrent(page.composeChoices, choice)
                         currentIndex: Math.max(0, model.findIndex(o => o.value === choice))
@@ -93,12 +93,12 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Alt Gr key"
-                    description: "Hold it to type the extra characters shown on some keys"
+                    title: qsTr("Alt Gr key")
+                    description: qsTr("Hold it to type the extra characters shown on some keys")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Alt Gr key"
+                        Accessible.name: qsTr("Alt Gr key")
                         readonly property string choice: Keyboard.altGr
                         model: page.withCurrent(page.altGrChoices, choice)
                         currentIndex: Math.max(0, model.findIndex(o => o.value === choice))
@@ -107,12 +107,12 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Try it here"
+                    title: qsTr("Try it here")
 
                     UI.TextField {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 240
-                        placeholderText: "Type in this box"
+                        placeholderText: qsTr("Type in this box")
                     }
                 }
             }
@@ -127,8 +127,8 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "caps-lock"
-                title: "Caps Lock and switching layouts"
-                description: "Set on the Keyboard page"
+                title: qsTr("Caps Lock and switching layouts")
+                description: qsTr("Set on the Keyboard page")
                 chevron: true
                 onClicked: Navigator.open("keyboard")
             }
@@ -145,8 +145,8 @@ PageScroll {
             return all.filter(m => query.length === 0 || m.name.toLowerCase().includes(query) || m.model.toLowerCase().includes(query));
         }
 
-        title: "Keyboard model"
-        text: "Most keyboards work as a Generic 105-key PC. Choose your own model if some of its keys do nothing."
+        title: qsTr("Keyboard model")
+        text: qsTr("Most keyboards work as a Generic 105-key PC. Choose your own model if some of its keys do nothing.")
         onAboutToShow: {
             if (all.length === 0) {
                 all = Keyboard.models();
@@ -159,7 +159,7 @@ PageScroll {
         UI.SearchField {
             id: filter
             Layout.fillWidth: true
-            placeholderText: "Search models, for example Logitech"
+            placeholderText: qsTr("Search models, for example Logitech")
             onTextChanged: modelDialog.chosen = -1
             onDownPressed: {
                 modelDialog.chosen = Math.max(0, modelDialog.chosen);
@@ -217,7 +217,7 @@ PageScroll {
                 UI.Label {
                     anchors.centerIn: parent
                     visible: list.count === 0
-                    text: "No models match"
+                    text: qsTr("No models match")
                     color: UI.Style.inkMuted
                 }
             }
@@ -226,7 +226,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: useButton
-                text: "Use"
+                text: qsTr("Use")
                 kind: "primary"
                 enabled: modelDialog.chosen >= 0 && modelDialog.chosen < modelDialog.shown.length
                 onClicked: {
@@ -238,7 +238,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: modelDialog.close()
             }
         ]

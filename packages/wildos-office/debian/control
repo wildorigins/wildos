@@ -8,6 +8,8 @@ Build-Depends:
  python3,
  qt6-base-dev,
  qt6-declarative-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -33,18 +35,23 @@ Depends:
  qml6-module-qtquick-shapes,
  qml6-module-qtquick-templates,
  qt6-svg-plugins,
-Description: Wild OS Write and Tables, the parts both share
- Documents and spreadsheets for Wild OS. Write and Tables are LibreOffice
- Writer and Calc with Wild OS start screens, ribbons and defaults: Word and
- Excel files open with them and save back as .docx and .xlsx unless asked
- otherwise. This package holds what they share; wildos-write and
- wildos-tables are the apps, so each can be removed on its own.
+# From 0.1.6 each app carries its own LibreOffice settings, which until then
+# were all in this package, so an older Write or Tables beside this one would
+# be without its default format. apt then updates all of them together.
+Breaks: wildos-write (<< 0.1.6~), wildos-tables (<< 0.1.6~)
+Description: Wild OS Write, Tables and Slides, the parts all three share
+ Documents, spreadsheets and presentations for Wild OS. Write, Tables and
+ Slides are LibreOffice Writer, Calc and Impress with Wild OS start screens,
+ ribbons and defaults: Word, Excel and PowerPoint files open with them and
+ save back as .docx, .xlsx and .pptx unless asked otherwise. This package
+ holds what they share; wildos-write, wildos-tables and wildos-slides are
+ the apps, so each can be removed on its own.
 
 Package: wildos-write
 Architecture: all
 Depends:
  ${misc:Depends},
- wildos-office (>= 0.1.4),
+ wildos-office (>= 0.1.6),
  libreoffice-writer,
 Breaks: wildos-office (<< 0.1.4~)
 Replaces: wildos-office (<< 0.1.4~)
@@ -56,10 +63,21 @@ Package: wildos-tables
 Architecture: all
 Depends:
  ${misc:Depends},
- wildos-office (>= 0.1.4),
+ wildos-office (>= 0.1.6),
  libreoffice-calc,
 Breaks: wildos-office (<< 0.1.4~)
 Replaces: wildos-office (<< 0.1.4~)
 Description: Wild OS Tables
  Spreadsheets for Wild OS: LibreOffice Calc with the Wild OS start screen,
  ribbon and defaults. Excel files open with it and save back as .xlsx.
+
+Package: wildos-slides
+Architecture: all
+Depends:
+ ${misc:Depends},
+ wildos-office (>= 0.1.6),
+ libreoffice-impress,
+Description: Wild OS Slides
+ Presentations for Wild OS: LibreOffice Impress with the Wild OS start
+ screen, ribbon and defaults. PowerPoint files open with it and save back
+ as .pptx.

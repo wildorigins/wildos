@@ -65,6 +65,7 @@ Q_SIGNALS:
     void editRequested(const QString &hostId);
     void quickConnectRequested(const QVariantMap &address);
     void raiseRequested();
+    void settingsRequested();
 
 private:
     explicit App(QObject *parent = nullptr);

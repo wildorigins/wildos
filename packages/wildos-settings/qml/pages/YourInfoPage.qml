@@ -22,7 +22,7 @@ PageScroll {
         }
         function onFailed(what, reason) {
             if (what === "picture" || what === "name") {
-                notice.show(what === "picture" ? "The picture was not changed" : "The name was not changed", reason, true);
+                notice.show(what === "picture" ? qsTr("The picture was not changed") : qsTr("The name was not changed"), reason, true);
             }
         }
     }
@@ -59,13 +59,13 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Local account, " + System.userName
+                    text: qsTr("Local account, %1").arg(System.userName)
                     color: UI.Style.inkMuted
                 }
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: Users.me.admin ? "Administrator" : "Standard user"
+                    text: Users.me.admin ? qsTr("Administrator") : qsTr("Standard user")
                     color: UI.Style.accentText
                 }
             }
@@ -77,7 +77,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Adjust your info"
+            text: qsTr("Adjust your info")
         }
 
         UI.Card {
@@ -88,12 +88,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "pencil"
-                    title: "Your name"
-                    description: "Shown on the sign-in screen, in Start and to anyone who shares this computer"
+                    title: qsTr("Your name")
+                    description: qsTr("Shown on the sign-in screen, in Start and to anyone who shares this computer")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Change name"
+                        text: qsTr("Change name")
                         enabled: Users.accountsService
                         onClicked: nameDialog.open()
                     }
@@ -101,12 +101,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "image"
-                    title: "Choose a picture"
-                    description: "Any photo works. You choose the part that goes in the circle."
+                    title: qsTr("Choose a picture")
+                    description: qsTr("Any photo works. You choose the part that goes in the circle.")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Browse files"
+                        text: qsTr("Browse files")
                         onClicked: fileDialog.open()
                     }
                 }
@@ -114,12 +114,12 @@ PageScroll {
                 UI.SettingRow {
                     visible: (Users.me.icon || "").length > 0
                     iconName: "restore"
-                    title: "Use the Wild OS picture"
-                    description: "Go back to the picture every new account starts with"
+                    title: qsTr("Use the Wild OS picture")
+                    description: qsTr("Go back to the picture every new account starts with")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Use it"
+                        text: qsTr("Use it")
                         onClicked: Users.clearPicture()
                     }
                 }
@@ -132,7 +132,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Related settings"
+            text: qsTr("Related settings")
         }
 
         UI.Card {
@@ -143,16 +143,16 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "lock"
-                    title: "Sign-in options"
-                    description: "Password, automatic sign-in and screen lock"
+                    title: qsTr("Sign-in options")
+                    description: qsTr("Password, automatic sign-in and screen lock")
                     chevron: true
                     onClicked: Navigator.open("signin")
                 }
 
                 UI.SettingRow {
                     iconName: "people"
-                    title: "Other users"
-                    description: "Add the people who share this computer"
+                    title: qsTr("Other users")
+                    description: qsTr("Add the people who share this computer")
                     chevron: true
                     onClicked: Navigator.open("otherusers")
                 }
@@ -162,8 +162,8 @@ PageScroll {
 
     FileDialog {
         id: fileDialog
-        title: "Choose a picture"
-        nameFilters: ["Pictures (*.jpg *.jpeg *.png *.webp *.bmp *.gif)"]
+        title: qsTr("Choose a picture")
+        nameFilters: [qsTr("Pictures (*.jpg *.jpeg *.png *.webp *.bmp *.gif)")]
         currentFolder: StandardPaths.writableLocation(StandardPaths.PicturesLocation)
         onAccepted: pictureDialog.choose(selectedFile)
     }
@@ -174,8 +174,8 @@ PageScroll {
 
     UI.Dialog {
         id: nameDialog
-        title: "Change your name"
-        text: "Use the name you would like people to see. It does not change the name you sign in with."
+        title: qsTr("Change your name")
+        text: qsTr("Use the name you would like people to see. It does not change the name you sign in with.")
         onAboutToShow: {
             nameField.text = System.userFullName;
             nameField.selectAll();
@@ -185,7 +185,7 @@ PageScroll {
         UI.TextField {
             id: nameField
             Layout.fillWidth: true
-            placeholderText: "Your name"
+            placeholderText: qsTr("Your name")
             error: /[:,]/.test(text)
             onAccepted: nameSave.clicked()
         }
@@ -193,7 +193,7 @@ PageScroll {
         UI.Label {
             Layout.fillWidth: true
             visible: nameField.error
-            text: "A name can't contain a colon or comma."
+            text: qsTr("A name can't contain a colon or comma.")
             size: 12
             color: UI.Style.danger
         }
@@ -201,7 +201,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: nameSave
-                text: "Save"
+                text: qsTr("Save")
                 kind: "primary"
                 enabled: nameField.text.trim().length > 0 && !nameField.error
                 onClicked: {
@@ -213,7 +213,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: nameDialog.close()
             }
         ]

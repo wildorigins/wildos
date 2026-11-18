@@ -32,7 +32,7 @@ UI.Dialog {
             return failure;
         }
         if (info.action === "firmware" && !firmwareRestart) {
-            return info.text + " To get there, restart and press the key the computer names as it starts, often F2, F10, F12 or Delete.";
+            return info.text + " " + qsTr("To get there, restart and press the key the computer names as it starts, often F2, F10, F12 or Delete.");
         }
         return info.text;
     }
@@ -61,12 +61,12 @@ UI.Dialog {
             busy: Protection.busy
             text: {
                 switch (dialog.action) {
-                case "updates": return "Install updates";
-                case "check": return "Check for updates";
-                case "usb": return "Turn on";
-                case "firmware": return "Restart to firmware settings";
-                case "restart": return "Restart now";
-                case "compat32": return "Turn off";
+                case "updates": return qsTr("Install updates");
+                case "check": return qsTr("Check for updates");
+                case "usb": return qsTr("Turn on");
+                case "firmware": return qsTr("Restart to firmware settings");
+                case "restart": return qsTr("Restart now");
+                case "compat32": return qsTr("Turn off");
                 default: return "";
                 }
             }
@@ -98,7 +98,7 @@ UI.Dialog {
             }
         },
         UI.Button {
-            text: "Close"
+            text: qsTr("Close")
             onClicked: dialog.close()
         }
     ]

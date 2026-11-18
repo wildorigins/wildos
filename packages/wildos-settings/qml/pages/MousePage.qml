@@ -19,8 +19,8 @@ PageScroll {
         visible: page.mouse === null
         iconName: "mouse"
         warning: true
-        title: "No mouse found"
-        description: "Plug in a mouse, or pair one in Bluetooth, and its settings appear here."
+        title: qsTr("No mouse found")
+        description: qsTr("Plug in a mouse, or pair one in Bluetooth, and its settings appear here.")
     }
 
     UI.Card {
@@ -33,12 +33,12 @@ PageScroll {
             UI.SettingRow {
                 visible: page.has("supportsLeftHanded")
                 iconName: "mouse"
-                title: "Primary mouse button"
+                title: qsTr("Primary mouse button")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Primary mouse button"
-                    model: [{ value: false, text: "Left" }, { value: true, text: "Right" }]
+                    Accessible.name: qsTr("Primary mouse button")
+                    model: [{ value: false, text: qsTr("Left") }, { value: true, text: qsTr("Right") }]
                     readonly property var choice: page.mouse ? page.mouse.leftHanded === true : false
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
                     onActivated: index => InputDevices.set("mouse", "leftHanded", model[index].value)
@@ -48,13 +48,13 @@ PageScroll {
             UI.SettingRow {
                 id: speedRow
                 visible: page.has("supportsPointerAcceleration")
-                title: "Mouse pointer speed"
+                title: qsTr("Mouse pointer speed")
                 readonly property real acceleration: page.mouse ? (page.mouse.pointerAcceleration || 0) : 0
 
                 UI.Slider {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 240
-                    accessibleName: "Mouse pointer speed"
+                    accessibleName: qsTr("Mouse pointer speed")
                     from: -1
                     to: 1
                     stepSize: 0.1
@@ -65,14 +65,14 @@ PageScroll {
 
             UI.SettingRow {
                 visible: page.has("supportsPointerAccelerationProfileAdaptive")
-                title: "Enhance pointer precision"
-                description: "The pointer moves further when you move the mouse quickly"
-                status: (page.mouse !== null && page.mouse.pointerAccelerationProfileAdaptive === true) ? "On" : "Off"
+                title: qsTr("Enhance pointer precision")
+                description: qsTr("The pointer moves further when you move the mouse quickly")
+                status: (page.mouse !== null && page.mouse.pointerAccelerationProfileAdaptive === true) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: page.mouse !== null && page.mouse.pointerAccelerationProfileAdaptive === true
-                    Accessible.name: "Enhance pointer precision"
+                    Accessible.name: qsTr("Enhance pointer precision")
                     onToggled: {
                         InputDevices.set("mouse", "pointerAccelerationProfileAdaptive", checked);
                         InputDevices.set("mouse", "pointerAccelerationProfileFlat", !checked);
@@ -88,7 +88,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Scrolling"
+            text: qsTr("Scrolling")
         }
 
         UI.Card {
@@ -99,14 +99,14 @@ PageScroll {
 
                 UI.SettingRow {
                     id: scrollRow
-                    title: "Lines to scroll at a time"
+                    title: qsTr("Lines to scroll at a time")
                     readonly property real factor: page.mouse ? (page.mouse.scrollFactor || 1) : 1
-                    status: Math.round(factor * 3) + (Math.round(factor * 3) === 1 ? " line" : " lines")
+                    status: Math.round(factor * 3) === 1 ? qsTr("1 line") : qsTr("%1 lines").arg(Math.round(factor * 3))
 
                     UI.Slider {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 240
-                        accessibleName: "Lines to scroll at a time"
+                        accessibleName: qsTr("Lines to scroll at a time")
                         from: 1
                         to: 15
                         stepSize: 1
@@ -117,14 +117,14 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.has("supportsNaturalScroll")
-                    title: "Reverse scrolling direction"
-                    description: "Content moves the way your finger does, as on a phone"
-                    status: (page.mouse !== null && page.mouse.naturalScroll === true) ? "On" : "Off"
+                    title: qsTr("Reverse scrolling direction")
+                    description: qsTr("Content moves the way your finger does, as on a phone")
+                    status: (page.mouse !== null && page.mouse.naturalScroll === true) ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: page.mouse !== null && page.mouse.naturalScroll === true
-                        Accessible.name: "Reverse scrolling direction"
+                        Accessible.name: qsTr("Reverse scrolling direction")
                         onToggled: InputDevices.set("mouse", "naturalScroll", checked)
                     }
                 }
@@ -141,8 +141,8 @@ PageScroll {
             UI.SettingRow {
                 visible: Pages.exists("touchpad") && InputDevices.touchpads.length > 0
                 iconName: "touchpad"
-                title: "Touchpad"
-                description: "Taps, scrolling and gestures"
+                title: qsTr("Touchpad")
+                description: qsTr("Taps, scrolling and gestures")
                 chevron: true
                 onClicked: Navigator.open("touchpad")
             }

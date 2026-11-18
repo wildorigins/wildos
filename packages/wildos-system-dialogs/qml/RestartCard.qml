@@ -24,11 +24,13 @@ PromptCard {
     signal notNow()
 
     width: 400
-    title: countdown ? "Restarting to finish updating" : "Restart to finish updating"
+    title: countdown ? qsTr("Restarting to finish updating") : qsTr("Restart to finish updating")
     text: countdown
-        ? "Wild OS will restart in " + seconds + (seconds === 1 ? " second" : " seconds") + ", at the time you chose. Your apps and windows will reopen where you left them."
-        : (security ? "A security update is ready" : "An update is ready") + (summary.length > 0 ? ", with " + summary + "." : ".")
-            + " Your apps and windows will reopen where you left them."
+        ? (seconds === 1 ? qsTr("Wild OS will restart in 1 second, at the time you chose. Your apps and windows will reopen where you left them.")
+                         : qsTr("Wild OS will restart in %1 seconds, at the time you chose. Your apps and windows will reopen where you left them.").arg(seconds))
+        : (security ? (summary.length > 0 ? qsTr("A security update is ready, with %1.").arg(summary) : qsTr("A security update is ready."))
+                    : (summary.length > 0 ? qsTr("An update is ready, with %1.").arg(summary) : qsTr("An update is ready.")))
+            + " " + qsTr("Your apps and windows will reopen where you left them.")
 
     picture: Rectangle {
         width: 40
@@ -49,8 +51,8 @@ PromptCard {
             Layout.fillWidth: true
             visible: !card.countdown
             text: card.scheduled.length > 0 && !card.picked
-                ? "Restarting " + card.scheduled.charAt(0).toLowerCase() + card.scheduled.slice(1) + ". Or pick another time:"
-                : "Or restart automatically:"
+                ? qsTr("Restarting %1. Or pick another time:").arg(card.scheduled.charAt(0).toLowerCase() + card.scheduled.slice(1))
+                : qsTr("Or restart automatically:")
             size: 12
             color: UI.Style.inkStatus
             wrapMode: Text.Wrap
@@ -62,20 +64,20 @@ PromptCard {
             implicitHeight: 32
             visible: !card.countdown && card.times.length > 0
             model: card.times
-            Accessible.name: "Restart automatically"
+            Accessible.name: qsTr("Restart automatically")
             onActivated: card.picked = true
         }
     ]
 
     buttons: [
         UI.Button {
-            text: card.picked ? "Schedule" : "Not now"
+            text: card.picked ? qsTr("Schedule") : qsTr("Not now")
             onClicked: card.picked ? card.scheduleAt(when.currentValue) : card.notNow()
         },
         UI.Button {
             id: nowButton
             kind: "primary"
-            text: "Restart now"
+            text: qsTr("Restart now")
             onClicked: card.restartNow()
         }
     ]

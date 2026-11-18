@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QTimer>
+#include <QUrl>
 
 // The note open in a window. The editor shows the text under the title;
 // the title, pin and colour have controls of their own. Everything is
@@ -56,6 +57,12 @@ public:
     // Saves and lets go of the note. A new note left empty is removed.
     Q_INVOKABLE void close();
     Q_INVOKABLE QString markdown() const;
+    // On paper the note is laid out from its Markdown: headings, lists,
+    // tables and pictures, black on white. False when Print was cancelled.
+    Q_INVOKABLE bool print();
+    Q_INVOKABLE bool exportPdf(const QUrl &url);
+    // Where Export as PDF starts: Documents, under the note's title.
+    Q_INVOKABLE QUrl pdfUrl() const;
 
 Q_SIGNALS:
     void pathChanged();
@@ -70,6 +77,7 @@ private:
     void changed();
     void reloadFromDisk(const QString &path);
     void updateTags();
+    QString printable() const;
 
     QString m_path;
     NoteParts m_parts;

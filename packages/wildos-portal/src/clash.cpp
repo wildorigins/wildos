@@ -6,6 +6,7 @@
 
 #include <KFileUtils>
 #include <KIO/Global>
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDir>
 #include <QFileInfo>
@@ -18,10 +19,10 @@ namespace
 QString folderName(const QUrl &folder)
 {
     if (folder.isLocalFile() && QDir::cleanPath(folder.toLocalFile()) == QDir::homePath()) {
-        return QStringLiteral("Home");
+        return QCoreApplication::translate("Clash", "Home");
     }
     const QString name = folder.adjusted(QUrl::StripTrailingSlash).fileName();
-    return name.isEmpty() ? QStringLiteral("this folder") : name;
+    return name.isEmpty() ? QCoreApplication::translate("Clash", "this folder") : name;
 }
 
 // "Budget 2026 (2).ods", counting from 2 as Files and Windows do.
@@ -70,7 +71,7 @@ Clash::Clash(const QVariantMap &info, QObject *parent)
     const QUrl dest(info.value(QStringLiteral("dest")).toString());
     m_folders = info.value(QStringLiteral("isDir")).toBool();
     m_name = Format::visibleName(dest.fileName(), m_folders, DirModel::showExtensions());
-    m_where = folderName(KIO::upUrl(dest));
+    m_whereUrl = KIO::upUrl(dest);
     m_srcSize = info.value(QStringLiteral("sourceSize"), -1).toLongLong();
     m_destSize = info.value(QStringLiteral("destSize"), -1).toLongLong();
     m_srcTime = info.value(QStringLiteral("sourceModified")).toLongLong();
@@ -98,67 +99,75 @@ Clash::Clash(const QVariantMap &info, QObject *parent)
 
 QString Clash::windowTitle() const
 {
-    return m_folders ? QStringLiteral("Merge or skip folders") : QStringLiteral("Replace or skip files");
+    return m_folders ? tr("Merge or skip folders") : tr("Replace or skip files");
 }
 
 QString Clash::heading() const
 {
-    return QStringLiteral("\"%1\" is already in %2").arg(m_name, m_where);
+    // The folder is named here, not when the clash arrives: the translations
+    // load with the dialog, after the first clash is made.
+    return tr("\"%1\" is already in %2").arg(m_name, folderName(m_whereUrl));
 }
 
 QString Clash::summary() const
 {
-    const QString verb = m_move ? QStringLiteral("Moving") : QStringLiteral("Copying");
-    const QString thing = m_folders ? QStringLiteral("folder") : QStringLiteral("file");
+    // Whole sentences, so a translation can order and agree its words.
     if (m_items > 1) {
-        const QString items = QStringLiteral("%1 %2 items.").arg(verb, QLocale::system().toString(m_items));
+        const QString count = QLocale::system().toString(m_items);
+        const QString items = m_move ? tr("Moving %1 items.").arg(count) : tr("Copying %1 items.").arg(count);
+        QString clashes;
         if (m_clashes > 1) {
-            return items + QStringLiteral(" %1 have the same name as items already there.").arg(m_clashes);
+            clashes = tr("%1 have the same name as items already there.").arg(m_clashes);
+        } else if (m_clashes == 1) {
+            clashes = m_folders ? tr("1 has the same name as a folder already there.") : tr("1 has the same name as a file already there.");
+        } else {
+            clashes = m_folders ? tr("This one has the same name as a folder already there.") : tr("This one has the same name as a file already there.");
         }
-        if (m_clashes == 1) {
-            return items + QStringLiteral(" 1 has the same name as a %1 already there.").arg(thing);
-        }
-        return items + QStringLiteral(" This one has the same name as a %1 already there.").arg(thing);
+        return items + QLatin1Char(' ') + clashes;
     }
-    return QStringLiteral("The %1 you are %2 has the same name as one already there.").arg(thing, m_move ? QStringLiteral("moving") : QStringLiteral("copying"));
+    if (m_folders) {
+        return m_move ? tr("The folder you are moving has the same name as one already there.") : tr("The folder you are copying has the same name as one already there.");
+    }
+    return m_move ? tr("The file you are moving has the same name as one already there.") : tr("The file you are copying has the same name as one already there.");
 }
 
 QString Clash::replaceTitle() const
 {
-    return m_folders ? QStringLiteral("Merge the folders") : QStringLiteral("Replace the file");
+    return m_folders ? tr("Merge the folders") : tr("Replace the file");
 }
 
 QString Clash::replaceText() const
 {
     if (m_folders) {
-        return QStringLiteral("Put what you are copying inside it. Files with the same name are asked about one by one.");
+        return tr("Put what you are copying inside it. Files with the same name are asked about one by one.");
     }
     const QString mine = facts(m_srcTime, m_srcSize, false);
     if (m_srcTime > 0 && m_destTime > 0) {
         // Within a minute counts as the same time: copies keep their dates
         // only to the second on some drives.
         const qint64 diff = m_srcTime - m_destTime;
-        const QString age = diff > 60000 ? QStringLiteral("newer") : diff < -60000 ? QStringLiteral("older") : QStringLiteral("the same age");
-        return QStringLiteral("The one you are copying is %1: %2").arg(age, mine);
+        return diff > 60000    ? tr("The one you are copying is newer: %1").arg(mine)
+            : diff < -60000    ? tr("The one you are copying is older: %1").arg(mine)
+                               : tr("The one you are copying is the same age: %1").arg(mine);
     }
-    return mine.isEmpty() ? QStringLiteral("Put the one you are copying in its place") : QStringLiteral("The one you are copying: %1").arg(mine);
+    return mine.isEmpty() ? tr("Put the one you are copying in its place") : tr("The one you are copying: %1").arg(mine);
 }
 
 QString Clash::skipTitle() const
 {
-    return m_folders ? QStringLiteral("Skip this folder") : QStringLiteral("Skip this file");
+    return m_folders ? tr("Skip this folder") : tr("Skip this file");
 }
 
 QString Clash::skipText() const
 {
     const QString theirs = facts(m_destTime, m_destSize, m_folders);
-    return theirs.isEmpty() ? QStringLiteral("Keep the existing one") : QStringLiteral("Keep the existing one: %1").arg(theirs);
+    return theirs.isEmpty() ? tr("Keep the existing one") : tr("Keep the existing one: %1").arg(theirs);
 }
 
 QString Clash::keepBothText() const
 {
     const QString shown = Format::visibleName(m_keepBothName, m_folders, DirModel::showExtensions());
-    return QStringLiteral("The copy is saved as \"%1\"").arg(shown);
+    return tr("The copy is saved as \"%1\"").arg(shown);
 }
 
 void Clash::answer(const QString &choice, bool all)

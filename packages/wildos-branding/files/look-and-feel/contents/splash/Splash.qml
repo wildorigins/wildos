@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import org.kde.kirigami as Kirigami
 import org.kde.plasma.workspace.dbus as DBus
 
 // Shown by ksplashqml between signing in and the desktop.
@@ -12,14 +13,14 @@ import org.kde.plasma.workspace.dbus as DBus
 // as the controls clearing away and the desktop arriving on the same picture.
 // When the system signs in by itself straight after boot (the live system, or
 // automatic sign-in after unlocking the disk), there was no sign-in screen to
-// finish the start-up animation, so this opens on Plymouth's last frame and
-// plays the bloom into the wallpaper instead, with the same component the
-// sign-in screen uses.
+// finish the start-up animation, so this opens on Plymouth's last frame,
+// carries its wait on until the desktop has drawn itself and then plays the
+// finish onto it, with the same component the sign-in screen uses.
 //
-// ksplashqml closes the moment Plasma reports ready, about a second after it
-// appears, which cut the animation off part way. The ready report now waits
-// for this splash to say it has finished (libexec/splash-hold), and the splash
-// then fades to the desktop, already drawn underneath.
+// ksplashqml closes the moment Plasma reports ready, which would cut the
+// finish off part way. The ready report waits for this splash to say it has
+// finished (libexec/splash-hold), and the splash then gives way to the
+// desktop, already drawn underneath.
 Item {
     id: root
 
@@ -49,6 +50,15 @@ Item {
         watchedService: "org.wildos.shell.DesktopReady"
     }
     readonly property bool showingDesktop: live && (booting || played)
+    // Plasma got to its desktop stage but never said the taskbar was drawn
+    // (wildos-shell missing or failing): the finish goes ahead anyway rather
+    // than leave the wait running.
+    property bool desktopLate: false
+    Timer {
+        running: root.stage >= root.readyStage && !root.live
+        interval: 2000
+        onTriggered: root.desktopLate = true
+    }
     // Same decode as the start-up animation's photo, so the two share it.
     readonly property real dpr: Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1
     readonly property int photoDecodeWidth: Math.ceil(1.18 * Math.max(width * dpr, height * dpr * 16 / 9))
@@ -112,6 +122,15 @@ Item {
         reveal();
     }
 
+    // Left by the boot-handoff helper straight after boot (see BootHandoff).
+    Image {
+        id: bootMarker
+        visible: false
+        asynchronous: false
+        cache: false
+        source: "file:///run/wildos/boot-handoff-session.png"
+    }
+
     Item {
         id: content
         anchors.fill: parent
@@ -151,7 +170,11 @@ Item {
                 y: (root.height - height) * (root.played ? 0.5 : 0.45)
                 source: "file://" + root.wallpaper
                 sourceSize.width: root.photoDecodeWidth
-                asynchronous: false
+                // After the sign-in screen it must be there at once, as that
+                // screen's photo carries on. Straight after boot the start-up
+                // animation covers it, so its decode waits rather than hold
+                // up the animation's first frame.
+                asynchronous: bootMarker.status === Image.Ready
                 cache: true
                 smooth: true
             }
@@ -173,7 +196,8 @@ Item {
                 photoItem: photo,
                 photoFocus: 0.5,
                 scrim: false,
-                endOnLanding: true
+                endOnLanding: true,
+                photoLater: true
             })
         }
 
@@ -181,6 +205,21 @@ Item {
             target: handoff.item
             property: "live"
             value: root.live
+            when: handoff.status === Loader.Ready
+        }
+        // The finish starts when the desktop is there to fly into.
+        Binding {
+            target: handoff.item
+            property: "ready"
+            value: root.live || root.desktopLate
+            when: handoff.status === Loader.Ready
+        }
+        // Settings > Accessibility > Reduce motion makes KDE's animations
+        // instant, which Kirigami's durations follow.
+        Binding {
+            target: handoff.item
+            property: "reducedMotion"
+            value: Kirigami.Units.longDuration <= 1
             when: handoff.status === Loader.Ready
         }
     }

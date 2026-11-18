@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Writes the Wild OS ribbons for Write and Tables.
+"""Writes the Wild OS ribbons for Write, Tables and Slides.
 
-    tools/gen-ribbons.py            regenerate lo/ui/{swriter,scalc}/notebookbar_wildos.ui
-                                    and lo/popupmenu/{swriter,scalc}/wildosfile.xml
-    tools/gen-ribbons.py --labels   print the command label overrides the ribbons expect
+    tools/gen-ribbons.py            regenerate lo/ui/{swriter,scalc,simpress}/notebookbar_wildos.ui
+                                    and lo/popupmenu/{swriter,scalc,simpress}/wildosfile.xml
+    tools/gen-ribbons.py --label-files main.xcd writer.xcd calc.xcd impress.xcd
+                                    regenerate the command label overrides in
+                                    lo/extension/wildos-office/registry
 
 The .ui files are GtkBuilder files in LibreOffice's notebookbar dialect. They
 are long and repetitive, so the ribbon is described here as data and the
@@ -11,8 +13,10 @@ files are generated; edit this script, not the .ui files.
 
 Button text on a ribbon comes from each command's label in LibreOffice's
 registry, never from the .ui file, so the short Wild OS names ("Picture",
-"Replace", "Font colour") need registry overrides. --labels prints them as
-component-data blocks for wildos.xcd.
+"Replace", "Font colour") need registry overrides. --label-files writes them,
+one file per command table, into the bundled extension: LibreOffice reads an
+extension after its language packs, which would otherwise put their own
+en-GB names back.
 """
 
 import os
@@ -24,6 +28,9 @@ UI = os.path.join(HERE, "..", "lo", "ui")
 POPUPMENU = os.path.join(HERE, "..", "lo", "popupmenu")
 
 FIND = "vnd.sun.star.findbar:FocusToFindbar"
+# Slides' Reset: LibreOffice has no command that puts a slide's placeholders
+# back where its layout has them, so the bundled extension carries one.
+RESET_SLIDE = "vnd.sun.star.script:WildOSOffice.Slides.Reset?language=Basic&location=application"
 
 
 # Ribbon description. A tab is (id, label, groups); a group is
@@ -99,6 +106,15 @@ FILE_MENU = {
         ".uno:Save", ".uno:SaveAs", ".uno:SaveACopy", "-",
         ".uno:ExportToPDF", ".uno:ExportTo", ".uno:SendMailDocAsPDF", "-",
         ".uno:PrintPreview", ".uno:Print", ".uno:PrinterSetup", "-",
+        ".uno:SetDocumentProperties", ".uno:Signature", "-",
+        ".uno:OptionsTreeDialog", ".uno:HelpIndex", "-",
+        ".uno:CloseDoc",
+    ],
+    "simpress": [
+        ".uno:AddDirect", ".uno:Open", ".uno:RecentFileList", "-",
+        ".uno:Save", ".uno:SaveAs", ".uno:SaveACopy", "-",
+        ".uno:ExportToPDF", ".uno:ExportTo", ".uno:SendMailDocAsPDF", "-",
+        ".uno:Print", ".uno:PrinterSetup", "-",
         ".uno:SetDocumentProperties", ".uno:Signature", "-",
         ".uno:OptionsTreeDialog", ".uno:HelpIndex", "-",
         ".uno:CloseDoc",
@@ -401,7 +417,218 @@ CALC = [
 
 # Short ribbon names, in sentence case and UK English. Menus keep
 # LibreOffice's own wording: see labels().
+# Slides. Home is board 12.18; the other seven tabs are not on a board yet and
+# hold what Impress offers, grouped as Write's and Tables' are.
+IMPRESS = [
+    ("Home", "Home", [
+        CLIPBOARD,
+        ("Slides", "Slides", 1, [
+            big(".uno:InsertPage|menu"),
+            rows([".uno:AssignLayout|text|noarrow"], [".uno:DuplicateSlide|text"],
+                 [RESET_SLIDE + "|text|label=Reset"]),
+        ]),
+        ("Font", "Font", 1, [
+            rows([".uno:CharFontName|w=150", ".uno:FontHeight|w=54|gap", ".uno:Grow", ".uno:Shrink"],
+                 [".uno:Bold", ".uno:Italic", ".uno:Underline|menu", ".uno:Strikeout", ".uno:SubScript",
+                  ".uno:SuperScript", ".uno:Color|menu", ".uno:CharBackColor|menu", ".uno:SetDefault"]),
+        ]),
+        ("Paragraph", "Paragraph", 2, [
+            rows([".uno:DefaultBullet|menu", ".uno:DefaultNumbering|menu", ".uno:OutlineLeft",
+                  ".uno:OutlineRight", ".uno:CellVertCenter"],
+                 [".uno:LeftPara", ".uno:CenterPara", ".uno:RightPara", ".uno:JustifyPara",
+                  ".uno:LineSpacing|menu", ".uno:SetOutline|menu"]),
+        ]),
+        ("Insert", "Insert", 2, [
+            big(".uno:InsertGraphic", ".uno:BasicShapes|menu", ".uno:Text", ".uno:InsertObjectChart",
+                ".uno:InsertTable"),
+        ]),
+        ("SlideShow", "Slide show", 1, [
+            big(".uno:Presentation", ".uno:PresentationCurrentSlide"),
+        ]),
+    ]),
+    ("Insert", "Insert", [
+        ("Slides", "Slides", 1, [
+            big(".uno:InsertPage|menu"),
+            rows([".uno:DuplicateSlide|text"], [".uno:ImportSlideFromFile|text"]),
+        ]),
+        ("Tables", "Tables", 1, [
+            big(".uno:InsertTable"),
+        ]),
+        ("Pictures", "Pictures", 1, [
+            big(".uno:InsertGraphic"),
+            rows([".uno:PhotoAlbumDialog|text"], [".uno:Gallery|text"]),
+        ]),
+        ("Illustrations", "Illustrations", 1, [
+            big(".uno:BasicShapes|menu", ".uno:InsertObjectChart"),
+            rows([".uno:LineToolbox|menu|text"], [".uno:ConnectorToolbox|menu|text"],
+                 [".uno:ArrowShapes|menu|text"]),
+        ]),
+        ("Links", "Links", 2, [
+            big(".uno:HyperlinkDialog"),
+        ]),
+        ("Comments", "Comments", 2, [
+            big(".uno:InsertAnnotation"),
+        ]),
+        ("TextObjects", "Text", 2, [
+            big(".uno:Text"),
+            rows([".uno:HeaderAndFooter|text"], [".uno:InsertSlideField|text"],
+                 [".uno:FontworkGalleryFloater|text"]),
+        ]),
+        ("Symbols", "Symbols", 3, [
+            big(".uno:CharmapControl|menu", ".uno:InsertMath"),
+        ]),
+        ("Media", "Media", 3, [
+            big(".uno:InsertAVMedia"),
+        ]),
+    ]),
+    ("Design", "Design", [
+        ("Masters", "Slide master", 1, [
+            big(".uno:MasterSlidesPanel", ".uno:PresentationLayout"),
+            rows([".uno:SlideMasterPage|text"], [".uno:ThemeDialog|text"]),
+        ]),
+        ("SlideSetup", "Slide", 1, [
+            big(".uno:SlideSetup"),
+            rows([".uno:AssignLayout|text|noarrow"], [".uno:RenameSlide|text"]),
+        ]),
+        ("Background", "Background", 2, [
+            rows([".uno:SelectBackground|text"], [".uno:SaveBackground|text"]),
+            rows([".uno:DisplayMasterBackground|check"], [".uno:DisplayMasterObjects|check"]),
+        ]),
+    ]),
+    ("Transitions", "Transitions", [
+        ("Transition", "Transition to this slide", 1, [
+            big(".uno:SlideChangeWindow"),
+        ]),
+        ("Timing", "Timing", 1, [
+            big(".uno:RehearseTimings"),
+        ]),
+        ("Slides", "Slides", 2, [
+            rows([".uno:HideSlide|text"], [".uno:ShowSlide|text"]),
+        ]),
+        ("Preview", "Preview", 1, [
+            big(".uno:PresentationCurrentSlide"),
+        ]),
+    ]),
+    ("Animations", "Animations", [
+        ("Animation", "Animation", 1, [
+            big(".uno:CustomAnimation"),
+        ]),
+        ("More", "More", 2, [
+            rows([".uno:AnimationEffects|text"], [".uno:AnimationObjects|text"]),
+        ]),
+        ("Preview", "Preview", 1, [
+            big(".uno:PresentationCurrentSlide"),
+        ]),
+    ]),
+    ("SlideShow", "Slide show", [
+        ("Start", "Start", 1, [
+            big(".uno:Presentation", ".uno:PresentationCurrentSlide"),
+            rows([".uno:CustomShowDialog|text"]),
+        ]),
+        ("SetUp", "Set up", 1, [
+            big(".uno:PresentationDialog", ".uno:RehearseTimings"),
+            rows([".uno:HideSlide|text"], [".uno:ShowSlide|text"]),
+        ]),
+    ]),
+    ("Review", "Review", [
+        ("Proofing", "Proofing", 1, [
+            big(".uno:SpellDialog"),
+            rows([".uno:SpellOnline|text"], [".uno:ThesaurusDialog|text"], [".uno:Hyphenation|text"]),
+        ]),
+        ("Language", "Language", 2, [
+            big(".uno:LanguageMenu|menu"),
+        ]),
+        ("Comments", "Comments", 1, [
+            big(".uno:InsertAnnotation"),
+            rows([".uno:PreviousAnnotation|text"], [".uno:NextAnnotation|text"],
+                 [".uno:DeleteAnnotation|text"]),
+            rows([".uno:ShowAnnotations|text"], [".uno:DeleteAllAnnotation|text"]),
+        ]),
+    ]),
+    ("View", "View", [
+        ("Views", "Views", 1, [
+            big(".uno:NormalMultiPaneGUI", ".uno:OutlineMode", ".uno:DiaMode", ".uno:NotesMode"),
+        ]),
+        ("MasterViews", "Master views", 2, [
+            rows([".uno:SlideMasterPage|text"], [".uno:NotesMasterPage|text"], [".uno:HandoutMode|text"]),
+        ]),
+        ("Show", "Show", 1, [
+            rows([".uno:ShowRuler|check"], [".uno:GridVisible|check"], [".uno:HelplinesVisible|check"]),
+            rows([".uno:LeftPaneImpress|check"], [".uno:BottomPaneImpress|check"], [".uno:Sidebar|check"]),
+        ]),
+        ("Zoom", "Zoom", 1, [
+            big(".uno:Zoom", ".uno:Zoom100Percent"),
+            rows([".uno:ZoomPage|text"], [".uno:ZoomPageWidth|text"]),
+        ]),
+        ("Colour", "Colour", 3, [
+            rows([".uno:OutputQualityColor|text"], [".uno:OutputQualityGrayscale|text"],
+                 [".uno:OutputQualityBlackWhite|text"]),
+        ]),
+        ("Window", "Window", 2, [
+            big(".uno:FullScreen", ".uno:NewWindow"),
+        ]),
+    ]),
+]
+
 LABELS = {
+    ".uno:NewWindow": "New window",
+    ".uno:InsertPage": "New slide",
+    ".uno:AssignLayout": "Layout",
+    ".uno:DuplicateSlide": "Duplicate",
+    ".uno:Presentation": "Present",
+    ".uno:PresentationCurrentSlide": "From here",
+    ".uno:SetDefault": "Clear formatting",
+    ".uno:OutlineLeft": "Decrease list level",
+    ".uno:OutlineRight": "Increase list level",
+    ".uno:CellVertCenter": "Centre vertically",
+    ".uno:SetOutline": "List style",
+    ".uno:ImportSlideFromFile": "Slides from a file",
+    ".uno:PhotoAlbumDialog": "Photo album",
+    ".uno:LineToolbox": "Lines",
+    ".uno:ConnectorToolbox": "Connectors",
+    ".uno:ArrowShapes": "Arrows",
+    ".uno:HeaderAndFooter": "Header and footer",
+    ".uno:InsertSlideField": "Slide number",
+    ".uno:FontworkGalleryFloater": "Word art",
+    ".uno:InsertAVMedia": "Audio or video",
+    ".uno:MasterSlidesPanel": "Slide masters",
+    ".uno:PresentationLayout": "Change master",
+    ".uno:SlideMasterPage": "Slide master",
+    ".uno:ThemeDialog": "Theme colours",
+    ".uno:SlideSetup": "Slide size",
+    ".uno:RenameSlide": "Rename slide",
+    ".uno:SelectBackground": "Background picture",
+    ".uno:SaveBackground": "Save background",
+    ".uno:DisplayMasterBackground": "Master background",
+    ".uno:DisplayMasterObjects": "Master objects",
+    ".uno:SlideChangeWindow": "Transition",
+    ".uno:RehearseTimings": "Rehearse timings",
+    ".uno:HideSlide": "Hide slide",
+    ".uno:ShowSlide": "Show slide",
+    ".uno:CustomAnimation": "Animation",
+    ".uno:AnimationEffects": "Interaction",
+    ".uno:AnimationObjects": "Animated picture",
+    ".uno:CustomShowDialog": "Custom show",
+    ".uno:PresentationDialog": "Set up show",
+    ".uno:SpellDialog": "Spelling",
+    ".uno:Hyphenation": "Hyphenation",
+    ".uno:PreviousAnnotation": "Previous",
+    ".uno:NextAnnotation": "Next",
+    ".uno:DeleteAnnotation": "Delete",
+    ".uno:DeleteAllAnnotation": "Delete all",
+    ".uno:NormalMultiPaneGUI": "Normal",
+    ".uno:OutlineMode": "Outline",
+    ".uno:DiaMode": "Slide sorter",
+    ".uno:NotesMode": "Notes page",
+    ".uno:NotesMasterPage": "Notes master",
+    ".uno:HandoutMode": "Handout master",
+    ".uno:ShowRuler": "Ruler",
+    ".uno:HelplinesVisible": "Guides",
+    ".uno:LeftPaneImpress": "Slide panel",
+    ".uno:BottomPaneImpress": "Notes",
+    ".uno:OutputQualityColor": "Colour",
+    ".uno:OutputQualityGrayscale": "Greyscale",
+    ".uno:OutputQualityBlackWhite": "Black and white",
     ".uno:Paste": "Paste",
     ".uno:Cut": "Cut",
     ".uno:Copy": "Copy",
@@ -812,7 +1039,7 @@ class Writer:
     def build(self, tabs):
         self.w(0, '<?xml version="1.0" encoding="UTF-8"?>')
         self.w(0, "<!-- Generated by packages/wildos-office/tools/gen-ribbons.py; edit that, not this. -->")
-        self.w(0, '<interface domain="%s">' % ("sw" if self.module == "swriter" else "sc"))
+        self.w(0, '<interface domain="%s">' % {"swriter": "sw", "scalc": "sc", "simpress": "sd"}[self.module])
         self.w(1, '<requires lib="gtk+" version="3.20"/>')
         self.w(1, '<requires lib="LibreOffice" version="1.0"/>')
         self.w(1, '<object class="GtkGrid" id="NotebookBar">')
@@ -868,11 +1095,11 @@ def labels():
     ContextLabel. So the short name goes in Label and LibreOffice's original
     Label moves to ContextLabel where the command has none, which keeps
     menus as they were. Run against LibreOffice's own registry to get the
-    originals: tools/gen-ribbons.py --labels main.xcd writer.xcd calc.xcd
+    originals: tools/gen-ribbons.py --label-files main.xcd writer.xcd calc.xcd impress.xcd
     """
     from xml.etree import ElementTree as ET
     O = "{http://openoffice.org/2001/registry}"
-    comps = {"GenericCommands": {}, "WriterCommands": {}, "CalcCommands": {}}
+    comps = {"GenericCommands": {}, "WriterCommands": {}, "CalcCommands": {}, "DrawImpressCommands": {}}
     for path in sys.argv[2:]:
         for cd in ET.parse(path).getroot():
             comp = comps.get(cd.get(O + "name"))
@@ -890,8 +1117,17 @@ def labels():
                         v = p.find("value")
                         if st.get(O + "name") == "Commands" or p.get(O + "name") not in d:
                             d[p.get(O + "name")] = v.text if v is not None else None
-    used = (set(commands(WRITER)) | set(commands(CALC)) | {".uno:CommandPopup"}
+    used = (set(commands(WRITER)) | set(commands(CALC)) | set(commands(IMPRESS)) | {".uno:CommandPopup"}
             | {c for m in FILE_MENU.values() for c in m if c != "-"})
+    # LibreOffice gives a button an icon only if its command is marked as
+    # having one (bit 1 of Properties). Some commands the ribbons use are
+    # not, having no icon in LibreOffice's own themes; the ones the Wild OS
+    # theme draws (lo/icons/icons.txt) are marked here.
+    drawn = set()
+    with open(os.path.join(HERE, "..", "lo", "icons", "icons.txt"), encoding="utf-8") as f:
+        for line in f:
+            if line.strip() and not line.startswith("#"):
+                drawn.add(".uno:" + line.split()[0])
     out = []
     for comp, table in comps.items():
         # A command with a TargetURL may show its target's label, so the
@@ -905,6 +1141,14 @@ def labels():
                 if target in table:
                     wanted[target] = label
         sets = {}
+        for cmd in sorted((used & drawn & set(table)) - set(wanted)):
+            if not int(table[cmd].get("Properties") or 0) & 1:
+                for st in table[cmd]["sets"]:
+                    sets.setdefault(st, []).extend([
+                        '        <node oor:name="%s">' % escape(cmd, {'"': "&quot;"}),
+                        '          <prop oor:name="Properties"><value>%d</value></prop>'
+                        % (int(table[cmd].get("Properties") or 0) | 1),
+                        "        </node>"])
         for cmd, label in sorted(wanted.items()):
             orig = table[cmd]
             # The File menu is ours, so its items show the Wild OS name too:
@@ -924,6 +1168,9 @@ def labels():
                 if not in_menu and not orig.get("ContextLabel") and orig.get("Label"):
                     nodes.append('          <prop oor:name="ContextLabel"><value xml:lang="en-US">%s</value></prop>'
                                  % escape(orig["Label"]))
+                if cmd in drawn and not int(orig.get("Properties") or 0) & 1:
+                    nodes.append('          <prop oor:name="Properties"><value>%d</value></prop>'
+                                 % (int(orig.get("Properties") or 0) | 1))
                 nodes.append("        </node>")
         if sets:
             out.append('  <oor:component-data oor:package="org.openoffice.Office.UI" oor:name="%s">' % comp)
@@ -949,10 +1196,26 @@ def file_menu(module):
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "--labels":
-        sys.stdout.write(labels())
+    if len(sys.argv) > 1 and sys.argv[1] == "--label-files":
+        import re
+        folder = os.path.join(HERE, "..", "lo", "extension", "wildos-office", "registry")
+        os.makedirs(folder, exist_ok=True)
+        block = re.compile(r'  <oor:component-data oor:package="org.openoffice.Office.UI" oor:name="(\w+)">\n'
+                           r'(.*?)  </oor:component-data>\n', re.S)
+        for name, body in block.findall(labels()):
+            body = "\n".join(line[2:] if line.startswith("  ") else line for line in body.split("\n"))
+            path = os.path.join(folder, name + ".xcu")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write('<?xml version="1.0" encoding="UTF-8"?>\n'
+                        "<!-- Generated by packages/wildos-office/tools/gen-ribbons.py (label files mode); "
+                        "edit that, not this. -->\n"
+                        '<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" '
+                        'xmlns:xs="http://www.w3.org/2001/XMLSchema" '
+                        'oor:package="org.openoffice.Office.UI" oor:name="%s">\n%s</oor:component-data>\n'
+                        % (name, body))
+            print(path)
         return
-    for module, tabs in (("swriter", WRITER), ("scalc", CALC)):
+    for module, tabs in (("swriter", WRITER), ("scalc", CALC), ("simpress", IMPRESS)):
         for path, text in ((os.path.join(UI, module, "notebookbar_wildos.ui"), Writer(module).build(tabs)),
                            (os.path.join(POPUPMENU, module, FILE_MENU_NAME + ".xml"), file_menu(module))):
             os.makedirs(os.path.dirname(path), exist_ok=True)

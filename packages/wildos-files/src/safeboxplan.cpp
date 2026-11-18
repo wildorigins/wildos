@@ -3,6 +3,7 @@
 #include "programs.h"
 
 #include <KApplicationTrader>
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QMimeDatabase>
 #include <QUrl>
@@ -35,19 +36,19 @@ SafeBoxPlan safeBoxPlan(const QString &path)
     SafeBoxPlan plan;
     const QFileInfo info(path);
     if (!info.isFile()) {
-        plan.message = QStringLiteral("Only files can open in the safe box.");
+        plan.message = QCoreApplication::translate("SafeBoxPlan", "Only files can open in the safe box.");
         return plan;
     }
     const QMimeType type = QMimeDatabase().mimeTypeForFile(info);
     if (type.inherits(QStringLiteral("application/x-ms-dos-executable")) || type.inherits(QStringLiteral("application/x-msi"))
         || type.inherits(QStringLiteral("application/x-msdownload")) || type.inherits(QStringLiteral("application/vnd.microsoft.portable-executable"))) {
-        plan.message = QStringLiteral("Windows programs can't run in the safe box.");
+        plan.message = QCoreApplication::translate("SafeBoxPlan", "Windows programs can't run in the safe box.");
         return plan;
     }
     if (isLinuxProgram(QUrl::fromLocalFile(info.absoluteFilePath()), type)) {
         const quint16 machine = elfMachine(info.absoluteFilePath());
         if (machine != 0 && hostMachine != 0 && machine != hostMachine) {
-            plan.message = QStringLiteral("%1 is made for a different type of processor, so it cannot run on this PC.").arg(info.fileName());
+            plan.message = QCoreApplication::translate("SafeBoxPlan", "%1 is made for a different type of processor, so it cannot run on this PC.").arg(info.fileName());
             return plan;
         }
         plan.ok = true;
@@ -68,8 +69,8 @@ SafeBoxPlan safeBoxPlan(const QString &path)
         }
     }
     if (!plan.app) {
-        plan.message = preferred ? QStringLiteral("%1 can't run in the safe box, and no other app opens this kind of file.").arg(preferred->name())
-                                 : QStringLiteral("No app opens this kind of file.");
+        plan.message = preferred ? QCoreApplication::translate("SafeBoxPlan", "%1 can't run in the safe box, and no other app opens this kind of file.").arg(preferred->name())
+                                 : QCoreApplication::translate("SafeBoxPlan", "No app opens this kind of file.");
         return plan;
     }
     plan.ok = true;

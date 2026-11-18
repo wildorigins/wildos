@@ -62,12 +62,12 @@ DeskDialog {
 
         Repeater {
             model: [
-                { label: "Location", value: info.location },
-                { label: "Size", value: info.size },
-                { label: "Contains", value: info.contains },
-                { label: "Created", value: info.created },
-                { label: "Modified", value: info.modified },
-                { label: "Opened", value: info.accessed }
+                { label: qsTr("Location"), value: info.location },
+                { label: qsTr("Size"), value: info.size },
+                { label: qsTr("Contains"), value: info.contains },
+                { label: qsTr("Created"), value: info.created },
+                { label: qsTr("Modified"), value: info.modified },
+                { label: qsTr("Opened"), value: info.accessed }
             ]
 
             delegate: UI.Label {
@@ -106,16 +106,16 @@ DeskDialog {
         spacing: 12
 
         UI.Label {
-            text: "Opens with"
+            text: qsTr("Opens with")
             color: UI.Style.inkMuted
         }
         UI.Label {
             Layout.fillWidth: true
-            text: info.opensWith.length > 0 ? info.opensWith : "No app chosen yet"
+            text: info.opensWith.length > 0 ? info.opensWith : qsTr("No app chosen yet")
         }
         UI.Button {
             size: "small"
-            text: "Change"
+            text: qsTr("Change")
             onClicked: {
                 props.close();
                 props.view.chooseApp(props.urls);
@@ -125,7 +125,7 @@ DeskDialog {
 
     UI.CheckBox {
         visible: info.single && info.canChangeReadOnly
-        text: "Read only"
+        text: qsTr("Read only")
         checked: info.readOnly
         onToggled: info.readOnly = checked
     }
@@ -133,7 +133,7 @@ DeskDialog {
     buttons: [
         UI.Button {
             kind: "primary"
-            text: "Close"
+            text: qsTr("Close")
             onClicked: props.close()
         }
     ]

@@ -11,6 +11,7 @@
 #include <QWindow>
 
 #include <functional>
+#include <utility>
 
 class KCoreDirLister;
 
@@ -70,6 +71,9 @@ class DeskOps : public QObject
     Q_PROPERTY(QVariantMap prompt READ prompt NOTIFY promptChanged)
     Q_PROPERTY(bool showExtensions READ showExtensions NOTIFY viewChanged)
     Q_PROPERTY(bool showHidden READ showHidden NOTIFY viewChanged)
+    // What Ctrl+Z would take back: "delete", "move", "rename", or "" when
+    // there is nothing.
+    Q_PROPERTY(QString undoKind READ undoKind NOTIFY undoChanged)
 
 public:
     static DeskOps *instance();
@@ -83,6 +87,7 @@ public:
     // as Explorer's do on Windows.
     bool showExtensions() const { return m_showExtensions; }
     bool showHidden() const { return m_showHidden; }
+    QString undoKind() const { return m_undoKind; }
 
     Q_INVOKABLE void open(const QList<QUrl> &urls);
     // Folders, This computer and the Recycle Bin open in Wild OS Files.
@@ -108,6 +113,11 @@ public:
     Q_INVOKABLE void trash(const QList<QUrl> &urls);
     Q_INVOKABLE void deleteForGood(const QList<QUrl> &urls);
     Q_INVOKABLE void emptyBin();
+    // Takes back the last delete to the Recycle Bin, move or rename. Only
+    // the last one is kept, and anything else done to files since (a copy,
+    // a new folder) forgets it, so Ctrl+Z never reaches back past what the
+    // person just did.
+    Q_INVOKABLE void undo();
 
     Q_INVOKABLE QString editableName(const QString &fileName, bool isDir) const;
     Q_INVOKABLE void rename(const QUrl &url, const QString &fileName, bool isDir, const QString &typed);
@@ -127,6 +137,7 @@ Q_SIGNALS:
     void binCountChanged();
     void promptChanged();
     void viewChanged();
+    void undoChanged();
     void failed(const QString &message);
     // Items that just appeared in a folder because of the user, to select
     // (and with rename, to start renaming) once they are listed.
@@ -145,6 +156,8 @@ private:
     void putNew(const QUrl &folder, const QUrl &url, const QByteArray &data, bool rename);
     void updateCut();
     void readView();
+    void setUndo(const QString &kind, const QList<std::pair<QUrl, QUrl>> &steps, const QString &name = QString());
+    void clearUndo();
 
     KCoreDirLister *m_bin;
     int m_binCount = 0;
@@ -153,4 +166,9 @@ private:
     QList<std::function<void(const QString &, bool)>> m_replies;
     bool m_showExtensions = false;
     bool m_showHidden = false;
+    QString m_undoKind;
+    // Each item as (where it is now, where it was).
+    QList<std::pair<QUrl, QUrl>> m_undoSteps;
+    // A renamed shortcut keeps its file and changes the name inside it.
+    QString m_undoName;
 };

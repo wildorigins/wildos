@@ -474,6 +474,7 @@ Item {
                             Repeater {
                                 model: listsHeading.expanded ? TasksEngine.lists : []
                                 delegate: NavRow {
+                                    id: listRow
                                     required property var modelData
                                     Layout.fillWidth: true
                                     iconName: "folder"
@@ -481,9 +482,9 @@ Item {
                                     count: modelData.count
                                     current: page.view === modelData.uid
                                     onClicked: page.pick(modelData.uid)
-                                    onMenuRequested: {
+                                    onMenuRequested: function (keyboard) {
                                         page.pick(modelData.uid);
-                                        page.popupMenu(listMenuEntries(), null);
+                                        page.popupMenu(listMenuEntries(), keyboard ? listRow : null);
                                     }
                                 }
                             }
@@ -536,7 +537,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    radius: 10
+                    radius: UI.Style.radiusPanel
                     color: UI.Style.surfaceRest
                     border.width: 1
                     border.color: UI.Style.borderSubtle
@@ -610,7 +611,7 @@ Item {
                             Layout.topMargin: 12
                             Layout.bottomMargin: 10
                             implicitHeight: 40
-                            radius: 8
+                            radius: UI.Style.radiusSm
                             color: UI.Style.surfaceControl
                             border.width: 1
                             border.color: newTask.activeFocus ? UI.Style.accent : UI.Style.borderSubtle
@@ -824,7 +825,7 @@ Item {
                 Rectangle {
                     Layout.preferredWidth: 340
                     Layout.fillHeight: true
-                    radius: 10
+                    radius: UI.Style.radiusPanel
                     color: UI.Style.surfaceRest
                     border.width: 1
                     border.color: UI.Style.borderSubtle
@@ -1136,7 +1137,7 @@ Item {
                                         placeholderTextColor: UI.Style.inkPlaceholder
                                         padding: 12
                                         background: Rectangle {
-                                            radius: 8
+                                            radius: UI.Style.radiusSm
                                             color: UI.Style.surfaceRaised
                                             border.width: 1
                                             border.color: notesEdit.activeFocus ? UI.Style.accent : UI.Style.borderSubtle

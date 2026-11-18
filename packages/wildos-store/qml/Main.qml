@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as T
 import QtQuick.Window
 import WildOS.Store
 import WildOS.UI as UI
@@ -17,6 +18,10 @@ UI.AppWindow {
     property var current: ({ page: "", arg: "", section: "discover" })
     property var history: []
     property var pending: null
+    property bool targetHandled: false
+    // How far down Back should put the page it returns to. Kept until the
+    // page has grown tall enough to scroll that far.
+    property real restoreOffset: 0
     // The board's sidebar, wider when larger text needs it.
     readonly property real navWidth: {
         let widest = 0;
@@ -42,30 +47,32 @@ UI.AppWindow {
 
     function titleOf(entry) {
         switch (entry.page) {
-        case "discover": return "Discover";
+        case "discover": return qsTr("Discover");
         case "wildos": return "Wild OS";
-        case "swap": return "Swap from Windows";
-        case "create": return "Create";
-        case "work": return "Work";
-        case "play": return "Play";
-        case "develop": return "Develop";
-        case "categories": return "Categories";
-        case "apps": return entry.arg ? Catalog.categoryLabel(entry.arg) : "All apps";
-        case "games": return entry.arg ? Catalog.categoryLabel(entry.arg) : "Games";
-        case "windowsapps": return "Windows apps";
-        case "updates": return "Updates";
-        case "library": return "Library";
-        case "search": return "Search";
+        case "swap": return qsTr("Swap from Windows");
+        case "create": return qsTr("Create");
+        case "work": return qsTr("Work");
+        case "play": return qsTr("Play");
+        case "develop": return qsTr("Develop");
+        case "categories": return qsTr("Categories");
+        case "apps": return entry.arg ? Catalog.categoryLabel(entry.arg) : qsTr("All apps");
+        case "games": return entry.arg ? Catalog.categoryLabel(entry.arg) : qsTr("Games");
+        case "windowsapps": return qsTr("Windows apps");
+        case "updates": return qsTr("Updates");
+        case "library": return qsTr("Library");
+        case "search": return qsTr("Search");
         case "app": {
             const a = Catalog.app(entry.arg);
-            return a ? a.name : "App";
+            return a ? a.name : qsTr("App");
         }
-        case "file": return "Package file";
+        case "file": return qsTr("Package file");
         }
-        return "Discover";
+        return qsTr("Discover");
     }
 
     function load(entry) {
+        restoreOffset = 0;
+        restoreTimeout.stop();
         current = entry;
         if (entry.page !== "search") {
             search.text = "";
@@ -106,7 +113,7 @@ UI.AppWindow {
         } else if (current.page.length > 0 && !(current.page === page && (page === "apps" || page === "games"))) {
             // Going deeper remembers the way back; another filter on the
             // same list does not.
-            history = history.concat([current]);
+            history = history.concat([{ page: current.page, arg: current.arg, section: current.section, scroll: scrollOffset() }]);
         }
         load(entry);
     }
@@ -131,25 +138,25 @@ UI.AppWindow {
         if (!a) {
             return;
         }
-        const entries = [{ text: "See details", icon: "info", run: () => root.openApp(key) }];
+        const entries = [{ text: qsTr("See details"), icon: "info", run: () => root.openApp(key) }];
         if (a.installed && a.canOpen) {
-            entries.push({ text: "Open", icon: "open", run: () => a.open() });
+            entries.push({ text: qsTr("Open"), icon: "open", run: () => a.open() });
         }
         if (a.installed && a.updateAvailable && !a.busy && !a.queued) {
-            entries.push({ text: "Update", icon: "update", run: () => a.update() });
+            entries.push({ text: qsTr("Update"), icon: "update", run: () => a.update() });
         }
         if (!a.installed) {
-            entries.push({ text: "Install", icon: "download", enabled: a.source.length > 0 && !a.busy && !a.queued, run: () => {
+            entries.push({ text: qsTr("Install"), icon: "download", enabled: a.source.length > 0 && !a.busy && !a.queued, run: () => {
                 if (!root.requestInstall(a)) {
                     a.install();
                 }
             } });
         }
         entries.push({ separator: true });
-        entries.push({ text: "Copy link", icon: "link", enabled: a.appstreamId.length > 0, run: () => root.copyLink(a) });
+        entries.push({ text: qsTr("Copy link"), icon: "link", enabled: a.appstreamId.length > 0, run: () => root.copyLink(a) });
         if (a.installed) {
             entries.push({ separator: true });
-            entries.push({ text: "Uninstall", icon: "delete", danger: true, enabled: !a.busy && !a.queued, run: () => root.askRemove(a) });
+            entries.push({ text: qsTr("Uninstall"), icon: "delete", danger: true, enabled: !a.busy && !a.queued, run: () => root.askRemove(a) });
         }
         appMenu.entries = entries;
         appMenu.popup(item, x, y);
@@ -161,7 +168,7 @@ UI.AppWindow {
         clipboard.text = "appstream://" + app.appstreamId;
         clipboard.selectAll();
         clipboard.copy();
-        toast.note("Link copied");
+        toast.note(qsTr("Link copied"));
     }
 
     property var removing: null
@@ -178,10 +185,43 @@ UI.AppWindow {
         const previous = history[history.length - 1];
         history = history.slice(0, history.length - 1);
         load(previous);
+        if (previous.scroll > 0) {
+            restoreOffset = previous.scroll;
+            restoreTimeout.restart();
+            restoreScroll(false);
+        }
+    }
+
+    // Page Up, Page Down, Home and End, for the page to scroll by.
+    function pageKey(event) {
+        if (pageLoader.item && pageLoader.item.keyPressed) {
+            pageLoader.item.keyPressed(event);
+        }
+    }
+
+    // How far the page showing is scrolled from its top.
+    function scrollOffset() {
+        const page = pageLoader.item;
+        return page && page.contentY !== undefined ? Math.max(0, page.contentY - (page.originY - page.topMargin)) : 0;
+    }
+
+    // Lists fill in after the page is made, so the place Back returns to
+    // may not exist yet; `anyway` settles for as far as the page goes.
+    function restoreScroll(anyway) {
+        const page = pageLoader.item;
+        if (restoreOffset <= 0 || !page || page.contentY === undefined) {
+            return;
+        }
+        const furthest = Math.max(0, page.contentHeight + page.topMargin + page.bottomMargin - page.height);
+        if (furthest >= restoreOffset || anyway) {
+            page.contentY = page.originY - page.topMargin + Math.min(restoreOffset, furthest);
+            restoreOffset = 0;
+            restoreTimeout.stop();
+        }
     }
 
     function backTitle() {
-        return history.length > 0 ? titleOf(history[history.length - 1]) : "Discover";
+        return history.length > 0 ? titleOf(history[history.length - 1]) : qsTr("Discover");
     }
 
     function runSearch(text) {
@@ -218,9 +258,22 @@ UI.AppWindow {
             if (key.length > 0) {
                 openApp(key);
             } else {
+                const id = app.replace(/^appstream:\/*/, "").replace(/\.desktop$/, "");
+                const outside = Catalog.installedOutside(id);
+                if (outside.id !== undefined && outside.id.toLowerCase() === id.toLowerCase()) {
+                    // Start's Uninstall on an app from a package file. The
+                    // Store has no page for it; Settings removes it. A
+                    // Store opened only for this has nothing to show.
+                    Catalog.openSettings("uninstall:" + outside.id);
+                    if (!targetHandled && startApp === app) {
+                        Qt.callLater(Qt.quit);
+                    }
+                    targetHandled = true;
+                    return;
+                }
                 // Not in either catalogue: show what a search finds instead
                 // of an empty page.
-                search.text = app.replace(/^appstream:\/*/, "");
+                search.text = id;
                 runSearch(search.text);
             }
         } else if (text && text.length > 0) {
@@ -229,6 +282,7 @@ UI.AppWindow {
         } else if (page && page.length > 0) {
             open(page);
         }
+        targetHandled = true;
     }
 
     Component.onCompleted: {
@@ -260,8 +314,30 @@ UI.AppWindow {
         }
     }
 
+    Connections {
+        target: pageLoader.item
+        enabled: root.restoreOffset > 0
+        ignoreUnknownSignals: true
+        function onContentHeightChanged() {
+            root.restoreScroll(false);
+        }
+        function onHeightChanged() {
+            root.restoreScroll(false);
+        }
+    }
+
+    Timer {
+        id: restoreTimeout
+        interval: 1500
+        onTriggered: root.restoreScroll(true)
+    }
+
+    // StandardKey.Back is Alt+Left on Linux, so listing both registered
+    // Alt+Left twice, and Qt treats a doubled shortcut as ambiguous and
+    // never fires it. "Back" is the browser back key on some keyboards.
     Shortcut {
-        sequences: [StandardKey.Back, "Alt+Left"]
+        sequences: ["Alt+Left", "Back"]
+        enabled: root.history.length > 0
         onActivated: root.back()
     }
 
@@ -315,7 +391,7 @@ UI.AppWindow {
                 visible: root.history.length > 0
                 iconName: "chevron-left"
                 text: root.backTitle()
-                Accessible.name: "Back to " + root.backTitle()
+                Accessible.name: qsTr("Back to %1").arg(root.backTitle())
                 onClicked: root.back()
             }
         }
@@ -330,10 +406,10 @@ UI.AppWindow {
             iconInset: 11
             iconSize: 15
             font.pixelSize: UI.Style.px(13.5)
-            placeholderText: "Search"
+            placeholderText: qsTr("Search")
             placeholderTextColor: Metrics.inkTertiary
-            Accessible.name: "Search apps"
-            Accessible.description: "Search apps, or the Windows app you used before"
+            Accessible.name: qsTr("Search apps")
+            Accessible.description: qsTr("Search apps, or the Windows app you used before")
             background: Rectangle {
                 radius: 9
                 color: search.activeFocus ? Metrics.buttonFill : UI.Style.tone(0.06)
@@ -355,103 +431,121 @@ UI.AppWindow {
             onTriggered: root.runSearch(search.text)
         }
 
-        Column {
-            id: nav
+        // The sections scroll when the window is too short for them all,
+        // as it can be with larger text.
+        Flickable {
+            id: navScroll
             x: 10
             y: search.y + search.height + 14
             width: root.navWidth - 20
-            spacing: 2
+            height: Math.min(nav.height, parent.height - y - 10)
+            contentHeight: nav.height
+            interactive: contentHeight > height
+            // Only while there is something to cut off, so a section's
+            // keyboard outline is whole the rest of the time.
+            clip: interactive
+            boundsBehavior: Flickable.StopAtBounds
+            T.ScrollBar.vertical: UI.ScrollBar {}
 
-            NavItem {
-                iconName: "discover"
-                text: "Discover"
-                current: root.current.section === "discover"
-                onClicked: root.open("discover")
-            }
+            Column {
+                id: nav
+                width: navScroll.width
+                spacing: 2
+                // The sections have no use for the page keys, so they scroll
+                // the page beside them.
+                Keys.onPressed: event => root.pageKey(event)
 
-            NavItem {
-                mark: true
-                text: "Wild OS"
-                current: root.current.section === "wildos"
-                onClicked: root.open("wildos")
-            }
-
-            NavItem {
-                iconName: "swap-windows"
-                text: "Swap from Windows"
-                current: root.current.section === "swap"
-                onClicked: root.open("swap")
-            }
-
-            NavItem {
-                iconName: "create"
-                text: "Create"
-                current: root.current.section === "create"
-                onClicked: root.open("create")
-            }
-
-            NavItem {
-                iconName: "work"
-                text: "Work"
-                current: root.current.section === "work"
-                onClicked: root.open("work")
-            }
-
-            NavItem {
-                iconName: "play"
-                text: "Play"
-                current: root.current.section === "play"
-                onClicked: root.open("play")
-            }
-
-            NavItem {
-                iconName: "develop"
-                text: "Develop"
-                current: root.current.section === "develop"
-                onClicked: root.open("develop")
-            }
-
-            NavItem {
-                iconName: "categories"
-                text: "Categories"
-                current: root.current.section === "categories"
-                onClicked: root.open("categories")
-            }
-
-            NavItem {
-                iconName: "windows-apps"
-                text: "Windows apps"
-                current: root.current.section === "windowsapps"
-                onClicked: root.open("windowsapps")
-            }
-
-            Item {
-                width: parent.width
-                height: 25
-
-                Rectangle {
-                    x: 10
-                    y: 12
-                    width: parent.width - 20
-                    height: 1
-                    color: Metrics.divider
+                NavItem {
+                    iconName: "discover"
+                    text: qsTr("Discover")
+                    current: root.current.section === "discover"
+                    onClicked: root.open("discover")
                 }
-            }
 
-            NavItem {
-                iconName: "updates"
-                text: "Updates"
-                badge: Catalog.updateCount
-                current: root.current.section === "updates"
-                onClicked: root.open("updates")
-            }
+                NavItem {
+                    mark: true
+                    text: "Wild OS"
+                    current: root.current.section === "wildos"
+                    onClicked: root.open("wildos")
+                }
 
-            NavItem {
-                iconName: "library"
-                text: "Library"
-                working: Catalog.workingCount > 0
-                current: root.current.section === "library"
-                onClicked: root.open("library")
+                NavItem {
+                    iconName: "swap-windows"
+                    text: qsTr("Swap from Windows")
+                    current: root.current.section === "swap"
+                    onClicked: root.open("swap")
+                }
+
+                NavItem {
+                    iconName: "create"
+                    text: qsTr("Create")
+                    current: root.current.section === "create"
+                    onClicked: root.open("create")
+                }
+
+                NavItem {
+                    iconName: "work"
+                    text: qsTr("Work")
+                    current: root.current.section === "work"
+                    onClicked: root.open("work")
+                }
+
+                NavItem {
+                    iconName: "play"
+                    text: qsTr("Play")
+                    current: root.current.section === "play"
+                    onClicked: root.open("play")
+                }
+
+                NavItem {
+                    iconName: "develop"
+                    text: qsTr("Develop")
+                    current: root.current.section === "develop"
+                    onClicked: root.open("develop")
+                }
+
+                NavItem {
+                    iconName: "categories"
+                    text: qsTr("Categories")
+                    current: root.current.section === "categories"
+                    onClicked: root.open("categories")
+                }
+
+                NavItem {
+                    iconName: "windows-apps"
+                    text: qsTr("Windows apps")
+                    current: root.current.section === "windowsapps"
+                    onClicked: root.open("windowsapps")
+                }
+
+                Item {
+                    width: parent.width
+                    height: 25
+
+                    Rectangle {
+                        x: 10
+                        y: 12
+                        width: parent.width - 20
+                        height: 1
+                        color: Metrics.divider
+                    }
+                }
+
+                NavItem {
+                    iconName: "updates"
+                    text: qsTr("Updates")
+                    badge: Catalog.updateCount
+                    current: root.current.section === "updates"
+                    onClicked: root.open("updates")
+                }
+
+                NavItem {
+                    iconName: "library"
+                    text: qsTr("Library")
+                    working: Catalog.workingCount > 0
+                    current: root.current.section === "library"
+                    onClicked: root.open("library")
+                }
             }
         }
 
@@ -466,7 +560,7 @@ UI.AppWindow {
             anchors.bottomMargin: 14
             // Larger text on a short window would push it over the
             // sections; it steps aside rather than cover them.
-            visible: y > nav.y + nav.height + 14
+            visible: y > navScroll.y + nav.height + 14
             radius: 12
             color: Metrics.privacyCard
             border.width: 1
@@ -491,13 +585,13 @@ UI.AppWindow {
 
                     UI.Label {
                         width: parent.width
-                        text: "No account needed"
+                        text: qsTr("No account needed")
                         font.weight: UI.Style.weightSemiBold
                     }
 
                     UI.Label {
                         width: parent.width
-                        text: "The Store never asks who you are. Flathub sees your IP address when you download, like any website."
+                        text: qsTr("The Store never asks who you are. Flathub sees your IP address when you download, like any website.")
                         size: 12
                         lineHeight: 1.45
                         color: Metrics.inkSecondary
@@ -516,6 +610,9 @@ UI.AppWindow {
             height: parent.height - Metrics.topBarHeight
             clip: true
             focus: true
+            // Page Up, Page Down, Home and End scroll the page, from the
+            // page itself or any control on it that has no use for them.
+            Keys.onPressed: event => root.pageKey(event)
             // Each page rises a little as it fades in.
             transform: UI.Reveal {
                 item: pageLoader
@@ -533,6 +630,20 @@ UI.AppWindow {
         }
     }
 
+    // The back button on a mouse goes back too, wherever the pointer is.
+    Item {
+        anchors.fill: parent
+
+        TapHandler {
+            acceptedButtons: Qt.BackButton
+            onTapped: {
+                if (root.history.length > 0) {
+                    root.back();
+                }
+            }
+        }
+    }
+
     UI.Menu {
         id: appMenu
     }
@@ -543,18 +654,19 @@ UI.AppWindow {
 
     UI.Dialog {
         id: removeDialog
-        title: root.removing ? "Uninstall " + root.removing.name + "?" : ""
+        title: root.removing ? qsTr("Uninstall %1?").arg(root.removing.name) : ""
         text: root.removing && root.removing.source === "flatpak"
-            ? "Your files stay where they are. Its settings stay too, in case you install it again."
-            : "Your files stay where they are. Wild OS will ask for the administrator password."
+            ? qsTr("Your files stay where they are. Its settings stay too, in case you install it again.")
+            : qsTr("Your files stay where they are. Wild OS will ask for the administrator password.")
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: removeDialog.close()
             },
             UI.Button {
                 kind: "primary"
-                text: "Uninstall"
+                danger: true
+                text: qsTr("Uninstall")
                 onClicked: {
                     removeDialog.close();
                     root.removing.remove();

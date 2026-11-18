@@ -15,6 +15,9 @@ Build-Depends:
  libebook1.2-dev,
  libsqlite3-dev,
  liblitehtml-dev,
+ libkf6sonnet-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -25,7 +28,7 @@ Depends:
  ${misc:Depends},
  evolution-data-server-camel-providers,
  evolution-data-server-core,
- wildos-ui (>= 0.1.11),
+ wildos-ui (>= 0.1.16),
  evolution-data-server-common,
  qml6-module-qtcore,
  qml6-module-qtquick,
@@ -34,6 +37,7 @@ Depends:
  qml6-module-qtquick-shapes,
  qml6-module-qtquick-dialogs,
  qml6-module-qtqml-workerscript,
+ sonnet6-plugins,
  fonts-noto-core,
 Description: Wild OS Mail
  Email for Wild OS on evolution-data-server's mail engine: IMAP and SMTP

@@ -1,3 +1,180 @@
+wildos-branding (0.1.87) trixie; urgency=medium
+
+  * The start-up menu has pictures for the start-up manager and for
+    another system on the PC.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 16:00:00 +0000
+
+wildos-branding (0.1.86) trixie; urgency=medium
+
+  * Nothing suggests adding the Plasma Integration extension to a browser.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 10:30:00 +0000
+
+wildos-branding (0.1.85) trixie; urgency=medium
+
+  * With the taskbar aligned left, Start opens above the Start button
+    instead of in the middle of the screen.
+  * The name shown when pointing at a taskbar item is no longer cut short.
+  * Remove from list on a recent file in Start takes it off the list
+    straight away.
+  * On a PC whose monitor is on an NVIDIA card with NVIDIA's own driver,
+    the boot screen shows during start-up instead of three dots.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 09:30:00 +0000
+
+wildos-branding (0.1.84) trixie; urgency=medium
+
+  * Slides, the new presentation app, is pinned in Start beside Write and
+    Tables, and PowerPoint and OpenDocument presentations open in it.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 17:00:00 +0000
+
+wildos-branding (0.1.83) trixie; urgency=medium
+
+  * The buttons on the notifications card above the calendar work again:
+    do not disturb, Notification settings, Clear all and the
+    notifications themselves. A press on the card closed the flyout
+    before the click arrived.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 16:06:19 +0000
+
+wildos-branding (0.1.82) trixie; urgency=medium
+
+  * The lock screen keeps listening for your fingerprint for as long as the
+    PC is locked. It used to stop after 30 seconds without a touch.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 15:00:00 +0000
+
+wildos-branding (0.1.81) trixie; urgency=medium
+
+  * Searching Start finds the Keyboard shortcuts page in Settings.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 13:00:00 +0000
+
+wildos-branding (0.1.80) trixie; urgency=medium
+
+  * On a PC with two graphics cards, an app's right-click menu in Start and
+    on the taskbar has Dedicated graphics card. It counts from the
+    app's next start.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 12:00:00 +0000
+
+wildos-branding (0.1.79) trixie; urgency=medium
+
+  * Report a problem is pinned to Start, at the end. Unpin it and it stays
+    unpinned.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 11:00:00 +0000
+
+wildos-branding (0.1.78) trixie; urgency=medium
+
+  * A taskbar set to hide itself hides while the security shield or Windows
+    mode has a warning showing. Either warning used to keep it on screen.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 10:20:00 +0000
+
+wildos-branding (0.1.77) trixie; urgency=medium
+
+  * Start-up no longer tries, and fails, to load NVIDIA's driver before the
+    system is ready, and loads the right graphics driver early after the
+    driver has been switched in Settings.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 23:10:00 +0000
+
+wildos-branding (0.1.76) trixie; urgency=medium
+
+  * A keyboard and mouse are never held back as new USB devices when the PC
+    has none working: a wireless receiver that is both, or a keyboard with
+    media keys, is let in like a plain one. A desktop PC could start with no
+    keyboard or mouse at the sign-in screen.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 18:00:00 +0000
+
+wildos-branding (0.1.75) trixie; urgency=medium
+
+  * The sign-in screen says "Password or PIN" for an account with a PIN,
+    and says when too many wrong PINs were typed.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 15:00:00 +0000
+
+wildos-branding (0.1.74) trixie; urgency=medium
+
+  * The start-up animation plays once, on the screen it stays on: the PC's
+    own graphics driver now loads before it starts, so it no longer stops,
+    goes black and starts again when the driver takes the screen over.
+  * After the disk is unlocked the animation keeps running until the
+    desktop takes the screen over and carries on with the same W, in the
+    same place and at the same size, into one finish. On scaled screens
+    such as 225% the W no longer shrinks when the desktop takes over, and
+    the boot screen no longer crashes as it ends.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 17:00:00 +0000
+
+wildos-branding (0.1.73) trixie; urgency=medium
+
+  * After the disk is unlocked, or straight after start-up, the
+    animation carries on as one: the wait runs on without starting over
+    or going black, then the finish plays once.
+  * The session splash shows sooner: its wallpaper loads while the wait
+    runs.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 14:00:00 +0000
+
+wildos-branding (0.1.72) trixie; urgency=medium
+
+  * A new start-up animation that keeps pace with the computer: a short
+    opening, a wait of glass and light that lasts only as long as start-up
+    does, and a finish that starts the moment the desktop or lock screen
+    is ready. Reduce motion fades the logo out instead of flying through
+    it.
+  * Computers without an encrypted disk no longer play the end of the
+    animation where the disk unlock screen leaves the logo.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 13:00:00 +0000
+
+wildos-branding (0.1.71) trixie; urgency=medium
+
+  * The Night light tile in quick settings turns night light on and off
+    again: the desktop was never told the setting had changed.
+  * The lock screen's box says "Password or PIN" when a PIN is set.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 10:30:00 +0000
+
+wildos-branding (0.1.70) trixie; urgency=medium
+
+  * The shutdown sound has its own switch in Settings > Sound, off by
+    default: shut down and restart no longer wait about 3 seconds for it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 22:00:00 +0000
+
+wildos-branding (0.1.69) trixie; urgency=medium
+
+  * New accounts start with every hot corner off.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 15:23:14 +0000
+
+wildos-branding (0.1.68) trixie; urgency=medium
+
+  * The start-up menu no longer has the glow along the bottom, which
+    was cut off on smaller screens.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 11:28:22 +0000
+
+wildos-branding (0.1.67) trixie; urgency=medium
+
+  * The Windows mode applet shows setup's steps and problems in the
+    display language chosen in Settings.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 04:36:28 +0000
+
+wildos-branding (0.1.66) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-branding (0.1.65) trixie; urgency=medium
 
   * Wild OS plays its shutdown sound as it signs out, restarts or shuts

@@ -7,7 +7,10 @@ import WildOS.UI as UI
 
 // Every installed app, A to Z by the name Start shows, grouped under its
 // first letter. Kicker sorts by the desktop file name, which would file
-// "Files" under D for Dolphin, so the list is sorted again here.
+// "Files" under D for Dolphin, so the list is sorted again here. An accented
+// first letter goes with its plain one, and other alphabets get letters of
+// their own after Z. Choosing a letter heading (or Left or Right in the
+// list) shows every letter to jump to, as on Windows.
 FocusScope {
     id: page
 
@@ -21,7 +24,40 @@ FocusScope {
     signal leaveDown()
     signal menuRequested(var model, int index, Item item, real x, real y, bool pinned)
 
+    // The letters to jump to: { letter, row }, row -1 with no apps there.
+    property var letters: []
+    property bool picking: false
+
+    function letterOf(name: string): string {
+        const base = name.trim().charAt(0).normalize("NFD").toUpperCase().charAt(0);
+        return base.length > 0 && base.toLowerCase() !== base ? base : "#";
+    }
+
+    function showLetters(letter: string): void {
+        letterGrid.currentIndex = Math.max(0, letters.findIndex(entry => entry.letter === letter));
+        picking = true;
+        if (Nav.keyboard) {
+            letterGrid.forceActiveFocus(Qt.TabFocusReason);
+        }
+    }
+
+    function jumpTo(row: int): void {
+        if (row < 0) {
+            return;
+        }
+        picking = false;
+        list.currentIndex = row;
+        list.positionViewAtIndex(row, ListView.Beginning);
+        if (Nav.keyboard) {
+            list.forceActiveFocus(Qt.TabFocusReason);
+        }
+    }
+
     function enter(fromBelow: bool): void {
+        if (picking) {
+            letterGrid.enter(fromBelow);
+            return;
+        }
         if (list.count === 0) {
             return;
         }
@@ -39,14 +75,26 @@ FocusScope {
                 continue;
             }
             const name = Helpers.appName(entry.model.favoriteId, entry.model.display);
-            const first = name.charAt(0).toUpperCase();
-            items.push({ name: name, row: i, letter: /[A-Z]/.test(first) ? first : "#" });
+            items.push({ name: name, row: i, letter: letterOf(name) });
         }
-        items.sort((a, b) => a.name.localeCompare(b.name));
+        // By letter first, so each letter's apps stay together however the
+        // language orders accents.
+        items.sort((a, b) => a.letter === b.letter ? a.name.localeCompare(b.name)
+            : a.letter === "#" ? -1 : b.letter === "#" ? 1 : a.letter.localeCompare(b.letter));
         sorted.clear();
-        for (const item of items) {
-            sorted.append(item);
+        const firstRow = {};
+        const all = ["#"].concat("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
+        for (let i = 0; i < items.length; i++) {
+            const letter = items[i].letter;
+            sorted.append(items[i]);
+            if (firstRow[letter] === undefined) {
+                firstRow[letter] = i;
+            }
+            if (all.indexOf(letter) < 0) {
+                all.push(letter);
+            }
         }
+        letters = all.map(letter => ({ letter: letter, row: firstRow[letter] !== undefined ? firstRow[letter] : -1 }));
     }
 
     Instantiator {
@@ -73,8 +121,8 @@ FocusScope {
     SectionHeader {
         id: header
         width: parent.width
-        title: "All apps"
-        buttonText: "Back"
+        title: qsTr("All apps")
+        buttonText: qsTr("Back")
         backward: true
         onActivated: page.backRequested()
     }
@@ -86,6 +134,7 @@ FocusScope {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        visible: !page.picking
         clip: true
         model: sorted
         currentIndex: -1
@@ -99,18 +148,42 @@ FocusScope {
         section.property: "letter"
         section.criteria: ViewSection.FullString
         section.delegate: Item {
+            id: heading
+
             required property string section
             width: ListView.view.width
             height: 30
 
+            Accessible.role: Accessible.Button
+            Accessible.name: qsTr("%1, jump to a letter").arg(section)
+
+            Rectangle {
+                y: 2
+                width: Math.max(28, letterLabel.implicitWidth + 16)
+                height: 24
+                radius: 6
+                color: headingMouse.pressed ? UI.Style.surfacePressed : headingMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                Behavior on color {
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
+
+                MouseArea {
+                    id: headingMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: page.showLetters(heading.section)
+                }
+            }
+
             UI.Label {
+                id: letterLabel
                 x: 8
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 6
                 size: 12
                 font.weight: UI.Style.weightSemiBold
                 color: UI.Style.inkMuted
-                text: parent.section
+                text: heading.section
             }
         }
 
@@ -169,6 +242,12 @@ FocusScope {
                     requestMenu(currentIndex, currentItem, currentItem.width / 2, currentItem.height / 2);
                 }
                 break;
+            case Qt.Key_Left:
+            case Qt.Key_Right:
+                Nav.keyboard = true;
+                page.showLetters(currentIndex >= 0 ? sorted.get(currentIndex).letter : "#");
+                event.accepted = true;
+                return;
             default:
                 return;
             }
@@ -240,6 +319,72 @@ FocusScope {
                 anchors.margins: -2
                 radius: Style.radiusItem + 2
                 visible: appRow.ListView.isCurrentItem && list.activeFocus && Nav.keyboard
+            }
+        }
+    }
+
+    NavGrid {
+        id: letterGrid
+        anchors.top: header.bottom
+        anchors.topMargin: 8
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.rightMargin: -gap
+        height: Math.min(implicitHeight, parent.height - header.height - 8)
+        visible: page.picking
+        columns: 7
+        rowHeight: 48
+        maxRows: Math.max(1, Math.floor((parent.height - header.height - 8 + gap) / cellHeight))
+        model: page.letters
+        onActivated: index => page.jumpTo(page.letters[index].row)
+        onExitUp: page.leaveUp()
+        onExitDown: page.leaveDown()
+
+        delegate: Item {
+            id: cell
+
+            required property var modelData
+            required property int index
+            readonly property bool used: modelData.row >= 0
+
+            width: letterGrid.cellWidth - letterGrid.gap
+            height: letterGrid.rowHeight
+
+            Accessible.role: Accessible.Button
+            Accessible.name: modelData.letter
+            Accessible.onPressAction: page.jumpTo(modelData.row)
+
+            Rectangle {
+                anchors.fill: parent
+                radius: Style.radiusItem
+                color: !cell.used ? "transparent"
+                    : cellMouse.pressed ? UI.Style.surfacePressed
+                    : cellMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRest
+                Behavior on color {
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
+            }
+
+            UI.Label {
+                anchors.centerIn: parent
+                size: 14
+                font.weight: UI.Style.weightMedium
+                color: cell.used ? UI.Style.ink : UI.Style.inkDisabled
+                text: cell.modelData.letter
+            }
+
+            MouseArea {
+                id: cellMouse
+                anchors.fill: parent
+                enabled: cell.used
+                hoverEnabled: true
+                onPressed: letterGrid.currentIndex = cell.index
+                onClicked: page.jumpTo(cell.modelData.row)
+            }
+
+            UI.FocusRing {
+                visible: cell.GridView.isCurrentItem && letterGrid.activeFocus && Nav.keyboard
+                targetRadius: Style.radiusItem
             }
         }
     }

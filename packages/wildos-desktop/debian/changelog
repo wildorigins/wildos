@@ -1,3 +1,88 @@
+wildos-desktop (0.1.30) trixie; urgency=medium
+
+  * Brave no longer opens an extra "n/" tab each time it starts.
+  * Screen recordings work on PCs with an NVIDIA graphics card. They are
+    encoded on the processor there, since recording on the other graphics
+    chip crashed Capture and left an empty file.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 17:00:00 +0000
+
+wildos-desktop (0.1.29) trixie; urgency=medium
+
+  * Wild OS comes with the start-up manager, for PCs that also have
+    Windows or another system.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 16:00:00 +0000
+
+wildos-desktop (0.1.28) trixie; urgency=medium
+
+  * A download in Brave shows in Brave only. The Plasma Integration
+    extension, which also reported every download to Wild OS as a copy,
+    is no longer added to Brave or connected to it.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 10:30:00 +0000
+
+wildos-desktop (0.1.27) trixie; urgency=medium
+
+  * LibreOffice Draw, which comes along with Slides, no longer shows in
+    Start, the Store or Settings, and is not offered for PDFs and pictures.
+  * In Brave, a click of the mouse wheel starts scrolling by moving the
+    mouse, as on Windows.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 09:30:00 +0000
+
+wildos-desktop (0.1.26) trixie; urgency=medium
+
+  * Slides, the new presentation app, comes with Wild OS beside Write and
+    Tables, and shows in Start under its own name.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 16:00:00 +0000
+
+wildos-desktop (0.1.25) trixie; urgency=medium
+
+  * A program you install for yourself into ~/.local/bin is found in the
+    terminal. Before, it was "command not found" until PATH was edited by
+    hand.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 11:45:00 +0000
+
+wildos-desktop (0.1.24) trixie; urgency=medium
+
+  * The sign-in screen takes the PIN from Settings > Accounts > Sign-in
+    options in the password box.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 15:00:00 +0000
+
+wildos-desktop (0.1.23) trixie; urgency=medium
+
+  * The desktop no longer sometimes takes over half a minute to appear
+    after signing in: Plasma's portal starts with the compositor instead
+    of waiting for the desktop, which was waiting for it.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 14:00:00 +0000
+
+wildos-desktop (0.1.22) trixie; urgency=medium
+
+  * The lock screen takes the PIN from Settings > Accounts > Sign-in
+    options in the password box.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 16 Nov 2026 10:30:00 +0000
+
+wildos-desktop (0.1.21) trixie; urgency=medium
+
+  * The fingerprint service stays running, so a finger already on the
+    reader when a prompt opens is read straight away.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 22:15:00 +0000
+
+wildos-desktop (0.1.20) trixie; urgency=medium
+
+  * The wallet and the accessibility shortcuts use less memory: they draw
+    their few windows without setting up 3D graphics, about 20 MB less
+    each on a laptop.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 15:33:52 +0000
+
 wildos-desktop (0.1.19) trixie; urgency=medium
 
   * Signing in with your fingerprint in the terminal no longer asks for

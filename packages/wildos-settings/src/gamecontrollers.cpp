@@ -23,15 +23,15 @@ const Named gamepadButtons[] = {
     {SDL_CONTROLLER_BUTTON_Y, "Y"},
     {SDL_CONTROLLER_BUTTON_LEFTSHOULDER, "LB"},
     {SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, "RB"},
-    {SDL_CONTROLLER_BUTTON_BACK, "View"},
-    {SDL_CONTROLLER_BUTTON_START, "Menu"},
-    {SDL_CONTROLLER_BUTTON_GUIDE, "Home"},
-    {SDL_CONTROLLER_BUTTON_LEFTSTICK, "Left stick"},
-    {SDL_CONTROLLER_BUTTON_RIGHTSTICK, "Right stick"},
-    {SDL_CONTROLLER_BUTTON_DPAD_UP, "Up"},
-    {SDL_CONTROLLER_BUTTON_DPAD_DOWN, "Down"},
-    {SDL_CONTROLLER_BUTTON_DPAD_LEFT, "Left"},
-    {SDL_CONTROLLER_BUTTON_DPAD_RIGHT, "Right"},
+    {SDL_CONTROLLER_BUTTON_BACK, QT_TRANSLATE_NOOP("GameControllers", "View")},
+    {SDL_CONTROLLER_BUTTON_START, QT_TRANSLATE_NOOP("GameControllers", "Menu")},
+    {SDL_CONTROLLER_BUTTON_GUIDE, QT_TRANSLATE_NOOP("GameControllers", "Home")},
+    {SDL_CONTROLLER_BUTTON_LEFTSTICK, QT_TRANSLATE_NOOP("GameControllers", "Left stick")},
+    {SDL_CONTROLLER_BUTTON_RIGHTSTICK, QT_TRANSLATE_NOOP("GameControllers", "Right stick")},
+    {SDL_CONTROLLER_BUTTON_DPAD_UP, QT_TRANSLATE_NOOP("GameControllers", "Up")},
+    {SDL_CONTROLLER_BUTTON_DPAD_DOWN, QT_TRANSLATE_NOOP("GameControllers", "Down")},
+    {SDL_CONTROLLER_BUTTON_DPAD_LEFT, QT_TRANSLATE_NOOP("GameControllers", "Left")},
+    {SDL_CONTROLLER_BUTTON_DPAD_RIGHT, QT_TRANSLATE_NOOP("GameControllers", "Right")},
 };
 
 struct NamedAxis {
@@ -41,12 +41,12 @@ struct NamedAxis {
 };
 
 const NamedAxis gamepadAxes[] = {
-    {SDL_CONTROLLER_AXIS_LEFTX, "Left stick, left and right", true},
-    {SDL_CONTROLLER_AXIS_LEFTY, "Left stick, up and down", true},
-    {SDL_CONTROLLER_AXIS_RIGHTX, "Right stick, left and right", true},
-    {SDL_CONTROLLER_AXIS_RIGHTY, "Right stick, up and down", true},
-    {SDL_CONTROLLER_AXIS_TRIGGERLEFT, "Left trigger", false},
-    {SDL_CONTROLLER_AXIS_TRIGGERRIGHT, "Right trigger", false},
+    {SDL_CONTROLLER_AXIS_LEFTX, QT_TRANSLATE_NOOP("GameControllers", "Left stick, left and right"), true},
+    {SDL_CONTROLLER_AXIS_LEFTY, QT_TRANSLATE_NOOP("GameControllers", "Left stick, up and down"), true},
+    {SDL_CONTROLLER_AXIS_RIGHTX, QT_TRANSLATE_NOOP("GameControllers", "Right stick, left and right"), true},
+    {SDL_CONTROLLER_AXIS_RIGHTY, QT_TRANSLATE_NOOP("GameControllers", "Right stick, up and down"), true},
+    {SDL_CONTROLLER_AXIS_TRIGGERLEFT, QT_TRANSLATE_NOOP("GameControllers", "Left trigger"), false},
+    {SDL_CONTROLLER_AXIS_TRIGGERRIGHT, QT_TRANSLATE_NOOP("GameControllers", "Right trigger"), false},
 };
 
 // SDL's -32768 to 32767 as 0 to 1; a trigger rests at 0.
@@ -217,12 +217,12 @@ void GameControllers::update()
             name = QString::fromUtf8(SDL_GameControllerName(device.gamepad));
             for (const Named &b : gamepadButtons) {
                 if (SDL_GameControllerHasButton(device.gamepad, b.button)) {
-                    buttons.append(button(QString::fromLatin1(b.name), SDL_GameControllerGetButton(device.gamepad, b.button) != 0));
+                    buttons.append(button(tr(b.name), SDL_GameControllerGetButton(device.gamepad, b.button) != 0));
                 }
             }
             for (const NamedAxis &a : gamepadAxes) {
                 if (SDL_GameControllerHasAxis(device.gamepad, a.axis)) {
-                    axes.append(axis(QString::fromLatin1(a.name), position(SDL_GameControllerGetAxis(device.gamepad, a.axis), a.centred), a.centred));
+                    axes.append(axis(tr(a.name), position(SDL_GameControllerGetAxis(device.gamepad, a.axis), a.centred), a.centred));
                 }
             }
         } else {
@@ -233,11 +233,11 @@ void GameControllers::update()
                 buttons.append(button(QString::number(i + 1), SDL_JoystickGetButton(device.joystick, i) != 0));
             }
             for (int i = 0; i < SDL_JoystickNumAxes(device.joystick); ++i) {
-                axes.append(axis(QStringLiteral("Axis %1").arg(i + 1), position(SDL_JoystickGetAxis(device.joystick, i), true), true));
+                axes.append(axis(tr("Axis %1").arg(i + 1), position(SDL_JoystickGetAxis(device.joystick, i), true), true));
             }
         }
         if (name.isEmpty()) {
-            name = QStringLiteral("Game controller");
+            name = tr("Game controller");
         }
         controllers.append(QVariantMap{
             {QStringLiteral("id"), id},

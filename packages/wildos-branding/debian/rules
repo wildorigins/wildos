@@ -11,6 +11,13 @@ AVATAR_DIR := debian/wildos-branding/usr/share/wildos
 # The wallpaper ships at the sizes Plasma picks from, generated from the one
 # original so a new photo is a one-file change.
 execute_after_dh_install:
+	# Translations for Start, the taskbar applets and the other Wild OS QML
+	# here, loaded by WildOS.UI like every Wild OS package's (docs/i18n.md).
+	install -d debian/wildos-branding/usr/share/wildos/translations
+	for ts in i18n/*.ts; do \
+		[ -e "$$ts" ] || continue; \
+		/usr/lib/qt6/bin/lrelease -silent "$$ts" -qm debian/wildos-branding/usr/share/wildos/translations/$$(basename "$$ts" .ts).qm; \
+	done
 	install -d $(WALL)/contents/images
 	for size in 7680x4320 5120x2880 3840x2160 2560x1600 2560x1440 1920x1200 1920x1080 1680x1050 1366x768 1280x800; do \
 		magick $(SRC_WALL) -resize "$$size^" -gravity center -extent $$size \

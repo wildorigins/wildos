@@ -6,18 +6,24 @@ import WildOS.UI as UI
 // password and, when the user list is hidden, for the username too. It is a
 // sign-in control of its own rather than a UI.TextField because it sits on
 // the photograph; its colours are the shared tokens. While `busy` the arrow
-// turns into a spinner and typing waits.
+// turns into a spinner and typing waits. Once something is typed an eye
+// shows it for as long as the eye is held down, as on Windows; nothing can
+// be copied or selected with the pointer meanwhile, and it never takes
+// paste.
 FocusScope {
     id: pill
 
     property Item backdrop: null
     property alias field: field
     property alias text: field.text
-    property string placeholder: "Password"
+    property string placeholder: qsTr("Password")
     property bool secret: true
     property bool showSubmit: true
     property bool busy: false
-    property string submitLabel: "Sign in"
+    property string submitLabel: qsTr("Sign in")
+
+    // The password is readable only while the eye is held.
+    readonly property bool revealing: reveal.visible && reveal.pressed
 
     signal submitted()
 
@@ -54,8 +60,8 @@ FocusScope {
 
         anchors.left: parent.left
         anchors.leftMargin: 18
-        anchors.right: submit.visible ? submit.left : parent.right
-        anchors.rightMargin: submit.visible ? 8 : 18
+        anchors.right: reveal.visible ? reveal.left : submit.visible ? submit.left : parent.right
+        anchors.rightMargin: reveal.visible ? 4 : submit.visible ? 8 : 18
         anchors.verticalCenter: parent.verticalCenter
         height: 40
         focus: true
@@ -67,8 +73,8 @@ FocusScope {
         selectedTextColor: UI.Style.inkOnWallpaper
         font.family: UI.Style.fontFamily
         font.pixelSize: UI.Style.px(14)
-        font.letterSpacing: pill.secret && text.length > 0 ? 1.5 : 0
-        echoMode: pill.secret ? TextInput.Password : TextInput.Normal
+        font.letterSpacing: pill.secret && !pill.revealing && text.length > 0 ? 1.5 : 0
+        echoMode: pill.secret && !pill.revealing ? TextInput.Password : TextInput.Normal
         passwordCharacter: "•"
         UI.NoPaste { enabled: pill.secret }
         placeholderText: pill.placeholder
@@ -92,6 +98,52 @@ FocusScope {
         }
 
         onAccepted: if (!pill.busy) pill.submitted()
+
+        // A password shown as text could otherwise be copied or cut.
+        Keys.onPressed: event => {
+            if (pill.revealing && (event.matches(StandardKey.Copy) || event.matches(StandardKey.Cut))) {
+                event.accepted = true;
+            }
+        }
+    }
+
+    // A click in shown text would put a selection where a middle click
+    // pastes from, so the field takes no pointer while the eye is held.
+    MouseArea {
+        anchors.fill: field
+        visible: pill.revealing
+        acceptedButtons: Qt.AllButtons
+    }
+
+    T.AbstractButton {
+        id: reveal
+
+        visible: pill.secret && !pill.busy && field.text.length > 0
+        anchors.right: submit.visible ? submit.left : parent.right
+        anchors.rightMargin: submit.visible ? 4 : 8
+        anchors.verticalCenter: parent.verticalCenter
+        width: 30
+        height: 30
+        hoverEnabled: true
+        // Typing stays in the field, and only a held pointer shows it.
+        focusPolicy: Qt.NoFocus
+        Accessible.name: qsTr("Show password")
+        Accessible.role: Accessible.Button
+
+        background: Rectangle {
+            radius: height / 2
+            color: reveal.down ? UI.Style.glassOnWallpaperPressed : reveal.hovered ? UI.Style.glassOnWallpaperHover : "transparent"
+            Behavior on color { ColorAnimation { duration: UI.Style.quickDuration } }
+        }
+
+        contentItem: Item {
+            UI.Icon {
+                anchors.centerIn: parent
+                name: "eye"
+                size: 16
+                color: UI.Style.inkOnWallpaperMuted
+            }
+        }
     }
 
     T.AbstractButton {
@@ -106,7 +158,7 @@ FocusScope {
         enabled: !pill.busy
         hoverEnabled: true
         focusPolicy: Qt.TabFocus
-        Accessible.name: pill.busy ? "Signing in" : pill.submitLabel
+        Accessible.name: pill.busy ? qsTr("Signing in") : pill.submitLabel
         Accessible.role: Accessible.Button
 
         background: Rectangle {

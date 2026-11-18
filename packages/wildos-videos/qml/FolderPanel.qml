@@ -35,7 +35,7 @@ Item {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: qsTr("In this folder")
+                text: Player.queued ? qsTr("Queue") : qsTr("In this folder")
                 size: 14
                 font.weight: UI.Style.weightSemiBold
             }

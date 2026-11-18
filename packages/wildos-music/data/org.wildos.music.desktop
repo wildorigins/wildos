@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Music
+Name[fr]=Musique
 GenericName=Music player
+GenericName[fr]=Lecteur de musique
 Comment=Play the songs in your Music folder
+Comment[fr]=Écoutez les titres de votre dossier Musique
 Exec=wildos-music %U
 Icon=wildos-music
 Terminal=false

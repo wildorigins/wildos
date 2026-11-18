@@ -1,6 +1,7 @@
 #include "system.h"
 
 #include <KConfigGroup>
+#include <KPluginMetaData>
 #include <KConfigWatcher>
 #include <KSharedConfig>
 #include <KUser>
@@ -259,7 +260,7 @@ void System::readHardware()
         m_processor = cpuName.captured(1).simplified();
     }
     if (threads > 0) {
-        const QString count = threads == 1 ? QStringLiteral("1 thread") : QStringLiteral("%1 threads").arg(threads);
+        const QString count = threads == 1 ? tr("1 thread") : tr("%1 threads").arg(threads);
         m_processor = m_processor.isEmpty() ? count : QStringLiteral("%1, %2").arg(m_processor, count);
     }
 
@@ -267,7 +268,7 @@ void System::readHardware()
                               .match(readFile(QStringLiteral("/proc/meminfo")));
     if (memTotal.hasMatch()) {
         const double gib = memTotal.captured(1).toDouble() / (1024.0 * 1024.0);
-        m_memory = QStringLiteral("%1 GB usable").arg(QLocale::system().toString(gib, 'f', 1));
+        m_memory = tr("%1 GB usable").arg(QLocale::system().toString(gib, 'f', 1));
     }
 }
 
@@ -285,10 +286,10 @@ QString System::architecture() const
 {
     const QString arch = QSysInfo::currentCpuArchitecture();
     if (arch == QLatin1String("x86_64")) {
-        return QStringLiteral("64-bit, x64 processor");
+        return tr("64-bit, x64 processor");
     }
     if (arch == QLatin1String("arm64")) {
-        return QStringLiteral("64-bit, Arm processor");
+        return tr("64-bit, Arm processor");
     }
     return arch;
 }
@@ -327,8 +328,8 @@ void System::renameHost(const QString &name)
         if (reply.isError()) {
             Q_EMIT renameFailed(reply.error().name() == QLatin1String("org.freedesktop.DBus.Error.AccessDenied")
                                         || reply.error().name().contains(QLatin1String("NotAuthorized"))
-                                    ? QStringLiteral("Your PC was not renamed because the password was not given.")
-                                    : QStringLiteral("Your PC could not be renamed. %1").arg(reply.error().message()));
+                                    ? tr("Your PC was not renamed because the password was not given.")
+                                    : tr("Your PC could not be renamed. %1").arg(reply.error().message()));
             return;
         }
         m_hostName = name;
@@ -450,9 +451,9 @@ QVariantList System::volumes() const
         seenDevices.insert(volume.device());
         QString name;
         if (isRoot) {
-            name = QStringLiteral("System disk");
+            name = tr("System disk");
         } else if (volume.rootPath() == QLatin1String("/home")) {
-            name = QStringLiteral("Home");
+            name = tr("Home");
         } else if (!volume.displayName().isEmpty() && volume.displayName() != volume.rootPath()) {
             name = volume.displayName();
         } else {
@@ -569,7 +570,7 @@ void System::readWallpaper()
 QString System::wallpaperName() const
 {
     if (m_slideshow && !m_slideshowFolder.isEmpty()) {
-        return QStringLiteral("Photos from %1").arg(QFileInfo(m_slideshowFolder).fileName());
+        return tr("Photos from %1").arg(QFileInfo(m_slideshowFolder).fileName());
     }
     QString path = m_wallpaper;
     const int contents = path.indexOf(QStringLiteral("/contents/images/"));
@@ -916,11 +917,11 @@ void System::setAltTabAllDesktops(bool on)
 namespace
 {
 // The defaults for new accounts, which /etc/skel/.config/wildosrc also
-// holds: the bottom corners sit beside Start and the show desktop end of the
-// taskbar, so they do nothing until chosen.
+// holds: every corner does nothing until chosen, as on Windows, since a
+// corner that fires on its own is easy to set off by accident.
 const QVariantMap hotCornerDefaults = {
-    {QStringLiteral("TopLeft"), QStringLiteral("taskview")},
-    {QStringLiteral("TopRight"), QStringLiteral("notifications")},
+    {QStringLiteral("TopLeft"), QStringLiteral("none")},
+    {QStringLiteral("TopRight"), QStringLiteral("none")},
     {QStringLiteral("BottomLeft"), QStringLiteral("none")},
     {QStringLiteral("BottomRight"), QStringLiteral("none")},
     {QStringLiteral("TopLeftKey"), QStringLiteral("none")},
@@ -1034,18 +1035,18 @@ QString System::formatBytes(qint64 bytes) const
     const double value = double(bytes);
     const double kb = 1024.0, mb = kb * 1024, gb = mb * 1024, tb = gb * 1024;
     if (value >= tb) {
-        return QStringLiteral("%1 TB").arg(locale.toString(value / tb, 'f', 2));
+        return tr("%1 TB").arg(locale.toString(value / tb, 'f', 2));
     }
     if (value >= gb) {
-        return QStringLiteral("%1 GB").arg(locale.toString(value / gb, 'f', value >= 100 * gb ? 0 : 1));
+        return tr("%1 GB").arg(locale.toString(value / gb, 'f', value >= 100 * gb ? 0 : 1));
     }
     if (value >= mb) {
-        return QStringLiteral("%1 MB").arg(locale.toString(value / mb, 'f', 0));
+        return tr("%1 MB").arg(locale.toString(value / mb, 'f', 0));
     }
     if (value >= kb) {
-        return QStringLiteral("%1 KB").arg(locale.toString(value / kb, 'f', 0));
+        return tr("%1 KB").arg(locale.toString(value / kb, 'f', 0));
     }
-    return QStringLiteral("%1 bytes").arg(bytes);
+    return tr("%1 bytes").arg(bytes);
 }
 
 QString System::thumbnail(const QString &path) const
@@ -1120,6 +1121,104 @@ namespace
 {
 const QString winModeScript = QStringLiteral(
     "var items = []; panels().forEach(function (p) { items = items.concat(p.widgets('org.wildos.winmode')); });");
+}
+
+// Plasma widgets on the Wild OS desktop (org.wildos.desktop's allowWidgets):
+// off by default, never blocked; every desktop, one per screen, follows it.
+namespace
+{
+const QString desktopsScript = QStringLiteral("var d = desktops().filter(function (x) { return x.type === 'org.wildos.desktop'; });");
+}
+
+void System::readDesktopWidgets()
+{
+    const QString allowed = evaluatePlasmaScript(desktopsScript
+        + QStringLiteral("if (d.length) { d[0].currentConfigGroup = ['General']; print(String(d[0].readConfig('allowWidgets', false))); }"));
+    const bool on = allowed == QLatin1String("true");
+    if (on != m_desktopWidgets) {
+        m_desktopWidgets = on;
+        Q_EMIT desktopWidgetsChanged();
+    }
+}
+
+void System::setDesktopWidgets(bool allowed)
+{
+    evaluatePlasmaScript(desktopsScript
+        + QStringLiteral("d.forEach(function (x) { x.currentConfigGroup = ['General']; x.writeConfig('allowWidgets', %1); x.reloadConfig(); });")
+              .arg(allowed ? QStringLiteral("true") : QStringLiteral("false")));
+    m_desktopWidgets = allowed;
+    Q_EMIT desktopWidgetsChanged();
+}
+
+// The taskbar is locked so it can't be taken apart by accident (the
+// look-and-feel layout locks the panel and each of its widgets). Widgets on
+// the taskbar lift that lock, and locking again puts it back the same way.
+void System::readTaskbarWidgets()
+{
+    const QString locked = evaluatePlasmaScript(QStringLiteral("print(panels().length ? String(panels()[0].locked) : 'true')"));
+    const bool on = locked == QLatin1String("false");
+    if (on != m_taskbarWidgets) {
+        m_taskbarWidgets = on;
+        Q_EMIT taskbarWidgetsChanged();
+    }
+}
+
+void System::setTaskbarWidgets(bool allowed)
+{
+    evaluatePlasmaScript(QStringLiteral(
+        "panels().forEach(function (p) {"
+        "  p.locked = %1;"
+        "  p.widgets().forEach(function (w) { w.currentConfigGroup = []; w.writeConfig('immutability', %2); w.locked = %1; });"
+        "});")
+            .arg(allowed ? QStringLiteral("false") : QStringLiteral("true"), allowed ? QStringLiteral("1") : QStringLiteral("2")));
+    m_taskbarWidgets = allowed;
+    Q_EMIT taskbarWidgetsChanged();
+}
+
+// The widgets someone added to the taskbar: everything on it that isn't
+// part of the Wild OS taskbar itself. Plasma's own way to remove a panel
+// widget is hidden with the rest of the taskbar's right-click menu, so
+// Settings lists them with a Remove button instead.
+void System::readAddedTaskbarWidgets()
+{
+    const QString answer = evaluatePlasmaScript(QStringLiteral(
+        "var out = []; panels().forEach(function (p) { p.widgets().forEach(function (w) {"
+        "  if (w.type.indexOf('org.wildos.') !== 0 && w.type !== 'org.kde.plasma.panelspacer') out.push(w.id + ' ' + w.type); }); });"
+        "print(out.join(';'));"));
+    QVariantList list;
+    const auto lines = answer.split(QLatin1Char(';'), Qt::SkipEmptyParts);
+    for (const QString &line : lines) {
+        const int space = line.indexOf(QLatin1Char(' '));
+        if (space <= 0) {
+            continue;
+        }
+        const QString plugin = line.mid(space + 1).trimmed();
+        const QString file = QStandardPaths::locate(QStandardPaths::GenericDataLocation,
+                                                    QStringLiteral("plasma/plasmoids/%1/metadata.json").arg(plugin));
+        const KPluginMetaData meta = file.isEmpty() ? KPluginMetaData() : KPluginMetaData::fromJsonFile(file);
+        list.append(QVariantMap{{QStringLiteral("id"), line.left(space).toInt()},
+                                {QStringLiteral("name"), meta.isValid() && !meta.name().isEmpty() ? meta.name() : plugin},
+                                {QStringLiteral("icon"), meta.iconName()}});
+    }
+    if (list != m_addedTaskbarWidgets) {
+        m_addedTaskbarWidgets = list;
+        Q_EMIT addedTaskbarWidgetsChanged();
+    }
+}
+
+void System::removeTaskbarWidget(int id)
+{
+    evaluatePlasmaScript(QStringLiteral(
+        "panels().forEach(function (p) { p.widgets().forEach(function (w) { if (w.id === %1) w.remove(); }); });").arg(id));
+    readAddedTaskbarWidgets();
+}
+
+// Plasma's widget picker; widgets are dragged from it onto the taskbar.
+void System::openWidgetExplorer()
+{
+    auto message = QDBusMessage::createMethodCall(QStringLiteral("org.kde.plasmashell"), QStringLiteral("/PlasmaShell"),
+                                                  QStringLiteral("org.kde.PlasmaShell"), QStringLiteral("toggleWidgetExplorer"));
+    QDBusConnection::sessionBus().asyncCall(message);
 }
 
 void System::readTaskbarWinModeStatus()
@@ -1282,8 +1381,8 @@ void System::setUsbProtection(bool on)
         if (watcher->isError()) {
             const QString name = watcher->error().name();
             Q_EMIT usbProtectionFailed(name.contains(QLatin1String("AccessDenied")) || name.contains(QLatin1String("Interactive"))
-                                           ? QStringLiteral("USB protection was not changed because the password was not given.")
-                                           : QStringLiteral("USB protection could not be changed. %1").arg(watcher->error().message()));
+                                           ? tr("USB protection was not changed because the password was not given.")
+                                           : tr("USB protection could not be changed. %1").arg(watcher->error().message()));
             refreshSecurity();
             return;
         }
@@ -1332,7 +1431,7 @@ void System::restartToFirmware()
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
         watcher->deleteLater();
         if (watcher->isError()) {
-            Q_EMIT firmwareRestartFailed(QStringLiteral("The computer could not be set to open its firmware settings. %1").arg(watcher->error().message()));
+            Q_EMIT firmwareRestartFailed(tr("The computer could not be set to open its firmware settings. %1").arg(watcher->error().message()));
             return;
         }
         // Plasma's own restart path, so open apps get the chance to save.
@@ -1397,9 +1496,9 @@ void System::setProtectionLevel(const QString &level)
         if (code == 0) {
             applyLockTimes(level);
         } else if (code == 126 || code == 127) {
-            Q_EMIT protectionLevelFailed(QStringLiteral("The level was not changed because the password was not given."));
+            Q_EMIT protectionLevelFailed(tr("The level was not changed because the password was not given."));
         } else {
-            Q_EMIT protectionLevelFailed(QStringLiteral("The level could not be changed."));
+            Q_EMIT protectionLevelFailed(tr("The level could not be changed."));
         }
         readProtectionLevel();
         Q_EMIT protectionLevelChanged();
@@ -1450,9 +1549,9 @@ void System::setUpdatePolicy(const QString &key, const QString &value)
     connect(process, &QProcess::finished, this, [this, process](int code) {
         process->deleteLater();
         if (code == 126 || code == 127) {
-            Q_EMIT updatePolicyFailed(QStringLiteral("The setting was not changed because the password was not given."));
+            Q_EMIT updatePolicyFailed(tr("The setting was not changed because the password was not given."));
         } else if (code != 0) {
-            Q_EMIT updatePolicyFailed(QStringLiteral("The setting could not be changed."));
+            Q_EMIT updatePolicyFailed(tr("The setting could not be changed."));
         }
         refreshUpdatePolicy();
         refreshSecurity();

@@ -1,0 +1,5 @@
+# Apps built for the older wallet ask for it by this name; KDE's file starts
+# the same kwalletd6. Same reason as org.kde.kwalletd6.service beside it.
+[D-BUS Service]
+Name=org.kde.kwalletd5
+Exec=/usr/bin/env QT_WAYLAND_CLIENT_BUFFER_INTEGRATION=shm /usr/bin/kwalletd6

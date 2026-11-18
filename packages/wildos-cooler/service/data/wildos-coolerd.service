@@ -1,0 +1,43 @@
+[Unit]
+Description=Wild OS Cooler: pump, fans and screen of an NZXT Kraken
+# Started by udev when a supported cooler is there (70-wildos-cooler.rules)
+# and by the bus when Cooler asks for it. The cooler keeps its pump and fan
+# curves only while it has power, so they are put back here at start-up,
+# before anyone signs in. It leaves by itself when the cooler is unplugged,
+# or when the bus started it on a PC that has none and nobody asks any more.
+
+[Service]
+Type=dbus
+BusName=io.wildos.Cooler
+ExecStart=/usr/libexec/wildos/coolerd
+StateDirectory=wildos-cooler
+# Holds "present", the file Cooler's entry in Start asks for (TryExec): it
+# is there only while a cooler is connected and this service is driving it.
+RuntimeDirectory=wildos-cooler
+Restart=on-failure
+RestartSec=5
+
+# It needs the cooler's USB device and its hidraw node, the system bus and
+# nothing else: no network, no home folders, no other devices.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+DevicePolicy=closed
+DeviceAllow=char-usb_device rw
+DeviceAllow=char-hidraw rw
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=

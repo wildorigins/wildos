@@ -1,3 +1,36 @@
+wildos-recovery (0.1.11) trixie; urgency=medium
+
+  * Restore points can be started from the start-up manager.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 16:00:00 +0000
+
+wildos-recovery (0.1.10) trixie; urgency=medium
+
+  * Starting a restore point from the start-up menu says so on the desktop:
+    it is a try, nothing has changed yet, and you can keep that version or
+    restart to the PC as it was. Before, it looked like a finished restore
+    and the next normal start went back to the system you were escaping.
+  * A restore point started from the menu runs on its layer in memory, as
+    it was meant to. Before, it ran read-only and parts of the desktop
+    could not save anything.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 12:20:00 +0000
+
+wildos-recovery (0.1.9) trixie; urgency=medium
+
+  * Temporary files are written without copy-on-write, which made programs
+    that rewrite them in small pieces slow: SQLite's large jobs take about
+    half as long.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 18:33:12 +0000
+
+wildos-recovery (0.1.8) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-recovery (0.1.7) trixie; urgency=medium
 
   * The disk password box takes only what is typed: nothing can be pasted

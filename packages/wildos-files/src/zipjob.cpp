@@ -55,7 +55,7 @@ void ZipJob::start()
     setTotalAmount(KJob::Bytes, quint64(total));
     setTotalAmount(KJob::Files, quint64(items.size()));
     const QString name = QFileInfo(m_target.toLocalFile()).fileName();
-    Q_EMIT description(this, QStringLiteral("Compressing"), qMakePair(QStringLiteral("To"), name));
+    Q_EMIT description(this, QCoreApplication::translate("ZipJob", "Compressing"), qMakePair(QCoreApplication::translate("ZipJob", "To"), name));
 
     const QString target = m_target.toLocalFile();
     auto cancel = m_cancel;
@@ -64,7 +64,7 @@ void ZipJob::start()
         KZip zip(target);
         QString error;
         if (!zip.open(QIODevice::WriteOnly)) {
-            error = QStringLiteral("Wild OS could not create %1 here. Check there is space and you can save in this folder.").arg(QFileInfo(target).fileName());
+            error = QCoreApplication::translate("ZipJob", "Wild OS could not create %1 here. Check there is space and you can save in this folder.").arg(QFileInfo(target).fileName());
         } else {
             qint64 done = 0;
             qulonglong files = 0;
@@ -74,7 +74,7 @@ void ZipJob::start()
                 }
                 const bool ok = item.dir ? zip.writeDir(item.name) : zip.addLocalFile(item.path, item.name);
                 if (!ok) {
-                    error = QStringLiteral("%1 could not be added. It may be open in another app or you may not be allowed to read it.").arg(QFileInfo(item.path).fileName());
+                    error = QCoreApplication::translate("ZipJob", "%1 could not be added. It may be open in another app or you may not be allowed to read it.").arg(QFileInfo(item.path).fileName());
                     break;
                 }
                 done += item.size;

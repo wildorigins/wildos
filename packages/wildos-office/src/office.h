@@ -7,7 +7,8 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
-// Everything the start screen knows: which app it is (Write or Tables),
+// Everything the start screen knows: which app it is (Write, Tables or
+// Slides),
 // the templates, the documents LibreOffice opened lately and the ones the
 // person pinned, and starting LibreOffice on whichever is picked.
 class Office : public QObject
@@ -17,6 +18,7 @@ class Office : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(bool tables READ tables CONSTANT)
+    Q_PROPERTY(bool slides READ slides CONSTANT)
     Q_PROPERTY(QString appName READ appName CONSTANT)
     Q_PROPERTY(QString iconName READ iconName CONSTANT)
     Q_PROPERTY(QString formatName READ formatName CONSTANT)
@@ -31,8 +33,11 @@ class Office : public QObject
     Q_PROPERTY(bool searching READ searching NOTIFY resultsChanged)
 
 public:
-    static void setMode(bool tables);
-    static bool modeTables();
+    enum App { Write, Tables, Slides };
+    static void setApp(App app);
+    static App app();
+    // LibreOffice's switch for this app's kind of document.
+    static QString moduleSwitch();
     static QString soffice();
     // Whether this account already has LibreOffice running.
     static bool running();
@@ -41,7 +46,8 @@ public:
 
     explicit Office(QObject *parent = nullptr);
 
-    bool tables() const { return s_tables; }
+    bool tables() const { return s_app == Tables; }
+    bool slides() const { return s_app == Slides; }
     QString appName() const;
     QString iconName() const;
     QString formatName() const;
@@ -102,5 +108,5 @@ private:
     int m_searchGeneration = 0;
     QString m_query;
 
-    static bool s_tables;
+    static App s_app;
 };

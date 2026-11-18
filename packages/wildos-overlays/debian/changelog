@@ -1,3 +1,43 @@
+wildos-overlays (0.1.8) trixie; urgency=medium
+
+  * Emoji, symbols and clipboard items go in properly while an input method
+    is running, as Vietnamese, Chinese, Japanese and Korean typing use. The
+    app used to get the letter v instead.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 15:30:00 +0000
+
+wildos-overlays (0.1.7) trixie; urgency=medium
+
+  * The emoji and symbols panel stays open after you pick one, so you can
+    pick several. Escape, the shortcut again or a click elsewhere closes it.
+  * Searching for an emoji, and Recently used, show the emoji. Each one
+    used to come out as several cells of broken characters and letters.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 14:00:00 +0000
+
+wildos-overlays (0.1.6) trixie; urgency=medium
+
+  * The emoji and symbol pages of the clipboard panel are made the first
+    time they are opened instead of at sign-in, which saves memory.
+    Clipboard history records as before.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 16:38:28 +0000
+
+wildos-overlays (0.1.5) trixie; urgency=medium
+
+  * The clipboard panel and the volume pop-up sit just above the taskbar,
+    whichever taskbar style is chosen: a surface can now be placed from
+    the edge of the screen itself.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:32:01 +0000
+
+wildos-overlays (0.1.4) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-overlays (0.1.3) trixie; urgency=medium
 
   * Passwords copied from a password manager or a Wild OS password box

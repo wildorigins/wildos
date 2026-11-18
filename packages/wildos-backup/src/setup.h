@@ -22,6 +22,7 @@ class Setup : public QObject
     Q_PROPERTY(QString state READ state NOTIFY changed)
     Q_PROPERTY(QString step READ step NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
+    Q_PROPERTY(QString errorDetail READ errorDetail NOTIFY changed)
     Q_PROPERTY(QString driveName READ driveName NOTIFY changed)
     // Only while it is being shown.
     Q_PROPERTY(QString password READ password NOTIFY passwordChanged)
@@ -30,6 +31,7 @@ class Setup : public QObject
 
     Q_PROPERTY(bool checking READ checking NOTIFY checkChanged)
     Q_PROPERTY(QString checkResult READ checkResult NOTIFY checkChanged)
+    Q_PROPERTY(QString checkDetail READ checkDetail NOTIFY checkChanged)
     Q_PROPERTY(bool checkOk READ checkOk NOTIFY checkChanged)
 
 public:
@@ -49,6 +51,16 @@ public:
     QString error() const
     {
         return m_error;
+    }
+    // The backup tool's own words, for Details, when `error` (or
+    // `checkResult`) is only the general sentence.
+    QString errorDetail() const
+    {
+        return m_errorDetail;
+    }
+    QString checkDetail() const
+    {
+        return m_checkDetail;
     }
     QString driveName() const
     {
@@ -94,7 +106,7 @@ Q_SIGNALS:
 
 private:
     void setState(const QString &state, const QString &step = QString());
-    void failed(const QString &error);
+    void failed(const QString &error, const QString &detail = QString());
     void opened(const QString &mountPoint, const QString &error);
     void verify(const QByteArray &password, bool fromKeyring);
     void createRepository();
@@ -105,6 +117,7 @@ private:
     QString m_state = QStringLiteral("idle");
     QString m_step;
     QString m_error;
+    QString m_errorDetail;
     QString m_uuid;
     QString m_driveName;
     QString m_kind;
@@ -116,5 +129,6 @@ private:
     bool m_checking = false;
     bool m_checkOk = false;
     QString m_checkResult;
+    QString m_checkDetail;
     QPointer<Restic> m_restic;
 };

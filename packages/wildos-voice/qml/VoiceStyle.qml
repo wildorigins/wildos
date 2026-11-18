@@ -5,15 +5,24 @@ import WildOS.UI as UI
 
 // The few values the board gives Voice that the system tokens do not have.
 // Red means recording and nothing else: the dot, the bars, Stop and the row
-// of the recording in progress (AppVoice.dc #ff5468, AppVoiceLight.dc).
+// of the recording in progress (AppVoice.dc #ff5468, AppVoiceLight.dc). The
+// system's danger red is for errors and deleting, so recording keeps a red
+// of its own, set here once: `record` on the red controls, `recordInk`
+// where it is drawn on the window, deeper in the light scheme to be read
+// there. The ring, the halo and the row's icon are made from that.
 QtObject {
     readonly property color record: "#ff5468"
-    readonly property color recordRing: UI.Style.dark ? Qt.rgba(1, 84 / 255, 104 / 255, 0.25) : Qt.rgba(153 / 255, 50 / 255, 62 / 255, 0.175)
-    readonly property color recordHalo: UI.Style.dark ? Qt.rgba(1, 84 / 255, 104 / 255, 0.18) : Qt.rgba(153 / 255, 50 / 255, 62 / 255, 0.126)
-    readonly property color recordText: UI.Style.contrast ? "#ff8a8a" : UI.Style.dark ? "#ff8a8a" : "#8c4b4b"
-    readonly property color recordIcon: UI.Style.dark ? "#ff5468" : "#9e3440"
+    readonly property color recordInk: UI.Style.dark || UI.Style.contrast ? record : "#9e3440"
+    readonly property color recordRing: Qt.rgba(recordInk.r, recordInk.g, recordInk.b, UI.Style.dark ? 0.25 : 0.175)
+    readonly property color recordHalo: Qt.rgba(recordInk.r, recordInk.g, recordInk.b, UI.Style.dark ? 0.18 : 0.126)
+    readonly property color recordIcon: recordInk
+    // "Recording now" under a title is status text, in the system's red;
+    // high contrast is black, where the bright red reads better.
+    readonly property color recordText: UI.Style.contrast ? record : UI.Style.danger
+    // The stop square and the record dot on the red button.
+    readonly property color recordGlyph: "#ffffff"
     // The shield on "Stays on this PC".
-    readonly property color safe: UI.Style.dark ? "#5fd38d" : "#3a8257"
+    readonly property color safe: UI.Style.success
     // The list column sits on a neutral shade of the window, as in Music.
     readonly property color sideShade: UI.Style.contrast ? "#000000" : Qt.rgba(0, 0, 0, UI.Style.dark ? 0.12 : 0.06)
     // The round Mark and Pause buttons, and the icons in the list.
@@ -24,7 +33,7 @@ QtObject {
     // not played yet, and the playhead.
     readonly property color waveDot: UI.Style.dark ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(0, 0, 0, 0.13)
     readonly property color waveRest: UI.Style.dark ? Qt.rgba(1, 1, 1, 0.26) : Qt.rgba(0, 0, 0, 0.2)
-    readonly property color playhead: UI.Style.dark ? "#ffffff" : UI.Style.ink
+    readonly property color playhead: UI.Style.ink
 
     // "02:14", or "1:02:14" past the hour, as the board writes times.
     function time(ms) {

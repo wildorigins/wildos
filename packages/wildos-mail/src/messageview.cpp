@@ -298,7 +298,7 @@ void MessageView::load()
             message = camel_folder_get_message_sync(folder, uid.toUtf8().constData(), nullptr, &error);
         }
         if (!message) {
-            result->error = error ? str(error->message) : MessageView::tr("This message couldn't be opened.");
+            result->error = MailEngine::plainError(error, MessageView::tr("Mail couldn't get it from your email provider. Try again in a moment."));
             g_clear_error(&error);
             return;
         }

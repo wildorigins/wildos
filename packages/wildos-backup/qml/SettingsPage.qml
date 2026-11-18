@@ -171,6 +171,10 @@ Item {
                         wrapMode: Text.Wrap
                     }
                 }
+                ErrorDetails {
+                    Layout.fillWidth: true
+                    text: Setup.checkDetail
+                }
             }
         }
     }

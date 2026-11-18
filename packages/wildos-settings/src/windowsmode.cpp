@@ -55,12 +55,12 @@ void WindowsMode::refresh()
 QString WindowsMode::call(const QString &method, const QVariantList &args, int timeoutMs)
 {
     if (!m_service) {
-        return QStringLiteral("Windows mode isn't installed on this PC.");
+        return tr("Windows mode isn't installed on this PC.");
     }
     m_service->setTimeout(timeoutMs);
     const QDBusMessage reply = m_service->callWithArgumentList(QDBus::Block, method, args);
     if (reply.type() == QDBusMessage::ErrorMessage) {
-        return QStringLiteral("Windows mode didn't answer. Restart the PC, then try again.");
+        return tr("Windows mode didn't answer. Restart the PC, then try again.");
     }
     return reply.arguments().value(0).toString();
 }
@@ -81,7 +81,7 @@ QVariantList WindowsMode::memoryChoices() const
     QVariantList choices;
     for (int gb : {4, 6, 8, 12, 16, 24, 32}) {
         if (gb == 4 || gb * 1024.0 * 1024 * 1024 <= total * 0.75) {
-            choices << QVariantMap{{QStringLiteral("value"), gb}, {QStringLiteral("text"), QStringLiteral("Up to %1 GB").arg(gb)}};
+            choices << QVariantMap{{QStringLiteral("value"), gb}, {QStringLiteral("text"), tr("Up to %1 GB").arg(gb)}};
         }
     }
     return choices;
@@ -95,7 +95,7 @@ QString WindowsMode::setOption(const QString &key, const QString &value)
 void WindowsMode::setProductKey(const QString &key)
 {
     if (!m_service) {
-        Q_EMIT productKeyDone(QStringLiteral("Windows mode isn't installed on this PC."));
+        Q_EMIT productKeyDone(tr("Windows mode isn't installed on this PC."));
         return;
     }
     if (m_activating) {
@@ -112,7 +112,7 @@ void WindowsMode::setProductKey(const QString &key)
         const QDBusPendingReply<QString> reply = *watcher;
         m_activating = false;
         Q_EMIT activatingChanged();
-        Q_EMIT productKeyDone(reply.isError() ? QStringLiteral("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
+        Q_EMIT productKeyDone(reply.isError() ? tr("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
     });
 }
 
@@ -132,7 +132,7 @@ void WindowsMode::power(const QString &action)
         const QDBusPendingReply<QString> reply = *watcher;
         m_powerAction.clear();
         Q_EMIT powerActionChanged();
-        Q_EMIT powerDone(reply.isError() ? QStringLiteral("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
+        Q_EMIT powerDone(reply.isError() ? tr("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
         refresh();
     });
 }
@@ -173,7 +173,7 @@ QString WindowsMode::activationPassword()
 void WindowsMode::callAsync(const QString &method, int timeoutMs, void (WindowsMode::*done)(const QString &))
 {
     if (!m_service) {
-        Q_EMIT(this->*done)(QStringLiteral("Windows mode isn't installed on this PC."));
+        Q_EMIT(this->*done)(tr("Windows mode isn't installed on this PC."));
         return;
     }
     m_service->setTimeout(timeoutMs);
@@ -181,7 +181,7 @@ void WindowsMode::callAsync(const QString &method, int timeoutMs, void (WindowsM
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, done] {
         watcher->deleteLater();
         const QDBusPendingReply<QString> reply = *watcher;
-        Q_EMIT(this->*done)(reply.isError() ? QStringLiteral("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
+        Q_EMIT(this->*done)(reply.isError() ? tr("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
         refresh();
     });
 }
@@ -220,7 +220,7 @@ void WindowsMode::copySecret(const QString &text) const
 void WindowsMode::remove()
 {
     if (!m_service) {
-        Q_EMIT removeDone(QStringLiteral("Windows mode isn't installed on this PC."));
+        Q_EMIT removeDone(tr("Windows mode isn't installed on this PC."));
         return;
     }
     if (m_removing) {
@@ -237,7 +237,7 @@ void WindowsMode::remove()
         const QDBusPendingReply<QString> reply = *watcher;
         m_removing = false;
         Q_EMIT removingChanged();
-        Q_EMIT removeDone(reply.isError() ? QStringLiteral("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
+        Q_EMIT removeDone(reply.isError() ? tr("Windows mode didn't answer. Restart the PC, then try again.") : reply.value());
         refresh();
     });
 }
@@ -255,5 +255,5 @@ QString WindowsMode::size(double bytes) const
     }
     const QLocale locale = QLocale::system();
     const double gb = bytes / 1e9;
-    return gb >= 1 ? QStringLiteral("%1 GB").arg(locale.toString(gb, 'f', 1)) : QStringLiteral("%1 MB").arg(qRound(bytes / 1e6));
+    return gb >= 1 ? tr("%1 GB").arg(locale.toString(gb, 'f', 1)) : tr("%1 MB").arg(qRound(bytes / 1e6));
 }

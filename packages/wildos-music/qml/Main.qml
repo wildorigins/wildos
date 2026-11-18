@@ -19,6 +19,13 @@ UI.AppWindow {
     property string searchText
     // Songs waiting for a playlist from Add to playlist > New playlist.
     property var pendingSongs: []
+    // What the button on the note at the foot of the window does.
+    property var toastAction: null
+    // The keyboard is in a text box: single keys belong to it.
+    readonly property bool typing: activeFocusItem instanceof TextInput || activeFocusItem instanceof TextEdit
+    // The first walk of the Music folder has found nothing to show yet.
+    // Playlists are files of their own and can be shown meanwhile.
+    readonly property bool looking: (!Library.ready || (Library.scanning && Library.songCount === 0)) && kind !== "playlist" && kind !== "liked"
 
     width: 1384
     height: 802
@@ -50,9 +57,10 @@ UI.AppWindow {
     function play(paths, index, shuffled) {
         Player.playSongs(paths, index, shuffled);
     }
-    function say(message) {
+    function say(message, action, run) {
         if (message.length > 0) {
-            toast.show(message);
+            toastAction = run ?? null;
+            toast.show(message, action);
         }
     }
     function addToPlaylist(name, paths) {
@@ -61,6 +69,22 @@ UI.AppWindow {
         } else {
             say(Playlists.lastError);
         }
+    }
+    function removeFromPlaylist(playlist, paths) {
+        if (paths.length === 0) {
+            return;
+        }
+        const before = Playlists.songs(playlist);
+        for (const path of paths) {
+            Playlists.removeSong(playlist, path);
+        }
+        const name = playlist === "Liked songs" ? qsTr("Liked songs") : playlist;
+        say(paths.length === 1 ? qsTr("Removed from %1").arg(name) : qsTr("%1 removed from %2").arg(MusicStyle.songs(paths.length)).arg(name),
+            qsTr("Undo"), () => {
+                if (!Playlists.setSongs(playlist, before)) {
+                    say(Playlists.lastError);
+                }
+            });
     }
     function playlistEntries(paths) {
         const entries = [
@@ -96,7 +120,24 @@ UI.AppWindow {
         if (playlist.length > 0) {
             entries.push({ separator: true });
             entries.push({ text: playlist === "Liked songs" ? qsTr("Remove from Liked songs") : qsTr("Remove from this playlist"), icon: "delete", danger: true,
-                run: () => Playlists.removeSong(playlist, track.path) });
+                run: () => removeFromPlaylist(playlist, [track.path]) });
+        }
+        itemMenu.entries = entries;
+        itemMenu.popup(item, x, y);
+    }
+    // The same for several selected songs at once.
+    function tracksMenu(tracks, playlist, item, x, y) {
+        const paths = tracks.filter(t => !t.missing).map(t => t.path);
+        const entries = [
+            { text: qsTr("Play"), icon: "play", enabled: paths.length > 0, run: () => play(paths, 0, false) },
+            { text: qsTr("Play next"), icon: "play", enabled: paths.length > 0, run: () => Player.playNext(paths) },
+            { text: qsTr("Add to queue"), icon: "list", enabled: paths.length > 0, run: () => Player.addToQueue(paths) },
+            { text: qsTr("Add to playlist"), icon: "plus", enabled: paths.length > 0, submenu: playlistEntries(paths) }
+        ];
+        if (playlist.length > 0) {
+            entries.push({ separator: true });
+            entries.push({ text: playlist === "Liked songs" ? qsTr("Remove from Liked songs") : qsTr("Remove from this playlist"), icon: "delete", danger: true,
+                run: () => removeFromPlaylist(playlist, tracks.map(t => t.path)) });
         }
         itemMenu.entries = entries;
         itemMenu.popup(item, x, y);
@@ -166,6 +207,16 @@ UI.AppWindow {
         }
     }
     Connections {
+        target: toast
+        function onActionClicked() {
+            const run = window.toastAction;
+            window.toastAction = null;
+            if (run) {
+                run();
+            }
+        }
+    }
+    Connections {
         target: Playlists
         function onChanged() {
             // A playlist renamed or deleted outside Music.
@@ -182,7 +233,31 @@ UI.AppWindow {
     }
     Shortcut {
         sequence: "Space"
+        enabled: !window.typing
         onActivated: Player.playPause()
+    }
+    Shortcut {
+        sequence: "Shift+Right"
+        enabled: !window.typing
+        onActivated: Player.skip(10000)
+    }
+    Shortcut {
+        sequence: "Shift+Left"
+        enabled: !window.typing
+        onActivated: Player.skip(-10000)
+    }
+    Shortcut {
+        sequence: "Ctrl+Up"
+        onActivated: Player.stepVolume(1)
+    }
+    Shortcut {
+        sequence: "Ctrl+Down"
+        onActivated: Player.stepVolume(-1)
+    }
+    Shortcut {
+        sequence: "M"
+        enabled: !window.typing
+        onActivated: Player.muted = !Player.muted
     }
     Shortcut {
         sequence: "Ctrl+Right"
@@ -203,6 +278,21 @@ UI.AppWindow {
         onClicked: window.back()
     }
 
+    DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        onDropped: drop => {
+            if (drop.hasUrls && drop.urls.length > 0) {
+                const paths = [];
+                for (let i = 0; i < drop.urls.length; ++i) {
+                    paths.push(drop.urls[i].toString());
+                }
+                Player.openFiles(paths);
+                drop.accept();
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: window.maximised ? 0 : 1
@@ -210,10 +300,9 @@ UI.AppWindow {
 
         UI.TitleBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
+            tall: true
             frame: window.frame
             showTitle: false
-            buttons.buttonHeight: 44
 
             // The title bar puts its content 16px in; the board's icon is 14.
             Row {
@@ -254,23 +343,48 @@ UI.AppWindow {
                 onPlaylistMenu: (name, row, x, y) => window.collectionMenu("playlist", name, Playlists.songs(name), row, x, y)
             }
 
-            Loader {
-                id: pageLoader
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                focus: true
-                sourceComponent: {
-                    switch (window.kind) {
-                    case "search": return searchPage;
-                    case "songs": return collectionPage;
-                    case "album": return collectionPage;
-                    case "artist": return collectionPage;
-                    case "playlist": return collectionPage;
-                    case "liked": return collectionPage;
-                    case "albums": return albumsPage;
-                    case "artists": return artistsPage;
-                    case "folders": return foldersPage;
-                    default: return homePage;
+
+                Loader {
+                    id: pageLoader
+                    anchors.fill: parent
+                    focus: true
+                    visible: !window.looking
+                    sourceComponent: {
+                        switch (window.kind) {
+                        case "search": return searchPage;
+                        case "songs": return collectionPage;
+                        case "album": return collectionPage;
+                        case "artist": return collectionPage;
+                        case "playlist": return collectionPage;
+                        case "liked": return collectionPage;
+                        case "albums": return albumsPage;
+                        case "artists": return artistsPage;
+                        case "folders": return foldersPage;
+                        default: return homePage;
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    visible: window.looking
+                    anchors.centerIn: parent
+                    width: Math.min(460, parent.width - 56)
+                    spacing: 14
+
+                    UI.Spinner {
+                        Layout.alignment: Qt.AlignHCenter
+                        size: 28
+                    }
+                    UI.Label {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: qsTr("Looking through your Music folder")
+                        size: 14
+                        color: UI.Style.inkMuted
+                        wrapMode: Text.Wrap
                     }
                 }
             }
@@ -445,7 +559,11 @@ UI.AppWindow {
                     const name = deleteDialog.playlist;
                     deleteDialog.close();
                     if (Playlists.remove(name)) {
-                        window.say(qsTr("%1 moved to the bin").arg(name));
+                        window.say(qsTr("%1 moved to the bin").arg(name), qsTr("Undo"), () => {
+                            if (!Playlists.restore(name)) {
+                                window.say(Playlists.lastError);
+                            }
+                        });
                     } else {
                         window.say(Playlists.lastError);
                     }

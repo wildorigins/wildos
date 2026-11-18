@@ -1,0 +1,11 @@
+# Takes the place of KDE's file of the same name: /usr/share/wildos comes
+# first in XDG_DATA_DIRS, so the session bus starts the wallet from here.
+#
+# The wallet only ever draws its password and permission boxes, plain
+# widget windows that paint without OpenGL. This Qt sets OpenGL up at
+# start-up for every Wayland client all the same, and the wallet runs all
+# session: shared-memory buffers took it from 85 MB to 17 in a virtual
+# machine, and about 20 MB less on a laptop's Intel graphics.
+[D-BUS Service]
+Name=org.kde.kwalletd6
+Exec=/usr/bin/env QT_WAYLAND_CLIENT_BUFFER_INTEGRATION=shm /usr/bin/kwalletd6

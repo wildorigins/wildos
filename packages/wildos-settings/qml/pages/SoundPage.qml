@@ -79,25 +79,41 @@ PageScroll {
         }
     }
 
-    // A card's words as the design has them: what it is on top ("Speakers",
-    // "Headphones", "External display"), how it is connected underneath.
+    // kindOf's words as shown; kindOf's own stay English for the checks.
+    function kindName(kind) {
+        switch (kind) {
+        case "Headphones":
+            return qsTr("Headphones");
+        case "Headset":
+            return qsTr("Headset");
+        case "Speaker":
+            return qsTr("Speaker");
+        case "Car":
+            return qsTr("Car");
+        default:
+            return "";
+        }
+    }
+
+    // A card's words as the design has them: what it is on top (qsTr("Speakers"),
+    // "Headphones", qsTr("External display")), how it is connected underneath.
     function outputInfo(sink) {
         const p = props(sink);
         const port = activePort(sink);
         const portName = port ? port.name : "";
-        const description = sink.description || sink.name || "Unknown device";
+        const description = sink.description || sink.name || qsTr("Unknown device");
         if (isBluetooth(sink)) {
             const battery = batteryOf(sink);
             const kind = kindOf(sink);
             return {
-                title: kind || "Headphones",
-                caption: battery >= 0 ? "Bluetooth, " + battery + "% battery" : "Bluetooth",
+                title: kind ? kindName(kind) : qsTr("Headphones"),
+                caption: battery >= 0 ? qsTr("Bluetooth, %1% battery").arg(battery) : "Bluetooth",
                 icon: kind === "Speaker" || kind === "Car" ? "sound" : "headphones"
             };
         }
         if (/hdmi|displayport/i.test(portName) || (port && port.type === Port.HDMI) || /hdmi|displayport/i.test(description)) {
             return {
-                title: "External display",
+                title: qsTr("External display"),
                 caption: /displayport/i.test(portName + " " + description) && !/hdmi/i.test(portName) ? "DisplayPort" : "HDMI",
                 icon: "display"
             };
@@ -105,21 +121,21 @@ PageScroll {
         if (p["device.bus"] === "usb") {
             const kind = kindOf(sink);
             return {
-                title: kind || description,
+                title: kind ? kindName(kind) : description,
                 caption: "USB",
                 icon: kind === "Headphones" || kind === "Headset" ? "headphones" : "sound"
             };
         }
         if (/headphone/i.test(portName) || (port && port.type === Port.Headphones)) {
-            return { title: "Headphones", caption: "Headphone jack", icon: "headphones" };
+            return { title: qsTr("Headphones"), caption: qsTr("Headphone jack"), icon: "headphones" };
         }
         if (/lineout/i.test(portName) || (port && port.type === Port.Line)) {
-            return { title: "Line out", caption: "Built-in", icon: "sound" };
+            return { title: qsTr("Line out"), caption: qsTr("Built-in"), icon: "sound" };
         }
         if (/speaker/i.test(portName) || sink.formFactor === "internal" || (port && port.type === Port.Speaker)) {
-            return { title: "Speakers", caption: "Built-in", icon: "sound" };
+            return { title: qsTr("Speakers"), caption: qsTr("Built-in"), icon: "sound" };
         }
-        return { title: description, caption: "Sound output", icon: "sound" };
+        return { title: description, caption: qsTr("Sound output"), icon: "sound" };
     }
 
     // The microphone's name for the drop-down ("Headphones") and for the
@@ -128,23 +144,23 @@ PageScroll {
         const p = props(source);
         const port = activePort(source);
         const portName = port ? port.name : "";
-        const description = source.description || source.name || "Unknown device";
+        const description = source.description || source.name || qsTr("Unknown device");
         if (isBluetooth(source)) {
             const kind = kindOf(source);
-            const title = kind === "Speaker" || kind === "Car" || kind === "" ? "Headphones" : kind;
-            return { title: title, phrase: title + " microphone" };
+            const title = kind === "Speaker" || kind === "Car" || kind === "" ? qsTr("Headphones") : kindName(kind);
+            return { title: title, phrase: qsTr("%1 microphone").arg(title) };
         }
         if (p["device.bus"] === "usb") {
             return { title: description, phrase: description };
         }
         if (/headset/i.test(portName)) {
-            return { title: "Headset", phrase: "Headset microphone" };
+            return { title: qsTr("Headset"), phrase: qsTr("Headset microphone") };
         }
         if (/internal|builtin/i.test(portName) || source.formFactor === "internal") {
-            return { title: "Built-in", phrase: "Built-in microphone" };
+            return { title: qsTr("Built-in"), phrase: qsTr("Built-in microphone") };
         }
         if (/mic/i.test(portName)) {
-            return { title: "Microphone jack", phrase: "Plugged-in microphone" };
+            return { title: qsTr("Microphone jack"), phrase: qsTr("Plugged-in microphone") };
         }
         return { title: description, phrase: description };
     }
@@ -268,7 +284,7 @@ PageScroll {
 
     function appName(stream) {
         const p = props(stream);
-        return String(p["application.name"] || (stream.client ? stream.client.name : "") || stream.name || "App");
+        return String(p["application.name"] || (stream.client ? stream.client.name : "") || stream.name || qsTr("App"));
     }
 
     // One row per app, as Windows has it: a browser with three tabs playing
@@ -285,7 +301,7 @@ PageScroll {
             const key = windows ? "windows" : "app:" + String(p["application.process.binary"] || appName(s));
             if (found[key] === undefined) {
                 found[key] = list.length;
-                list.push({ key: key, windows: windows, name: windows ? "Windows apps" : appName(s), streams: [] });
+                list.push({ key: key, windows: windows, name: windows ? qsTr("Windows apps") : appName(s), streams: [] });
             }
             list[found[key]].streams.push(s);
         }
@@ -297,7 +313,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Output"
+            text: qsTr("Output")
         }
 
         GridLayout {
@@ -329,14 +345,14 @@ PageScroll {
                 UI.SettingRow {
                     visible: page.output === null
                     iconName: "sound"
-                    title: "No speakers or headphones found"
-                    description: "Plug some in or connect them over Bluetooth"
+                    title: qsTr("No speakers or headphones found")
+                    description: qsTr("Plug some in or connect them over Bluetooth")
                 }
 
                 UI.SettingRow {
                     id: volumeRow
                     visible: page.output !== null
-                    title: "Volume"
+                    title: qsTr("Volume")
                     minHeight: 50
 
                     readonly property int level: page.output ? Math.min(100, page.percent(page.output.volume)) : 0
@@ -345,7 +361,7 @@ PageScroll {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 260
                         flat: true
-                        accessibleName: "Output volume"
+                        accessibleName: qsTr("Output volume")
                         dimmed: page.output !== null && page.output.muted
                         value: volumeRow.level
                         onMoved: {
@@ -362,7 +378,7 @@ PageScroll {
 
                     Percent {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: volumeRow.level + "%"
+                        text: qsTr("%1%").arg(volumeRow.level)
                     }
                 }
             }
@@ -374,7 +390,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Input"
+            text: qsTr("Input")
         }
 
         UI.Card {
@@ -384,9 +400,9 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Microphone"
-                    description: !page.input ? "No microphone found"
-                        : page.testingMic ? page.inputInfo(page.input).phrase + ". Listening, speak to test it."
+                    title: qsTr("Microphone")
+                    description: !page.input ? qsTr("No microphone found")
+                        : page.testingMic ? qsTr("%1. Listening, speak to test it.").arg(page.inputInfo(page.input).phrase)
                         : page.inputInfo(page.input).phrase
                     minHeight: 54
 
@@ -409,7 +425,7 @@ PageScroll {
                         visible: page.input !== null && page.testingMic
                         spacing: 3
                         Accessible.role: Accessible.Indicator
-                        Accessible.name: "Microphone level"
+                        Accessible.name: qsTr("Microphone level")
 
                         // Peaks are linear, so ordinary speech would barely
                         // light the first bars; the square root spreads it
@@ -433,15 +449,15 @@ PageScroll {
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: page.input !== null
-                        text: page.testingMic ? "Stop" : "Test"
-                        Accessible.name: page.testingMic ? "Stop testing the microphone" : "Test the microphone"
+                        text: page.testingMic ? qsTr("Stop") : qsTr("Test")
+                        Accessible.name: page.testingMic ? qsTr("Stop testing the microphone") : qsTr("Test the microphone")
                         onClicked: page.testingMic = !page.testingMic
                     }
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: page.inputs.length > 0
-                        Accessible.name: "Microphone"
+                        Accessible.name: qsTr("Microphone")
                         model: page.options(page.inputs, page.inputInfo)
                         readonly property var choice: page.input ? page.input.index : -1
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -462,12 +478,12 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Volume mixer"
+            text: qsTr("Volume mixer")
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Set the volume and output for each app on its own. Apps appear here while they're playing sound."
+            text: qsTr("Set the volume and output for each app on its own. Apps appear here while they're playing sound.")
             size: 12
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -503,7 +519,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Sounds"
+            text: qsTr("Sounds")
         }
 
         UI.Card {
@@ -514,16 +530,16 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "sound"
-                    title: "Sound scheme"
-                    description: "The sounds for notifications, warnings, devices and more"
+                    title: qsTr("Sound scheme")
+                    description: qsTr("The sounds for notifications, warnings, devices and more")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Sound scheme"
+                        Accessible.name: qsTr("Sound scheme")
                         model: [
                             { value: "wildos", text: "Wild OS" },
                             { value: "ocean", text: "Ocean (KDE)" },
-                            { value: "none", text: "No sounds" }
+                            { value: "none", text: qsTr("No sounds") }
                         ]
                         currentIndex: model.findIndex(o => o.value === SoundTheme.scheme)
                         onActivated: index => SoundTheme.setScheme(model[index].value)
@@ -532,19 +548,39 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "power"
-                    title: "Play a sound when Wild OS starts and shuts down"
-                    description: "When the desktop appears, and when you sign out, restart or shut down"
-                    status: SoundTheme.startupSound ? "On" : "Off"
+                    title: qsTr("Play a sound when Wild OS starts")
+                    description: qsTr("When the desktop appears after you sign in")
+                    status: SoundTheme.startupSound ? qsTr("On") : qsTr("Off")
                     enabled: SoundTheme.scheme !== "none"
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: SoundTheme.startupSound
-                        Accessible.name: "Play a sound when Wild OS starts and shuts down"
+                        Accessible.name: qsTr("Play a sound when Wild OS starts")
                         onToggled: {
                             SoundTheme.setStartupSound(checked);
                             if (checked) {
                                 SoundTheme.preview("desktop-login");
+                            }
+                        }
+                    }
+                }
+
+                UI.SettingRow {
+                    iconName: "power"
+                    title: qsTr("Play a sound when Wild OS shuts down")
+                    description: qsTr("When you sign out, restart or shut down. Wild OS waits for it to finish, which adds about 3 seconds.")
+                    status: SoundTheme.shutdownSound ? qsTr("On") : qsTr("Off")
+                    enabled: SoundTheme.scheme !== "none"
+
+                    UI.Toggle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: SoundTheme.shutdownSound
+                        Accessible.name: qsTr("Play a sound when Wild OS shuts down")
+                        onToggled: {
+                            SoundTheme.setShutdownSound(checked);
+                            if (checked) {
+                                SoundTheme.preview("desktop-logout");
                             }
                         }
                     }
@@ -698,7 +734,7 @@ PageScroll {
 
                     UI.Chip {
                         visible: row.windowsMode
-                        text: "Windows mode"
+                        text: qsTr("Windows mode")
                     }
 
                     Item {
@@ -722,21 +758,21 @@ PageScroll {
                 radius: 7
                 iconName: row.muted ? "sound-off" : "sound"
                 iconSize: 16
-                tip: (row.muted ? "Unmute " : "Mute ") + row.title
+                tip: row.muted ? qsTr("Unmute %1").arg(row.title) : qsTr("Mute %1").arg(row.title)
                 onClicked: row.muteClicked()
             }
 
             UI.Slider {
                 Layout.preferredWidth: 200
                 flat: true
-                accessibleName: row.title + " volume"
+                accessibleName: qsTr("%1 volume").arg(row.title)
                 dimmed: row.muted
                 value: row.level
                 onMoved: row.volumeMoved(Math.round(value))
             }
 
             Percent {
-                text: row.level + "%"
+                text: qsTr("%1%").arg(row.level)
             }
 
             Item {
@@ -745,7 +781,7 @@ PageScroll {
 
             UI.ComboBox {
                 visible: page.outputOptions.length > 0
-                Accessible.name: row.title + " output device"
+                Accessible.name: qsTr("%1 output device").arg(row.title)
                 model: page.outputOptions
                 currentIndex: model ? model.findIndex(o => o.value === row.deviceIndex) : -1
                 onActivated: index => row.deviceChosen(model[index].value)
@@ -785,8 +821,8 @@ PageScroll {
         title: group.name
         windowsMode: group.windows
         subtitle: group.windows
-            ? (openWindowsApps.length > 0 ? openWindowsApps + ". Share one volume" : "All Windows apps share one volume")
-            : paused ? "Paused" : mediaName
+            ? (openWindowsApps.length > 0 ? qsTr("%1. Share one volume").arg(openWindowsApps) : qsTr("All Windows apps share one volume"))
+            : paused ? qsTr("Paused") : mediaName
         muted: lead !== null && lead.muted
         level: lead ? Math.min(100, page.percent(lead.volume)) : 0
         deviceIndex: lead ? lead.deviceIndex : -1
@@ -874,8 +910,8 @@ PageScroll {
         property var entry: null
         readonly property var target: entry && entry.device ? page.byName(page.outputs, entry.device) : null
 
-        title: "System sounds"
-        subtitle: "Notifications and alerts"
+        title: qsTr("System sounds")
+        subtitle: qsTr("Notifications and alerts")
         muted: entry !== null && entry.muted
         level: entry ? Math.min(100, page.percent(entry.volume)) : 0
         deviceIndex: target ? target.index : page.output ? page.output.index : -1

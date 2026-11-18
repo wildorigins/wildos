@@ -10,18 +10,32 @@ import WildOS.UI as UI
 Page {
     id: page
 
-    property string mainText: "Set up"
+    property string mainText: qsTr("Set up")
     property bool busy: false
 
     signal back()
     signal confirmed()
 
-    title: "Choose options"
-    text: "These suit most people. You can change any of them later in Settings, under Windows apps."
+    title: qsTr("Choose options")
+    text: qsTr("These suit most people. You can change any of them later in Settings, under Windows apps.")
     spacing: 16
 
-    readonly property string editionName: Setup.edition === "pro" ? "Windows 11 Pro" : Setup.edition === "home" ? "Windows 11 Home" : ""
+    readonly property string editionName: Setup.edition === "pro" ? "Windows 11 Pro" : Setup.edition === "home" ? qsTr("Windows 11 Home") : ""
     readonly property bool keyChosen: Setup.licenceChoice === "key"
+
+    // Setup.folders are the names Windows mode keeps them by; shown in
+    // the language chosen in Settings.
+    function folderName(name) {
+        switch (name) {
+        case "Documents": return qsTr("Documents");
+        case "Downloads": return qsTr("Downloads");
+        case "Pictures": return qsTr("Pictures");
+        case "Desktop": return qsTr("Desktop");
+        case "Music": return qsTr("Music");
+        case "Videos": return qsTr("Videos");
+        default: return name;
+        }
+    }
 
     function link(href, words) {
         return "<a href=\"" + href + "\" style=\"color: " + UI.Style.accentText + "; text-decoration: none;\">" + words + "</a>";
@@ -35,22 +49,22 @@ Page {
 
             OptionRow {
                 width: parent.width
-                title: "Windows licence"
+                title: qsTr("Windows licence")
                 description: {
                     if (Setup.firmwareUsable) {
-                        return (page.editionName.length > 0 ? page.editionName + " found in this PC." : "A licence found in this PC.")
-                            + " Or enter a product key, or activate later.";
+                        return page.editionName.length > 0 ? qsTr("%1 found in this PC. Or enter a product key, or activate later.").arg(page.editionName)
+                            : qsTr("A licence found in this PC. Or enter a product key, or activate later.");
                     }
                     if (Setup.edition === "home" && (Setup.licence === "firmware" || Setup.licence === "inuse")) {
-                        return "This PC's Windows 11 Home licence can't activate Windows mode. Enter a Pro key, or activate later.";
+                        return qsTr("This PC's Windows 11 Home licence can't activate Windows mode. Enter a Pro key, or activate later.");
                     }
-                    return "No licence found in this PC. Enter a product key, or activate later.";
+                    return qsTr("No licence found in this PC. Enter a product key, or activate later.");
                 }
 
                 UI.ComboBox {
-                    Accessible.name: "Windows licence"
-                    model: (Setup.firmwareUsable ? [{ value: "firmware", text: "Built into this PC" }] : [])
-                        .concat([{ value: "key", text: "Enter a product key" }, { value: "none", text: "Activate later" }])
+                    Accessible.name: qsTr("Windows licence")
+                    model: (Setup.firmwareUsable ? [{ value: "firmware", text: qsTr("Built into this PC") }] : [])
+                        .concat([{ value: "key", text: qsTr("Enter a product key") }, { value: "none", text: qsTr("Activate later") }])
                     currentIndex: model.findIndex(o => o.value === Setup.licenceChoice)
                     onActivated: Setup.licenceChoice = currentValue
                 }
@@ -59,9 +73,9 @@ Page {
             OptionRow {
                 width: parent.width
                 visible: page.keyChosen
-                title: "Product key"
-                description: keyField.error ? "That isn't the right shape. A key has 25 letters and numbers in five groups."
-                    : "Windows 11 Pro, from a sticker or an email"
+                title: qsTr("Product key")
+                description: keyField.error ? qsTr("That isn't the right shape. A key has 25 letters and numbers in five groups.")
+                    : qsTr("Windows 11 Pro, from a sticker or an email")
                 descriptionColor: keyField.error ? UI.Style.danger : UI.Style.inkMuted
                 leading: Item {}
 
@@ -77,16 +91,16 @@ Page {
                 width: parent.width
                 interactive: true
                 onClicked: Setup.office = !Setup.office
-                title: "Install Microsoft Office"
-                description: "Optional. Word, Excel, PowerPoint and Outlook. Needs a subscription or an Office licence."
+                title: qsTr("Install Microsoft Office")
+                description: qsTr("Optional. Word, Excel, PowerPoint and Outlook. Needs a subscription or an Office licence.")
                 leading: UI.CheckBox {
                     checked: Setup.office
-                    Accessible.name: "Install Microsoft Office"
+                    Accessible.name: qsTr("Install Microsoft Office")
                     onToggled: Setup.office = checked
                 }
 
                 UI.Label {
-                    text: "4 GB"
+                    text: qsTr("%1 GB").arg(4)
                     size: 12
                     color: UI.Style.inkMuted
                 }
@@ -95,17 +109,17 @@ Page {
             OptionRow {
                 width: parent.width
                 visible: Setup.office
-                title: "Your Office plan"
-                description: "Personal or Family, Business, Work or school, or a product key"
+                title: qsTr("Your Office plan")
+                description: qsTr("Personal or Family, Business, Work or school, or a product key")
                 leading: Item {}
 
                 UI.ComboBox {
-                    Accessible.name: "Office plan"
+                    Accessible.name: qsTr("Office plan")
                     model: [
-                        { value: "personal", text: "Personal or Family" },
-                        { value: "business", text: "Business" },
-                        { value: "work", text: "Work or school" },
-                        { value: "key", text: "Product key" }
+                        { value: "personal", text: qsTr("Personal or Family") },
+                        { value: "business", text: qsTr("Business") },
+                        { value: "work", text: qsTr("Work or school") },
+                        { value: "key", text: qsTr("Product key") }
                     ]
                     currentIndex: model.findIndex(o => o.value === Setup.officePlan)
                     onActivated: Setup.officePlan = currentValue
@@ -116,11 +130,11 @@ Page {
                 width: parent.width
                 interactive: true
                 onClicked: Setup.openFiles = !Setup.openFiles
-                title: "Open Windows files in Windows apps"
-                description: "Double-clicking a .docx, .xlsx or .pptx opens it in Word, Excel or PowerPoint"
+                title: qsTr("Open Windows files in Windows apps")
+                description: qsTr("Double-clicking a .docx, .xlsx or .pptx opens it in Word, Excel or PowerPoint")
                 leading: UI.CheckBox {
                     checked: Setup.openFiles
-                    Accessible.name: "Open Windows files in Windows apps"
+                    Accessible.name: qsTr("Open Windows files in Windows apps")
                     onToggled: Setup.openFiles = checked
                 }
             }
@@ -138,7 +152,7 @@ Page {
         spacing: 10
 
         Heading {
-            text: "Speed and memory"
+            text: qsTr("Speed and memory")
         }
 
         UI.Card {
@@ -149,18 +163,18 @@ Page {
 
                 OptionRow {
                     width: parent.width
-                    title: "When no Windows app is open"
+                    title: qsTr("When no Windows app is open")
                     // The board's line, with the 15 minutes the service now waits
                     // before saving to disk.
-                    description: "Kept ready in memory for short breaks, saved to disk after 15 minutes or on battery"
+                    description: qsTr("Kept ready in memory for short breaks, saved to disk after 15 minutes or on battery")
 
                     UI.ComboBox {
-                        Accessible.name: "When no Windows app is open"
+                        Accessible.name: qsTr("When no Windows app is open")
                         model: [
-                            { value: "automatic", text: "Automatic" },
-                            { value: "memory", text: "Keep ready in memory" },
-                            { value: "disk", text: "Save to disk" },
-                            { value: "shutdown", text: "Shut down Windows" }
+                            { value: "automatic", text: qsTr("Automatic") },
+                            { value: "memory", text: qsTr("Keep ready in memory") },
+                            { value: "disk", text: qsTr("Save to disk") },
+                            { value: "shutdown", text: qsTr("Shut down Windows") }
                         ]
                         currentIndex: model.findIndex(o => o.value === Setup.whenIdle)
                         onActivated: Setup.whenIdle = currentValue
@@ -169,12 +183,12 @@ Page {
 
                 OptionRow {
                     width: parent.width
-                    title: "Memory Windows mode can use"
-                    description: (Setup.memoryLabel.length > 0 ? "This PC has " + Setup.memoryLabel + ". " : "")
-                        + "More helps big spreadsheets. Unused memory is handed back."
+                    title: qsTr("Memory Windows mode can use")
+                    description: Setup.memoryLabel.length > 0 ? qsTr("This PC has %1. More helps big spreadsheets. Unused memory is handed back.").arg(Setup.memoryLabel)
+                        : qsTr("More helps big spreadsheets. Unused memory is handed back.")
 
                     UI.ComboBox {
-                        Accessible.name: "Memory limit"
+                        Accessible.name: qsTr("Memory limit")
                         model: Setup.memoryChoices
                         currentIndex: model.findIndex(o => o.value === Setup.memoryGb)
                         onActivated: Setup.memoryGb = currentValue
@@ -184,11 +198,11 @@ Page {
                 OptionRow {
                     width: parent.width
                     visible: Setup.hyperThreadingAvailable
-                    title: "Use every processor thread"
-                    description: "Faster heavy apps, one less CPU-flaw protection for the whole PC. Needs a restart."
+                    title: qsTr("Use every processor thread")
+                    description: qsTr("Faster heavy apps, one less CPU-flaw protection for the whole PC. Needs a restart.")
 
                     UI.Toggle {
-                        text: checked ? "On" : "Off"
+                        text: checked ? qsTr("On") : qsTr("Off")
                         checked: Setup.hyperThreading
                         onToggled: Setup.hyperThreading = checked
                     }
@@ -202,7 +216,7 @@ Page {
         spacing: 10
 
         Heading {
-            text: "Your files"
+            text: qsTr("Your files")
         }
 
         UI.Card {
@@ -210,8 +224,8 @@ Page {
 
             OptionRow {
                 width: parent.width
-                title: "Folders Windows apps can see"
-                description: "Word and Excel save straight into these"
+                title: qsTr("Folders Windows apps can see")
+                description: qsTr("Word and Excel save straight into these")
 
                 Repeater {
                     model: Setup.folders
@@ -226,7 +240,7 @@ Page {
                         UI.Label {
                             id: folderName
                             anchors.centerIn: parent
-                            text: parent.modelData
+                            text: page.folderName(parent.modelData)
                             size: 12
                             color: UI.Style.accentText
                         }
@@ -264,15 +278,16 @@ Page {
 
             UI.Label {
                 id: termsText
-                readonly property string plain: "I accept Microsoft's licence terms for Windows 11" + (Setup.office ? " and Office" : "")
+                readonly property string plain: Setup.office ? qsTr("I accept Microsoft's licence terms for Windows 11 and Office") : qsTr("I accept Microsoft's licence terms for Windows 11")
                 anchors.verticalCenter: parent.verticalCenter
                 // Rich text, for links in the accent without an underline.
                 textFormat: Text.RichText
                 size: 13
                 elide: Text.ElideNone
-                text: "I accept Microsoft's licence terms for "
-                    + page.link("https://www.microsoft.com/en-us/useterms/retail/windows/11/useterms_retail_windows_11_english.htm", "Windows 11")
-                    + (Setup.office ? " and " + page.link("https://www.microsoft.com/en-gb/useterms", "Office") : "")
+                readonly property string windowsLink: page.link("https://www.microsoft.com/en-us/useterms/retail/windows/11/useterms_retail_windows_11_english.htm", "Windows 11")
+                text: Setup.office
+                    ? qsTr("I accept Microsoft's licence terms for %1 and %2").arg(windowsLink).arg(page.link("https://www.microsoft.com/en-gb/useterms", "Office"))
+                    : qsTr("I accept Microsoft's licence terms for %1").arg(windowsLink)
                 onLinkActivated: link => Setup.openUrl(link)
 
                 HoverHandler {
@@ -284,7 +299,7 @@ Page {
 
     buttons: [
         UI.Button {
-            text: "Back"
+            text: qsTr("Back")
             enabled: !page.busy
             onClicked: page.back()
         },

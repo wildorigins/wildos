@@ -43,8 +43,8 @@ FocusScope {
         .concat(lights.camera.uses.map(u => Object.assign({ device: "camera" }, u)))
         .sort((a, b) => a.since - b.since)
     readonly property var idle: [
-        { name: "Microphone", info: lights.microphone, path: Glyphs.micOff, busy: lights.micInUse },
-        { name: "Camera", info: lights.camera, path: Glyphs.cameraOff, busy: lights.cameraInUse }
+        { name: qsTr("Microphone"), info: lights.microphone, path: Glyphs.micOff, busy: lights.micInUse },
+        { name: qsTr("Camera"), info: lights.camera, path: Glyphs.cameraOff, busy: lights.cameraInUse }
     ].filter(d => !d.busy)
 
     Connections {
@@ -116,8 +116,8 @@ FocusScope {
         }
 
         TwoLines {
-            title: switchRow.name === "camera" ? "Camera" : "Microphone"
-            detail: "Off here blocks it for every app."
+            title: switchRow.name === "camera" ? qsTr("Camera") : qsTr("Microphone")
+            detail: qsTr("Off here blocks it for every app.")
         }
 
         UI.Toggle {
@@ -125,8 +125,8 @@ FocusScope {
             // prompt leaves the switch where the device really is.
             checked: !switchRow.device.blocked && panel.lights.requestCount >= 0
             locked: switchRow.device.maximum
-            lockedReason: "Maximum protection keeps the camera off"
-            Accessible.name: switchRow.name === "camera" ? "Camera" : "Microphone"
+            lockedReason: qsTr("Maximum protection keeps the camera off")
+            Accessible.name: switchRow.name === "camera" ? qsTr("Camera") : qsTr("Microphone")
             onToggled: panel.lights.setAllowed(switchRow.name, checked)
         }
     }
@@ -179,14 +179,16 @@ FocusScope {
                 }
 
                 TwoLines {
-                    title: useRow.modelData.app + " is using the " + panel.lights.deviceWord(useRow.modelData.device)
-                    detail: "Since " + panel.lights.timeText(useRow.modelData.since) + "."
+                    title: useRow.modelData.device === "camera" ? qsTr("%1 is using the camera").arg(useRow.modelData.app)
+                        : qsTr("%1 is using the microphone").arg(useRow.modelData.app)
+                    detail: qsTr("Since %1.").arg(panel.lights.timeText(useRow.modelData.since))
                 }
 
                 UI.Button {
                     visible: useRow.modelData.stoppable === true
-                    text: "Stop"
-                    Accessible.name: "Stop " + useRow.modelData.app + " using the " + panel.lights.deviceWord(useRow.modelData.device)
+                    text: qsTr("Stop")
+                    Accessible.name: useRow.modelData.device === "camera" ? qsTr("Stop %1 using the camera").arg(useRow.modelData.app)
+                        : qsTr("Stop %1 using the microphone").arg(useRow.modelData.app)
                     onClicked: panel.lights.stopUse(useRow.modelData.key)
                 }
             }
@@ -244,7 +246,7 @@ FocusScope {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Amber is the microphone. Green is the camera."
+                text: qsTr("Amber is the microphone. Green is the camera.")
                 size: 12.5
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
@@ -255,8 +257,8 @@ FocusScope {
                 // The link's own padding sits outside the panel's edge, so
                 // its words line up with the switches above.
                 Layout.rightMargin: -4
-                text: "This week"
-                Accessible.name: "This week's camera and microphone use in History"
+                text: qsTr("This week")
+                Accessible.name: qsTr("This week's camera and microphone use in History")
                 onClicked: panel.lights.openHistory()
             }
         }

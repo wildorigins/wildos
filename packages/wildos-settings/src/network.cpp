@@ -489,7 +489,7 @@ void NetworkSettings::modifyCurrent(const QString &busyKey, const QStringList &s
             setBusy(QString());
             m_profiles.clear();
             refresh();
-            Q_EMIT failed(failTitle, QStringLiteral("NetworkManager did not accept the change, so this network is set up as it was."));
+            Q_EMIT failed(failTitle, tr("NetworkManager did not accept the change, so this network is set up as it was."));
             return;
         }
         const auto finish = [this, failTitle](bool up, const QString &) {
@@ -497,7 +497,7 @@ void NetworkSettings::modifyCurrent(const QString &busyKey, const QStringList &s
             m_profiles.clear();
             refresh();
             if (!up) {
-                Q_EMIT failed(failTitle, QStringLiteral("The change is saved, but the network did not reconnect with it. Try turning Wi-Fi off and on."));
+                Q_EMIT failed(failTitle, tr("The change is saved, but the network did not reconnect with it. Try turning Wi-Fi off and on."));
             }
         };
         const QStringList up{QStringLiteral("connection"), QStringLiteral("up"), uuid};
@@ -528,23 +528,23 @@ void NetworkSettings::setDns(const QString &choice, const QString &custom)
     const bool ipv4 = NetShared::ipv4TakesDns(str(p.value(QStringLiteral("ipv4")), "method"));
     const bool ipv6 = NetShared::ipv6TakesDns(str(p.value(QStringLiteral("ipv6")), "method"));
     m_current.insert(QStringLiteral("dns"), choice);
-    modifyCurrent(QStringLiteral("dns"), NetShared::dnsModifyArgs(choice, splitServers(custom), ipv4, ipv6), false, QStringLiteral("DNS was not changed"));
+    modifyCurrent(QStringLiteral("dns"), NetShared::dnsModifyArgs(choice, splitServers(custom), ipv4, ipv6), false, tr("DNS was not changed"));
 }
 
 QString NetworkSettings::checkCustomDns(const QString &custom) const
 {
     const QStringList entries = splitServers(custom);
     if (entries.isEmpty()) {
-        return QStringLiteral("Type the address of at least one DNS server.");
+        return tr("Type the address of at least one DNS server.");
     }
     static const QRegularExpression hostName(QStringLiteral("^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$"));
     for (const QString &entry : entries) {
         if (QHostAddress(NetShared::serverAddress(entry)).isNull()) {
-            return QStringLiteral("%1 is not an IP address.").arg(entry.section(QLatin1Char('#'), 0, 0));
+            return tr("%1 is not an IP address.").arg(entry.section(QLatin1Char('#'), 0, 0));
         }
         const QString name = entry.section(QLatin1Char('#'), 1);
         if (entry.contains(QLatin1Char('#')) && !hostName.match(name).hasMatch()) {
-            return QStringLiteral("%1 is not a server name.").arg(name);
+            return tr("%1 is not a server name.").arg(name);
         }
     }
     return QString();
@@ -553,13 +553,13 @@ QString NetworkSettings::checkCustomDns(const QString &custom) const
 QString NetworkSettings::checkAddress(const QString &address, const QString &mask, const QString &gateway) const
 {
     if (QHostAddress(address.trimmed()).protocol() != QAbstractSocket::IPv4Protocol) {
-        return QStringLiteral("Type an IP address such as 192.168.1.42.");
+        return tr("Type an IP address such as 192.168.1.42.");
     }
     if (prefixFromMask(mask) < 0) {
-        return QStringLiteral("Type a subnet mask such as 255.255.255.0.");
+        return tr("Type a subnet mask such as 255.255.255.0.");
     }
     if (!gateway.trimmed().isEmpty() && QHostAddress(gateway.trimmed()).protocol() != QAbstractSocket::IPv4Protocol) {
-        return QStringLiteral("Type a gateway address such as 192.168.1.1.");
+        return tr("Type a gateway address such as 192.168.1.1.");
     }
     return QString();
 }
@@ -582,7 +582,7 @@ void NetworkSettings::setAddress(bool automatic, const QString &address, const Q
             settings << NetShared::dnsModifyArgs(QStringLiteral("quad9"), {}, true, false, true);
         }
     }
-    modifyCurrent(QStringLiteral("address"), settings, false, QStringLiteral("The IP address was not changed"));
+    modifyCurrent(QStringLiteral("address"), settings, false, tr("The IP address was not changed"));
 }
 
 // The new address only takes effect on joining again, so the network
@@ -594,14 +594,14 @@ void NetworkSettings::setPrivateAddress(bool on)
     const QString off = wifi ? QStringLiteral("permanent") : QStringLiteral("preserve");
     m_current.insert(QStringLiteral("privateAddress"), on);
     const QString private_ = wifi ? QStringLiteral("random") : QStringLiteral("stable");
-    modifyCurrent(QStringLiteral("private"), {key, on ? private_ : off}, true, QStringLiteral("The hardware address was not changed"));
+    modifyCurrent(QStringLiteral("private"), {key, on ? private_ : off}, true, tr("The hardware address was not changed"));
 }
 
 void NetworkSettings::setMetered(bool on)
 {
     m_current.insert(QStringLiteral("metered"), on);
     modifyCurrent(QStringLiteral("metered"), {QStringLiteral("connection.metered"), on ? QStringLiteral("yes") : QStringLiteral("no")}, false,
-                  QStringLiteral("Metered connection was not changed"));
+                  tr("Metered connection was not changed"));
 }
 
 void NetworkSettings::forget(const QString &uuid)
@@ -614,7 +614,7 @@ void NetworkSettings::forget(const QString &uuid)
         setBusy(QString());
         scheduleRefresh();
         if (!ok) {
-            Q_EMIT failed(QStringLiteral("The network was not forgotten"), QStringLiteral("NetworkManager did not remove it. Try again."));
+            Q_EMIT failed(tr("The network was not forgotten"), tr("NetworkManager did not remove it. Try again."));
         }
     });
 }
@@ -632,7 +632,7 @@ void NetworkSettings::setVpnActive(const QString &uuid, bool on)
             watcher->deleteLater();
             if (watcher->isError()) {
                 qWarning() << "VPN" << name << watcher->error().message();
-                Q_EMIT failed(name + QStringLiteral(" did not connect"), QStringLiteral("Check that you are online, then try again."));
+                Q_EMIT failed(tr("%1 did not connect").arg(name), tr("Check that you are online, then try again."));
                 Q_EMIT vpnsChanged();
             }
             scheduleRefresh();
@@ -665,9 +665,9 @@ void NetworkSettings::setKillSwitch(bool on)
         process->deleteLater();
         setBusy(QString());
         if (code == 126 || code == 127) {
-            Q_EMIT failed(QStringLiteral("The kill switch was not changed"), QStringLiteral("The password was not given."));
+            Q_EMIT failed(tr("The kill switch was not changed"), tr("The password was not given."));
         } else if (code != 0) {
-            Q_EMIT failed(QStringLiteral("The kill switch was not changed"), QStringLiteral("Wild OS could not change it. Try again."));
+            Q_EMIT failed(tr("The kill switch was not changed"), tr("Wild OS could not change it. Try again."));
         }
         // Whatever happened, the switch shows the file again.
         Q_EMIT killSwitchChanged();
@@ -681,31 +681,31 @@ void NetworkSettings::setKillSwitch(bool on)
 QString NetworkSettings::checkWireGuard(const QVariantMap &details) const
 {
     if (details.value(QStringLiteral("name")).toString().trimmed().isEmpty()) {
-        return QStringLiteral("Give the VPN a name.");
+        return tr("Give the VPN a name.");
     }
     const QString endpoint = details.value(QStringLiteral("endpoint")).toString().trimmed();
     static const QRegularExpression endpointShape(QStringLiteral("^(\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9.-]+):[0-9]{1,5}$"));
     if (!endpointShape.match(endpoint).hasMatch()) {
-        return QStringLiteral("Type the server with its port, such as vpn.example.com:51820.");
+        return tr("Type the server with its port, such as vpn.example.com:51820.");
     }
     if (!isWireGuardKey(details.value(QStringLiteral("publicKey")).toString())) {
-        return QStringLiteral("The server's public key is 44 characters ending in =.");
+        return tr("The server's public key is 44 characters ending in =.");
     }
     if (!isWireGuardKey(details.value(QStringLiteral("privateKey")).toString())) {
-        return QStringLiteral("Your private key is 44 characters ending in =.");
+        return tr("Your private key is 44 characters ending in =.");
     }
     const QStringList addresses = splitServers(details.value(QStringLiteral("address")).toString());
     if (addresses.isEmpty()) {
-        return QStringLiteral("Type the address your provider gave this computer, such as 10.64.0.2/32.");
+        return tr("Type the address your provider gave this computer, such as 10.64.0.2/32.");
     }
     for (const QString &address : addresses) {
         if (QHostAddress::parseSubnet(address).first.isNull() && QHostAddress(address).isNull()) {
-            return QStringLiteral("%1 is not an IP address.").arg(address);
+            return tr("%1 is not an IP address.").arg(address);
         }
     }
     for (const QString &server : splitServers(details.value(QStringLiteral("dns")).toString())) {
         if (QHostAddress(server).isNull()) {
-            return QStringLiteral("%1 is not an IP address.").arg(server);
+            return tr("%1 is not an IP address.").arg(server);
         }
     }
     return QString();
@@ -734,7 +734,7 @@ void NetworkSettings::addWireGuard(const QVariantMap &details)
     QTemporaryDir dir;
     QFile file(dir.filePath(QStringLiteral("typed.conf")));
     if (!dir.isValid() || !file.open(QIODevice::WriteOnly)) {
-        Q_EMIT failed(QStringLiteral("The VPN was not added"), QStringLiteral("Wild OS could not write its details down. Try again."));
+        Q_EMIT failed(tr("The VPN was not added"), tr("Wild OS could not write its details down. Try again."));
         return;
     }
     file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
@@ -751,7 +751,7 @@ void NetworkSettings::importVpn(const QUrl &url)
     const QString path = url.isLocalFile() ? url.toLocalFile() : url.toString();
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        Q_EMIT failed(QStringLiteral("The VPN was not added"), QStringLiteral("That file could not be opened."));
+        Q_EMIT failed(tr("The VPN was not added"), tr("That file could not be opened."));
         return;
     }
     const QString text = QString::fromUtf8(file.read(256 * 1024));
@@ -761,7 +761,7 @@ void NetworkSettings::importVpn(const QUrl &url)
     } else if (text.contains(QRegularExpression(QStringLiteral("^\\s*(remote|client|dev\\s+tun|<ca>)"), QRegularExpression::MultilineOption))) {
         type = QStringLiteral("openvpn");
     } else {
-        Q_EMIT failed(QStringLiteral("The VPN was not added"), QStringLiteral("That file is not a WireGuard or OpenVPN connection."));
+        Q_EMIT failed(tr("The VPN was not added"), tr("That file is not a WireGuard or OpenVPN connection."));
         return;
     }
     importFile(path, type, QFileInfo(path).completeBaseName());
@@ -785,7 +785,7 @@ void NetworkSettings::importFile(const QString &path, const QString &type, const
         source = dir->filePath(interfaceFor(name, taken) + QStringLiteral(".conf"));
         if (!dir->isValid() || !QFile::copy(path, source)) {
             setBusy(QString());
-            Q_EMIT failed(QStringLiteral("The VPN was not added"), QStringLiteral("That file could not be read."));
+            Q_EMIT failed(tr("The VPN was not added"), tr("That file could not be read."));
             return;
         }
         QFile::setPermissions(source, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
@@ -795,9 +795,9 @@ void NetworkSettings::importFile(const QString &path, const QString &type, const
               const auto match = QRegularExpression(QStringLiteral("\\(([0-9a-fA-F-]{36})\\)")).match(output);
               if (!ok || !match.hasMatch()) {
                   setBusy(QString());
-                  Q_EMIT failed(QStringLiteral("The VPN was not added"),
-                                type == QLatin1String("openvpn") ? QStringLiteral("NetworkManager could not read that OpenVPN file.")
-                                                                 : QStringLiteral("NetworkManager could not read that WireGuard file."));
+                  Q_EMIT failed(tr("The VPN was not added"),
+                                type == QLatin1String("openvpn") ? tr("NetworkManager could not read that OpenVPN file.")
+                                                                 : tr("NetworkManager could not read that WireGuard file."));
                   return;
               }
               // A VPN starts only when the person turns it on.
@@ -806,7 +806,7 @@ void NetworkSettings::importFile(const QString &path, const QString &type, const
                     [this, name](bool, const QString &) {
                         setBusy(QString());
                         scheduleRefresh();
-                        Q_EMIT done(name + QStringLiteral(" added"), QStringLiteral("Turn it on with its switch whenever you want to use it."));
+                        Q_EMIT done(tr("%1 added").arg(name), tr("Turn it on with its switch whenever you want to use it."));
                     });
           });
 }

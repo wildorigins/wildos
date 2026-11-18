@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Calendar
+Name[fr]=Calendrier
 GenericName=Calendar
+GenericName[fr]=Calendrier
 Comment=Your events, with Google, iCloud and CalDAV calendars
+Comment[fr]=Vos événements, avec les calendriers Google, iCloud et CalDAV
 Exec=wildos-calendar
 Icon=org.wildos.calendar
 Terminal=false

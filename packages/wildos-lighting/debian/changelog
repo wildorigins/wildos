@@ -1,3 +1,13 @@
+wildos-lighting (0.2.0) trixie; urgency=medium
+
+  * Runs the effects chosen on Cooler's Lighting page, over OpenRGB's SDK
+    protocol: one effect across every part, parts set on their own, zone
+    names, shapes, counts and sections, and Flash.
+  * Until something is chosen in Cooler, the lighting follows the taskbar
+    underglow exactly as before.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 12:00:00 +0000
+
 wildos-lighting (0.1.0) trixie; urgency=medium
 
   * Keyboard and mouse lighting that follows the taskbar underglow, through

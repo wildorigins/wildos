@@ -3,16 +3,17 @@ pragma Singleton
 import QtQuick
 import WildOS.UI as UI
 
-// The board's colours that WildOS.UI has no token for: the green of
-// "nothing is sent" and of removed details, the log's source names, and the
-// plain fields and panes of this window. Light values are the dark ones
+// The board's colours that WildOS.UI has no token for: the log's source
+// names, and the plain fields and panes of this window. The green of
+// "nothing is sent" and of removed details is the system's success green,
+// with the board's lighter washes of it. Light values are the dark ones
 // carried over the way Style carries its own.
 QtObject {
     readonly property bool dark: UI.Style.dark
-    readonly property color green: UI.Style.contrast ? "#7cf0a8" : dark ? "#5fd38d" : "#1b7a48"
-    readonly property color greenFill: dark ? Qt.rgba(95 / 255, 211 / 255, 141 / 255, 0.07) : Qt.rgba(27 / 255, 122 / 255, 72 / 255, 0.07)
-    readonly property color greenEdge: dark ? Qt.rgba(95 / 255, 211 / 255, 141 / 255, 0.2) : Qt.rgba(27 / 255, 122 / 255, 72 / 255, 0.25)
-    readonly property color tokenFill: dark ? Qt.rgba(95 / 255, 211 / 255, 141 / 255, 0.12) : Qt.rgba(27 / 255, 122 / 255, 72 / 255, 0.10)
+    readonly property color green: UI.Style.success
+    readonly property color greenFill: Qt.rgba(green.r, green.g, green.b, 0.07)
+    readonly property color greenEdge: Qt.rgba(green.r, green.g, green.b, dark ? 0.2 : 0.25)
+    readonly property color tokenFill: UI.Style.successSoft
     readonly property color source: dark ? "#c9a6ff" : "#6a3fc2"
     readonly property color field: UI.Style.tone(0.05)
     readonly property color fieldEdge: UI.Style.tone(0.10)

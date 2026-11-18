@@ -71,7 +71,19 @@ QAction *shortcut(QObject *parent, const QString &name, const QString &text, con
 
 int runService(int argc, char **argv)
 {
+    // No window ever opens here: the shortcuts arrive over D-Bus. Connected
+    // to the display, this Qt sets up OpenGL at start-up all the same, which
+    // held about 35 MB for as long as the session lasted; without a
+    // connection the service takes 2. kaccess, Orca and the on-screen
+    // keyboard, started from here, get the session's setting back.
+    const QByteArray platform = qgetenv("QT_QPA_PLATFORM");
+    qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
+    if (platform.isEmpty()) {
+        qunsetenv("QT_QPA_PLATFORM");
+    } else {
+        qputenv("QT_QPA_PLATFORM", platform);
+    }
     app.setApplicationName(QStringLiteral("wildos-access"));
     app.setQuitOnLastWindowClosed(false);
 

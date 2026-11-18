@@ -1,0 +1,34 @@
+wildos-cooler (0.1.3) trixie; urgency=medium
+
+  * The GPU's temperature is read on PCs with NVIDIA's own driver packages,
+    which leave out nvidia-smi: Cooler now asks the driver's NVML library.
+  * With the GPU chosen, the name above the number says GPU.
+  * With both chosen, the CPU's and the GPU's temperatures stand side by
+    side, each with its name, instead of taking turns. Last minute still
+    takes turns, as its line follows one temperature.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 21:00:00 +0000
+
+wildos-cooler (0.1.2) trixie; urgency=medium
+
+  * Choose whose temperature the cooler's screen shows: the CPU, the GPU,
+    or both taking turns every five seconds (Screen, Temperature).
+  * The smaller writing on every face is larger, so it can be read on the
+    cooler's screen.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 18:30:00 +0000
+
+wildos-cooler (0.1.1) trixie; urgency=medium
+
+  * When Wild OS shuts down or restarts, Cooler finishes the picture it is
+    sending to the cooler's screen before it lets go, so the cooler is not
+    left half way through one.
+  * The RGB ring face shows on PCs with an NVIDIA graphics card.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 17:30:00 +0000
+
+wildos-cooler (0.1.0) trixie; urgency=medium
+
+  * Initial release.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 10:00:00 +0000

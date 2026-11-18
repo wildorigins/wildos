@@ -90,7 +90,7 @@ Item {
 
                 UI.Label {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Wild OS security"
+                    text: qsTr("Wild OS security")
                     size: 13
                     color: UI.Style.accentText
                 }
@@ -98,7 +98,7 @@ Item {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Allow " + (Agent.appName.length > 0 ? Agent.appName : "this app") + " to make changes to this computer?"
+                text: Agent.appName.length > 0 ? qsTr("Allow %1 to make changes to this computer?").arg(Agent.appName) : qsTr("Allow this app to make changes to this computer?")
                 size: 20
                 font.weight: UI.Style.weightSemiBold
                 lineHeightMode: Text.FixedHeight
@@ -131,7 +131,7 @@ Item {
 
                         UI.Label {
                             Layout.fillWidth: true
-                            text: Agent.appName.length > 0 ? Agent.appName : "An app"
+                            text: Agent.appName.length > 0 ? Agent.appName : qsTr("An app")
                             size: 14
                             font.weight: UI.Style.weightSemiBold
                         }
@@ -157,9 +157,9 @@ Item {
 
                             UI.Label {
                                 Layout.fillWidth: true
-                                text: Agent.trust === "verified" ? "Verified: part of Wild OS"
-                                    : Agent.trust === "unverified" ? "Not verified. " + Agent.why
-                                    : "Checking where it comes from"
+                                text: Agent.trust === "verified" ? qsTr("Verified: part of Wild OS")
+                                    : Agent.trust === "unverified" ? qsTr("Not verified. %1").arg(Agent.why)
+                                    : qsTr("Checking where it comes from")
                                 size: 12
                                 color: Agent.trust === "unverified" ? UI.Style.warning : UI.Style.inkAlpha(0.78, 0.72)
                                 wrapMode: Text.Wrap
@@ -185,7 +185,7 @@ Item {
                 spacing: 6
 
                 UI.Label {
-                    text: "Administrator"
+                    text: qsTr("Administrator")
                     size: 13
                     font.weight: UI.Style.weightMedium
                 }
@@ -194,7 +194,7 @@ Item {
                     Layout.fillWidth: true
                     model: Agent.people
                     currentIndex: Agent.person
-                    Accessible.name: "Administrator"
+                    Accessible.name: qsTr("Administrator")
                     onActivated: index => Agent.choose(index)
                 }
             }
@@ -205,9 +205,9 @@ Item {
 
                 UI.Label {
                     id: passwordLabel
-                    text: Agent.forSelf ? "Your password (" + card.who.text + ")"
-                        : Agent.people.length > 1 ? "Password for " + card.who.text
-                        : "Administrator password (" + card.who.text + ")"
+                    text: Agent.forSelf ? qsTr("Your password (%1)").arg(card.who.text)
+                        : Agent.people.length > 1 ? qsTr("Password for %1").arg(card.who.text)
+                        : qsTr("Administrator password (%1)").arg(card.who.text)
                     size: 13
                     font.weight: UI.Style.weightMedium
                 }
@@ -217,7 +217,22 @@ Item {
                     UI.NoPaste {}
                     Layout.fillWidth: true
                     implicitHeight: 40
-                    echoMode: TextInput.Password
+                    // Readable only while the eye is held down, as on
+                    // Windows. Meanwhile it cannot be copied, by key or
+                    // from the menu.
+                    echoMode: reveal.visible && reveal.pressed ? TextInput.Normal : TextInput.Password
+                    textMenu: echoMode === TextInput.Password
+                    trailing: UI.IconButton {
+                        id: reveal
+                        visible: password.text.length > 0 && !Agent.busy
+                        width: 28
+                        height: 28
+                        radius: UI.Style.radiusXs
+                        iconName: "eye"
+                        iconSize: 15
+                        tip: qsTr("Show password")
+                        focusPolicy: Qt.NoFocus
+                    }
                     enabled: !card.waiting
                     readOnly: Agent.busy
                     error: Agent.error.length > 0
@@ -229,13 +244,27 @@ Item {
                         }
                     }
                     Keys.onEscapePressed: Agent.cancel()
+                    Keys.onPressed: event => {
+                        if (echoMode !== TextInput.Password && (event.matches(StandardKey.Copy) || event.matches(StandardKey.Cut))) {
+                            event.accepted = true;
+                        }
+                    }
+
+                    // A click in shown text would put a selection where a
+                    // middle click pastes from.
+                    MouseArea {
+                        width: parent.width - parent.rightPadding
+                        height: parent.height
+                        visible: password.echoMode !== TextInput.Password
+                        acceptedButtons: Qt.AllButtons
+                    }
                 }
 
                 UI.Label {
                     Layout.fillWidth: true
                     visible: Agent.error.length > 0 || card.waiting
                     text: card.waiting
-                        ? "Too many wrong tries. Try again in " + Agent.waitSeconds + (Agent.waitSeconds === 1 ? " second." : " seconds.")
+                        ? (Agent.waitSeconds === 1 ? qsTr("Too many wrong tries. Try again in 1 second.") : qsTr("Too many wrong tries. Try again in %1 seconds.").arg(Agent.waitSeconds))
                         : Agent.error
                     size: 12
                     color: UI.Style.danger
@@ -248,7 +277,7 @@ Item {
                     Layout.fillWidth: true
                     visible: text.length > 0 && Agent.error.length === 0 && !card.waiting
                     text: Agent.info.length > 0 ? Agent.info
-                        : Agent.fingerprint && !Agent.busy && !Agent.listening ? "Or leave it empty and select Yes, then touch the fingerprint reader."
+                        : Agent.fingerprint && !Agent.busy && !Agent.listening ? qsTr("Or leave it empty and select Yes, then touch the fingerprint reader.")
                         : ""
                     size: 12
                     color: UI.Style.inkMuted
@@ -259,7 +288,7 @@ Item {
 
             UI.LinkButton {
                 Layout.leftMargin: -4
-                text: card.detailsShown ? "Hide details" : "Show more details"
+                text: card.detailsShown ? qsTr("Hide details") : qsTr("Show more details")
                 onClicked: card.detailsShown = !card.detailsShown
             }
 
@@ -342,7 +371,7 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: 40
                 kind: "primary"
-                text: "Yes"
+                text: qsTr("Yes")
                 busy: Agent.busy
                 enabled: card.canSubmit
                 onClicked: card.submit()
@@ -351,7 +380,7 @@ Item {
             UI.Button {
                 Layout.fillWidth: true
                 implicitHeight: 40
-                text: "No"
+                text: qsTr("No")
                 onClicked: Agent.cancel()
             }
         }

@@ -22,7 +22,7 @@ T.AbstractButton {
     hoverEnabled: true
     focusPolicy: Qt.TabFocus
     Accessible.role: Accessible.PageTab
-    Accessible.name: badge > 0 ? text + ", " + badge : working ? text + ", installing" : text
+    Accessible.name: badge > 0 ? qsTr("%1, %2").arg(text).arg(badge) : working ? qsTr("%1, installing").arg(text) : text
     Accessible.selected: current
 
     background: Rectangle {

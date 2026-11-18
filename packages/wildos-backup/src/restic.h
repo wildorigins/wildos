@@ -24,6 +24,9 @@ public:
         Locked = 11,
         WrongPassword = 12,
         Interrupted = 130,
+        // Not restic's: it never ran, so there is no exit code of its own.
+        NotStarted = -1,
+        NoPipe = -2,
     };
 
     Restic(const QString &repository, const QByteArray &password, QObject *parent = nullptr);
@@ -52,6 +55,9 @@ public:
     }
     // A sentence for an exit code and restic's error output.
     static QString explain(int code, const QString &error);
+    // restic's own last line, to show behind Details, when explain() has
+    // only its general sentence for what went wrong; empty otherwise.
+    static QString detail(int code, const QString &error);
 
     static QString program();
 

@@ -161,7 +161,14 @@ int main(int argc, char *argv[])
         bus.registerService(serviceName);
     }
 
-    return app.exec();
+    const int code = app.exec();
+    // The name is given up before the Store is taken down, which can take a
+    // few seconds: a Store opened again in that time then starts as a new
+    // one, instead of handing over to this one and showing nothing.
+    if (bus.isConnected()) {
+        bus.unregisterService(serviceName);
+    }
+    return code;
 }
 
 #include "main.moc"

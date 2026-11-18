@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Tables
+Name[fr]=Tables
 GenericName=Spreadsheets
+GenericName[fr]=Feuilles de calcul
 Comment=Make budgets, lists and sums, and open and save Excel files
+Comment[fr]=Faites des budgets, des listes et des calculs, et ouvrez et enregistrez des fichiers Excel
 Exec=wildos-tables %U
 Icon=org.wildos.tables
 Terminal=false

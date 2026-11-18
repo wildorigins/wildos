@@ -21,15 +21,16 @@ Item {
     id: starting
 
     required property var modelData
+    required property Item tasksRoot
 
-    width: Style.button
+    width: tasksRoot.buttonWidth
     height: Style.button
 
     readonly property bool reducedMotion: Kirigami.Units.longDuration <= 1
 
     Accessible.role: Accessible.Button
     Accessible.name: modelData.name || modelData.desktopId
-    Accessible.description: "Starting"
+    Accessible.description: qsTr("Starting")
 
     HoverHandler {
         id: hover
@@ -68,6 +69,10 @@ Item {
         width: Style.icon
         height: Style.icon
         source: starting.modelData.icon || "application-x-executable"
+    }
+
+    TaskbarTip {
+        text: starting.modelData.name || ""
     }
 
     Rectangle {

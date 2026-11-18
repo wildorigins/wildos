@@ -8,14 +8,17 @@
 struct passwd;
 
 /* The key that opens an account's KWallet, and the root-held copy of it
- * kept for the one account that signs in automatically.
+ * kept for the account that signs in automatically and for accounts that
+ * sign in with a PIN.
  *
  * pam_kwallet makes the key from the password typed at sign-in and the
  * salt in ~/.local/share/kwalletd/kdewallet.salt, then has kwalletd open
- * the wallet with it. An automatic sign-in types no password, so for that
- * account Wild OS keeps the same key in /var/lib/wildos/wallet/<uid>.key,
- * readable by root only, on the encrypted root filesystem. Everything here
- * that writes there runs as root.
+ * the wallet with it. An automatic sign-in types no password and a PIN
+ * sign-in types only the PIN, so for those accounts Wild OS keeps the same
+ * key in /var/lib/wildos/wallet/<uid>.key, readable by root only. On an
+ * encrypted disk that is as safe as the disk; on a disk that is not
+ * encrypted, whoever can read the disk from outside can read the key.
+ * Everything here that writes there runs as root.
  */
 namespace WalletKey
 {
@@ -38,10 +41,18 @@ QByteArray accountSalt(const struct passwd *pw);
  * Empty when there is none. */
 QString autoLoginUser();
 
+/* Whether the account has a PIN (Settings > Accounts > Sign-in options),
+ * which wildos-pin keeps in /var/lib/wildos/pin/NAME. */
+bool hasPin(const QByteArray &name);
+
+/* Takes the note wildos-pin leaves when the account signs in with its PIN
+ * on the sign-in screen. True once per such sign-in. */
+bool takePinSignIn(uid_t uid);
+
 bool store(uid_t uid, const QByteArray &key);
 QByteArray load(uid_t uid);
 void forget(uid_t uid);
-/* Removes every key but the auto sign-in account's, so a key never
- * outlives the setting it was kept for. */
+/* Removes every key but the auto sign-in account's and those of accounts
+ * with a PIN, so a key never outlives the setting it was kept for. */
 void forgetOthers();
 }

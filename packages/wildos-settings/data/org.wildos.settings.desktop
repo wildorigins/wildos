@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Settings
+Name[fr]=Paramètres
 GenericName=Settings
+GenericName[fr]=Paramètres
 Comment=Change how Wild OS looks and works
+Comment[fr]=Modifiez l'apparence et le fonctionnement de Wild OS
 Exec=wildos-settings
 Icon=preferences-system
 Categories=Settings;System;

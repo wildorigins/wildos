@@ -17,7 +17,7 @@ Rectangle {
     signal addAccount()
     signal signIn(string accountId)
 
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRest
     border.width: 1
     border.color: UI.Style.borderSubtle
@@ -63,7 +63,7 @@ Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
                     implicitHeight: 34
-                    radius: 6
+                    radius: UI.Style.radiusXs
                     color: page.section === modelData.id ? UI.Style.surfaceSelected : navMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
 
                     MouseArea {
@@ -315,7 +315,7 @@ Rectangle {
                                 placeholderText: qsTr("For example, your name and phone number")
                                 placeholderTextColor: UI.Style.inkPlaceholder
                                 background: Rectangle {
-                                    radius: 6
+                                    radius: UI.Style.radiusXs
                                     color: UI.Style.surfaceSunken
                                     border.width: 1
                                     border.color: UI.Style.borderField

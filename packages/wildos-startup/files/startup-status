@@ -1,0 +1,5 @@
+#!/bin/sh
+# What Settings > System > Start-up disk shows. Reading it needs root (other
+# disks are opened to look for systems) but changes nothing, so it has a
+# polkit action of its own that asks for no password.
+exec /usr/libexec/wildos/startup-ctl status

@@ -49,34 +49,37 @@ PageScroll {
     readonly property real total: Object.keys(sizes).reduce((sum, k) => sum + (ticked[k] ? sizes[k] : 0), 0)
 
     readonly property var rows: [
-        { key: "bin", icon: "trash-round", title: "Recycle Bin", shown: true, bytes: sizes.bin,
-          description: bin.files > 0 ? Format.plural(bin.files, "file", "files") + " you have already deleted." : "The Recycle Bin is empty." },
+        { key: "bin", icon: "trash-round", title: qsTr("Recycle Bin"), shown: true, bytes: sizes.bin,
+          description: bin.files > 0 ? (bin.files === 1 ? qsTr("1 file you have already deleted.") : qsTr("%1 files you have already deleted.").arg(bin.files)) : qsTr("The Recycle Bin is empty.") },
         // The system half can fail (no polkit agent, say): then its rows
         // say nothing they could not check.
-        { key: "restorePoints", icon: "history", title: "Old restore points", shown: points.available !== false, bytes: sizes.restorePoints,
+        { key: "restorePoints", icon: "history", title: qsTr("Old restore points"), shown: points.available !== false, bytes: sizes.restorePoints,
           unknown: FreeSpace.systemFailed,
-          description: FreeSpace.systemFailed ? "Keeps the newest 3 and removes the older ones."
-              : points.count > 0 ? "Keeps the newest 3 and removes " + points.count + " older " + (points.count === 1 ? "one." : "ones.")
-              : "Keeps the newest 3. There are no older ones." },
-        { key: "updates", icon: "download-round", title: "Update files already installed", shown: true, bytes: sizes.updates,
+          description: FreeSpace.systemFailed ? qsTr("Keeps the newest 3 and removes the older ones.")
+              : points.count === 1 ? qsTr("Keeps the newest 3 and removes 1 older one.")
+              : points.count > 0 ? qsTr("Keeps the newest 3 and removes %1 older ones.").arg(points.count)
+              : qsTr("Keeps the newest 3. There are no older ones.") },
+        { key: "updates", icon: "download-round", title: qsTr("Update files already installed"), shown: true, bytes: sizes.updates,
           unknown: FreeSpace.systemFailed,
-          description: "Downloads that are no longer needed." },
-        { key: "caches", icon: "layers", title: "App caches", shown: true, bytes: sizes.caches,
-          description: "Temporary files that apps rebuild when they need them." },
-        { key: "leftovers", icon: "package", title: "Leftovers from removed apps", shown: true, bytes: sizes.leftovers,
-          description: leftoverApps > 0 ? "Settings kept for " + Format.plural(leftoverApps, "app", "apps") + " you removed. Clearing them means a reinstall starts fresh."
-              : "Nothing is left from apps you removed." },
+          description: qsTr("Downloads that are no longer needed.") },
+        { key: "caches", icon: "layers", title: qsTr("App caches"), shown: true, bytes: sizes.caches,
+          description: qsTr("Temporary files that apps rebuild when they need them.") },
+        { key: "leftovers", icon: "package", title: qsTr("Leftovers from removed apps"), shown: true, bytes: sizes.leftovers,
+          description: leftoverApps === 1 ? qsTr("Settings kept for 1 app you removed. Clearing them means a reinstall starts fresh.")
+              : leftoverApps > 0 ? qsTr("Settings kept for %1 apps you removed. Clearing them means a reinstall starts fresh.").arg(leftoverApps)
+              : qsTr("Nothing is left from apps you removed.") },
         // Only where Windows mode is set up.
-        { key: "winmode", icon: "app-window", title: "Unused space inside Windows mode", shown: winmode.available === true,
+        { key: "winmode", icon: "app-window", title: qsTr("Unused space inside Windows mode"), shown: winmode.available === true,
           bytes: sizes.winmode, unknown: winmode.known !== true,
           // Windows trims its own free space, so it has to be running; a
           // tick here is kept for Tidy up automatically to do it then.
-          description: winmode.known === true ? "Shrinks the Windows disk file. Windows mode needs to stay on while it runs."
-              : "Shrinks the Windows disk file. This can only be done while Windows mode is on." },
-        { key: "downloads", icon: "folder-round", title: "Large files in Downloads", shown: true,
+          description: winmode.known === true ? qsTr("Shrinks the Windows disk file. Windows mode needs to stay on while it runs.")
+              : qsTr("Shrinks the Windows disk file. This can only be done while Windows mode is on.") },
+        { key: "downloads", icon: "folder-round", title: qsTr("Large files in Downloads"), shown: true,
           bytes: ticked.downloads ? chosenDownloadBytes : downloads.bytes,
-          description: downloads.count > 0 ? Format.plural(downloads.count, "file", "files") + " over 100 MB that you have not opened for 90 days."
-              : "No files over 100 MB that you have left unopened for 90 days." }
+          description: downloads.count === 1 ? qsTr("1 file over 100 MB that you have not opened for 90 days.")
+              : downloads.count > 0 ? qsTr("%1 files over 100 MB that you have not opened for 90 days.").arg(downloads.count)
+              : qsTr("No files over 100 MB that you have left unopened for 90 days.") }
     ]
 
     function ticksFrom(list) {
@@ -103,11 +106,11 @@ PageScroll {
 
     readonly property var tickedItems: rows.filter(r => r.shown && ticked[r.key] && (r.key !== "downloads" || chosenDownloads.length > 0))
     readonly property string clearList: {
-        const names = { bin: "the Recycle Bin", restorePoints: "old restore points", updates: "update files",
-            caches: "app caches", leftovers: "leftovers from removed apps", winmode: "unused space inside Windows mode",
-            downloads: Format.plural(chosenDownloads.length, "file", "files") + " from Downloads" };
+        const names = { bin: qsTr("the Recycle Bin"), restorePoints: qsTr("old restore points"), updates: qsTr("update files"),
+            caches: qsTr("app caches"), leftovers: qsTr("leftovers from removed apps"), winmode: qsTr("unused space inside Windows mode"),
+            downloads: chosenDownloads.length === 1 ? qsTr("1 file from Downloads") : qsTr("%1 files from Downloads").arg(chosenDownloads.length) };
         const list = tickedItems.map(r => names[r.key]);
-        return list.length <= 1 ? (list[0] || "") : list.slice(0, -1).join(", ") + " and " + list[list.length - 1];
+        return list.length <= 1 ? (list[0] || "") : qsTr("%1 and %2").arg(list.slice(0, -1).join(", ")).arg(list[list.length - 1]);
     }
 
     Component.onCompleted: FreeSpace.measure()
@@ -125,18 +128,18 @@ PageScroll {
             const skipped = Object.keys(items).reduce((all, k) => all.concat(items[k].skipped || []), []);
             const notes = [];
             if (skipped.some(s => s.why === "an update is running")) {
-                notes.push("Update files were left because an update is running.");
+                notes.push(qsTr("Update files were left because an update is running."));
             }
             if (skipped.some(s => s.why === "an open app is using it")) {
-                notes.push("Files that open apps are using were left.");
+                notes.push(qsTr("Files that open apps are using were left."));
             }
             if (skipped.some(s => s.why === "Windows mode isn't on")) {
-                notes.push("Windows mode was off, so its disk was not shrunk.");
+                notes.push(qsTr("Windows mode was off, so its disk was not shrunk."));
             }
             if (freed > 0) {
-                notice.show(System.formatBytes(freed) + " was freed up", notes.join(" "), false);
+                notice.show(qsTr("%1 was freed up").arg(System.formatBytes(freed)), notes.join(" "), false);
             } else {
-                notice.show("Nothing was freed up", notes.length > 0 ? notes.join(" ") : "There was nothing left to clear.", notes.length > 0);
+                notice.show(qsTr("Nothing was freed up"), notes.length > 0 ? notes.join(" ") : qsTr("There was nothing left to clear."), notes.length > 0);
             }
         }
     }
@@ -189,9 +192,9 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: !page.measured ? "Measuring what can be freed"
-                            : page.total > 0 ? System.formatBytes(page.total) + " can be freed safely"
-                            : page.tickedItems.length > 0 ? "There is nothing to free up" : "Tick what you want cleared"
+                        text: !page.measured ? qsTr("Measuring what can be freed")
+                            : page.total > 0 ? qsTr("%1 can be freed safely").arg(System.formatBytes(page.total))
+                            : page.tickedItems.length > 0 ? qsTr("There is nothing to free up") : qsTr("Tick what you want cleared")
                         size: 16.5
                         font.weight: UI.Style.weightSemiBold
                         wrapMode: Text.Wrap
@@ -199,8 +202,8 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: "This disk is " + System.formatBytes(FreeSpace.diskTotal) + " with " + System.formatBytes(FreeSpace.diskFree)
-                            + " free. Nothing here touches your documents, pictures or settings."
+                        text: qsTr("This disk is %1 with %2 free. Nothing here touches your documents, pictures or settings.")
+                            .arg(System.formatBytes(FreeSpace.diskTotal)).arg(System.formatBytes(FreeSpace.diskFree))
                         size: 13
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
@@ -209,8 +212,8 @@ PageScroll {
 
                 UI.Button {
                     kind: "primary"
-                    text: FreeSpace.cleaning ? "Freeing up space"
-                        : page.measured && page.total > 0 ? "Free up " + System.formatBytes(page.total) : "Free up space"
+                    text: FreeSpace.cleaning ? qsTr("Freeing up space")
+                        : page.measured && page.total > 0 ? qsTr("Free up %1").arg(System.formatBytes(page.total)) : qsTr("Free up space")
                     busy: FreeSpace.measuring || FreeSpace.cleaning
                     enabled: page.measured && !FreeSpace.cleaning && page.total > 0
                     onClicked: confirmDialog.open()
@@ -271,7 +274,7 @@ PageScroll {
                         UI.LinkButton {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: row.isDownloads && page.downloads.count > 0
-                            text: "Review"
+                            text: qsTr("Review")
                             onClicked: reviewDialog.open()
                         }
 
@@ -279,7 +282,7 @@ PageScroll {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 70
                             horizontalAlignment: Text.AlignRight
-                            text: !page.measured ? "" : row.modelData.unknown ? "Unknown" : System.formatBytes(row.modelData.bytes)
+                            text: !page.measured ? "" : row.modelData.unknown ? qsTr("Unknown") : System.formatBytes(row.modelData.bytes)
                             size: 13.5
                             font.features: ({ "tnum": 1 })
                             color: row.on ? UI.Style.ink : UI.Style.inkMuted
@@ -294,8 +297,8 @@ PageScroll {
 
             UI.SettingRow {
                 width: parent.width
-                title: "Tidy up automatically"
-                description: "When less than 10% of the disk is free, clear the ticked items. You are told what was removed."
+                title: qsTr("Tidy up automatically")
+                description: qsTr("When less than 10% of the disk is free, clear the ticked items. You are told what was removed.")
                 leading: PathIcon {
                     anchors.verticalCenter: parent.verticalCenter
                     name: "refresh-cw"
@@ -305,6 +308,7 @@ PageScroll {
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: FreeSpace.autoOn
+                    Accessible.name: qsTr("Tidy up automatically")
                     onToggled: {
                         const want = checked;
                         // Follows FreeSpace, so a password that was not
@@ -328,7 +332,7 @@ PageScroll {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "There is no registry to clean and nothing to defragment on Wild OS. This page is only about getting space back."
+                text: qsTr("There is no registry to clean and nothing to defragment on Wild OS. This page is only about getting space back.")
                 size: 12.5
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
@@ -338,12 +342,12 @@ PageScroll {
 
     UI.Dialog {
         id: confirmDialog
-        title: "Free up " + System.formatBytes(page.total) + "?"
-        text: "This removes " + page.clearList + " for good. Your documents, pictures and settings are not touched"
-            + (page.ticked.leftovers ? ", apart from the settings of apps you removed." : ".")
+        title: qsTr("Free up %1?").arg(System.formatBytes(page.total))
+        text: (page.ticked.leftovers ? qsTr("This removes %1 for good. Your documents, pictures and settings are not touched, apart from the settings of apps you removed.")
+            : qsTr("This removes %1 for good. Your documents, pictures and settings are not touched.")).arg(page.clearList)
         buttons: [
             UI.Button {
-                text: "Free up " + System.formatBytes(page.total)
+                text: qsTr("Free up %1").arg(System.formatBytes(page.total))
                 kind: "primary"
                 onClicked: {
                     confirmDialog.close();
@@ -351,7 +355,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: confirmDialog.close()
             }
         ]
@@ -363,8 +367,8 @@ PageScroll {
         property var picks: []
 
         size: "large"
-        title: "Large files in Downloads"
-        text: "Files over 100 MB in Downloads that you have not opened for 90 days. Tick the ones to remove. Nothing else in Downloads is touched."
+        title: qsTr("Large files in Downloads")
+        text: qsTr("Files over 100 MB in Downloads that you have not opened for 90 days. Tick the ones to remove. Nothing else in Downloads is touched.")
         onOpened: picks = page.chosenDownloads.slice()
 
         Column {
@@ -378,10 +382,11 @@ PageScroll {
                     required property var modelData
                     width: parent.width
                     title: modelData.name
-                    description: "Not opened since " + Format.day(new Date(modelData.last * 1000))
+                    description: qsTr("Not opened since %1").arg(Format.dayText(new Date(modelData.last * 1000)))
                     leading: UI.CheckBox {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: reviewDialog.picks.indexOf(fileRow.modelData.path) >= 0
+                        Accessible.name: fileRow.modelData.name
                         onToggled: {
                             const p = reviewDialog.picks.filter(x => x !== fileRow.modelData.path);
                             if (checked) {
@@ -402,7 +407,7 @@ PageScroll {
 
         buttons: [
             UI.Button {
-                text: "Done"
+                text: qsTr("Done")
                 kind: "primary"
                 onClicked: {
                     page.chosenDownloads = reviewDialog.picks;
@@ -411,7 +416,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: reviewDialog.close()
             }
         ]

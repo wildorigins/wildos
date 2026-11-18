@@ -1,0 +1,4 @@
+# Links rather than files in /etc/grub.d, as wildos-base does, so the
+# scripts are not configuration files and updates replace them.
+usr/lib/wildos/grub.d/14_wildos_startup etc/grub.d/14_wildos_startup
+usr/lib/wildos/grub.d/16_wildos_startup etc/grub.d/16_wildos_startup

@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Wild OS defaults for Slides: the settings that only exist with LibreOffice Impress
+     installed. Shipped by wildos-slides, which requires it; wildos.xcd holds the rest. -->
+<oor:data xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oor="http://openoffice.org/2001/registry">
+  <dependency file="main"/>
+  <dependency file="impress"/>
+
+  <oor:component-data oor:package="org.openoffice" oor:name="Setup">
+    <node oor:name="Office">
+      <node oor:name="Factories">
+        <node oor:name="com.sun.star.presentation.PresentationDocument">
+          <prop oor:name="ooSetupFactoryWindowAttributes"><value>,,,;4;</value></prop>
+          <prop oor:name="ooSetupFactoryDefaultFilter"><value>Impress MS PowerPoint 2007 XML</value></prop>
+          <prop oor:name="ooSetupFactoryUIName"><value xml:lang="en-US">Slides</value></prop>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- Alt+Q opens Find a command, as in Word; the search field shows it. -->
+  <oor:component-data oor:package="org.openoffice.Office" oor:name="Accelerators">
+    <node oor:name="PrimaryKeys">
+      <node oor:name="Modules">
+        <node oor:name="com.sun.star.presentation.PresentationDocument">
+          <node oor:name="Q_MOD2" oor:op="replace">
+            <prop oor:name="Command"><value xml:lang="en-US">.uno:CommandPopup</value></prop>
+          </node>
+        </node>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- No tool bars under the ribbon, as in Write and Tables. Impress shows its
+       own (drawing, text, table...) whenever its saved state says they are
+       visible, ribbon or not, so they start hidden here: the state LibreOffice
+       itself saves when someone switches to a ribbon. Classic menus and
+       toolbars, in View, brings them back. -->
+  <oor:component-data oor:package="org.openoffice.Office.UI" oor:name="ImpressWindowState">
+    <node oor:name="UIElements">
+      <node oor:name="States">
+        <node oor:name="private:resource/toolbar/extrusionobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/commontaskbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/formtextobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/formsfilterbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/formsnavigationbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/fontworkobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/outlinetoolbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/slideviewobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/standardbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/textobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/toolbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/tableobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/gluepointsobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/bezierobjectbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/viewerbar"><prop oor:name="Visible"><value>false</value></prop></node>
+        <node oor:name="private:resource/toolbar/masterviewtoolbar"><prop oor:name="Visible"><value>false</value></prop></node>
+      </node>
+    </node>
+  </oor:component-data>
+
+  <!-- The presenter's own screen during a show, as on Slides board 12.20: a top
+       bar with the file name, slide count, timer and clock; the slide on screen
+       large on the left under ON SCREEN NOW; NEXT and NOTES on the right; and
+       along the bottom Back, Next, Pointer, Pen, Black screen, a strip of slide
+       thumbnails and End show. Listing the TopBar view is what makes the Wild OS
+       LibreOffice arrange it this way; the pieces themselves are its own. -->
+  <oor:component-data oor:package="org.openoffice.Office" oor:name="PresenterScreen">
+    <node oor:name="PresenterScreenSettings">
+    <node oor:name="ToolBars">
+      <node oor:name="ToolBar" oor:op="replace">
+        <node oor:name="Entries">
+          <node oor:name="wa" oor:op="replace">
+            <prop oor:name="Name"><value>PillBack</value></prop>
+            <prop oor:name="Type"><value>Button</value></prop>
+            <node oor:name="Normal">
+              <prop oor:name="Text"><value xml:lang="en-US">Back</value><value xml:lang="fr">Précédente</value></prop>
+              <node oor:name="Icon"><prop oor:name="NormalFileName"><value>bitmaps/WildOSBack.png</value></prop></node>
+              <prop oor:name="Action"><value>vnd.org.libreoffice.presenterscreen:PrevSlide</value></prop>
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>14</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>FFFFFF</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+          <node oor:name="wb" oor:op="replace">
+            <prop oor:name="Name"><value>PillNext</value></prop>
+            <prop oor:name="Type"><value>Button</value></prop>
+            <node oor:name="Normal">
+              <prop oor:name="Text"><value xml:lang="en-US">Next</value><value xml:lang="fr">Suivante</value></prop>
+              <node oor:name="Icon"><prop oor:name="NormalFileName"><value>bitmaps/WildOSNext.png</value></prop></node>
+              <prop oor:name="Action"><value>vnd.org.libreoffice.presenterscreen:NextSlide</value></prop>
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>14</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>FFFFFF</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+          <node oor:name="wc" oor:op="replace">
+            <prop oor:name="Name"><value>PillPointer</value></prop>
+            <prop oor:name="Type"><value>Button</value></prop>
+            <node oor:name="Normal">
+              <prop oor:name="Text"><value xml:lang="en-US">Pointer</value><value xml:lang="fr">Pointeur</value></prop>
+              <node oor:name="Icon"><prop oor:name="NormalFileName"><value>bitmaps/WildOSPointer.png</value></prop></node>
+              <prop oor:name="Action"><value>vnd.org.libreoffice.presenterscreen:UsePointer</value></prop>
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>14</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>FFFFFF</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+          <node oor:name="wd" oor:op="replace">
+            <prop oor:name="Name"><value>PillPen</value></prop>
+            <prop oor:name="Type"><value>Button</value></prop>
+            <node oor:name="Normal">
+              <prop oor:name="Text"><value xml:lang="en-US">Pen</value><value xml:lang="fr">Stylo</value></prop>
+              <node oor:name="Icon"><prop oor:name="NormalFileName"><value>bitmaps/WildOSPen.png</value></prop></node>
+              <prop oor:name="Action"><value>vnd.org.libreoffice.presenterscreen:UsePen</value></prop>
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>14</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>FFFFFF</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+          <node oor:name="we" oor:op="replace">
+            <prop oor:name="Name"><value>PillBlack</value></prop>
+            <prop oor:name="Type"><value>Button</value></prop>
+            <node oor:name="Normal">
+              <prop oor:name="Text"><value xml:lang="en-US">Black screen</value><value xml:lang="fr">Écran noir</value></prop>
+              <node oor:name="Icon"><prop oor:name="NormalFileName"><value>bitmaps/WildOSBlack.png</value></prop></node>
+              <prop oor:name="Action"><value>vnd.org.libreoffice.presenterscreen:BlackScreen</value></prop>
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>14</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>FFFFFF</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+        </node>
+      </node>
+      <node oor:name="TopBar" oor:op="replace">
+        <node oor:name="Entries">
+          <node oor:name="a" oor:op="replace">
+            <prop oor:name="Name"><value>DocumentTitle</value></prop>
+            <prop oor:name="Type"><value>Label</value></prop>
+            <node oor:name="Normal">
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>15</value></prop><prop oor:name="Style"><value>Bold</value></prop><prop oor:name="Color"><value>FFFFFF</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+          <node oor:name="b" oor:op="replace">
+            <prop oor:name="Name"><value>SlideNumber</value></prop>
+            <prop oor:name="Type"><value>Label</value></prop>
+            <node oor:name="Normal">
+              <prop oor:name="Text"><value xml:lang="en-US">Slide %CURRENT_SLIDE_NUMBER% of %SLIDE_COUNT%</value><value xml:lang="fr">Diapositive %CURRENT_SLIDE_NUMBER% sur %SLIDE_COUNT%</value></prop>
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>14</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>BBBBBC</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+        </node>
+      </node>
+      <node oor:name="TimeBar" oor:op="replace">
+        <node oor:name="Entries">
+          <node oor:name="a" oor:op="replace">
+            <prop oor:name="Type"><value>PresentationTimeLabel</value></prop>
+            <node oor:name="Normal">
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>26</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>FFFFFF</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+          <node oor:name="b" oor:op="replace">
+            <prop oor:name="Type"><value>CurrentTimeLabel</value></prop>
+            <node oor:name="Normal">
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>18</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>BBBBBC</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+        </node>
+      </node>
+      <node oor:name="EndBar" oor:op="replace">
+        <node oor:name="Entries">
+          <node oor:name="a" oor:op="replace">
+            <prop oor:name="Name"><value>PillEndShow</value></prop>
+            <prop oor:name="Type"><value>Button</value></prop>
+            <node oor:name="Normal">
+              <prop oor:name="Text"><value xml:lang="en-US">End show</value><value xml:lang="fr">Terminer</value></prop>
+              <node oor:name="Icon"><prop oor:name="NormalFileName"><value>bitmaps/WildOSEnd.png</value></prop></node>
+              <prop oor:name="Action"><value>vnd.org.libreoffice.presenterscreen:ExitPresenter</value></prop>
+              <node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>14</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>FF9A9A</value></prop><prop oor:name="Anchor"><value>Center</value></prop></node>
+            </node>
+          </node>
+        </node>
+      </node>
+    </node>
+    </node>
+    <node oor:name="Presenter">
+    <node oor:name="Themes">
+      <node oor:name="Theme_1">
+        <!-- The board's near-black, plain. -->
+        <node oor:name="Background"><prop oor:name="NormalFileName"><value></value></prop><prop oor:name="ReplacementColor"><value>FF0C0D10</value></prop></node>
+        <node oor:name="PaneStyles">
+          <!-- A small caps label over a pane and nothing round it. -->
+          <node oor:name="WildOSPane" oor:op="replace">
+            <prop oor:name="StyleName"><value>WildOSPaneStyle</value></prop>
+            <node oor:name="TitleFont"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>12</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Color"><value>868788</value></prop><prop oor:name="Anchor"><value>Left</value></prop><prop oor:name="YOffset"><value>-3</value></prop></node>
+            <node oor:name="InnerBorderSize"><prop oor:name="Left"><value>0</value></prop><prop oor:name="Top"><value>0</value></prop><prop oor:name="Right"><value>0</value></prop><prop oor:name="Bottom"><value>0</value></prop></node>
+            <node oor:name="OuterBorderSize"><prop oor:name="Left"><value>0</value></prop><prop oor:name="Top"><value>28</value></prop><prop oor:name="Right"><value>0</value></prop><prop oor:name="Bottom"><value>0</value></prop></node>
+          </node>
+          <node oor:name="WildOSBar" oor:op="replace">
+            <prop oor:name="StyleName"><value>WildOSBarStyle</value></prop>
+            <node oor:name="TitleFont"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Size"><value>12</value></prop><prop oor:name="Color"><value>868788</value></prop></node>
+            <node oor:name="InnerBorderSize"><prop oor:name="Left"><value>0</value></prop><prop oor:name="Top"><value>0</value></prop><prop oor:name="Right"><value>0</value></prop><prop oor:name="Bottom"><value>0</value></prop></node>
+            <node oor:name="OuterBorderSize"><prop oor:name="Left"><value>0</value></prop><prop oor:name="Top"><value>0</value></prop><prop oor:name="Right"><value>0</value></prop><prop oor:name="Bottom"><value>0</value></prop></node>
+          </node>
+        </node>
+        <node oor:name="ViewStyles">
+          <node oor:name="ViewStyle_2"><node oor:name="Font"><prop oor:name="FamilyName"><value>Albert Sans</value></prop><prop oor:name="Style"><value></value></prop><prop oor:name="Size"><value>21</value></prop><prop oor:name="Color"><value>FFFFFF</value></prop></node></node>
+          <node oor:name="ViewStyle_3"><node oor:name="Background"><prop oor:name="NormalFileName"><value></value></prop><prop oor:name="ReplacementColor"><value>FF0C0D10</value></prop></node></node>
+        </node>
+        <node oor:name="StyleAssociations">
+          <node oor:name="PreviewPane"><prop oor:name="StyleName"><value>WildOSPaneStyle</value></prop></node>
+          <node oor:name="NextSlidePreviewPane"><prop oor:name="StyleName"><value>WildOSPaneStyle</value></prop></node>
+          <node oor:name="NotesPane"><prop oor:name="StyleName"><value>WildOSPaneStyle</value></prop></node>
+          <node oor:name="ToolBarPane"><prop oor:name="StyleName"><value>WildOSBarStyle</value></prop></node>
+          <node oor:name="WildOSTopBarPane" oor:op="replace"><prop oor:name="ResourceURL"><value>private:resource/pane/Presenter/Pane7</value></prop><prop oor:name="StyleName"><value>WildOSBarStyle</value></prop></node>
+          <node oor:name="WildOSTimeBarPane" oor:op="replace"><prop oor:name="ResourceURL"><value>private:resource/pane/Presenter/Pane8</value></prop><prop oor:name="StyleName"><value>WildOSBarStyle</value></prop></node>
+          <node oor:name="WildOSEndBarPane" oor:op="replace"><prop oor:name="ResourceURL"><value>private:resource/pane/Presenter/Pane9</value></prop><prop oor:name="StyleName"><value>WildOSBarStyle</value></prop></node>
+          <node oor:name="WildOSStripPane" oor:op="replace"><prop oor:name="ResourceURL"><value>private:resource/pane/Presenter/Pane10</value></prop><prop oor:name="StyleName"><value>WildOSBarStyle</value></prop></node>
+        </node>
+      </node>
+    </node>
+    <node oor:name="Views">
+      <node oor:name="WildOSTopBar" oor:op="replace"><prop oor:name="ViewURL"><value>private:resource/view/Presenter/TopBar</value></prop><prop oor:name="IsOpaque"><value>false</value></prop></node>
+      <node oor:name="WildOSTimeBar" oor:op="replace"><prop oor:name="ViewURL"><value>private:resource/view/Presenter/TimeBar</value></prop><prop oor:name="IsOpaque"><value>false</value></prop></node>
+      <node oor:name="WildOSEndBar" oor:op="replace"><prop oor:name="ViewURL"><value>private:resource/view/Presenter/EndBar</value></prop><prop oor:name="IsOpaque"><value>false</value></prop></node>
+    </node>
+    <node oor:name="Layouts">
+      <node oor:name="DefaultLayout">
+        <node oor:name="Layout">
+          <node oor:name="WildOSTopBar" oor:op="replace"><prop oor:name="PaneURL"><value>private:resource/pane/Presenter/Pane7</value></prop><prop oor:name="ViewURL"><value>private:resource/view/Presenter/TopBar</value></prop><prop oor:name="RelativeX"><value>0.0</value></prop><prop oor:name="RelativeY"><value>0.0</value></prop><prop oor:name="RelativeWidth"><value>0.2</value></prop><prop oor:name="RelativeHeight"><value>0.1</value></prop></node>
+          <node oor:name="WildOSTimeBar" oor:op="replace"><prop oor:name="PaneURL"><value>private:resource/pane/Presenter/Pane8</value></prop><prop oor:name="ViewURL"><value>private:resource/view/Presenter/TimeBar</value></prop><prop oor:name="RelativeX"><value>0.0</value></prop><prop oor:name="RelativeY"><value>0.0</value></prop><prop oor:name="RelativeWidth"><value>0.2</value></prop><prop oor:name="RelativeHeight"><value>0.1</value></prop></node>
+          <node oor:name="WildOSEndBar" oor:op="replace"><prop oor:name="PaneURL"><value>private:resource/pane/Presenter/Pane9</value></prop><prop oor:name="ViewURL"><value>private:resource/view/Presenter/EndBar</value></prop><prop oor:name="RelativeX"><value>0.0</value></prop><prop oor:name="RelativeY"><value>0.0</value></prop><prop oor:name="RelativeWidth"><value>0.2</value></prop><prop oor:name="RelativeHeight"><value>0.1</value></prop></node>
+          <node oor:name="SlideSorter"><prop oor:name="PaneURL"><value>private:resource/pane/Presenter/Pane10</value></prop></node>
+        </node>
+      </node>
+    </node>
+    </node>
+  </oor:component-data>
+</oor:data>

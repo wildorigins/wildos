@@ -4,7 +4,62 @@
 #include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
+#include <QFont>
+#include <QImageReader>
+#include <QLocale>
+#include <QPageSize>
+#include <QPdfWriter>
+#include <QPrintDialog>
+#include <QPrinter>
 #include <QSaveFile>
+#include <QStandardPaths>
+#include <QTextBlock>
+#include <QTextCursor>
+#include <QTextDocument>
+
+namespace
+{
+// As wide as a picture is drawn in the note, in points on the page.
+constexpr int maxPictureWidth = 480;
+
+void fillPrintable(QTextDocument &out, const QString &markdown, const QString &dir)
+{
+    // Pictures are linked by a path from the note's folder.
+    out.setBaseUrl(QUrl::fromLocalFile(dir + u'/'));
+    QFont font(QStringLiteral("Albert Sans"));
+    font.setPointSizeF(11);
+    out.setDefaultFont(font);
+    out.setMarkdown(markdown);
+
+    struct Picture {
+        int position;
+        int length;
+        QTextImageFormat format;
+    };
+    QList<Picture> large;
+    for (QTextBlock block = out.begin(); block.isValid(); block = block.next()) {
+        for (QTextBlock::iterator it = block.begin(); !it.atEnd(); ++it) {
+            const QTextFragment fragment = it.fragment();
+            if (!fragment.isValid() || !fragment.charFormat().isImageFormat()) {
+                continue;
+            }
+            QTextImageFormat format = fragment.charFormat().toImageFormat();
+            const QSize size = QImageReader(out.baseUrl().resolved(QUrl(format.name())).toLocalFile()).size();
+            if (size.width() > maxPictureWidth && size.height() > 0) {
+                format.setWidth(maxPictureWidth);
+                format.setHeight(double(maxPictureWidth) * size.height() / size.width());
+                large.append({fragment.position(), fragment.length(), format});
+            }
+        }
+    }
+    for (const Picture &picture : std::as_const(large)) {
+        QTextCursor cursor(&out);
+        cursor.setPosition(picture.position);
+        cursor.setPosition(picture.position + picture.length, QTextCursor::KeepAnchor);
+        cursor.setCharFormat(picture.format);
+    }
+}
+}
 
 NoteDocument::NoteDocument(QObject *parent)
     : QObject(parent)
@@ -290,6 +345,66 @@ QString NoteDocument::markdown() const
     plain.bom.clear();
     plain.crlf = false;
     return QString::fromUtf8(NoteFile::serialize(plain));
+}
+
+QString NoteDocument::printable() const
+{
+    QString text = markdown();
+    // A note titled by its file name has no heading of its own to print.
+    if (m_parts.titleLine.isEmpty() && !title().isEmpty()) {
+        text.prepend(QStringLiteral("# ") + title() + QStringLiteral("\n\n"));
+    }
+    return text;
+}
+
+bool NoteDocument::print()
+{
+    if (m_path.isEmpty()) {
+        return false;
+    }
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setDocName(title());
+    QPrintDialog dialog(&printer);
+    dialog.setWindowTitle(tr("Print %1").arg(title()));
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+    QTextDocument out;
+    fillPrintable(out, printable(), noteDir());
+    out.print(&printer);
+    return true;
+}
+
+bool NoteDocument::exportPdf(const QUrl &url)
+{
+    const QString target = url.toLocalFile();
+    if (m_path.isEmpty() || target.isEmpty()) {
+        return false;
+    }
+    // Written beside the target and moved over it only when whole.
+    QSaveFile file(target);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return false;
+    }
+    {
+        QPdfWriter writer(&file);
+        writer.setTitle(title());
+        writer.setCreator(QStringLiteral("Wild OS Notes"));
+        writer.setPageSize(QPageSize(QLocale().measurementSystem() == QLocale::ImperialUSSystem ? QPageSize::Letter : QPageSize::A4));
+        QTextDocument out;
+        fillPrintable(out, printable(), noteDir());
+        out.print(&writer);
+    }
+    return file.commit();
+}
+
+QUrl NoteDocument::pdfUrl() const
+{
+    QString name = NoteFile::safeFileName(title());
+    if (name.isEmpty()) {
+        name = QFileInfo(m_path).completeBaseName();
+    }
+    return QUrl::fromLocalFile(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + u'/' + name + QStringLiteral(".pdf"));
 }
 
 void NoteDocument::reloadFromDisk(const QString &path)

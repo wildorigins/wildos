@@ -49,7 +49,7 @@ void Sharer::share(int row)
     auto config = m_model->configureJob(row);
     if (!config || !config->isReady()) {
         delete config;
-        Q_EMIT failed(QStringLiteral("That way of sharing is not available any more. Pick another."));
+        Q_EMIT failed(tr("That way of sharing is not available any more. Pick another."));
         return;
     }
     Purpose::Job *job = config->createJob();
@@ -57,7 +57,7 @@ void Sharer::share(int row)
     connect(job, &KJob::result, this, [this, job] {
         if (job->error()) {
             if (job->error() != KJob::KilledJobError) {
-                Q_EMIT failed(job->errorString().isEmpty() ? QStringLiteral("Sharing did not finish.") : job->errorString());
+                Q_EMIT failed(job->errorString().isEmpty() ? tr("Sharing did not finish.") : job->errorString());
             }
             return;
         }
@@ -66,7 +66,7 @@ void Sharer::share(int row)
             auto *mime = new QMimeData;
             mime->setText(link);
             KSystemClipboard::instance()->setMimeData(mime, QClipboard::Clipboard);
-            Q_EMIT finished(QStringLiteral("Link copied. Paste it wherever you want to share it."));
+            Q_EMIT finished(tr("Link copied. Paste it wherever you want to share it."));
         } else {
             Q_EMIT finished(QString());
         }

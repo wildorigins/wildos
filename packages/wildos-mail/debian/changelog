@@ -1,3 +1,25 @@
+wildos-mail (0.2.8) trixie; urgency=medium
+
+  * Calendar accounts (iCloud, Fastmail, Nextcloud and other CalDAV
+    servers) list their calendars straight after being added, instead of
+    only after the next sign-in.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 21:50:00 +0000
+
+wildos-mail (0.2.7) trixie; urgency=medium
+
+  * The eye button on password boxes shows the password again.
+  * French: clearer wording when a calendar account is added or removed.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 21:15:00 +0000
+
+wildos-mail (0.2.6) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-mail (0.2.5) trixie; urgency=medium
 
   * Every text box in Mail has the right-click menu with Cut, Copy,

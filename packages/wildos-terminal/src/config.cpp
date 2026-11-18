@@ -2,6 +2,7 @@
 #include "schemes.h"
 
 #include <KConfigGroup>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
@@ -32,7 +33,7 @@ QString shellName(const QString &path)
     if (!name.isEmpty()) {
         name[0] = name[0].toUpper();
     }
-    return name.isEmpty() ? QStringLiteral("Shell") : name;
+    return name.isEmpty() ? QCoreApplication::translate("Config", "Shell") : name;
 }
 
 QVariantMap makeProfile(const QString &id, const QString &name)
@@ -92,7 +93,9 @@ void Config::read()
     m_launchColumns = std::clamp(g.readEntry("LaunchColumns", 120), 20, 400);
     m_launchRows = std::clamp(g.readEntry("LaunchRows", 30), 5, 200);
     m_launchMaximised = g.readEntry("LaunchMaximised", false);
-    m_copyOnSelect = g.readEntry("CopyOnSelect", false);
+    // Selecting copies unless switched off: the quickest
+    // way to get a long link or an error out of the terminal.
+    m_copyOnSelect = g.readEntry("CopyOnSelect", true);
     m_pasteOnRightClick = g.readEntry("PasteOnRightClick", false);
     m_ctrlCopyPaste = g.readEntry("CtrlCopyPaste", true);
     m_warnMultilinePaste = g.readEntry("WarnMultilinePaste", true);
@@ -316,7 +319,7 @@ QString Config::newId() const
 QString Config::addProfile()
 {
     const QString id = newId();
-    m_profiles.append(makeProfile(id, QStringLiteral("New profile")));
+    m_profiles.append(makeProfile(id, tr("New profile")));
     writeProfiles();
     return id;
 }

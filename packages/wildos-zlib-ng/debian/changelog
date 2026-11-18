@@ -1,0 +1,6 @@
+wildos-zlib-ng (0.1.0) trixie; urgency=medium
+
+  * zlib-ng 2.3.3 as the system's zlib, with a check that falls back to
+    Debian's zlib whenever the two stop matching.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 23:30:00 +0000

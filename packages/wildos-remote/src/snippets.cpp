@@ -163,7 +163,7 @@ QVariantList Snippets::suggest(const QString &hostKey, const QString &typed) con
         out.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("history")},
                                {QStringLiteral("text"), matches[i].first},
                                {QStringLiteral("completion"), matches[i].first},
-                               {QStringLiteral("detail"), matches[i].second == 1 ? QStringLiteral("Used once") : QStringLiteral("Used %1 times").arg(matches[i].second)}});
+                               {QStringLiteral("detail"), matches[i].second == 1 ? tr("Used once") : tr("Used %1 times").arg(matches[i].second)}});
     }
     // A snippet whose command starts the same way, or whose name has the
     // last word typed in it.
@@ -180,7 +180,7 @@ QVariantList Snippets::suggest(const QString &hostKey, const QString &typed) con
                                    {QStringLiteral("text"), title},
                                    {QStringLiteral("completion"), command},
                                    {QStringLiteral("replace"), !byCommand},
-                                   {QStringLiteral("detail"), note.isEmpty() ? QStringLiteral("Snippet") : QStringLiteral("Snippet: ") + note}});
+                                   {QStringLiteral("detail"), note.isEmpty() ? tr("Snippet") : tr("Snippet: %1").arg(note)}});
             break;
         }
     }

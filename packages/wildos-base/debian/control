@@ -18,6 +18,8 @@ Depends:
  locales,
  systemd-zram-generator,
  systemd-oomd,
+ systemd-timesyncd,
+ wildos-zlib-ng,
 Description: Wild OS base system
  Identity and security layer of Wild OS. Pulls in the Kicksecure hardening
  packages (kernel and sysctl hardening, AppArmor profiles, secure time sync,

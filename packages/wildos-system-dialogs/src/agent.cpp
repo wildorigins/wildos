@@ -212,7 +212,7 @@ void Agent::startSession()
     m_listening = false;
     m_fingerEnd = FingerEnd::None;
     if (m_people.isEmpty()) {
-        setError(QStringLiteral("No account on this computer can allow this."));
+        setError(tr("No account on this computer can allow this."));
         return;
     }
     const Person &who = m_people.at(m_person);
@@ -263,7 +263,7 @@ void Agent::listen()
     m_listening = true;
     m_fingerEnd = FingerEnd::None;
     m_listenClock.start();
-    m_info = QStringLiteral("Touch the fingerprint reader, or type your password.");
+    m_info = tr("Touch the fingerprint reader, or type your password.");
     m_session->setResponse(QString());
     Q_EMIT stateChanged();
 }
@@ -308,23 +308,23 @@ void Agent::onMessage(const QString &text, bool error)
     const bool swipe = text.contains(QLatin1String("swipe"), Qt::CaseInsensitive);
     if (text.contains(QLatin1String("timed out"), Qt::CaseInsensitive)) {
         m_fingerEnd = FingerEnd::TimedOut;
-        m_error = QStringLiteral("No finger was read in time. Type your password, or leave it empty and try again.");
+        m_error = tr("No finger was read in time. Type your password, or leave it empty and try again.");
         m_info.clear();
     } else if (text.contains(QLatin1String("match"), Qt::CaseInsensitive)) {
         m_fingerEnd = FingerEnd::NoMatch;
-        m_error = QStringLiteral("That fingerprint wasn't recognised. Try again.");
+        m_error = tr("That fingerprint wasn't recognised. Try again.");
         m_info.clear();
     } else if (!error) {
         // After a finger that didn't match, pam_fprintd asks again at once;
         // the mismatch stays on screen until the next touch.
-        m_info = m_listening ? (swipe ? QStringLiteral("Swipe your finger across the fingerprint reader, or type your password.")
-                                      : QStringLiteral("Touch the fingerprint reader, or type your password."))
-            : swipe ? QStringLiteral("Swipe your finger across the fingerprint reader.")
-                    : QStringLiteral("Touch the fingerprint reader.");
+        m_info = m_listening ? (swipe ? tr("Swipe your finger across the fingerprint reader, or type your password.")
+                                      : tr("Touch the fingerprint reader, or type your password."))
+            : swipe ? tr("Swipe your finger across the fingerprint reader.")
+                    : tr("Touch the fingerprint reader.");
     } else {
         // The reader gave up (unplugged, or no touch in time).
         m_fingerEnd = FingerEnd::Broken;
-        m_error = QStringLiteral("The fingerprint reader didn't answer. Type your password instead.");
+        m_error = tr("The fingerprint reader didn't answer. Type your password instead.");
         m_info.clear();
     }
     Q_EMIT stateChanged();
@@ -415,9 +415,9 @@ void Agent::onCompleted(bool gained)
         } else {
             m_autoFinger = false;
             if (m_fingerEnd == FingerEnd::NoMatch) {
-                m_error = QStringLiteral("That fingerprint wasn't recognised. Type your password, or leave it empty and select Yes to try again.");
+                m_error = tr("That fingerprint wasn't recognised. Type your password, or leave it empty and select Yes to try again.");
             } else if (m_fingerEnd == FingerEnd::TimedOut) {
-                m_error = QStringLiteral("The fingerprint reader didn't answer. Type your password instead.");
+                m_error = tr("The fingerprint reader didn't answer. Type your password instead.");
             }
         }
         Q_EMIT stateChanged();
@@ -437,10 +437,10 @@ void Agent::onCompleted(bool gained)
     }
     if (m_failures % triesBeforeWait == 0) {
         m_waitSeconds = waitLength;
-        m_error = QStringLiteral("Too many wrong tries.");
+        m_error = tr("Too many wrong tries.");
         m_wait.start();
     } else if (m_error.isEmpty() || m_error.contains(QLatin1String("Authentication failure"), Qt::CaseInsensitive)) {
-        m_error = QStringLiteral("That password isn't right. Try again.");
+        m_error = tr("That password isn't right. Try again.");
     }
     Q_EMIT stateChanged();
     // Polkit's helper answers once per session, so another try needs a
@@ -492,7 +492,7 @@ void Agent::submit(const QString &password)
     if (m_demo) {
         if (password == QLatin1String("wrong")) {
             ++m_failures;
-            m_error = QStringLiteral("That password isn't right. Try again.");
+            m_error = tr("That password isn't right. Try again.");
             Q_EMIT stateChanged();
         } else {
             m_active = false;
@@ -553,13 +553,13 @@ QVariantList Agent::details() const
             list.append(QVariantMap{{QStringLiteral("label"), label}, {QStringLiteral("value"), value}});
         }
     };
-    add(QStringLiteral("Action"), m_request.actionId);
+    add(tr("Action"), m_request.actionId);
     const QString commandLine = !m_verdict.commandLine.isEmpty() ? m_verdict.commandLine : m_request.details.value(QStringLiteral("command_line"));
-    add(QStringLiteral("Program"), !commandLine.isEmpty() ? commandLine : m_verdict.program);
+    add(tr("Program"), !commandLine.isEmpty() ? commandLine : m_verdict.program);
     const QString pid = m_request.details.value(QStringLiteral("polkit.subject-pid"));
-    add(QStringLiteral("Asked by"), m_verdict.caller.isEmpty() ? QString() : pid.isEmpty() ? m_verdict.caller : m_verdict.caller + QStringLiteral(" (process ") + pid + QLatin1Char(')'));
-    add(QStringLiteral("Package"), m_verdict.package.isEmpty() ? QString() : m_verdict.origin.isEmpty() ? m_verdict.package : m_verdict.package + QStringLiteral(", from ") + m_verdict.origin);
-    add(QStringLiteral("Publisher"), m_verdict.vendor);
+    add(tr("Asked by"), m_verdict.caller.isEmpty() ? QString() : pid.isEmpty() ? m_verdict.caller : tr("%1 (process %2)").arg(m_verdict.caller, pid));
+    add(tr("Package"), m_verdict.package.isEmpty() ? QString() : m_verdict.origin.isEmpty() ? m_verdict.package : tr("%1, from %2").arg(m_verdict.package, m_verdict.origin));
+    add(tr("Publisher"), m_verdict.vendor);
     return list;
 }
 
@@ -607,7 +607,7 @@ void Agent::demo(const QString &kind)
         m_people = {{60001, QStringLiteral("sam"), QStringLiteral("Sam Carter")}, {60002, QStringLiteral("jo"), QStringLiteral("Jo Carter")}};
     }
     m_person = 0;
-    m_error = kind == QLatin1String("wrong") ? QStringLiteral("That password isn't right. Try again.") : QString();
+    m_error = kind == QLatin1String("wrong") ? tr("That password isn't right. Try again.") : QString();
     m_waitSeconds = 0;
     m_active = true;
     ++m_serial;

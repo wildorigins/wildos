@@ -12,11 +12,14 @@ UI.AppWindow {
     id: win
 
     deep: true
+    // Opened on its own from Settings, it would otherwise count as the
+    // app's main window.
+    rememberSize: false
     width: 480
     height: 560
     minimumWidth: 420
     minimumHeight: 480
-    title: "Choose what is removed"
+    title: qsTr("Choose what is removed")
 
     component Choice: ColumnLayout {
         id: choice
@@ -88,33 +91,33 @@ UI.AppWindow {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Right-click a file in Files and choose Remove personal details to save a copy without what is ticked here. The file itself stays as it is."
+                text: qsTr("Right-click a file in Files and choose Remove personal details to save a copy without what is ticked here. The file itself stays as it is.")
                 wrapMode: Text.Wrap
                 elide: Text.ElideNone
             }
 
             Choice {
-                text: "Location"
-                detail: "GPS position and place names, such as the city and country, in photos, videos and audio."
+                text: qsTr("Location")
+                detail: qsTr("GPS position and place names, such as the city and country, in photos, videos and audio.")
                 checked: Protection.removeLocation
                 onToggled: on => Protection.removeLocation = on
             }
             Choice {
-                text: "Device"
-                detail: "The phone or camera's make, model and serial numbers, the lens, the camera maker's own notes, and the program that made or last saved the file. In documents, the printer it was set up for."
+                text: qsTr("Device")
+                detail: qsTr("The phone or camera's make, model and serial numbers, the lens, the camera maker's own notes, and the program that made or last saved the file. In documents, the printer it was set up for.")
                 checked: Protection.removeDevice
                 onToggled: on => Protection.removeDevice = on
             }
             Choice {
-                text: "Author names"
-                detail: "Author, artist, owner and copyright names, and in documents who last saved it, the company, and the names on comments and tracked changes."
+                text: qsTr("Author names")
+                detail: qsTr("Author, artist, owner and copyright names, and in documents who last saved it, the company, and the names on comments and tracked changes.")
                 checked: Protection.removeAuthors
                 onToggled: on => Protection.removeAuthors = on
             }
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Works with photos, MP4 and MOV videos, MP3, FLAC and Ogg audio, PDFs, and Word, Excel, PowerPoint and OpenDocument files. Anything that shows in the picture or the text itself is kept, and so is the date it was made. Pictures inside a PDF keep their own details."
+                text: qsTr("Works with photos, MP4 and MOV videos, MP3, FLAC and Ogg audio, PDFs, and Word, Excel, PowerPoint and OpenDocument files. Anything that shows in the picture or the text itself is kept, and so is the date it was made. Pictures inside a PDF keep their own details.")
                 size: 12
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
@@ -141,7 +144,7 @@ UI.AppWindow {
 
             UI.Button {
                 kind: "primary"
-                text: "Close"
+                text: qsTr("Close")
                 onClicked: win.close()
             }
         }

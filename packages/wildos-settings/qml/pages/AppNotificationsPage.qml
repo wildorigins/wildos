@@ -15,24 +15,24 @@ PageScroll {
 
     function summary(app) {
         if (!app.enabled) {
-            return "Off";
+            return qsTr("Off");
         }
         const parts = [];
         if (app.banners) {
-            parts.push("Banners");
+            parts.push(qsTr("Banners"));
         }
         if (app.hasSound && app.sound) {
-            parts.push("Sounds");
+            parts.push(qsTr("Sounds"));
         }
         if (!app.banners && app.history) {
-            parts.push("Notification list only");
+            parts.push(qsTr("Notification list only"));
         }
         return parts.join(", ");
     }
 
     UI.Label {
         Layout.fillWidth: true
-        text: "Choose which apps can send you notifications. Select an app for banners, sounds and the notification list."
+        text: qsTr("Choose which apps can send you notifications. Select an app for banners, sounds and the notification list.")
         color: UI.Style.inkMuted
         wrapMode: Text.Wrap
         elide: Text.ElideNone
@@ -66,13 +66,13 @@ PageScroll {
                         description: page.summary(entry.modelData)
                         divider: false
                         interactive: true
-                        Accessible.description: entry.open ? "Hide this app's notification options" : "Show this app's notification options"
+                        Accessible.description: entry.open ? qsTr("Hide this app's notification options") : qsTr("Show this app's notification options")
                         onClicked: page.expanded = entry.open ? "" : entry.modelData.id
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: entry.modelData.enabled
-                            Accessible.name: "Notifications from " + entry.modelData.name
+                            Accessible.name: qsTr("Notifications from %1").arg(entry.modelData.name)
                             onToggled: AppNotifications.setEnabled(entry.modelData.id, checked)
                         }
 
@@ -89,14 +89,14 @@ PageScroll {
                         visible: entry.open
                         enabled: entry.modelData.enabled
                         leading: Item { width: 24; height: 1 }
-                        title: "Show notification banners"
-                        description: "Notifications pop up in the corner of the screen"
-                        status: entry.modelData.banners ? "On" : "Off"
+                        title: qsTr("Show notification banners")
+                        description: qsTr("Notifications pop up in the corner of the screen")
+                        status: entry.modelData.banners ? qsTr("On") : qsTr("Off")
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: entry.modelData.banners
-                            Accessible.name: "Show notification banners from " + entry.modelData.name
+                            Accessible.name: qsTr("Show notification banners from %1").arg(entry.modelData.name)
                             onToggled: AppNotifications.setBanners(entry.modelData.id, checked)
                         }
                     }
@@ -105,13 +105,13 @@ PageScroll {
                         visible: entry.open && entry.modelData.hasSound
                         enabled: entry.modelData.enabled
                         leading: Item { width: 24; height: 1 }
-                        title: "Play a sound when a notification arrives"
-                        status: entry.modelData.sound ? "On" : "Off"
+                        title: qsTr("Play a sound when a notification arrives")
+                        status: entry.modelData.sound ? qsTr("On") : qsTr("Off")
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: entry.modelData.sound
-                            Accessible.name: "Play a sound for notifications from " + entry.modelData.name
+                            Accessible.name: qsTr("Play a sound for notifications from %1").arg(entry.modelData.name)
                             onToggled: AppNotifications.setSound(entry.modelData.id, checked)
                         }
                     }
@@ -120,14 +120,14 @@ PageScroll {
                         visible: entry.open
                         enabled: entry.modelData.enabled
                         leading: Item { width: 24; height: 1 }
-                        title: "Show notifications in the notification list"
-                        description: "Notifications stay in the list after their banner goes"
-                        status: entry.modelData.history ? "On" : "Off"
+                        title: qsTr("Show notifications in the notification list")
+                        description: qsTr("Notifications stay in the list after their banner goes")
+                        status: entry.modelData.history ? qsTr("On") : qsTr("Off")
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: entry.modelData.history
-                            Accessible.name: "Show notifications from " + entry.modelData.name + " in the notification list"
+                            Accessible.name: qsTr("Show notifications from %1 in the notification list").arg(entry.modelData.name)
                             onToggled: AppNotifications.setHistory(entry.modelData.id, checked)
                         }
                     }
@@ -137,8 +137,8 @@ PageScroll {
             UI.SettingRow {
                 visible: AppNotifications.apps.length === 0
                 iconName: "bell"
-                title: "No apps have sent notifications yet"
-                description: "Apps appear here once they can notify you, each with a switch."
+                title: qsTr("No apps have sent notifications yet")
+                description: qsTr("Apps appear here once they can notify you, each with a switch.")
             }
         }
     }

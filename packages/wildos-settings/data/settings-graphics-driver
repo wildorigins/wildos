@@ -5,36 +5,147 @@
 # (org.wildos.settings.graphics-driver).
 #
 #   nvidia   install NVIDIA's driver. Stops with exit 4 when Debian's driver
-#            doesn't support this card (nvidia-detect decides). With Secure
-#            Boot on, the module is built here, so it is signed with this PC's
-#            own key (dkms makes one), and that key is queued for enrolment:
-#            the firmware asks for the code printed here at the next restart.
+#            doesn't support this card (nvidia-detect decides), 5 when the
+#            driver did not build or install whole (the open driver is put
+#            back), 6 when the download failed. With Secure Boot on, the
+#            module is built here, so it is signed with this PC's own key
+#            (dkms makes one), and that key is queued for enrolment: the
+#            firmware asks for the code printed here at the next restart.
 #   open     remove NVIDIA's driver; nouveau is back from the next start-up.
 #
 # Settings reads the lines this prints: "step <what is happening>" while it
-# works, and "code <digits>" when the key needs enrolling.
+# works, and "code <digits>" when the key needs enrolling. Everything apt,
+# dkms and dracut say goes to /var/log/wildos/graphics-driver.log.
+#
+# The next start-up after an install is a trial (graphics-driver-trial): if
+# the desktop does not appear, the open driver is put back without anyone
+# having to find start-up recovery on a black screen.
 
 set -eu
 export DEBIAN_FRONTEND=noninteractive
-MOK_KEY=/var/lib/dkms/mok.key
 MOK_PUB=/var/lib/dkms/mok.pub
 APT="apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+LOG=/var/log/wildos/graphics-driver.log
+STATE=/var/lib/wildos/graphics-driver
+MODPROBE=/etc/modprobe.d/60-wildos-nvidia.conf
+TMPFILES=/etc/tmpfiles.d/wildos-nvidia.conf
+UDEV=/etc/udev/rules.d/60-wildos-nvidia.rules
+UNIT=/etc/systemd/system/wildos-nvidia-drm.service
+UNIT_WANTS=/etc/systemd/system/sysinit.target.wants/wildos-nvidia-drm.service
+NVMODPROBE=/usr/bin/nvidia-modprobe
+HARDEN=/etc/permission-hardener.d/40_wildos-nvidia.conf
+# The same name as security-misc's file in /usr/lib/sysctl.d, which this
+# stands in for while a trial is pending.
+SYSCTL=/etc/sysctl.d/30_security-misc_ptrace-disable.conf
+LIBS=/usr/lib/x86_64-linux-gnu
+
+# Wild OS installs without Recommends, and the parts a Wayland desktop draws
+# with are only Recommends of nvidia-driver: without the two GBM packages
+# the desktop is a pointer on a black screen. So every package is named.
+PACKAGES="nvidia-driver nvidia-kernel-dkms
+    libnvidia-allocator1 libnvidia-egl-gbm1
+    nvidia-vulkan-icd libgles-nvidia1 libgles-nvidia2
+    libnvidia-cfg1 libnvidia-encode1 nvidia-smi
+    firmware-misc-nonfree nvidia-suspend-common"
 
 step() { echo "step $*"; }
+
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+
+run() { "$@" >> "$LOG" 2>&1; }
 
 secure_boot() {
     mokutil --sb-state 2>/dev/null | grep -q "SecureBoot enabled"
 }
 
 rebuild_initramfs() {
-    # The nouveau blacklist and the modules must be in the start-up image.
+    # The nouveau blacklist must be in the start-up image.
     step "Updating the start-up files"
     if command -v dracut >/dev/null 2>&1; then
-        dracut --force --regenerate-all >/dev/null 2>&1
+        run dracut --force --regenerate-all
     else
-        update-initramfs -u -k all >/dev/null 2>&1
+        run update-initramfs -u -k all
     fi
 }
+
+remove_nvidia() {
+    # shellcheck disable=SC2046
+    run $APT purge $(dpkg-query -W -f='${Package}\n' 'nvidia-*' 'libnvidia-*' 'libgles-nvidia*' \
+        'xserver-xorg-video-nvidia*' 2>/dev/null | grep -v -E '^(nvidia-detect)$' || true) || true
+    run $APT autoremove || true
+    rm -f "$MODPROBE" "$TMPFILES" "$UDEV" "$UNIT" "$UNIT_WANTS" "$STATE/trial"
+    rm -f "$HARDEN"
+    dpkg-statoverride --remove "$NVMODPROBE" >/dev/null 2>&1 || true
+    if grep -qs "graphics driver trial" "$SYSCTL"; then
+        rm -f "$SYSCTL"
+    fi
+}
+
+# What must be on disk before a restart can be asked for. Anything missing
+# here was a black screen on the first PC this was tried on.
+installed_whole() {
+    kernel=$(uname -r)
+    if ! ls "/lib/modules/$kernel/updates/dkms/"nvidia-current.ko* >/dev/null 2>&1; then
+        log "check: no NVIDIA module was built for kernel $kernel"
+        return 1
+    fi
+    for file in "$LIBS/gbm/nvidia-drm_gbm.so" \
+        /usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json \
+        /usr/share/glvnd/egl_vendor.d/10_nvidia.json; do
+        if [ ! -e "$file" ]; then
+            log "check: $file is missing"
+            return 1
+        fi
+    done
+    for file in "$MODPROBE" "$TMPFILES" "$UNIT" "$UNIT_WANTS"; do
+        if [ ! -s "$file" ]; then
+            log "check: $file is missing or empty"
+            return 1
+        fi
+    done
+    # Runnable by root only is the one state that hangs the desktop (see
+    # where the mode is set).
+    if [ "$(stat -c %a "$NVMODPROBE" 2>/dev/null)" != 755 ]; then
+        log "check: $NVMODPROBE is not mode 755"
+        return 1
+    fi
+    return 0
+}
+
+# Store apps from Flathub draw with NVIDIA's libraries from a runtime of
+# their own, which has to be the very version of the driver or the app does
+# not start (Steam did not). Flatpak picks it by the driver that is loaded,
+# and until the restart that is still the open one, so an update here would
+# fetch nothing: the runtime is asked for by name. Store apps belong to the
+# person who installed them, so it goes where each person's apps are, and
+# system-wide if anything is installed there.
+store_apps_driver() {
+    version=$(dpkg-query -W -f='${Version}' nvidia-driver 2>/dev/null | sed -e 's/^[0-9]*://' -e 's/-[^-]*$//')
+    [ -n "$version" ] || return 0
+    name=nvidia-$(echo "$version" | tr . -)
+    getent passwd | while IFS=: read -r user _ uid _ _ home _; do
+        [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || continue
+        [ -d "$home/.local/share/flatpak/runtime/org.freedesktop.Platform.GL.default" ] || continue
+        refs="org.freedesktop.Platform.GL.$name//1.4"
+        if [ -d "$home/.local/share/flatpak/runtime/org.freedesktop.Platform.GL32.default" ]; then
+            refs="$refs org.freedesktop.Platform.GL32.$name//1.4"
+        fi
+        # shellcheck disable=SC2086
+        run runuser -u "$user" -- flatpak install --user -y --noninteractive flathub $refs ||
+            log "install: the Store apps' driver for $user did not install"
+    done
+    if [ -d /var/lib/flatpak/runtime/org.freedesktop.Platform.GL.default ]; then
+        refs="org.freedesktop.Platform.GL.$name//1.4"
+        if [ -d /var/lib/flatpak/runtime/org.freedesktop.Platform.GL32.default ]; then
+            refs="$refs org.freedesktop.Platform.GL32.$name//1.4"
+        fi
+        # shellcheck disable=SC2086
+        run flatpak install --system -y --noninteractive flathub $refs ||
+            log "install: the system-wide Store apps' driver did not install"
+    fi
+}
+
+mkdir -p "$(dirname "$LOG")" "$STATE"
 
 # The restore point apt's hook takes first (wildos-recovery) is named for
 # what this does, so Settings > System > Recovery can say what going back
@@ -46,11 +157,14 @@ esac
 
 case "${1:-}" in
 nvidia)
+    log "install: start, kernel $(uname -r)"
+    rm -f "$STATE/failed"
+
     step "Checking for updates"
-    apt-get -q update >/dev/null 2>&1 || true
+    run apt-get -q update || true
 
     step "Checking this graphics card"
-    $APT install nvidia-detect >/dev/null 2>&1
+    run $APT install nvidia-detect || { log "install: nvidia-detect did not install"; exit 6; }
     # It recommends a package per card; only the current one, nvidia-driver,
     # is what this installs (legacy cards are told to use older ones).
     if ! nvidia-detect 2>/dev/null | grep -qx '[[:space:]]*nvidia-driver'; then
@@ -66,22 +180,117 @@ nvidia)
         headers="$headers linux-headers-$(uname -r)"
     fi
     # shellcheck disable=SC2086
-    $APT install $headers dkms mokutil >/dev/null 2>&1
+    run $APT install $headers dkms mokutil || { log "install: headers or dkms did not install"; exit 6; }
+    # shellcheck disable=SC2086
+    run $APT install --download-only $PACKAGES || { log "install: download failed"; exit 6; }
 
     step "Installing NVIDIA's driver"
-    $APT install nvidia-driver firmware-misc-nonfree nvidia-suspend-common >/dev/null 2>&1
+    # shellcheck disable=SC2086
+    if ! run $APT install $PACKAGES; then
+        log "install: apt failed, putting the open driver back"
+        remove_nvidia
+        exit 5
+    fi
 
-    # Wayland needs the kernel's mode setting from NVIDIA's module.
+    # Wayland needs the kernel's mode setting from NVIDIA's module. Not its
+    # console (fbdev=1): on Linux 7.2 this driver's console crashes the
+    # kernel in about one start-up in three, and the boot screen is drawn
+    # on the firmware's screen, which the console would take away. Newer
+    # drivers switch it on unless told not to, so it is said outright.
     mkdir -p /etc/modprobe.d
     printf '%s\n' '# Written by Wild OS Settings: NVIDIA driver for the desktop (Wayland).' \
-        'options nvidia-drm modeset=1 fbdev=1' > /etc/modprobe.d/60-wildos-nvidia.conf
+        'options nvidia-drm modeset=1 fbdev=0' > "$MODPROBE"
 
-    rebuild_initramfs
+    # The driver's device files. NVIDIA's libraries make them by running
+    # nvidia-modprobe as root, and Wild OS takes that program's setuid away,
+    # so the desktop would find none. Four cards' worth, made at start-up.
+    printf '%s\n' '# Written by Wild OS Settings: NVIDIA device files (nvidia-modprobe has no setuid here).' \
+        'c /dev/nvidiactl      0666 root root - 195:255' \
+        'c /dev/nvidia0        0666 root root - 195:0' \
+        'c /dev/nvidia1        0666 root root - 195:1' \
+        'c /dev/nvidia2        0666 root root - 195:2' \
+        'c /dev/nvidia3        0666 root root - 195:3' \
+        'c /dev/nvidia-modeset 0666 root root - 195:254' > "$TMPFILES"
+    # The compute device (video encoding, CUDA) gets its number when its
+    # module loads, so root makes that one then.
+    printf '%s\n' '# Written by Wild OS Settings: NVIDIA compute device file.' \
+        'ACTION=="add", SUBSYSTEM=="module", KERNEL=="nvidia_uvm", RUN+="/usr/bin/nvidia-modprobe -c 0 -u"' > "$UDEV"
 
-    # Store apps from Flathub need NVIDIA's graphics libraries in their own runtime.
+    # NVIDIA's libraries also run nvidia-modprobe from inside every program
+    # that starts drawing, the desktop included. permission-hardener takes
+    # its setuid away and leaves it mode 744: there, but not runnable by
+    # anyone except root. The library sees the file, forks, cannot run it,
+    # and the fork then calls exit(), which runs the desktop's own shutdown
+    # code inside the copy; KWin's waits for a thread the copy does not have,
+    # so it never ends, and the real KWin waits for it for ever: a black
+    # screen at "Attempting to load the OpenGL scene". Runnable by everyone,
+    # still without setuid, it just starts, finds the device files above
+    # already made, and ends. permission-hardener runs again after every
+    # package change and would put 744 back, so it is told in its own
+    # words: not one of the setuid programs to lock, and mode 755.
+    mkdir -p "$(dirname "$HARDEN")"
+    printf '%s\n' '## Written by Wild OS Settings: NVIDIA libraries hang the desktop if this cannot be run.' \
+        "$NVMODPROBE exactwhitelist" \
+        "$NVMODPROBE 0755 root root" > "$HARDEN"
+    if command -v permission-hardener >/dev/null 2>&1; then
+        run permission-hardener enable || log "install: permission-hardener did not run"
+    fi
+    if [ "$(stat -c %a "$NVMODPROBE" 2>/dev/null)" != 755 ]; then
+        dpkg-statoverride --remove "$NVMODPROBE" >/dev/null 2>&1 || true
+        run dpkg-statoverride --update --add root root 0755 "$NVMODPROBE" || chmod 0755 "$NVMODPROBE"
+    fi
+
+    # The display part of the driver (nvidia-drm) is not loaded by the card
+    # being found, only the core module is. Debian asks for it in
+    # /etc/modules-load.d/nvidia.conf, but systemd-modules-load runs in the
+    # start-up image, where NVIDIA's modules are not, and is not run again
+    # in the real system unless that first run failed. So it is loaded here
+    # by name, before the sign-in screen. Without it the card has no screen
+    # and the desktop starts on nothing.
+    mkdir -p "$(dirname "$UNIT_WANTS")"
+    printf '%s\n' "# Written by Wild OS Settings: loads the display part of NVIDIA's driver." \
+        '[Unit]' \
+        "Description=Load NVIDIA's display driver" \
+        'DefaultDependencies=no' \
+        'ConditionPathExists=!/etc/initrd-release' \
+        "ConditionPathExists=$MODPROBE" \
+        'After=systemd-modules-load.service' \
+        'Before=sysinit.target display-manager.service shutdown.target' \
+        'Conflicts=shutdown.target' \
+        '' \
+        '[Service]' \
+        'Type=oneshot' \
+        'RemainAfterExit=yes' \
+        'ExecStart=/sbin/modprobe nvidia-drm' \
+        '' \
+        '[Install]' \
+        'WantedBy=sysinit.target' > "$UNIT"
+    ln -sf "$UNIT" "$UNIT_WANTS"
+
+    if ! installed_whole; then
+        log "install: incomplete, putting the open driver back"
+        step "Putting the open driver back"
+        remove_nvidia
+        rebuild_initramfs || true
+        exit 5
+    fi
+
+    # Wild OS lets nothing look inside another program, root included, and
+    # the kernel will not relax that once a start-up has set it, which the
+    # start-up image does first. For the trial start-up alone root may, so
+    # that a desktop that hangs can be recorded; graphics-driver-trial puts
+    # the rule back the moment the desktop appears. Written before the
+    # start-up image is rebuilt, so the image carries it.
+    if [ "$(sysctl -n kernel.yama.ptrace_scope 2>/dev/null)" = 3 ] && [ ! -e "$SYSCTL" ]; then
+        printf '%s\n' '# Written by Wild OS Settings for the graphics driver trial; removed when it ends.' \
+            'kernel.yama.ptrace_scope=2' > "$SYSCTL"
+    fi
+
+    rebuild_initramfs || log "install: the start-up files did not rebuild"
+
     if command -v flatpak >/dev/null 2>&1; then
         step "Updating Store apps for the new driver"
-        flatpak update --system --noninteractive >/dev/null 2>&1 || true
+        store_apps_driver
     fi
 
     if secure_boot && [ -f "$MOK_PUB" ] && ! mokutil --test-key "$MOK_PUB" 2>/dev/null | grep -q "already enrolled"; then
@@ -93,16 +302,18 @@ nvidia)
         printf '%s\n%s\n' "$code" "$code" | mokutil --import "$MOK_PUB" >/dev/null 2>&1
         echo "code $code"
     fi
+
+    # The next start-up is the trial.
+    echo 0 > "$STATE/trial"
+    log "install: done"
     step "Done"
     ;;
 open)
+    log "remove: start"
     step "Removing NVIDIA's driver"
-    # shellcheck disable=SC2046
-    $APT purge $(dpkg-query -W -f='${Package}\n' 'nvidia-*' 'libnvidia-*' 'xserver-xorg-video-nvidia*' 2>/dev/null \
-        | grep -v -E '^(nvidia-detect)$' || true) >/dev/null 2>&1 || true
-    $APT autoremove >/dev/null 2>&1 || true
-    rm -f /etc/modprobe.d/60-wildos-nvidia.conf
-    rebuild_initramfs
+    remove_nvidia
+    rebuild_initramfs || log "remove: the start-up files did not rebuild"
+    log "remove: done"
     step "Done"
     ;;
 *)

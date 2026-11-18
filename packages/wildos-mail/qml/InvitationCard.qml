@@ -30,7 +30,7 @@ Rectangle {
 
     visible: invite.uid !== undefined && (isRequest || isCancel)
     implicitHeight: visible ? content.implicitHeight + 32 : 0
-    radius: 8
+    radius: UI.Style.radiusSm
     color: UI.Style.surfaceRaised
     border.width: 1
     border.color: UI.Style.borderSubtle
@@ -228,9 +228,9 @@ Rectangle {
                 subtext: {
                     const parts = [];
                     if (card.invite.accepted > 0)
-                        parts.push(qsTr("%1 accepted").arg(card.invite.accepted));
+                        parts.push(qsTr("%n accepted", "", card.invite.accepted));
                     if (card.invite.waiting > 0)
-                        parts.push(qsTr("%1 not replied yet").arg(card.invite.waiting));
+                        parts.push(qsTr("%n not replied yet", "", card.invite.waiting));
                     return parts.join(", ");
                 }
             }
@@ -243,7 +243,7 @@ Rectangle {
             Layout.preferredWidth: 300
             Layout.preferredHeight: 280
             Layout.alignment: Qt.AlignTop
-            radius: 8
+            radius: UI.Style.radiusSm
             color: UI.Style.surfaceRest
             border.width: 1
             border.color: UI.Style.borderSubtle
@@ -270,7 +270,7 @@ Rectangle {
                 y: 34
                 width: parent.width - 24
                 height: 28
-                radius: 6
+                radius: UI.Style.radiusXs
                 color: dayBox.clashes.length > 0 ? UI.Style.warningSoft : UI.Style.successSoft
                 RowLayout {
                     anchors.fill: parent

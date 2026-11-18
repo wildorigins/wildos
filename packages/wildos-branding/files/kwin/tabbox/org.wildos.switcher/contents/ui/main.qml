@@ -71,7 +71,7 @@ KWin.TabBoxSwitcher {
                 height: scroller.height + 14 + hint.height + tabBox.framePadding * 2
 
                 Accessible.role: Accessible.List
-                Accessible.name: "Switch windows"
+                Accessible.name: qsTr("Switch windows")
 
                 Keys.onPressed: event => {
                     const n = panel.count;
@@ -183,7 +183,7 @@ KWin.TabBoxSwitcher {
                 UI.Label {
                     anchors.centerIn: scroller
                     visible: panel.count === 0
-                    text: "No open windows"
+                    text: qsTr("No open windows")
                     size: 14
                     font.weight: UI.Style.weightMedium
                 }
@@ -198,8 +198,8 @@ KWin.TabBoxSwitcher {
                     // When the switcher was opened without holding a modifier
                     // there is nothing to release, so Enter confirms instead.
                     text: tabBox.noModifierGrab
-                          ? "Use the arrow keys to move along. Press Enter to switch."
-                          : "Hold Alt and press Tab to move along. Release to switch."
+                          ? qsTr("Use the arrow keys to move along. Press Enter to switch.")
+                          : qsTr("Hold Alt and press Tab to move along. Release to switch.")
                     color: UI.Style.inkMuted
                     size: 12
                 }

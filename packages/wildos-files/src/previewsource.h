@@ -31,6 +31,10 @@ public:
     QString text() const { return m_text; }
     bool truncated() const { return m_truncated; }
 
+    // Whether a file of this type gets the "image" preview, so a folder
+    // listing can say without the file being opened.
+    Q_INVOKABLE bool showsAsPicture(const QString &mimeType) const;
+
 Q_SIGNALS:
     void urlChanged();
     void changed();

@@ -25,7 +25,18 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Never draws, so it needs no OpenGL. This Qt sets OpenGL up at start-up
+    // for every Wayland client, which held about 30 MB all session; plain
+    // shared-memory buffers take that to a few. Apps started from here get
+    // the session's setting back.
+    const QByteArray buffers = qgetenv("QT_WAYLAND_CLIENT_BUFFER_INTEGRATION");
+    qputenv("QT_WAYLAND_CLIENT_BUFFER_INTEGRATION", "shm");
     QGuiApplication app(argc, argv);
+    if (buffers.isEmpty()) {
+        qunsetenv("QT_WAYLAND_CLIENT_BUFFER_INTEGRATION");
+    } else {
+        qputenv("QT_WAYLAND_CLIENT_BUFFER_INTEGRATION", buffers);
+    }
     app.setApplicationName(QStringLiteral("wildos-launchd"));
     app.setOrganizationDomain(QStringLiteral("wildos.io"));
     app.setApplicationVersion(QStringLiteral(WILDOS_LAUNCH_VERSION));

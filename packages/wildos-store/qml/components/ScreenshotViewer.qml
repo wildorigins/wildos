@@ -104,7 +104,7 @@ Popup {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             iconName: "chevron-left"
-            tip: "Previous screenshot"
+            tip: qsTr("Previous screenshot")
             onClicked: viewer.index--
         }
 
@@ -113,7 +113,7 @@ Popup {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             iconName: "chevron"
-            tip: "Next screenshot"
+            tip: qsTr("Next screenshot")
             onClicked: viewer.index++
         }
 
@@ -121,7 +121,7 @@ Popup {
             anchors.right: parent.right
             anchors.top: parent.top
             iconName: "close"
-            tip: "Close"
+            tip: qsTr("Close")
             onClicked: viewer.close()
         }
     }

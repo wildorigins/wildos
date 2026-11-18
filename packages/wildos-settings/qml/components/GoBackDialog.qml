@@ -31,19 +31,18 @@ RecoveryDialog {
         if (!Format.isValid(date)) {
             return "";
         }
-        const day = Format.day(date);
-        return (day === "today" || day === "yesterday" ? day : "on " + day) + " at " + Format.time(date);
+        return Format.dayAndTime(date);
     }
 
     function goesBackSystem() {
         if (point.system && point.driver) {
-            return "System files and the graphics driver";
+            return qsTr("System files and the graphics driver");
         }
         if (point.driver) {
-            return "The graphics driver";
+            return qsTr("The graphics driver");
         }
         if (point.system || apps.length === 0) {
-            return apps.length === 0 && !point.system ? "System files and apps, as they were then" : "System files";
+            return apps.length === 0 && !point.system ? qsTr("System files and apps, as they were then") : qsTr("System files");
         }
         return "";
     }
@@ -54,19 +53,27 @@ RecoveryDialog {
         }
         const shown = apps.slice(0, 3);
         const more = apps.length - shown.length;
-        const names = more > 0 ? shown.join(", ") + " and " + Format.plural(more, "more app", "more apps")
-            : shown.length === 1 ? shown[0] : shown.slice(0, -1).join(", ") + " and " + shown[shown.length - 1];
-        return names + ", to " + (apps.length === 1 ? "its earlier version" : "their earlier versions");
+        const names = more > 0 ? qsTr("%1 and %2").arg(shown.join(", ")).arg(Format.plural(more, qsTr("more app"), qsTr("more apps")))
+            : shown.length === 1 ? shown[0] : qsTr("%1 and %2").arg(shown.slice(0, -1).join(", ")).arg(shown[shown.length - 1]);
+        return apps.length === 1 ? qsTr("%1, to its earlier version").arg(names) : qsTr("%1, to their earlier versions").arg(names);
     }
 
-    title: before ? "Go back to " + lowerFirst(label) + "?" : "Go back to this restore point?"
+    title: before ? qsTr("Go back to %1?").arg(lowerFirst(label)) : qsTr("Go back to this restore point?")
     dialogWidth: 560
 
     UI.Label {
         Layout.fillWidth: true
-        text: "The PC goes back to how it was " + dialog.whenText(dialog.point.when)
-            + (dialog.before ? ", just " + dialog.lowerFirst(dialog.label) : "")
-            + (Recovery.backend === "btrfs" ? ". It takes about a minute and restarts once." : ". It takes a few minutes and restarts once.")
+        text: {
+            const when = dialog.whenText(dialog.point.when);
+            const quick = Recovery.backend === "btrfs";
+            if (dialog.before) {
+                const what = dialog.lowerFirst(dialog.label);
+                return quick ? qsTr("The PC goes back to how it was %1, just %2. It takes about a minute and restarts once.").arg(when).arg(what)
+                    : qsTr("The PC goes back to how it was %1, just %2. It takes a few minutes and restarts once.").arg(when).arg(what);
+            }
+            return quick ? qsTr("The PC goes back to how it was %1. It takes about a minute and restarts once.").arg(when)
+                : qsTr("The PC goes back to how it was %1. It takes a few minutes and restarts once.").arg(when);
+        }
         size: 13.5
         lineHeight: 1.5
         wrapMode: Text.Wrap
@@ -84,7 +91,7 @@ RecoveryDialog {
             spacing: 10
 
             UI.Label {
-                text: "GOES BACK"
+                text: qsTr("GOES BACK")
                 size: 12.5
                 font.weight: UI.Style.weightSemiBold
                 color: UI.Style.inkSubtle
@@ -104,7 +111,7 @@ RecoveryDialog {
                         name: "undo-2"
                         size: 15
                         strokeWidth: 2.2
-                        color: "#ffc46a"
+                        color: UI.Style.warning
                     }
 
                     UI.Label {
@@ -126,14 +133,14 @@ RecoveryDialog {
             spacing: 10
 
             UI.Label {
-                text: "STAYS AS IT IS"
+                text: qsTr("STAYS AS IT IS")
                 size: 12.5
                 font.weight: UI.Style.weightSemiBold
                 color: UI.Style.inkSubtle
             }
 
             Repeater {
-                model: ["Your files, Mail, Calendar and Notes", "Your settings, passwords and Wi-Fi", "Windows mode and its apps"]
+                model: [qsTr("Your files, Mail, Calendar and Notes"), qsTr("Your settings, passwords and Wi-Fi"), qsTr("Windows mode and its apps")]
 
                 RowLayout {
                     required property string modelData
@@ -146,7 +153,7 @@ RecoveryDialog {
                         name: "check"
                         size: 15
                         strokeWidth: 2.4
-                        color: "#5fd38d"
+                        color: UI.Style.success
                     }
 
                     UI.Label {
@@ -183,7 +190,7 @@ RecoveryDialog {
             UI.CheckBox {
                 Layout.alignment: Qt.AlignTop
                 checked: dialog.hold
-                Accessible.name: "Hold back the build " + (dialog.point.build || "") + " update for 2 weeks"
+                Accessible.name: qsTr("Hold back the build %1 update for 2 weeks").arg(dialog.point.build || "")
                 onToggled: dialog.hold = checked
             }
 
@@ -193,14 +200,14 @@ RecoveryDialog {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Hold back the build " + (dialog.point.build || "") + " update for 2 weeks"
+                    text: qsTr("Hold back the build %1 update for 2 weeks").arg(dialog.point.build || "")
                     size: 13
                     wrapMode: Text.Wrap
                 }
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "So it doesn't install again straight away. Security fixes still come through."
+                    text: qsTr("So it doesn't install again straight away. Security fixes still come through.")
                     size: 12
                     color: UI.Style.inkMuted
                     wrapMode: Text.Wrap
@@ -222,7 +229,7 @@ RecoveryDialog {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Changed your mind later? Today's version is saved as a restore point too."
+            text: qsTr("Changed your mind later? Today's version is saved as a restore point too.")
             size: 12.5
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -241,7 +248,7 @@ RecoveryDialog {
     buttons: [
         UI.Button {
             implicitHeight: 32
-            text: "Cancel"
+            text: qsTr("Cancel")
             enabled: !Recovery.busy
             onClicked: dialog.close()
         },
@@ -249,7 +256,7 @@ RecoveryDialog {
             implicitHeight: 32
             kind: "primary"
             iconName: "restore"
-            text: "Go back and restart"
+            text: qsTr("Go back and restart")
             busy: Recovery.busy
             onClicked: Recovery.goBack(dialog.point.id, dialog.canHold && dialog.hold)
         }

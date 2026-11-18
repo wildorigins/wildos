@@ -52,7 +52,7 @@ Rectangle {
         UI.Label {
             visible: card.entries.length === 0
             width: parent.width
-            text: "Nothing is using it right now."
+            text: qsTr("Nothing is using it right now.")
             size: 12
             color: UI.Style.inkMuted
         }

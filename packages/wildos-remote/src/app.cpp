@@ -202,7 +202,9 @@ void App::sendKey(const QString &keyPath, const QString &hostId)
 
 void App::fromSession(const QString &what)
 {
-    if (what.startsWith(QLatin1String("edit:"))) {
+    if (what == QLatin1String("settings")) {
+        Q_EMIT settingsRequested();
+    } else if (what.startsWith(QLatin1String("edit:"))) {
         Q_EMIT editRequested(what.mid(5));
     } else if (!what.isEmpty()) {
         Q_EMIT connectRequested(what);

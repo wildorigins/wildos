@@ -164,12 +164,12 @@ QString kindOf(const QVariantMap &drive)
 {
     const QString bus = drive.value(QStringLiteral("ConnectionBus")).toString();
     if (bus == QLatin1String("sdio") || drive.value(QStringLiteral("Media")).toString().startsWith(QLatin1String("flash_sd"))) {
-        return QStringLiteral("SD card");
+        return QCoreApplication::translate("DriveFormat", "SD card");
     }
     if (drive.value(QStringLiteral("Size")).toLongLong() > 0 && drive.value(QStringLiteral("RotationRate")).toInt() > 0) {
-        return QStringLiteral("external drive");
+        return QCoreApplication::translate("DriveFormat", "external drive");
     }
-    return bus == QLatin1String("usb") ? QStringLiteral("USB drive") : QStringLiteral("external drive");
+    return bus == QLatin1String("usb") ? QCoreApplication::translate("DriveFormat", "USB drive") : QCoreApplication::translate("DriveFormat", "external drive");
 }
 
 // Labels as each file system stores them: FAT keeps 11 upper-case
@@ -211,21 +211,21 @@ QString plainError(const QDBusError &error)
         return QString();
     }
     if (name.contains(QLatin1String("NotAuthorized"))) {
-        return QStringLiteral("Formatting this drive needs an administrator's permission, and it wasn't given.");
+        return QCoreApplication::translate("DriveFormat", "Formatting this drive needs an administrator's permission, and it wasn't given.");
     }
     if (name.endsWith(QLatin1String("DeviceBusy")) || text.contains(QLatin1String("busy"), Qt::CaseInsensitive)) {
-        return QStringLiteral("The drive is in use. Close any files or apps using it, then try again.");
+        return QCoreApplication::translate("DriveFormat", "The drive is in use. Close any files or apps using it, then try again.");
     }
     if (name == QLatin1String("org.freedesktop.DBus.Error.ServiceUnknown")) {
-        return QStringLiteral("Files can't reach the disk service, so it can't format drives right now. Restart the PC and try again.");
+        return QCoreApplication::translate("DriveFormat", "Files can't reach the disk service, so it can't format drives right now. Restart the PC and try again.");
     }
     if (name == QLatin1String("org.freedesktop.DBus.Error.UnknownObject") || text.contains(QLatin1String("No such"), Qt::CaseInsensitive)) {
-        return QStringLiteral("The drive was unplugged before formatting finished. Plug it back in and format it again.");
+        return QCoreApplication::translate("DriveFormat", "The drive was unplugged before formatting finished. Plug it back in and format it again.");
     }
     if (text.contains(QLatin1String("read-only"), Qt::CaseInsensitive) || text.contains(QLatin1String("write-protect"), Qt::CaseInsensitive)) {
-        return QStringLiteral("The drive is write-protected. If it has a lock switch, slide it off, plug it back in and try again.");
+        return QCoreApplication::translate("DriveFormat", "The drive is write-protected. If it has a lock switch, slide it off, plug it back in and try again.");
     }
-    return QStringLiteral("The drive couldn't be formatted. It may be faulty or not plugged in firmly. Try another USB port, then format it again.");
+    return QCoreApplication::translate("DriveFormat", "The drive couldn't be formatted. It may be faulty or not plugged in firmly. Try another USB port, then format it again.");
 }
 
 struct Outcome {
@@ -263,10 +263,10 @@ Outcome run(const Request &request)
     }
     const QString target = formatTarget(objects, request.object);
     if (!objects.contains(QDBusObjectPath(target))) {
-        return {false, QStringLiteral("The drive isn't plugged in any more."), {}};
+        return {false, QCoreApplication::translate("DriveFormat", "The drive isn't plugged in any more."), {}};
     }
     if (!allowed(objects, target)) {
-        return {false, QStringLiteral("Files only formats removable drives, never the one Wild OS runs from."), {}};
+        return {false, QCoreApplication::translate("DriveFormat", "Files only formats removable drives, never the one Wild OS runs from."), {}};
     }
     const InterfaceProps targetIfaces = objects.value(QDBusObjectPath(target));
     const QVariantMap block = targetIfaces.value(blockIface);

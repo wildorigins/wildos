@@ -4,6 +4,7 @@
 
 #include <QObject>
 #include <QQmlEngine>
+#include <QSize>
 #include <QUrl>
 #include <QVariantList>
 
@@ -33,6 +34,10 @@ class Chooser : public QObject
     Q_PROPERTY(QString typeLabel READ typeLabel CONSTANT)
     // "details" or "icons" (Large icons), remembered per kind of file.
     Q_PROPERTY(QString viewMode READ viewMode WRITE setViewMode NOTIFY viewModeChanged)
+    // The size the window was last left at, without the rows an app's
+    // extra choices add.
+    Q_PROPERTY(int windowWidth READ windowWidth CONSTANT)
+    Q_PROPERTY(int windowHeight READ windowHeight CONSTANT)
 
 public:
     enum Mode { Open, Save, SaveFiles, Folder };
@@ -68,10 +73,15 @@ public:
     QString typeLabel() const;
     QString viewMode() const { return m_viewMode; }
     void setViewMode(const QString &mode);
+    int windowWidth() const { return m_windowSize.width(); }
+    int windowHeight() const { return m_windowSize.height(); }
 
     // What the name field holds once a file is picked in the list.
     Q_INVOKABLE QString nameForSelection() const;
     Q_INVOKABLE void setChoice(const QString &id, const QString &value);
+    // The window's size as the person drags it, written out when the
+    // dialog closes.
+    Q_INVOKABLE void setWindowSize(int width, int height);
     // The "All files" type, or -1 when the app offers none.
     Q_INVOKABLE int allFilesIndex() const;
     // The name with the extension of type `from` changed to that of `to`,
@@ -106,6 +116,7 @@ private:
     QString recentKey() const;
     QUrl startFolder() const;
     void rememberFolder(const QList<QUrl> &urls);
+    void rememberWindowSize();
 
     Request m_request;
     DirModel *m_folder;
@@ -114,6 +125,8 @@ private:
     QString m_initialName;
     QString m_purpose;
     QString m_viewMode;
+    QSize m_windowSize;
+    bool m_windowSizeChanged = false;
     QList<QUrl> m_pending;
     bool m_done = false;
 };

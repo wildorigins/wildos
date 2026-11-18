@@ -1,6 +1,7 @@
 #include "flatpakbackend.h"
 #include "timing.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -10,6 +11,7 @@
 #include <QStandardPaths>
 
 #include <flatpak.h>
+#include <unistd.h>
 
 namespace
 {
@@ -37,19 +39,19 @@ QString takeError(GError *&error, const QString &fallback = {})
 QString platformLabel(const QString &name)
 {
     if (name == QLatin1String("org.kde.Platform")) {
-        return QStringLiteral("the KDE base");
+        return QCoreApplication::translate("FlatpakBackend", "the KDE base");
     }
     if (name == QLatin1String("org.gnome.Platform")) {
-        return QStringLiteral("the GNOME base");
+        return QCoreApplication::translate("FlatpakBackend", "the GNOME base");
     }
     if (name == QLatin1String("org.freedesktop.Platform")) {
-        return QStringLiteral("the Freedesktop base");
+        return QCoreApplication::translate("FlatpakBackend", "the Freedesktop base");
     }
     if (name == QLatin1String("io.elementary.Platform")) {
-        return QStringLiteral("the elementary base");
+        return QCoreApplication::translate("FlatpakBackend", "the elementary base");
     }
     if (name.endsWith(QLatin1String(".Platform"))) {
-        return QStringLiteral("a shared base");
+        return QCoreApplication::translate("FlatpakBackend", "a shared base");
     }
     return {};
 }
@@ -62,15 +64,15 @@ QString plainError(const QString &message)
     const QString m = message.toLower();
     if (m.contains(QLatin1String("resolve")) || m.contains(QLatin1String("connect")) || m.contains(QLatin1String("network"))
         || m.contains(QLatin1String("timeout")) || m.contains(QLatin1String("timed out")) || m.contains(QLatin1String("curl"))) {
-        return QStringLiteral("Couldn't reach Flathub. Check you're online.");
+        return QCoreApplication::translate("FlatpakBackend", "Couldn't reach Flathub. Check you're online.");
     }
     if (m.contains(QLatin1String("space"))) {
-        return QStringLiteral("There isn't enough free space for this app.");
+        return QCoreApplication::translate("FlatpakBackend", "There isn't enough free space for this app.");
     }
     if (m.contains(QLatin1String("not found")) || m.contains(QLatin1String("nothing matches"))) {
-        return QStringLiteral("Flathub doesn't have this app any more.");
+        return QCoreApplication::translate("FlatpakBackend", "Flathub doesn't have this app any more.");
     }
-    return QStringLiteral("Flathub stopped part way through. Try again in a few minutes.");
+    return QCoreApplication::translate("FlatpakBackend", "Flathub stopped part way through. Try again in a few minutes.");
 }
 
 // The same for an app installed from a file, which may come from anywhere.
@@ -79,21 +81,21 @@ QString plainFileError(const QString &message)
     const QString m = message.toLower();
     if (m.contains(QLatin1String("resolve")) || m.contains(QLatin1String("connect")) || m.contains(QLatin1String("network"))
         || m.contains(QLatin1String("timeout")) || m.contains(QLatin1String("timed out")) || m.contains(QLatin1String("curl"))) {
-        return QStringLiteral("Couldn't reach the place this app downloads from. Check you're online.");
+        return QCoreApplication::translate("FlatpakBackend", "Couldn't reach the place this app downloads from. Check you're online.");
     }
     if (m.contains(QLatin1String("space"))) {
-        return QStringLiteral("There isn't enough free space for this app.");
+        return QCoreApplication::translate("FlatpakBackend", "There isn't enough free space for this app.");
     }
     if (m.contains(QLatin1String("gpg")) || m.contains(QLatin1String("signature")) || m.contains(QLatin1String("signed"))) {
-        return QStringLiteral("The app's signature didn't match, so nothing was installed. The file may be damaged or changed.");
+        return QCoreApplication::translate("FlatpakBackend", "The app's signature didn't match, so nothing was installed. The file may be damaged or changed.");
     }
     if (m.contains(QLatin1String("runtime")) || m.contains(QLatin1String("not found")) || m.contains(QLatin1String("nothing matches"))) {
-        return QStringLiteral("This app needs a part Wild OS can't find on Flathub, so it can't be installed.");
+        return QCoreApplication::translate("FlatpakBackend", "This app needs a part Wild OS can't find on Flathub, so it can't be installed.");
     }
     if (m.contains(QLatin1String("invalid")) || m.contains(QLatin1String("not a")) || m.contains(QLatin1String("parse"))) {
-        return QStringLiteral("This file can't be read. It may be damaged or only partly downloaded.");
+        return QCoreApplication::translate("FlatpakBackend", "This file can't be read. It may be damaged or only partly downloaded.");
     }
-    return QStringLiteral("The install stopped part way through. Try again, or download the file again.");
+    return QCoreApplication::translate("FlatpakBackend", "The install stopped part way through. Try again, or download the file again.");
 }
 
 QString refName(const char *ref)
@@ -351,8 +353,20 @@ FlatpakBackend::~FlatpakBackend()
     for (QThread *thread : {&m_catalogueThread, &m_detailsThread, &m_installThread}) {
         thread->quit();
     }
+    bool running = false;
     for (QThread *thread : {&m_catalogueThread, &m_detailsThread, &m_installThread}) {
-        thread->wait(3000);
+        if (!thread->wait(3000)) {
+            running = true;
+        }
+    }
+    // A thread still inside a Flatpak call (reading the catalogue over a
+    // slow connection, say) cannot be stopped from here, and taking a
+    // running thread down aborts the program: "Store closed unexpectedly"
+    // after an ordinary close. The Store is on its way out with nothing
+    // left to save, so it leaves at once instead. Flatpak finishes or
+    // undoes an interrupted step itself the next time it runs.
+    if (running) {
+        _exit(0);
     }
 }
 
@@ -466,7 +480,7 @@ bool FlatpakWorker::ensureInstallation()
     QFile file(QStringLiteral(":/qt/qml/WildOS/Store/data/flathub.flatpakrepo"));
     if (!file.open(QIODevice::ReadOnly)) {
         g_clear_object(&m_installation);
-        Q_EMIT unavailable(QStringLiteral("The Flathub details are missing from the Store."));
+        Q_EMIT unavailable(QCoreApplication::translate("FlatpakBackend", "The Flathub details are missing from the Store."));
         return false;
     }
     const QByteArray data = file.readAll();
@@ -696,7 +710,7 @@ void FlatpakWorker::runTransaction(const QList<int> &jobs, Op op, const QStringL
 {
     if (!ensureInstallation()) {
         for (int job : jobs) {
-            Q_EMIT finished(job, false, QStringLiteral("Flathub is not available right now."));
+            Q_EMIT finished(job, false, QCoreApplication::translate("FlatpakBackend", "Flathub is not available right now."));
         }
         return;
     }

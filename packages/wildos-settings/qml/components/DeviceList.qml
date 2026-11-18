@@ -10,9 +10,9 @@ Rectangle {
     id: card
 
     property var model: []
-    // The board's status colours, as History and Firewall use them.
-    readonly property color amber: UI.Style.dark ? "#ffc46a" : UI.Style.warning
-    readonly property color green: UI.Style.dark ? "#5fd38d" : "#1d7a4c"
+    // The status colours History and Firewall use.
+    readonly property color amber: UI.Style.warning
+    readonly property color green: UI.Style.success
 
     signal opened(var row)
     signal acted(var row)
@@ -42,8 +42,8 @@ Rectangle {
                 hoverEnabled: true
                 focusPolicy: Qt.StrongFocus
                 Accessible.role: Accessible.Button
-                Accessible.name: modelData.name + ". " + (needsYou ? modelData.problem : modelData.line)
-                Accessible.description: "Details"
+                Accessible.name: qsTr("%1. %2").arg(modelData.name).arg(needsYou ? modelData.problem : modelData.line)
+                Accessible.description: qsTr("Details")
                 onClicked: card.opened(modelData)
 
                 background: Rectangle {
@@ -118,7 +118,7 @@ Rectangle {
                         }
 
                         UI.Label {
-                            text: deviceRow.needsYou || deviceRow.off ? deviceRow.modelData.badge : "Working"
+                            text: deviceRow.needsYou || deviceRow.off ? deviceRow.modelData.badge : qsTr("Working")
                             size: 12.5
                             color: deviceRow.needsYou ? card.amber : UI.Style.inkMuted
                         }

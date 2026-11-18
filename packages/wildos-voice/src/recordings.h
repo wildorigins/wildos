@@ -2,11 +2,14 @@
 
 #include <QFileSystemWatcher>
 #include <QHash>
+#include <QList>
 #include <QObject>
 #include <QQmlEngine>
 #include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
+
+#include <utility>
 
 // The recordings in the Recordings folder, newest first, each with its
 // title, date, length, markers and transcript. The folder is watched, so a
@@ -40,6 +43,9 @@ public:
     Q_INVOKABLE bool rename(const QString &path, const QString &title);
     // Moves the recording, its markers and its transcript to the bin.
     Q_INVOKABLE bool remove(const QString &path);
+    // Undoes the last remove(): the recording, its markers and its
+    // transcript come back out of the bin.
+    Q_INVOKABLE bool restore(const QString &path);
     Q_INVOKABLE void showInFiles(const QString &path) const;
     // Reads the waveform in the background; waveformReady brings it.
     Q_INVOKABLE void loadWaveform(const QString &path);
@@ -70,4 +76,7 @@ private:
     QFileSystemWatcher m_watcher;
     QTimer m_refreshTimer;
     QHash<QString, QVariantList> m_waveforms;
+    // What remove() moved last, the recording first: where each file was
+    // and where it went in the bin.
+    QList<std::pair<QString, QString>> m_binned;
 };

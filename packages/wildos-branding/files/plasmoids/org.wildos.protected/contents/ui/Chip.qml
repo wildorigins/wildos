@@ -1,8 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Templates as T
 import WildOS.UI as UI
 
-// The taskbar button: a 16 px shield in a 32 px cell with a 32 by 36 hover,
+// The taskbar button: a 16 px shield in a 32 px cell with a 32 by 40 hover,
 // the same as the tray's icons and the Updates button, so the gaps between
 // them all match. No label. The
 // shield carries the state: accent with a tick when all is well, sand with
@@ -24,19 +25,50 @@ MouseArea {
     Layout.minimumHeight: 44
 
     hoverEnabled: true
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
     Accessible.role: Accessible.Button
-    Accessible.name: "Security: " + security.chipText.toLowerCase()
+    Accessible.name: qsTr("Security: %1").arg(security.chipText.toLowerCase())
     Accessible.description: security.toolTipSubText
 
     // Remembering the state at press time stops a click that closes the popup
     // (it loses focus first) from opening it again straight away.
-    onPressed: wasExpanded = security.expanded
-    onClicked: security.expanded = !wasExpanded
+    onPressed: mouse => {
+        if (mouse.button === Qt.LeftButton) {
+            wasExpanded = security.expanded;
+        }
+    }
+    onClicked: mouse => {
+        if (mouse.button === Qt.RightButton) {
+            openMenu(mouse.x);
+        } else {
+            security.expanded = !wasExpanded;
+        }
+    }
+
+    // A right click gives the short list Windows gives its corner icons.
+    // It opens in a window of its own, above the taskbar, as the taskbar is
+    // too short to hold it.
+    function openMenu(px: real): void {
+        menu.entries = [
+            { text: qsTr("Privacy and security settings"), icon: "menu-settings", run: () => security.openPrivacy() },
+            { text: qsTr("Firewall settings"), icon: "firewall", run: () => security.openSettings("firewall") }
+        ];
+        const scene = chip.mapToItem(null, 0, 0);
+        menu.x = Math.round(px - menu.implicitWidth / 2);
+        menu.y = Math.round(-scene.y - 12 - menu.implicitHeight);
+        menu.open();
+    }
+
+    UI.Menu {
+        id: menu
+        popupType: T.Popup.Window
+        minimumWidth: 264
+    }
 
     Rectangle {
         anchors.centerIn: parent
         width: 32
-        height: 36
+        height: 40
         radius: 8
         color: chip.pressed ? UI.Style.surfacePressed : chip.security.expanded ? UI.Style.surfaceSelected : chip.containsMouse ? UI.Style.surfaceHover : "transparent"
         Behavior on color {

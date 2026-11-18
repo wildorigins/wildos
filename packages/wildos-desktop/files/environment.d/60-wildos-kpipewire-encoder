@@ -1,0 +1,12 @@
+#!/bin/sh
+# Screen recording (Capture, screen sharing) encodes through KPipeWire, which
+# picks the first VA-API device for hardware H.264. With an NVIDIA card that is
+# usually the Intel or AMD chip beside it while the frames come from the NVIDIA
+# card, and the recording crashes. KPipeWire cannot encode on NVIDIA at all, so
+# any PC with an NVIDIA card encodes on the processor with x264.
+for vendor in /sys/class/drm/renderD*/device/vendor; do
+    if [ "$(cat "$vendor" 2>/dev/null)" = "0x10de" ]; then
+        echo "KPIPEWIRE_FORCE_ENCODER=libx264"
+        exit 0
+    fi
+done

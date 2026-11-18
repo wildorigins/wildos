@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ] || [ "$1" = "abort-install" ]; then
+    dpkg-divert --package wildos-cooler --remove --rename \
+        --divert /usr/lib/udev/rules.d/71-liquidctl.rules.stock \
+        /usr/lib/udev/rules.d/71-liquidctl.rules >/dev/null || true
+    udevadm control --reload >/dev/null 2>&1 || true
+fi
+if [ "$1" = "purge" ]; then
+    rm -rf /var/lib/wildos-cooler
+fi
+
+#DEBHELPER#

@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=Cooler
+Name[fr]=Cooler
+GenericName=Liquid cooler
+GenericName[fr]=Refroidissement liquide
+Comment=Choose the face on your cooler's screen and how fast its pump and fans run
+Comment[fr]=Choisissez le cadran de l'écran de votre refroidisseur et la vitesse de sa pompe et de ses ventilateurs
+Exec=wildos-cooler
+TryExec=/run/wildos-cooler/present
+Icon=wildos-cooler
+Terminal=false
+StartupNotify=true
+StartupWMClass=wildos-cooler
+Categories=Qt;System;Settings;HardwareSettings;
+Keywords=cooler;cooling;kraken;nzxt;cam;aio;liquid;pump;fan;fans;temperature;lcd;screen;
+X-DBUS-StartupType=Unique
+X-DBUS-ServiceName=org.wildos.cooler

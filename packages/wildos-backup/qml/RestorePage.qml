@@ -18,6 +18,18 @@ Item {
     readonly property bool ready: Restore.state === "ready" && Restore.snapshots.length > 0
     readonly property string home: Core.StandardPaths.writableLocation(Core.StandardPaths.HomeLocation).toString().replace(/^file:\/\//, "")
 
+    // The right-click menu of a row, also on the Menu key.
+    function showRowMenu(item, x, y) {
+        const entry = item.entry;
+        const entries = [];
+        if (entry.dir) {
+            entries.push({ text: qsTr("Open folder"), icon: "open-folder", run: () => Restore.openFolder(entry.path) });
+        }
+        entries.push({ text: item.picked ? qsTr("Untick") : qsTr("Tick"), icon: "check", run: () => Restore.toggle(entry.path) });
+        rowMenu.entries = entries;
+        rowMenu.popup(item, x, y);
+    }
+
     function display(path) {
         const h = decodeURIComponent(home);
         if (path === h) {
@@ -54,8 +66,9 @@ Item {
         function onRestored(count, where) {
             page.app.say(count === 1 ? qsTr("1 item restored to %1").arg(page.display(where)) : qsTr("%1 items restored to %2").arg(count).arg(page.display(where)));
         }
-        function onRestoreFailed(reason) {
+        function onRestoreFailed(reason, detail) {
             failDialog.text = reason;
+            failDialog.detail = detail;
             failDialog.open();
         }
     }
@@ -148,6 +161,10 @@ Item {
                             : Restore.state === "ready" ? qsTr("The first backup shows up here once it's done.")
                             : qsTr("Reading the list of backups on %1.").arg(Restore.driveName)
                     }
+                    ErrorDetails {
+                        Layout.fillWidth: true
+                        text: Settings.configured && Restore.state === "failed" ? Restore.errorDetail : ""
+                    }
                     RowLayout {
                         Layout.topMargin: 6
                         visible: Restore.state === "needPassword"
@@ -156,7 +173,6 @@ Item {
                         UI.TextField {
                             id: restorePassword
                             Layout.preferredWidth: 280
-                            echoMode: TextInput.Password
                             revealable: true
                             UI.NoPaste {}
                             placeholderText: qsTr("Backup password")
@@ -268,14 +284,79 @@ Item {
                     clip: true
                     model: Restore.entries
                     boundsBehavior: Flickable.StopAtBounds
+                    keyNavigationEnabled: false
+                    activeFocusOnTab: true
                     C.ScrollBar.vertical: UI.ScrollBar {}
+                    Accessible.role: Accessible.List
+                    Accessible.name: qsTr("Files and folders in this backup")
+
+                    // The row the keyboard is on, by its path: the list is
+                    // made again as a folder's entries come in, and would
+                    // otherwise jump back to the top each time.
+                    property string keptPath
+                    function keep(row) {
+                        currentIndex = row;
+                        keptPath = row >= 0 && row < count ? model[row].path : "";
+                    }
+                    function step(by) {
+                        if (count === 0) {
+                            return;
+                        }
+                        keep(Math.max(0, Math.min(count - 1, currentIndex + by)));
+                        positionViewAtIndex(currentIndex, ListView.Contain);
+                    }
+                    function activate() {
+                        const entry = currentIndex >= 0 && currentIndex < count ? model[currentIndex] : null;
+                        if (!entry) {
+                            return;
+                        }
+                        if (entry.dir) {
+                            Restore.openFolder(entry.path);
+                        } else {
+                            Restore.toggle(entry.path);
+                        }
+                    }
+                    onModelChanged: {
+                        const at = keptPath.length > 0 ? model.findIndex(e => e.path === keptPath) : -1;
+                        if (at >= 0) {
+                            currentIndex = at;
+                        } else {
+                            keptPath = "";
+                        }
+                    }
+                    Keys.onUpPressed: step(-1)
+                    Keys.onDownPressed: step(1)
+                    Keys.onSpacePressed: {
+                        if (currentIndex >= 0 && currentIndex < count) {
+                            Restore.toggle(model[currentIndex].path);
+                        }
+                    }
+                    Keys.onReturnPressed: activate()
+                    Keys.onEnterPressed: activate()
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                            const item = itemAtIndex(currentIndex);
+                            if (item) {
+                                page.showRowMenu(item, 60, item.height - 4);
+                            }
+                            event.accepted = true;
+                        }
+                    }
 
                     delegate: EntryRow {
+                        id: entryRow
                         required property var modelData
+                        required property int index
                         width: list.width
                         entry: modelData
                         showPath: Restore.searchText.length > 0
                         pathText: page.display(modelData.path.slice(0, modelData.path.lastIndexOf("/")))
+                        current: list.activeFocus && ListView.isCurrentItem
+                        onPressed: {
+                            list.keep(index);
+                            list.forceActiveFocus();
+                        }
+                        onMenuRequested: (mx, my) => page.showRowMenu(entryRow, mx, my)
                     }
 
                     UI.Label {
@@ -389,10 +470,24 @@ Item {
         ]
     }
 
+    UI.Menu {
+        id: rowMenu
+    }
+
     UI.Dialog {
         id: failDialog
+        // The backup tool's own words, added under the sentence on Details.
+        property string detail
         title: qsTr("Some files couldn't be restored")
         buttons: [
+            UI.Button {
+                visible: failDialog.detail.length > 0
+                text: qsTr("Details")
+                onClicked: {
+                    failDialog.text = failDialog.text + "\n\n" + failDialog.detail;
+                    failDialog.detail = "";
+                }
+            },
             UI.Button {
                 kind: "primary"
                 text: qsTr("OK")

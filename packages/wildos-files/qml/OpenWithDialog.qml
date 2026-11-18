@@ -32,7 +32,7 @@ UI.Dialog {
         return out;
     }
 
-    title: "How do you want to open this file?"
+    title: qsTr("How do you want to open this file?")
 
     function show(list) {
         urls = list;
@@ -57,7 +57,7 @@ UI.Dialog {
     UI.SearchField {
         id: search
         Layout.fillWidth: true
-        placeholderText: "Find an app"
+        placeholderText: qsTr("Find an app")
         Accessible.name: placeholderText
         onTextChanged: chooser.filter = text
         onEscapePressed: chooser.close()
@@ -131,18 +131,18 @@ UI.Dialog {
     }
 
     UI.CheckBox {
-        text: "Always use this app for this kind of file"
+        text: qsTr("Always use this app for this kind of file")
         checked: chooser.always
         onToggled: chooser.always = checked
     }
     buttons: [
         UI.Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: chooser.close()
         },
         UI.Button {
             kind: "primary"
-            text: "Open"
+            text: qsTr("Open")
             enabled: chooser.chosen.length > 0
             onClicked: chooser.openChosen()
         }

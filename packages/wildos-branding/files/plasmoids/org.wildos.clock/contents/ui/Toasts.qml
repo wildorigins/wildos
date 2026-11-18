@@ -8,8 +8,8 @@ import WildOS.UI as UI
 import org.wildos.overlays
 
 // New notifications as toasts in the top right corner (Overlays.dc): 380
-// wide, radius 16, the panel glass, 18px in from the edges, the newest on
-// top and older ones below. Each slides in from the right, stays 6 seconds
+// wide, the flyouts' glass and 22px corners, 18px in from the edges, the
+// newest on top and older ones below. Each slides in from the right, stays 6 seconds
 // (the pointer on it holds it there), then goes to the notification list in
 // the clock flyout. Buttons sit under the text, the main one on the right.
 // They follow Plasma's notification settings for which apps may pop up and
@@ -102,6 +102,18 @@ Item {
             readonly property real created: model.created ? model.created.getTime() : 0
             readonly property bool critical: model.urgency === NotificationManager.Notifications.CriticalUrgency
             property int offset: toasts.edgeMargin
+            // When a toast above goes, the ones left glide up to their new
+            // place. A toast still arriving is put straight where it belongs.
+            Behavior on offset {
+                enabled: toast.visible
+                NumberAnimation {
+                    duration: UI.Style.motionNormal
+                    easing.type: UI.Style.easeStandard
+                }
+            }
+            // The compositor takes the new margin with the window's next
+            // frame, and nothing else in the toast changes while it moves.
+            onOffsetChanged: toast.update()
 
             readonly property int timeout: {
                 // A copy still going stays up, as Windows' copy window does.
@@ -140,14 +152,14 @@ Item {
 
             UI.WindowFrame {
                 window: toast
-                radius: 16
+                radius: UI.Style.radius2xl
                 shadowColor: UI.Style.shadowWindow
             }
 
             Rectangle {
                 anchors.fill: parent
-                radius: 16
-                color: UI.Style.glass(23, 25, 29, 0.84, 0.92)
+                radius: UI.Style.radius2xl
+                color: UI.Style.glassPanel
                 border.width: 1
                 border.color: UI.Style.borderGlass
             }

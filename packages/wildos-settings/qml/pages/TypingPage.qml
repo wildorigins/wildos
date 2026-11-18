@@ -23,8 +23,8 @@ PageScroll {
         visible: !page.hasDictionaries
         iconName: "warning"
         warning: true
-        title: "No spelling dictionaries are installed"
-        description: "Spell checking needs a dictionary for each language. Install one, such as hunspell-en-gb, and open this page again."
+        title: qsTr("No spelling dictionaries are installed")
+        description: qsTr("Spell checking needs a dictionary for each language. Install one, such as hunspell-en-gb, and open this page again.")
     }
 
     ColumnLayout {
@@ -32,7 +32,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Spelling"
+            text: qsTr("Spelling")
         }
 
         UI.Card {
@@ -43,42 +43,42 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "pencil"
-                    title: "Check spelling"
-                    description: "Underline misspelt words in apps that check spelling"
-                    status: Spelling.enabled ? "On" : "Off"
+                    title: qsTr("Check spelling")
+                    description: qsTr("Underline misspelt words in apps that check spelling")
+                    status: Spelling.enabled ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Spelling.enabled
-                        Accessible.name: "Check spelling"
+                        Accessible.name: qsTr("Check spelling")
                         onToggled: Spelling.setEnabled(checked)
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Check as I type"
-                    description: "Look over each word as you write it, not only when you ask"
+                    title: qsTr("Check as I type")
+                    description: qsTr("Look over each word as you write it, not only when you ask")
                     enabled: Spelling.enabled
-                    status: Spelling.asYouType ? "On" : "Off"
+                    status: Spelling.asYouType ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Spelling.asYouType
-                        Accessible.name: "Check as I type"
+                        Accessible.name: qsTr("Check as I type")
                         onToggled: Spelling.setAsYouType(checked)
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Ignore words in capitals"
-                    description: "Leave words such as NASA or HTML alone"
+                    title: qsTr("Ignore words in capitals")
+                    description: qsTr("Leave words such as NASA or HTML alone")
                     enabled: Spelling.enabled
-                    status: Spelling.skipUppercase ? "On" : "Off"
+                    status: Spelling.skipUppercase ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Spelling.skipUppercase
-                        Accessible.name: "Ignore words in capitals"
+                        Accessible.name: qsTr("Ignore words in capitals")
                         onToggled: Spelling.setSkipUppercase(checked)
                     }
                 }
@@ -92,7 +92,7 @@ PageScroll {
         visible: page.hasDictionaries
 
         SectionTitle {
-            text: "Languages"
+            text: qsTr("Languages")
         }
 
         UI.Card {
@@ -103,12 +103,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "language"
-                    title: "Spelling language"
-                    description: "The dictionary used first"
+                    title: qsTr("Spelling language")
+                    description: qsTr("The dictionary used first")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Spelling language"
+                        Accessible.name: qsTr("Spelling language")
                         model: Spelling.dictionaries
                         readonly property string choice: Spelling.language
                         currentIndex: model.findIndex(o => o.value === choice)
@@ -119,14 +119,14 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.others.length > 0
-                    title: "Detect the language I'm writing in"
-                    description: "Switch to whichever of your languages a sentence is in"
-                    status: Spelling.autodetect ? "On" : "Off"
+                    title: qsTr("Detect the language I'm writing in")
+                    description: qsTr("Switch to whichever of your languages a sentence is in")
+                    status: Spelling.autodetect ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Spelling.autodetect
-                        Accessible.name: "Detect the language I'm writing in"
+                        Accessible.name: qsTr("Detect the language I'm writing in")
                         onToggled: Spelling.setAutodetect(checked)
                     }
                 }
@@ -143,7 +143,7 @@ PageScroll {
                         leading: UI.CheckBox {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: Spelling.otherLanguages.includes(other.modelData.value)
-                            Accessible.name: "Also check " + other.modelData.text
+                            Accessible.name: qsTr("Also check %1").arg(other.modelData.text)
                             onToggled: Spelling.setOtherLanguage(other.modelData.value, checked)
                         }
                     }
@@ -158,12 +158,12 @@ PageScroll {
         visible: page.hasDictionaries
 
         SectionTitle {
-            text: "Your dictionary"
+            text: qsTr("Your dictionary")
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Words here are never marked as misspelt. Names, places and words from your work are good ones to add."
+            text: qsTr("Words here are never marked as misspelt. Names, places and words from your work are good ones to add.")
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
             elide: Text.ElideNone
@@ -176,19 +176,19 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Add a word"
+                    title: qsTr("Add a word")
 
                     UI.TextField {
                         id: wordField
                         anchors.verticalCenter: parent.verticalCenter
                         width: 220
-                        placeholderText: "Type a word"
+                        placeholderText: qsTr("Type a word")
                         onAccepted: page.addWord()
                     }
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Add"
+                        text: qsTr("Add")
                         iconName: "plus"
                         enabled: wordField.text.trim().length > 0 && !wordField.text.trim().includes(" ")
                         onClicked: page.addWord()
@@ -197,8 +197,8 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: Spelling.words.length === 0
-                    title: "No words added yet"
-                    description: "Add words here, or choose Add to dictionary when an app underlines one"
+                    title: qsTr("No words added yet")
+                    description: qsTr("Add words here, or choose Add to dictionary when an app underlines one")
                 }
 
                 Repeater {
@@ -213,7 +213,7 @@ PageScroll {
                         UI.IconButton {
                             anchors.verticalCenter: parent.verticalCenter
                             iconName: "delete"
-                            tip: "Remove " + wordRow.modelData
+                            tip: qsTr("Remove %1").arg(wordRow.modelData)
                             onClicked: Spelling.removeWord(wordRow.modelData)
                         }
                     }

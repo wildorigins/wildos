@@ -82,6 +82,7 @@ class Scanner : public QObject
     Q_PROPERTY(QVariantList pages READ pages NOTIFY pagesChanged)
     Q_PROPERTY(int current READ current WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY pagesChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY pagesChanged)
     Q_PROPERTY(qint64 pdfSize READ pdfSize NOTIFY pdfSizeChanged)
     Q_PROPERTY(QVariantMap problem READ problem NOTIFY problemChanged)
     Q_PROPERTY(bool canSign READ canSign CONSTANT)
@@ -123,6 +124,7 @@ public:
     int current() const { return m_current; }
     void setCurrent(int index);
     bool canUndo() const { return !m_history.isEmpty(); }
+    bool canRedo() const { return !m_future.isEmpty(); }
     qint64 pdfSize() const { return m_pdfSize; }
     QVariantMap problem() const { return m_problem; }
     bool canSign() const;
@@ -134,7 +136,10 @@ public:
     Q_INVOKABLE void rotate();
     Q_INVOKABLE void crop(const QRectF &fraction);
     Q_INVOKABLE void removePage();
+    // Takes the page at `from` to where the page at `to` is.
+    Q_INVOKABLE void movePage(int from, int to);
     Q_INVOKABLE void undo();
+    Q_INVOKABLE void redo();
     Q_INVOKABLE void clearProblem();
     // Mark up: the page goes to the Capture editor as a picture, and comes
     // back when the editor saves it.
@@ -169,11 +174,14 @@ private:
         // Size as a one-page PDF, measured in the background; -1 until then.
         qint64 pdfBytes = -1;
     };
+    // One step back, or forward again: the page as it was (or, for a step
+    // to redo, as it becomes), or for "move" where it came from and went.
     struct Undo {
         QString kind;
         int index;
         Page page;
         QImage image;
+        int to = -1;
     };
 
     void startWorker();
@@ -183,6 +191,9 @@ private:
     void addPage(const QImage &image, int dpi, const QString &note);
     void changed(int index, const QImage &image, const QString &kind);
     void remember(const QString &kind, int index);
+    void keep(const Undo &step);
+    int indexOfPage(int id) const;
+    void takeOut(int index);
     void measure();
     void pickDefaults();
     QString nextName(const QString &folder, const QString &suffix) const;
@@ -212,6 +223,8 @@ private:
     bool m_busy = false;
     QList<Page> m_pages;
     QList<Undo> m_history;
+    QList<Undo> m_future;
+    bool m_redoing = false;
     int m_current = -1;
     int m_nextId = 1;
     qint64 m_pdfSize = 0;

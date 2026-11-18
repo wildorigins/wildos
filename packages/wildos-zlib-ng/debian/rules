@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+
+VERSION := 2.3.3
+TARBALL := zlib-ng-$(VERSION).tar.gz
+SHA256 := f9c65aa9c852eb8255b636fd9f07ce1c406f061ec19a2e7d508b318ca0c907d1
+SRC := build/zlib-ng-$(VERSION)
+DEST := debian/wildos-zlib-ng
+# Inside the multiarch directory, so every AppArmor profile that lets a
+# program load its libraries lets it load this one.
+LIBDIR := usr/lib/x86_64-linux-gnu/wildos-zlib-ng
+
+%:
+	dh $@
+
+# The tarball is GitHub's archive of the release tag, checked before it is
+# used. --zlib-compat gives the library zlib's own name, symbols and symbol
+# versions, so programs built against zlib1g load it unchanged.
+override_dh_auto_configure:
+	echo "$(SHA256)  $(TARBALL)" | sha256sum -c -
+	rm -rf build && mkdir build
+	tar -xzf $(TARBALL) -C build
+	cd $(SRC) && ./configure --zlib-compat
+
+override_dh_auto_build:
+	$(MAKE) -C $(SRC)
+	$(CC) -O2 -I$(SRC) -o build/selftest files/selftest.c -L$(SRC) -lz
+
+# zlib-ng's own tests, against the library just built.
+override_dh_auto_test:
+	$(MAKE) -C $(SRC) test
+
+override_dh_auto_install:
+	install -d $(DEST)/$(LIBDIR) $(DEST)/usr/libexec/wildos $(DEST)/usr/share/wildos-zlib-ng
+	install -m644 $(SRC)/libz.so.1.*.zlib-ng $(DEST)/$(LIBDIR)/
+	ln -s $$(basename $(SRC)/libz.so.1.*.zlib-ng) $(DEST)/$(LIBDIR)/libz.so.1
+	install -m755 build/selftest $(DEST)/usr/libexec/wildos/zlib-ng-selftest
+	install -m755 files/zlib-ng-check $(DEST)/usr/libexec/wildos/zlib-ng-check
+	install -m644 files/ld.so.conf $(DEST)/usr/share/wildos-zlib-ng/ld.so.conf
+	install -m644 $(SRC)/LICENSE.md $(DEST)/usr/share/wildos-zlib-ng/LICENSE.md
+	# The zlib version this build stands in for, read by the check.
+	sed -n 's/^#define ZLIB_VERSION "\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p' $(SRC)/zlib.h > $(DEST)/usr/share/wildos-zlib-ng/stands-in-for
+	test -s $(DEST)/usr/share/wildos-zlib-ng/stands-in-for
+
+# The library is private to this package: nothing built later should come to
+# depend on wildos-zlib-ng for libz.so.1, and zlib1g stays the provider.
+override_dh_makeshlibs:
+
+override_dh_auto_clean:
+	rm -rf build

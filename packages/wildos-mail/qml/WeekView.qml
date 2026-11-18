@@ -9,7 +9,8 @@ import "Formats.js" as Formats
 // its date, events that fill whole days in the band above the hours, and
 // the hours themselves, 40px each, with a line at the time now. Events can
 // be dragged to another time or day; a double-click on an empty slot
-// starts a new event there.
+// starts a new event there, and a right-click on an event or a slot opens
+// its menu.
 Item {
     id: view
 
@@ -23,6 +24,9 @@ Item {
     signal eventClicked(string key, Item block)
     signal newAt(date start, bool allDay)
     signal dayClicked(date day)
+    // `from` is the event when its menu was asked for with the keyboard.
+    signal eventMenu(string key, var from)
+    signal slotMenu(date start, bool allDay)
 
     readonly property real gutter: 58
     readonly property real columnWidth: Math.max(40, (width - gutter - 1) / days)
@@ -154,7 +158,17 @@ Item {
                     }
                     MouseArea {
                         anchors.fill: parent
-                        onDoubleClicked: view.newAt(view.dayAfter(view.startDate, index), true)
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: function (mouse) {
+                            if (mouse.button === Qt.RightButton) {
+                                view.slotMenu(view.dayAfter(view.startDate, index), true);
+                            }
+                        }
+                        onDoubleClicked: function (mouse) {
+                            if (mouse.button === Qt.LeftButton) {
+                                view.newAt(view.dayAfter(view.startDate, index), true);
+                            }
+                        }
                     }
                 }
             }
@@ -171,12 +185,30 @@ Item {
                     color: Qt.rgba(Qt.color(modelData.color).r, Qt.color(modelData.color).g, Qt.color(modelData.color).b, view.openKey === modelData.key ? 0.55 : 0.38)
                     border.width: view.openKey === modelData.key ? 1 : 0
                     border.color: modelData.color
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Button
+                    Accessible.name: qsTr("%1, all day").arg(modelData.title)
+                    Keys.onPressed: function (event) {
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                            view.eventClicked(modelData.key, chip);
+                        } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                            view.eventMenu(modelData.key, chip);
+                        } else {
+                            return;
+                        }
+                        event.accepted = true;
+                    }
 
                     Rectangle {
                         width: 3
                         height: parent.height
                         radius: 1
                         color: chip.modelData.color
+                    }
+                    UI.FocusRing {
+                        visible: chip.activeFocus
+                        anchors.margins: 0
+                        targetRadius: chip.radius - 4
                     }
                     UI.Label {
                         anchors.verticalCenter: parent.verticalCenter
@@ -190,7 +222,14 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: view.eventClicked(chip.modelData.key, chip)
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: function (mouse) {
+                            if (mouse.button === Qt.RightButton) {
+                                view.eventMenu(chip.modelData.key, null);
+                            } else {
+                                view.eventClicked(chip.modelData.key, chip);
+                            }
+                        }
                     }
                 }
             }
@@ -264,10 +303,22 @@ Item {
                         }
                         MouseArea {
                             anchors.fill: parent
-                            onDoubleClicked: function (mouse) {
-                                const minutes = Math.floor(mouse.y / view.hourHeight * 2) * 30;
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            // The half hour under the pointer.
+                            function slotAt(y) {
+                                const minutes = Math.floor(y / view.hourHeight * 2) * 30;
                                 const d = column.day;
-                                view.newAt(new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(minutes / 60), minutes % 60), false);
+                                return new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(minutes / 60), minutes % 60);
+                            }
+                            onClicked: function (mouse) {
+                                if (mouse.button === Qt.RightButton) {
+                                    view.slotMenu(slotAt(mouse.y), false);
+                                }
+                            }
+                            onDoubleClicked: function (mouse) {
+                                if (mouse.button === Qt.LeftButton) {
+                                    view.newAt(slotAt(mouse.y), false);
+                                }
                             }
                         }
 
@@ -291,11 +342,42 @@ Item {
                                 border.color: Qt.lighter(modelData.color, 1.2)
                                 opacity: modelData.invited && modelData.myStatus === "notGoing" ? 0.5 : 1
                                 clip: true
+                                activeFocusOnTab: true
+                                Accessible.role: Accessible.Button
+                                Accessible.name: qsTr("%1, %2").arg(modelData.title).arg(modelData.rangeText)
+                                Keys.onPressed: function (event) {
+                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                        view.eventClicked(modelData.key, block);
+                                    } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                                        view.eventMenu(modelData.key, block);
+                                    } else {
+                                        return;
+                                    }
+                                    event.accepted = true;
+                                }
+                                // An event reached with Tab may be hours away
+                                // from the ones on screen.
+                                onActiveFocusChanged: {
+                                    if (!activeFocus) {
+                                        return;
+                                    }
+                                    if (y < hours.contentY) {
+                                        hours.contentY = Math.max(0, y - 8);
+                                    } else if (y + height > hours.contentY + hours.height) {
+                                        hours.contentY = Math.max(0, Math.min(hours.contentHeight - hours.height, y + height - hours.height + 8));
+                                    }
+                                }
 
                                 Rectangle {
                                     width: 3
                                     height: parent.height
                                     color: block.modelData.color
+                                }
+                                // Inside the block, which clips what it draws.
+                                UI.FocusRing {
+                                    visible: block.activeFocus
+                                    anchors.margins: 0
+                                    targetRadius: block.radius - 4
                                 }
                                 Column {
                                     x: 9
@@ -334,12 +416,16 @@ Item {
                                     property bool active: false
                                     anchors.fill: parent
                                     cursorShape: active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                                     preventStealing: true
                                     onPressed: function (mouse) {
                                         startX = mouse.x;
                                         startY = mouse.y;
                                     }
                                     onPositionChanged: function (mouse) {
+                                        if (!(pressedButtons & Qt.LeftButton)) {
+                                            return;
+                                        }
                                         const dx = mouse.x - startX;
                                         const dy = mouse.y - startY;
                                         if (!active && Math.abs(dx) + Math.abs(dy) > 8 && !block.modelData.readOnly) {
@@ -370,7 +456,16 @@ Item {
                                         const d = view.dayAfter(column.day, dayShift);
                                         CalendarEngine.moveEvent(block.modelData.key, new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, minutes));
                                     }
-                                    onClicked: if (!active) view.eventClicked(block.modelData.key, block)
+                                    onClicked: function (mouse) {
+                                        if (active) {
+                                            return;
+                                        }
+                                        if (mouse.button === Qt.RightButton) {
+                                            view.eventMenu(block.modelData.key, null);
+                                        } else {
+                                            view.eventClicked(block.modelData.key, block);
+                                        }
+                                    }
                                 }
                             }
                         }

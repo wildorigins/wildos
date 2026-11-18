@@ -16,6 +16,7 @@ Item {
     signal selected(string path)
     signal newNote()
     signal noteMenu(string path, Item row, real x, real y)
+    signal deleteRequested(string path)
 
     readonly property string heading: {
         if (NoteStore.viewKind === "pinned") {
@@ -162,6 +163,11 @@ Item {
 
             Keys.onUpPressed: list.step(-1)
             Keys.onDownPressed: list.step(1)
+            Keys.onDeletePressed: {
+                if (list.selectedPath.length > 0) {
+                    list.deleteRequested(list.selectedPath);
+                }
+            }
 
             UI.Label {
                 visible: notes.count === 0

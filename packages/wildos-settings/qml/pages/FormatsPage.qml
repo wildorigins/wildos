@@ -12,21 +12,21 @@ PageScroll {
     id: page
 
     readonly property var formats: Language.formats()
-    readonly property var choices: [{ value: "", text: "Same as regional format" }].concat(formats)
+    readonly property var choices: [{ value: "", text: qsTr("Same as regional format") }].concat(formats)
     readonly property string regional: formats.find(o => o.value === Language.format)?.text ?? Language.format
 
     readonly property var parts: [
-        { key: "LC_NUMERIC", icon: "list", title: "Numbers", what: "Decimal point and thousands separator" },
-        { key: "LC_MONETARY", icon: "store", title: "Currency", what: "Currency symbol and where it goes" },
-        { key: "LC_TIME", icon: "clock", title: "Dates and times", what: "Date order, 12 or 24 hour clock, first day of the week" },
-        { key: "LC_MEASUREMENT", icon: "resolution", title: "Measurement units", what: "Metric or imperial" },
-        { key: "LC_PAPER", icon: "printer", title: "Paper size", what: "The paper documents are laid out on" }
+        { key: "LC_NUMERIC", icon: "list", title: qsTr("Numbers"), what: qsTr("Decimal point and thousands separator") },
+        { key: "LC_MONETARY", icon: "store", title: qsTr("Currency"), what: qsTr("Currency symbol and where it goes") },
+        { key: "LC_TIME", icon: "clock", title: qsTr("Dates and times"), what: qsTr("Date order, 12 or 24 hour clock, first day of the week") },
+        { key: "LC_MEASUREMENT", icon: "resolution", title: qsTr("Measurement units"), what: qsTr("Metric or imperial") },
+        { key: "LC_PAPER", icon: "printer", title: qsTr("Paper size"), what: qsTr("The paper documents are laid out on") }
     ]
 
     readonly property var fileSizeChoices: [
-        { value: 0, text: "KiB, MiB (1,024 bytes)" },
-        { value: 1, text: "KB, MB (1,024 bytes)" },
-        { value: 2, text: "kB, MB (1,000 bytes)" }
+        { value: 0, text: qsTr("KiB, MiB (1,024 bytes)") },
+        { value: 1, text: qsTr("KB, MB (1,024 bytes)") },
+        { value: 2, text: qsTr("kB, MB (1,000 bytes)") }
     ]
 
     // Typing to pick in a closed list chooses at every letter; only the
@@ -53,7 +53,7 @@ PageScroll {
     Connections {
         target: Language
         function onFailed(reason) {
-            notice.show("The format was not changed", reason, true);
+            notice.show(qsTr("The format was not changed"), reason, true);
         }
     }
 
@@ -64,11 +64,11 @@ PageScroll {
     StatusCard {
         visible: Language.needsSignOut
         iconName: "sign-out"
-        title: "Sign out to finish"
-        description: "Apps use the new formats when you sign out and back in. Save your work first."
+        title: qsTr("Sign out to finish")
+        description: qsTr("Apps use the new formats when you sign out and back in. Save your work first.")
 
         UI.Button {
-            text: "Sign out now"
+            text: qsTr("Sign out now")
             onClicked: Language.signOut()
         }
     }
@@ -78,12 +78,12 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Formats"
+            text: qsTr("Formats")
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Your regional format is " + page.regional + ". Choose another format for any of these and the rest stay as they are."
+            text: qsTr("Your regional format is %1. Choose another format for any of these and the rest stay as they are.").arg(page.regional)
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
             elide: Text.ElideNone
@@ -123,12 +123,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "storage"
-                    title: "File sizes"
-                    description: "A file of 1,536,000 bytes shows as " + Language.fileSizeExample(Language.fileSizeUnits)
+                    title: qsTr("File sizes")
+                    description: qsTr("A file of 1,536,000 bytes shows as %1").arg(Language.fileSizeExample(Language.fileSizeUnits))
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "File sizes"
+                        Accessible.name: qsTr("File sizes")
                         model: page.fileSizeChoices
                         readonly property int choice: Language.fileSizeUnits
                         currentIndex: Math.max(0, model.findIndex(o => o.value === choice))
@@ -140,7 +140,7 @@ PageScroll {
 
         UI.Label {
             Layout.fillWidth: true
-            text: Language.busy ? "Getting the format ready on this computer" : "File sizes change in each app the next time it opens."
+            text: Language.busy ? qsTr("Getting the format ready on this computer") : qsTr("File sizes change in each app the next time it opens.")
             size: 12
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap

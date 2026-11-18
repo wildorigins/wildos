@@ -116,7 +116,7 @@ void Advanced::run(const QStringList &args, const QString &key)
         } else if (status != QProcess::NormalExit || (code != 126 && code != 127)) {
             // 126 and 127: the password prompt was dismissed, which needs no
             // message. The switch goes back to the store's value.
-            Q_EMIT failed(key, QStringLiteral("Something went wrong. Nothing was changed."));
+            Q_EMIT failed(key, tr("Something went wrong. Nothing was changed."));
         }
         // A switch flipped by hand has lost its binding; changed() puts
         // every row back to what the store says.

@@ -14,7 +14,10 @@ T.AbstractButton {
     property bool divider: true
     readonly property var app: Catalog.app(appKey)
     readonly property bool working: !!app && (app.busy || app.queued)
-    readonly property bool removed: !!app && !app.installed && !working
+    // An app that does not come with Wild OS was never removed: it is
+    // offered like any other, with Get.
+    readonly property bool optional: Catalog.catalogRevision >= 0 && Catalog.isOptional(appKey)
+    readonly property bool removed: !!app && !app.installed && !working && !optional
     readonly property string sizeText: Catalog.stateRevision >= 0 && app ? Catalog.sizeText(Catalog.appSize(appKey)) : ""
 
     signal activated(string key)
@@ -23,7 +26,7 @@ T.AbstractButton {
     hoverEnabled: true
     focusPolicy: Qt.TabFocus
     Accessible.role: Accessible.Button
-    Accessible.name: app ? app.name + ", " + app.tagline + (removed ? ", removed" : "") : ""
+    Accessible.name: app ? (removed ? qsTr("%1, %2, removed") : qsTr("%1, %2")).arg(app.name).arg(app.tagline) : ""
     onClicked: activated(appKey)
 
     AppMenuArea {
@@ -99,8 +102,8 @@ T.AbstractButton {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             app: row.app
-            getLabel: "Reinstall"
-            note: row.working ? "Reinstalling" : row.removed ? "Removed" : row.sizeText
+            getLabel: row.optional ? qsTr("Get") : qsTr("Reinstall")
+            note: row.working ? (row.optional ? qsTr("Installing") : qsTr("Reinstalling")) : row.removed ? qsTr("Removed") : row.sizeText
             noteColor: row.removed ? UI.Style.warning : Metrics.inkTertiary
         }
     }

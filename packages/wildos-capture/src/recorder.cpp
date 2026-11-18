@@ -107,7 +107,7 @@ QString Recorder::nextPath(const QString &extension) const
 void Recorder::recordArea(const QRect &area, qreal scale)
 {
     if (!available() || m_recording) {
-        Q_EMIT failed(QStringLiteral("Screen recording is not available right now."));
+        Q_EMIT failed(tr("Screen recording is not available right now."));
         return;
     }
     attach(new ScreencastStream(m_casting->stream_region(area.x(), area.y(), area.width(), area.height(), wl_fixed_from_double(scale),
@@ -118,7 +118,7 @@ void Recorder::recordArea(const QRect &area, qreal scale)
 void Recorder::recordWindow(const QString &id)
 {
     if (!available() || m_recording) {
-        Q_EMIT failed(QStringLiteral("Screen recording is not available right now."));
+        Q_EMIT failed(tr("Screen recording is not available right now."));
         return;
     }
     attach(new ScreencastStream(m_casting->stream_window(id, QtWayland::zkde_screencast_unstable_v1::pointer_embedded), this));
@@ -143,7 +143,7 @@ void Recorder::attach(ScreencastStream *stream)
         m_recording = false;
         dropStream();
         Q_EMIT recordingChanged();
-        Q_EMIT failed(QStringLiteral("The recording could not start."));
+        Q_EMIT failed(tr("The recording could not start."));
     });
     connect(stream, &ScreencastStream::closed, this, &Recorder::stop);
     connect(stream, &ScreencastStream::created, this, [this](uint node) {
@@ -181,7 +181,7 @@ void Recorder::attach(ScreencastStream *stream)
             if (QFileInfo(m_path).size() > 0) {
                 Q_EMIT finished(m_path);
             } else {
-                Q_EMIT failed(QStringLiteral("Nothing was recorded."));
+                Q_EMIT failed(tr("Nothing was recorded."));
             }
         });
         m_record->start();

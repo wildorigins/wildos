@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest:manifest xmlns:manifest="http://openoffice.org/2001/manifest">
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.basic-library" manifest:full-path="WildOSOffice/"/>
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data" manifest:full-path="registry/GenericCommands.xcu"/>
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data" manifest:full-path="registry/WriterCommands.xcu"/>
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data" manifest:full-path="registry/CalcCommands.xcu"/>
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data" manifest:full-path="registry/DrawImpressCommands.xcu"/>
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data" manifest:full-path="registry/PresenterScreen.xcu"/>
 </manifest:manifest>

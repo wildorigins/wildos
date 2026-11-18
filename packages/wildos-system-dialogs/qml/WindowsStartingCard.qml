@@ -18,28 +18,28 @@ PromptCard {
     signal hidden()
 
     width: 440
-    title: cold ? "Starting Windows" : "Waking up Windows"
+    title: cold ? qsTr("Starting Windows") : qsTr("Waking up Windows")
     // A start from off is the slow one, and rare now that Windows is saved
     // as the PC shuts down: said plainly, so the wait is expected.
-    text: (appName.length > 0 ? appName : "Your app") + " opens " + (cold ? coldWhen() : when()) + "."
-          + (cold ? " Windows only starts up from off now and then. After this, its apps open in seconds." : "")
+    text: (cold ? coldWhen(appName.length > 0 ? appName : qsTr("Your app")) : when(appName.length > 0 ? appName : qsTr("Your app")))
+          + (cold ? " " + qsTr("Windows only starts up from off now and then. After this, its apps open in seconds.") : "")
 
-    function coldWhen() {
+    function coldWhen(app) {
         if (seconds < 90)
-            return "once Windows has started up, in about a minute";
+            return qsTr("%1 opens once Windows has started up, in about a minute.").arg(app);
         if (seconds < 150)
-            return "once Windows has started up, in a minute or two";
-        return "once Windows has started up, in about " + Math.round(seconds / 60) + " minutes";
+            return qsTr("%1 opens once Windows has started up, in a minute or two.").arg(app);
+        return qsTr("%1 opens once Windows has started up, in about %2 minutes.").arg(app).arg(Math.round(seconds / 60));
     }
 
-    function when() {
+    function when(app) {
         if (seconds <= 5)
-            return "in a few seconds";
+            return qsTr("%1 opens in a few seconds.").arg(app);
         if (seconds < 45)
-            return "in about " + (Math.round(seconds / 5) * 5) + " seconds";
+            return qsTr("%1 opens in about %2 seconds.").arg(app).arg(Math.round(seconds / 5) * 5);
         if (seconds < 90)
-            return "as soon as Windows is ready, in about a minute";
-        return "as soon as Windows is ready, in about " + Math.round(seconds / 60) + " minutes";
+            return qsTr("%1 opens as soon as Windows is ready, in about a minute.").arg(app);
+        return qsTr("%1 opens as soon as Windows is ready, in about %2 minutes.").arg(app).arg(Math.round(seconds / 60));
     }
 
     property real elapsed: 0
@@ -71,7 +71,7 @@ PromptCard {
 
     buttons: [
         UI.Button {
-            text: "Hide"
+            text: qsTr("Hide")
             onClicked: card.hidden()
         }
     ]

@@ -12,6 +12,10 @@ import WildOS.UI as UI
 Item {
     id: page
 
+    // Processes gives endLabel in English, which this page compares;
+    // listed here for the translations and shown with qsTr().
+    readonly property var endLabels: [QT_TR_NOOP("Restart"), QT_TR_NOOP("End task")]
+
     property string selectedKey: ""
     // Read again whenever the list updates.
     readonly property var selected: Processes.processCount >= 0 && selectedKey.length > 0 ? Processes.entry(selectedKey) : ({})
@@ -29,7 +33,7 @@ Item {
         if (info.group === 2) {
             confirm.key = key;
             confirm.tree = tree;
-            confirm.title = "End " + info.name + "?";
+            confirm.title = qsTr("End %1?").arg(info.name);
             confirm.open();
             return;
         }
@@ -43,25 +47,25 @@ Item {
         }
         const entries = [];
         if (info.expandable) {
-            entries.push({ text: info.expanded ? "Collapse" : "Expand", run: () => Processes.toggle(key) });
+            entries.push({ text: info.expanded ? qsTr("Collapse") : qsTr("Expand"), run: () => Processes.toggle(key) });
             entries.push({ separator: true });
         }
-        entries.push({ text: info.endLabel, icon: info.endLabel === "Restart" ? "restart" : "close", enabled: info.canEnd, run: () => page.end(key, false) });
+        entries.push({ text: qsTr(info.endLabel), icon: info.endLabel === "Restart" ? "restart" : "close", enabled: info.canEnd, run: () => page.end(key, false) });
         if (!info.winMode) {
-            entries.push({ text: "End process tree", enabled: info.canEnd, run: () => page.end(key, true) });
+            entries.push({ text: qsTr("End process tree"), enabled: info.canEnd, run: () => page.end(key, true) });
         }
         if (!info.winMode && info.single) {
-            const levels = [["High", -10], ["Above normal", -5], ["Normal", 0], ["Below normal", 5], ["Low", 19]];
+            const levels = [[qsTr("High"), -10], [qsTr("Above normal"), -5], [qsTr("Normal"), 0], [qsTr("Below normal"), 5], [qsTr("Low"), 19]];
             entries.push({ separator: true });
             entries.push({
-                text: "Set priority",
+                text: qsTr("Set priority"),
                 submenu: levels.map(l => ({ text: l[0], run: () => page.message(Processes.setPriority(key, l[1])) }))
             });
-            entries.push({ text: "Open file location", icon: "open-folder", run: () => Processes.openFileLocation(key) });
+            entries.push({ text: qsTr("Open file location"), icon: "open-folder", run: () => Processes.openFileLocation(key) });
         }
         if (info.winMode) {
             entries.push({ separator: true });
-            entries.push({ text: "Windows app settings", icon: "options", run: () => Prefs.openSettings("windowsapps") });
+            entries.push({ text: qsTr("Windows app settings"), icon: "options", run: () => Prefs.openSettings("windowsapps") });
         }
         menu.entries = entries;
         menu.popup(item, at.x, at.y);
@@ -69,20 +73,36 @@ Item {
 
     Keys.onDeletePressed: if (page.canEnd) page.end(page.selectedKey, false)
 
+    function rowIndex() {
+        return Processes.indexOf(selectedKey);
+    }
+
+    function selectRow(index) {
+        selectedKey = Processes.keyAt(index);
+    }
+
+    function rowName(index) {
+        return Processes.entry(Processes.keyAt(index)).name || "";
+    }
+
+    function rowSelectable(index) {
+        return !Processes.isHeading(index);
+    }
+
     PageHeader {
         id: header
         width: parent.width
-        title: "Processes"
+        title: qsTr("Processes")
 
         HeaderButton {
-            text: "Run new task"
+            text: qsTr("Run new task")
             iconName: "plus"
             onClicked: page.runTask()
         }
 
         HeaderButton {
             kind: "primary"
-            text: page.selected.endLabel || "End task"
+            text: qsTr(page.selected.endLabel || QT_TR_NOOP("End task"))
             iconName: page.selected.endLabel === "Restart" ? "restart" : "close"
             enabled: page.canEnd
             onClicked: page.end(page.selectedKey, false)
@@ -98,7 +118,7 @@ Item {
         ColumnHeader {
             width: parent.width - 120 - 4 * 92
             height: parent.height - 1
-            label: "Name"
+            label: qsTr("Name")
             alignRight: false
             sorted: Processes.sortColumn === "name"
             descending: Processes.sortDescending
@@ -109,12 +129,12 @@ Item {
                 UI.Label {
                     x: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Name"
+                    text: qsTr("Name")
                     size: 12
                     color: UI.Style.inkAlpha(0.7, 0.64)
                 }
                 UI.Icon {
-                    visible: Processes.sortColumn === "name" && Processes.sortDescending
+                    visible: Processes.sortColumn === "name"
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 3
                     name: Processes.sortDescending ? "chevron-down" : "chevron-up"
@@ -132,7 +152,7 @@ Item {
             ColumnHeader {
                 width: 120
                 height: parent.height - 1
-                label: "Status"
+                label: qsTr("Status")
                 alignRight: false
                 sorted: Processes.sortColumn === "status"
                 descending: Processes.sortDescending
@@ -141,10 +161,10 @@ Item {
 
             Repeater {
                 model: [
-                    { id: "cpu", label: "CPU", total: () => Format.percent(SystemStats.cpuUsage) },
-                    { id: "memory", label: "Memory", total: () => Format.percent(SystemStats.memoryPercent) },
-                    { id: "disk", label: "Disk", total: () => Format.percent(SystemStats.diskPercent) },
-                    { id: "network", label: "Network", total: () => Format.percent(SystemStats.networkPercent) }
+                    { id: "cpu", label: qsTr("CPU"), total: () => Format.percent(SystemStats.cpuUsage) },
+                    { id: "memory", label: qsTr("Memory"), total: () => Format.percent(SystemStats.memoryPercent) },
+                    { id: "disk", label: qsTr("Disk"), total: () => Format.percent(SystemStats.diskPercent) },
+                    { id: "network", label: qsTr("Network"), total: () => Format.percent(SystemStats.networkPercent) }
                 ]
 
                 ColumnHeader {
@@ -177,36 +197,33 @@ Item {
         model: Processes
         boundsBehavior: Flickable.StopAtBounds
         focus: true
+        activeFocusOnTab: true
         keyNavigationEnabled: false
         reuseItems: true
+        Accessible.role: Accessible.List
+        Accessible.name: qsTr("Processes")
         T.ScrollBar.vertical: UI.ScrollBar {}
+        // The first list takes a moment to gather; it fades in when it is
+        // there rather than appearing all at once on an empty page.
+        opacity: Processes.ready ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation { duration: UI.Style.motionNormal; easing.type: Easing.OutCubic }
+        }
 
         delegate: ProcessRow {
             width: list.width
             selected: key === page.selectedKey
+            focused: selected && listKeys.shown
             memoryTotal: SystemStats.memoryTotal
             onChosen: k => {
                 page.selectedKey = k;
-                list.forceActiveFocus();
+                listKeys.clicked();
             }
             onExpandToggled: k => Processes.toggle(k)
             onMenuRequested: (k, at) => page.showMenu(k, this, at)
         }
 
-        function step(delta) {
-            let i = Processes.indexOf(page.selectedKey) + delta;
-            while (i >= 0 && i < count && Processes.isHeading(i)) {
-                i += delta;
-            }
-            if (i < 0 || i >= count) {
-                return;
-            }
-            page.selectedKey = Processes.keyAt(i);
-            positionViewAtIndex(i, ListView.Contain);
-        }
-
-        Keys.onUpPressed: step(-1)
-        Keys.onDownPressed: step(1)
+        Keys.onPressed: event => listKeys.handle(event)
         Keys.onRightPressed: if (page.selected.expandable) Processes.setExpanded(page.selectedKey, true)
         Keys.onLeftPressed: if (page.selected.expandable) Processes.setExpanded(page.selectedKey, false)
         Keys.onReturnPressed: if (page.selected.expandable) Processes.toggle(page.selectedKey)
@@ -222,8 +239,16 @@ Item {
     UI.Label {
         visible: Processes.ready && list.count === 0
         anchors.centerIn: list
-        text: Processes.search.length > 0 ? "Nothing running matches “" + Processes.search + "”." : ""
+        text: Processes.search.length > 0 ? qsTr("Nothing running matches “%1”.").arg(Processes.search) : ""
         color: UI.Style.inkMuted
+    }
+
+    ListKeys {
+        id: listKeys
+        view: list
+        host: page
+        rowMenu: menu
+        rowHeight: 37
     }
 
     UI.Menu {
@@ -234,19 +259,20 @@ Item {
         id: confirm
         property string key
         property bool tree: false
-        text: "Wild OS uses this to run. Ending it can make part of the system stop working until you restart."
+        text: qsTr("Wild OS uses this to run. Ending it can make part of the system stop working until you restart.")
 
         buttons: [
             UI.Button {
                 kind: "primary"
-                text: "End process"
+                danger: true
+                text: qsTr("End process")
                 onClicked: {
                     confirm.close();
                     page.message(confirm.tree ? Processes.endTree(confirm.key) : Processes.endTask(confirm.key));
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: confirm.close()
             }
         ]

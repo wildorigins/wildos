@@ -18,18 +18,54 @@ UI.AppWindow {
 
     required property var view
     property url url
-    readonly property string kind: info.isDir ? "folder" : peek.kind
-    readonly property string appName: url.toString().length > 0 && !info.isDir ? FileOps.defaultAppName(url) : ""
+    // Where the item sits in the folder, and whether the folder's listing
+    // already says it is a picture. Pictures are known from the listing, so
+    // stepping from one to the next never waits for the file to be looked
+    // at again, and its neighbours can be made ready.
+    property int row: -1
+    property bool picture: false
+    readonly property string kind: info.isDir ? "folder" : picture ? "image" : peek.kind
+    readonly property string appName: info.opensWith
 
     deep: true
+    stateKey: "preview"
     width: 920
     height: 660
     minimumWidth: 480
     minimumHeight: 360
     title: info.name
 
+    function isPicture(at) {
+        const f = view.folder;
+        return at >= 0 && at < f.count && f.urlAt(at).toString().startsWith("file:") && peek.showsAsPicture(f.mimeAt(at));
+    }
+
+    function look(itemUrl, at) {
+        const forwards = at >= row;
+        const known = isPicture(at);
+        const near = [];
+        if (known) {
+            for (const r of forwards ? [at + 1, at - 1] : [at - 1, at + 1]) {
+                if (isPicture(r)) {
+                    near.push(view.folder.urlAt(r).toString());
+                }
+            }
+        }
+        row = at;
+        pictures.ahead = near;
+        // Ordered so the preview never passes through a state where the
+        // old item is taken for a picture, or the new one for a file.
+        if (known) {
+            url = itemUrl;
+            picture = true;
+        } else {
+            picture = false;
+            url = itemUrl;
+        }
+    }
+
     function show(itemUrl) {
-        url = itemUrl;
+        look(itemUrl, view.folder.rowForUrl(itemUrl));
         visible = true;
         raise();
         requestActivate();
@@ -66,6 +102,8 @@ UI.AppWindow {
     // Hiding unloads the preview, which stops a video or song playing on.
     onVisibleChanged: {
         if (!visible) {
+            picture = false;
+            row = -1;
             url = "";
             if (view.Window.window) {
                 view.Window.window.requestActivate();
@@ -81,7 +119,7 @@ UI.AppWindow {
 
     PreviewSource {
         id: peek
-        url: ql.url
+        url: ql.picture ? "" : ql.url
     }
 
     // The preview follows the item the arrow keys or a click land on in
@@ -91,7 +129,7 @@ UI.AppWindow {
         function onCurrentIndexChanged() {
             const f = ql.view.folder;
             if (f.currentIndex >= 0 && f.isSelected(f.currentIndex)) {
-                ql.url = f.urlAt(f.currentIndex);
+                ql.look(f.urlAt(f.currentIndex), f.currentIndex);
             }
         }
         function onUrlChanged() {
@@ -178,11 +216,19 @@ UI.AppWindow {
             Layout.fillHeight: true
             clip: true
 
+            PictureView {
+                id: pictures
+                anchors.fill: parent
+                visible: ql.kind === "image" && !failed
+                current: ql.kind === "image" ? ql.url : ""
+            }
+
             Loader {
                 anchors.fill: parent
-                sourceComponent: ({
+                // A picture has its own view above; one that cannot be read
+                // gets the icon and details like any other file.
+                sourceComponent: ql.kind === "image" ? (pictures.failed ? aboutComponent : null) : ({
                     "": loadingComponent,
-                    "image": imageComponent,
                     "animated": animatedComponent,
                     "pdf": pdfComponent,
                     "video": videoComponent,
@@ -217,7 +263,7 @@ UI.AppWindow {
             UI.Button {
                 focusPolicy: Qt.TabFocus
                 kind: "primary"
-                text: info.isDir ? "Open" : ql.appName.length > 0 ? "Open with " + ql.appName : "Open with…"
+                text: info.isDir ? qsTr("Open") : ql.appName.length > 0 ? qsTr("Open with %1").arg(ql.appName) : qsTr("Open with…")
                 visible: ql.url.toString().length > 0
                 onClicked: ql.openWithApp()
             }
@@ -230,40 +276,6 @@ UI.AppWindow {
             UI.Spinner {
                 anchors.centerIn: parent
                 size: 24
-            }
-        }
-    }
-
-    // Pictures at their own size, or shrunk to fit the window; never
-    // stretched past it, so an icon-sized PNG stays crisp. A photo is
-    // decoded at no more than 4K, which keeps a 50 megapixel camera file
-    // from taking hundreds of megabytes.
-    Component {
-        id: imageComponent
-        Item {
-            Image {
-                id: picture
-                anchors.centerIn: parent
-                width: Math.min(parent.width - 32, implicitWidth)
-                height: Math.min(parent.height - 32, implicitHeight)
-                source: ql.url
-                sourceSize: Qt.size(3840, 3840)
-                fillMode: Image.PreserveAspectFit
-                autoTransform: true
-                asynchronous: true
-                cache: false
-                smooth: true
-                mipmap: true
-            }
-            UI.Spinner {
-                anchors.centerIn: parent
-                visible: picture.status === Image.Loading
-                size: 24
-            }
-            Loader {
-                anchors.fill: parent
-                active: picture.status === Image.Error
-                sourceComponent: aboutComponent
             }
         }
     }
@@ -330,7 +342,7 @@ UI.AppWindow {
 
         UI.IconButton {
             focusPolicy: Qt.NoFocus
-            tip: bar.player.playbackState === MediaPlayer.PlayingState ? "Pause" : "Play"
+            tip: bar.player.playbackState === MediaPlayer.PlayingState ? qsTr("Pause") : qsTr("Play")
             iconName: "play"
             glyph: bar.player.playbackState === MediaPlayer.PlayingState ? "M9 5v14M15 5v14" : ""
             onClicked: bar.player.playbackState === MediaPlayer.PlayingState ? bar.player.pause() : bar.player.play()
@@ -344,7 +356,7 @@ UI.AppWindow {
         UI.Slider {
             Layout.fillWidth: true
             focusPolicy: Qt.NoFocus
-            accessibleName: "Position"
+            accessibleName: qsTr("Position")
             enabled: bar.player.seekable
             from: 0
             to: Math.max(1, bar.player.duration)
@@ -434,7 +446,7 @@ UI.AppWindow {
                 UI.Label {
                     Layout.fillWidth: true
                     visible: song.error !== MediaPlayer.NoError
-                    text: "This cannot be played here."
+                    text: qsTr("This cannot be played here.")
                     color: UI.Style.inkMuted
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -489,7 +501,7 @@ UI.AppWindow {
                 width: parent.width
                 height: 30
                 visible: peek.truncated
-                text: "Showing the first 200 KB. Open the file to read the rest."
+                text: qsTr("Showing the first 200 KB. Open the file to read the rest.")
                 color: UI.Style.inkMuted
                 font.pixelSize: UI.Style.px(12)
                 horizontalAlignment: Text.AlignHCenter
@@ -527,7 +539,7 @@ UI.AppWindow {
                     maximumLineCount: 3
                 }
                 Repeater {
-                    model: [info.type, info.isDir ? info.contains : "", info.size, info.modified.length > 0 ? "Modified " + info.modified : ""]
+                    model: [info.type, info.isDir ? info.contains : "", info.size, info.modified.length > 0 ? qsTr("Modified %1").arg(info.modified) : ""]
                     delegate: UI.Label {
                         required property string modelData
                         Layout.fillWidth: true

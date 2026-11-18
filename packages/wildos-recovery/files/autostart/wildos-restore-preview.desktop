@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Restore point notice
+Exec=/usr/libexec/wildos/restore-preview-notice
+NoDisplay=true
+X-KDE-autostart-phase=2

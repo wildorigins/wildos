@@ -46,13 +46,19 @@ Item {
     }
 
     implicitHeight: content.implicitHeight + 18
+    Accessible.role: Accessible.ListItem
+    Accessible.name: unread ? qsTr("Unread, %1, %2, %3").arg(from).arg(subject).arg(time) : qsTr("%1, %2, %3").arg(from).arg(subject).arg(time)
+    Accessible.selected: current
 
     Rectangle {
         anchors.fill: parent
         anchors.leftMargin: 6
         anchors.rightMargin: 6
-        radius: 6
+        radius: UI.Style.radiusXs
         color: row.current ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        Behavior on color {
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
 
         Rectangle {
             visible: row.unread

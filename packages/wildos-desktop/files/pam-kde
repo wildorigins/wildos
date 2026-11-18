@@ -10,6 +10,12 @@
 # Kicksecure's full stack, including the lockout.
 auth    requisite       pam_nologin.so
 auth    required        pam_succeed_if.so user != root quiet_success
+# The PIN from Settings > Accounts > Sign-in options, typed in the password
+# box. The right PIN skips the three password lines below; anything else,
+# a missing module included, carries on to the password as before. The
+# sign-in screen takes the PIN through common-auth (the wildos-pin PAM
+# profile).
+auth    [success=3 default=ignore]      pam_wildos_pin.so
 # nullok: the live session user has no password; installed accounts always
 # do, because the installer refuses an empty one.
 auth    required        pam_unix.so nullok try_first_pass
@@ -18,6 +24,9 @@ auth    required        pam_unix.so nullok try_first_pass
 # the password again itself, so a wrong one notes nothing.
 auth    optional        pam_exec.so quiet seteuid expose_authtok /usr/libexec/wildos/fingerprint-stamp
 auth    optional        pam_kwallet5.so
+# Where the right PIN lands. It changes nothing for a password: a wrong
+# one has already failed at pam_unix, which is required.
+auth    required        pam_permit.so
 
 @include common-account
 

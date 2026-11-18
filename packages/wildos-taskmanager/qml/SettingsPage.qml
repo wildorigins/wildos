@@ -10,23 +10,23 @@ Item {
     id: page
 
     readonly property var startPages: [
-        { value: "processes", text: "Processes" },
-        { value: "performance", text: "Performance" },
-        { value: "startup", text: "Startup apps" },
-        { value: "windowsapps", text: "Windows apps" },
-        { value: "services", text: "Services" }
+        { value: "processes", text: qsTr("Processes") },
+        { value: "performance", text: qsTr("Performance") },
+        { value: "startup", text: qsTr("Startup apps") },
+        { value: "windowsapps", text: qsTr("Windows apps") },
+        { value: "services", text: qsTr("Services") }
     ]
     readonly property var speeds: [
-        { value: "high", text: "High (twice a second)" },
-        { value: "normal", text: "Normal (every second)" },
-        { value: "low", text: "Low (every 4 seconds)" },
-        { value: "paused", text: "Paused" }
+        { value: "high", text: qsTr("High (twice a second)") },
+        { value: "normal", text: qsTr("Normal (every second)") },
+        { value: "low", text: qsTr("Low (every 4 seconds)") },
+        { value: "paused", text: qsTr("Paused") }
     ]
 
     PageHeader {
         id: header
         width: parent.width
-        title: "Settings"
+        title: qsTr("Settings")
     }
 
     Column {
@@ -46,11 +46,12 @@ Item {
                 UI.SettingRow {
                     width: parent.width
                     iconName: "processes"
-                    title: "Default start page"
-                    description: "The page Task Manager opens on"
+                    title: qsTr("Default start page")
+                    description: qsTr("The page Task Manager opens on")
 
                     UI.ComboBox {
                         width: 200
+                        Accessible.name: qsTr("Default start page")
                         model: page.startPages
                         textRole: "text"
                         valueRole: "value"
@@ -62,11 +63,12 @@ Item {
                 UI.SettingRow {
                     width: parent.width
                     iconName: "refresh"
-                    title: "Update speed"
-                    description: "How often the numbers and graphs change"
+                    title: qsTr("Update speed")
+                    description: qsTr("How often the numbers and graphs change")
 
                     UI.ComboBox {
                         width: 220
+                        Accessible.name: qsTr("Update speed")
                         model: page.speeds
                         textRole: "text"
                         valueRole: "value"
@@ -78,11 +80,12 @@ Item {
                 UI.SettingRow {
                     width: parent.width
                     iconName: "system"
-                    title: "Show Wild OS processes"
-                    description: "List what the system runs for itself under Processes"
+                    title: qsTr("Show Wild OS processes")
+                    description: qsTr("List what the system runs for itself under Processes")
 
                     UI.Toggle {
                         checked: Prefs.showSystem
+                        Accessible.name: qsTr("Show Wild OS processes")
                         onToggled: Prefs.showSystem = checked
                     }
                 }

@@ -27,6 +27,22 @@ Rectangle {
         searchField.text = "";
         searchField.visible = false;
     }
+    // Up and Down in the list: the recording above or below the one open.
+    function step(by) {
+        const at = shown.findIndex(r => r.path === selectedPath);
+        goTo(at < 0 ? (by > 0 ? 0 : shown.length - 1) : at + by);
+    }
+    function goTo(index) {
+        if (shown.length === 0) {
+            return;
+        }
+        const to = Math.max(0, Math.min(shown.length - 1, index));
+        list.byKeys = true;
+        list.positionViewAtIndex(to, ListView.Contain);
+        if (shown[to].path !== selectedPath) {
+            side.picked(shown[to].path);
+        }
+    }
 
     // The list, with the recording in progress at the top even before the
     // folder scan has found its file.
@@ -126,6 +142,34 @@ Rectangle {
             model: side.shown
             boundsBehavior: Flickable.StopAtBounds
             bottomMargin: 8
+            activeFocusOnTab: true
+            keyNavigationEnabled: false
+            Accessible.role: Accessible.List
+            Accessible.name: qsTr("Recordings")
+
+            // The keyboard brought the focus here, which is when the open
+            // recording's row shows its outline.
+            property bool byKeys: false
+            onActiveFocusChanged: if (activeFocus) byKeys = true
+
+            Keys.onUpPressed: side.step(-1)
+            Keys.onDownPressed: side.step(1)
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Home) {
+                    side.goTo(0);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_End) {
+                    side.goTo(side.shown.length - 1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                    const at = side.shown.findIndex(r => r.path === side.selectedPath);
+                    const holder = at >= 0 ? itemAtIndex(at) : null;
+                    if (holder) {
+                        side.rowMenu(side.shown[at], holder, 52, holder.height - 8);
+                    }
+                    event.accepted = true;
+                }
+            }
             delegate: Column {
                 id: entry
                 required property var modelData
@@ -153,7 +197,12 @@ Rectangle {
                     selected: entry.modelData.path === side.selectedPath
                     recordingNow: Recorder.active && entry.modelData.path === Recorder.path
                     liveLength: Recorder.elapsed
-                    onClicked: side.picked(entry.modelData.path)
+                    keyboardFocus: selected && list.activeFocus && list.byKeys
+                    onClicked: {
+                        list.forceActiveFocus();
+                        list.byKeys = false;
+                        side.picked(entry.modelData.path);
+                    }
                     onMenuRequested: (x, y) => side.rowMenu(entry.modelData, rowItem, x, y)
                 }
             }
@@ -179,7 +228,7 @@ Rectangle {
             Layout.rightMargin: 12
             Layout.bottomMargin: 12
             implicitHeight: footRow.implicitHeight + 22
-            radius: 10
+            radius: UI.Style.radiusPanel
             color: UI.Style.surfaceRaised
             border.width: 1
             border.color: UI.Style.borderSubtle

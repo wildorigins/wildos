@@ -85,7 +85,7 @@ QQC.ScrollView {
                         required property var modelData
                         Layout.fillWidth: true
                         implicitHeight: 30
-                        radius: 6
+                        radius: UI.Style.radiusXs
                         color: rowMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
 
                         RowLayout {

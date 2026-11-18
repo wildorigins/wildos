@@ -5,7 +5,7 @@ import WildOS.UI as UI
 DeskDialog {
     id: dialog
 
-    title: "That did not work"
+    title: qsTr("That did not work")
     defaultAction: () => dialog.close()
 
     function show(message) {
@@ -16,7 +16,7 @@ DeskDialog {
     buttons: [
         UI.Button {
             kind: "primary"
-            text: "Close"
+            text: qsTr("Close")
             onClicked: dialog.close()
         }
     ]

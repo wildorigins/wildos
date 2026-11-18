@@ -14,7 +14,11 @@ import QtQuick.Templates as T
 //
 // A row is clickable only when it has a chevron, opens something
 // (`external`) or sets `interactive`; a row holding a toggle is not, and
-// its title dims with the control when `enabled` is false.
+// its title dims with the control when `enabled` is false. A clickable row
+// is reached with Tab, opened with Enter or Space, and shows the focus ring.
+//
+// A switch, drop-down, slider or field placed on the right is announced by
+// the row's title, unless it was given an `accessibleName` of its own.
 T.AbstractButton {
     id: row
 
@@ -42,6 +46,22 @@ T.AbstractButton {
     property alias leading: leadingRow.data
 
     readonly property bool lit: interactive && (hovered || previewHover) && enabled
+    property bool namesControls: false
+
+    function nameControls(): void {
+        for (const control of Array.from(trailingRow.children)) {
+            if (control.accessibleName === "") {
+                control.accessibleName = Qt.binding(() => row.title);
+            }
+        }
+    }
+
+    // Not before this: a name the page binds is still empty while the row
+    // is being put together, and would be replaced.
+    Component.onCompleted: {
+        namesControls = true;
+        nameControls();
+    }
 
     implicitWidth: 360
     // The text column carries the 10px above and below, so larger text
@@ -58,6 +78,16 @@ T.AbstractButton {
     hoverEnabled: interactive
     focusPolicy: interactive ? Qt.StrongFocus : Qt.NoFocus
     Accessible.role: interactive ? Accessible.Button : Accessible.ListItem
+    // Space already presses a button; Enter opens a row too, as on Windows.
+    Keys.onReturnPressed: event => row.pressFromKey(event)
+    Keys.onEnterPressed: event => row.pressFromKey(event)
+
+    function pressFromKey(event: var): void {
+        event.accepted = interactive;
+        if (interactive && !event.isAutoRepeat) {
+            click();
+        }
+    }
     Accessible.name: title
     Accessible.description: description
 
@@ -103,7 +133,7 @@ T.AbstractButton {
             visible: row.iconName.length > 0 && row.themeIcon.length === 0 && !row.iconTile
             name: row.iconName
             size: 20
-            opacity: row.enabled ? 1 : 0.5
+            opacity: row.enabled ? 1 : Style.disabledOpacity
         }
 
         Rectangle {
@@ -141,7 +171,7 @@ T.AbstractButton {
             Layout.topMargin: 10
             Layout.bottomMargin: 10
             spacing: 2
-            opacity: row.enabled ? 1 : 0.5
+            opacity: row.enabled ? 1 : Style.disabledOpacity
 
             Label {
                 id: titleLabel
@@ -181,6 +211,7 @@ T.AbstractButton {
             id: trailingRow
             Layout.alignment: Qt.AlignVCenter
             spacing: 12
+            onChildrenChanged: if (row.namesControls) row.nameControls()
         }
 
         Icon {

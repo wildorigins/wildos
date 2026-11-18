@@ -53,10 +53,11 @@ Panel {
         user.text = h.user || "";
         note.text = h.note || "";
         passwordMode = d.password || "ask";
-        display = d.display || "full";
+        // A new desktop starts with Remote's settings; a saved one has its own.
+        display = d.display || RemoteSettings.desktopDisplay;
         resolution.currentIndex = Math.max(0, resolutionModel.findIndex(o => o.value === (d.resolution || "match")));
         scaling.currentIndex = Math.max(0, scalingModel.findIndex(o => o.value === (d.scaling || "auto")));
-        clipboard.checked = d.clipboard !== false;
+        clipboard.checked = d.clipboard === undefined ? RemoteSettings.desktopClipboard : d.clipboard !== false;
         sound.checked = d.sound !== false;
         microphone.checked = d.microphone === true;
         printers.checked = d.printers === true;

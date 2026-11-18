@@ -210,7 +210,6 @@ UI.AppWindow {
                 UI.TextField {
                     id: passwordField
                     Layout.fillWidth: true
-                    echoMode: TextInput.Password
                     revealable: true
                     placeholderText: qsTr("Password")
                     onTextEdited: error = false

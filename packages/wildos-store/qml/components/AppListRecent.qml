@@ -17,7 +17,7 @@ T.AbstractButton {
     hoverEnabled: true
     focusPolicy: Qt.TabFocus
     Accessible.role: Accessible.Button
-    Accessible.name: app ? app.name + ", updated " + app.updatedText : ""
+    Accessible.name: app ? qsTr("%1, updated %2").arg(app.name).arg(app.updatedText) : ""
     onClicked: activated(appKey)
 
     AppMenuArea {

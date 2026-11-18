@@ -93,15 +93,21 @@ QString describe(const QDateTime &when, const QDateTime &now)
     const int days = now.date().daysTo(when.date());
     const bool night = when.time().hour() >= 18 || when.time().hour() < 5;
     if (days == 0) {
-        return (night ? QStringLiteral("Tonight at ") : QStringLiteral("Today at ")) + time;
+        return night ? QCoreApplication::translate("Prompts", "Tonight at %1").arg(time) : QCoreApplication::translate("Prompts", "Today at %1").arg(time);
     }
     if (days == 1 && when.time().hour() < 5) {
-        return QStringLiteral("Tonight at ") + time;
+        return QCoreApplication::translate("Prompts", "Tonight at %1").arg(time);
     }
     if (days == 1) {
-        return QStringLiteral("Tomorrow at ") + time;
+        return QCoreApplication::translate("Prompts", "Tomorrow at %1").arg(time);
     }
-    return QLocale(QLocale::English, QLocale::UnitedKingdom).toString(when.date(), QStringLiteral("dddd")) + QStringLiteral(" at ") + time;
+    // The day's name in the display language chosen in Settings, which is
+    // the first of uiLanguages (English when none is chosen).
+    const QString language = QLocale::system().uiLanguages().value(0);
+    const QLocale names = language.isEmpty() || language == QLatin1String("C") || language.startsWith(QLatin1String("en"))
+        ? QLocale(QLocale::English, QLocale::UnitedKingdom)
+        : QLocale(language);
+    return QCoreApplication::translate("Prompts", "%1 at %2").arg(names.toString(when.date(), QStringLiteral("dddd")), time);
 }
 
 // Plasma's restart path first, so open apps get the chance to save. It is
@@ -324,7 +330,7 @@ void Prompts::turnOn32bit()
         // meanwhile, which the card now says.
         m_info.insert(QStringLiteral("mode"), state32bit());
         if (code != 3 && code != 126 && code != 127) {
-            m_info.insert(QStringLiteral("error"), QStringLiteral("32-bit apps could not be turned on."));
+            m_info.insert(QStringLiteral("error"), tr("32-bit apps could not be turned on."));
         }
         Q_EMIT infoChanged();
     });
@@ -611,7 +617,7 @@ void Prompts::windowsMode(const QString &id, const QString &name, const QString 
     m_windowsId = id;
     m_windowsTarget = target;
     m_info = {
-        {QStringLiteral("appName"), name.isEmpty() ? QStringLiteral("This app") : name},
+        {QStringLiteral("appName"), name.isEmpty() ? tr("This app") : name},
         {QStringLiteral("iconName"), icon},
     };
     show(QStringLiteral("windowsmode"));
@@ -675,11 +681,13 @@ void Prompts::askWindowsShutdown(const QString &action, const QString &appsJson,
     }
     QString reopen;
     if (!unsavedDocs.isEmpty() && oneApp) {
-        const QString list = unsavedDocs.size() == 1 ? unsavedDocs.first() : unsavedDocs.mid(0, unsavedDocs.size() - 1).join(QStringLiteral(", ")) + QStringLiteral(" and ") + unsavedDocs.last();
-        reopen = QStringLiteral("%1 opens with %2 just as you left them.").arg(unsavedApp, list);
-    } else {
-        reopen = QStringLiteral("Your Windows apps open just as you left them.");
+        const QString list = unsavedDocs.size() == 1
+            ? unsavedDocs.first()
+            : tr("%1 and %2").arg(unsavedDocs.mid(0, unsavedDocs.size() - 1).join(tr(", ")), unsavedDocs.last());
+        reopen = tr("%1 opens with %2 just as you left them.").arg(unsavedApp, list);
     }
+    // Empty: the card says "your Windows apps open just as you left them"
+    // in its own sentence.
     m_info = {
         {QStringLiteral("action"), action},
         {QStringLiteral("apps"), apps},

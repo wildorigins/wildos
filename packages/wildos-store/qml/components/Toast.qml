@@ -22,9 +22,9 @@ UI.Toast {
             return;
         }
         if (what === "installed") {
-            show(a.name + " is installed", a.canOpen ? "Open" : "");
+            show(qsTr("%1 is installed").arg(a.name), a.canOpen ? qsTr("Open") : "");
         } else {
-            show("Couldn't finish with " + a.name + ". " + (message || ""), "Details");
+            show(qsTr("Couldn't finish with %1. %2").arg(a.name).arg(message || ""), qsTr("Details"));
         }
     }
 

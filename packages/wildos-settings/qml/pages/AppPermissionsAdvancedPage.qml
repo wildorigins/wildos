@@ -53,7 +53,7 @@ PageScroll {
     UI.Label {
         Layout.fillWidth: true
         visible: page.selected.length === 0
-        text: "Every permission an app from the Store has, including the technical ones the other pages leave out. Changes apply the next time the app opens."
+        text: qsTr("Every permission an app from the Store has, including the technical ones the other pages leave out. Changes apply the next time the app opens.")
         color: UI.Style.inkMuted
         wrapMode: Text.Wrap
         elide: Text.ElideNone
@@ -73,7 +73,7 @@ PageScroll {
                     required property var modelData
                     themeIcon: modelData.icon
                     title: modelData.name
-                    description: modelData.changed ? "Changed from what the app asked for" : "As the app asked for"
+                    description: modelData.changed ? qsTr("Changed from what the app asked for") : qsTr("As the app asked for")
                     chevron: true
                     onClicked: page.selected = modelData.id
                 }
@@ -82,7 +82,7 @@ PageScroll {
             UI.SettingRow {
                 visible: page.apps.length === 0
                 iconName: "sandbox"
-                title: "No apps from the Store yet"
+                title: qsTr("No apps from the Store yet")
             }
         }
     }
@@ -103,12 +103,12 @@ PageScroll {
                     iconTile: true
                     minHeight: 68
                     title: page.app ? page.app.name : ""
-                    description: page.app && page.app.changed ? "You have changed what this app can reach" : "This app has what it asked for when installed"
+                    description: page.app && page.app.changed ? qsTr("You have changed what this app can reach") : qsTr("This app has what it asked for when installed")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: page.app !== null && page.app.changed
-                        text: "Reset to the app's defaults"
+                        text: qsTr("Reset to the app's defaults")
                         onClicked: resetDialog.open()
                     }
                 }
@@ -145,8 +145,8 @@ PageScroll {
                                 id: permission
                                 required property var modelData
                                 title: modelData.label
-                                description: [modelData.detail, modelData.changed ? "Changed by you" : ""].filter(t => t.length > 0).join(". ")
-                                status: modelData.allowed ? "On" : "Off"
+                                description: [modelData.detail, modelData.changed ? qsTr("Changed by you") : ""].filter(t => t.length > 0).join(". ")
+                                status: modelData.allowed ? qsTr("On") : qsTr("Off")
 
                                 UI.Toggle {
                                     anchors.verticalCenter: parent.verticalCenter
@@ -160,18 +160,18 @@ PageScroll {
                         UI.SettingRow {
                             visible: block.addKind.length > 0
                             iconName: "plus"
-                            title: block.addKind === "folder" ? "Give it another folder"
-                                : block.addKind === "bus" ? "Let it talk to another service"
-                                : "Set a variable"
+                            title: block.addKind === "folder" ? qsTr("Give it another folder")
+                                : block.addKind === "bus" ? qsTr("Let it talk to another service")
+                                : qsTr("Set a variable")
                             description: block.modelData.items.length === 0
-                                ? (block.addKind === "folder" ? "It can only open files you choose for it"
-                                    : block.addKind === "bus" ? "It can only use the desktop's own services"
-                                    : "It has no variables of its own")
+                                ? (block.addKind === "folder" ? qsTr("It can only open files you choose for it")
+                                    : block.addKind === "bus" ? qsTr("It can only use the desktop's own services")
+                                    : qsTr("It has no variables of its own"))
                                 : ""
 
                             UI.Button {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "Add"
+                                text: qsTr("Add")
                                 onClicked: addDialog.show(block.addKind)
                             }
                         }
@@ -197,15 +197,15 @@ PageScroll {
             valueField.forceActiveFocus();
         }
 
-        title: kind === "folder" ? "Give it another folder" : kind === "bus" ? "Let it talk to another service" : "Set a variable"
-        text: kind === "folder" ? "Type the folder's path. ~ is your home folder."
-            : kind === "bus" ? "Type the service's name. Only add one the app's makers ask you to."
-            : "Type the variable's name and the value the app sees."
+        title: kind === "folder" ? qsTr("Give it another folder") : kind === "bus" ? qsTr("Let it talk to another service") : qsTr("Set a variable")
+        text: kind === "folder" ? qsTr("Type the folder's path. ~ is your home folder.")
+            : kind === "bus" ? qsTr("Type the service's name. Only add one the app's makers ask you to.")
+            : qsTr("Type the variable's name and the value the app sees.")
 
         UI.TextField {
             id: valueField
             Layout.fillWidth: true
-            placeholderText: addDialog.kind === "folder" ? "For example ~/Projects" : addDialog.kind === "bus" ? "For example org.freedesktop.Notifications" : "Name, for example GTK_THEME"
+            placeholderText: addDialog.kind === "folder" ? qsTr("For example ~/Projects") : addDialog.kind === "bus" ? qsTr("For example org.freedesktop.Notifications") : qsTr("Name, for example GTK_THEME")
             onAccepted: addButton.clicked()
         }
 
@@ -213,7 +213,7 @@ PageScroll {
             id: extraField
             Layout.fillWidth: true
             visible: addDialog.kind === "env"
-            placeholderText: "Value"
+            placeholderText: qsTr("Value")
             onAccepted: addButton.clicked()
         }
 
@@ -221,10 +221,10 @@ PageScroll {
             id: accessBox
             Layout.fillWidth: true
             visible: addDialog.kind !== "env"
-            Accessible.name: "Access"
+            Accessible.name: qsTr("Access")
             model: addDialog.kind === "folder"
-                ? [{ value: "rw", text: "Can open and change files" }, { value: "ro", text: "Can open files, not change them" }]
-                : [{ value: "talk", text: "Can talk to it" }, { value: "own", text: "Can talk to it and take its name" }]
+                ? [{ value: "rw", text: qsTr("Can open and change files") }, { value: "ro", text: qsTr("Can open files, not change them") }]
+                : [{ value: "talk", text: qsTr("Can talk to it") }, { value: "own", text: qsTr("Can talk to it and take its name") }]
         }
 
         UI.Label {
@@ -240,7 +240,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: addButton
-                text: "Add"
+                text: qsTr("Add")
                 kind: "primary"
                 enabled: valueField.text.trim().length > 0
                 onClicked: {
@@ -257,7 +257,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: addDialog.close()
             }
         ]
@@ -265,11 +265,11 @@ PageScroll {
 
     UI.Dialog {
         id: resetDialog
-        title: page.app ? "Reset " + page.app.name + "?" : ""
-        text: "Every sandbox permission you changed for this app is undone, here and in the Store, and it gets exactly what it asked for when you installed it."
+        title: page.app ? qsTr("Reset %1?").arg(page.app.name) : ""
+        text: qsTr("Every sandbox permission you changed for this app is undone, here and in the Store, and it gets exactly what it asked for when you installed it.")
         buttons: [
             UI.Button {
-                text: "Reset"
+                text: qsTr("Reset")
                 kind: "primary"
                 onClicked: {
                     resetDialog.close();
@@ -277,7 +277,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: resetDialog.close()
             }
         ]

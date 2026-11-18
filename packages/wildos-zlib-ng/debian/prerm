@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+# Programs go back to the system's zlib before the library is taken away.
+case "$1" in
+    remove|deconfigure)
+        rm -f /etc/ld.so.conf.d/00-wildos-zlib-ng.conf
+        ldconfig
+        ;;
+esac
+
+#DEBHELPER#

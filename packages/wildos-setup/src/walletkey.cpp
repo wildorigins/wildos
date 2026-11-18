@@ -17,6 +17,8 @@
 namespace
 {
 const char storeDir[] = "/var/lib/wildos/wallet";
+const char pinDir[] = "/var/lib/wildos/pin";
+const char pinSignInDir[] = "/run/wildos-pin";
 
 QByteArray keyPath(uid_t uid)
 {
@@ -235,6 +237,20 @@ void forget(uid_t uid)
     }
 }
 
+bool hasPin(const QByteArray &name)
+{
+    if (name.isEmpty() || name == "." || name == ".." || name.contains('/')) {
+        return false;
+    }
+    struct stat st;
+    return ::lstat((QByteArray(pinDir) + '/' + name).constData(), &st) == 0 && S_ISREG(st.st_mode);
+}
+
+bool takePinSignIn(uid_t uid)
+{
+    return ::unlink((QByteArray(pinSignInDir) + '/' + QByteArray::number(uint(uid))).constData()) == 0;
+}
+
 void forgetOthers()
 {
     const QByteArray user = autoLoginUser().toUtf8();
@@ -243,7 +259,10 @@ void forgetOthers()
     const auto names = QDir(QString::fromLatin1(storeDir)).entryList(QDir::Files | QDir::System | QDir::Hidden);
     bool removed = false;
     for (const QString &name : names) {
-        if (name != keep) {
+        bool numeric = false;
+        const uint uid = name.endsWith(QLatin1String(".key")) ? name.chopped(4).toUInt(&numeric) : 0;
+        const struct passwd *owner = numeric ? ::getpwuid(uid) : nullptr;
+        if (name != keep && !(owner && hasPin(owner->pw_name))) {
             removed |= ::unlink((QByteArray(storeDir) + '/' + QFile::encodeName(name)).constData()) == 0;
         }
     }

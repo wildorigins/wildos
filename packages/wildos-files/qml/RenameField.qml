@@ -63,7 +63,7 @@ Rectangle {
         clip: true
         selectByMouse: true
         Accessible.role: Accessible.EditableText
-        Accessible.name: "New name"
+        Accessible.name: qsTr("New name")
 
         Component.onCompleted: {
             selectAll();

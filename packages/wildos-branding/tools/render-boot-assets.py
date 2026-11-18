@@ -3,7 +3,8 @@
 
 Plymouth cannot blur, draw soft gradients or render text reliably inside the
 initramfs, so every frame of the boot screen is drawn here, from the logo
-masters in branding/logo, the gradients in design/BootIntro.dc.html and the
+masters in branding/logo, the gradients and keyframes in
+design/BootPace.dc.html (BootPaceTarget.dc.html has the exact timings) and the
 Albert Sans typeface, and shipped as PNGs. The sign-in screen and the session splash
 load the same files to open on Plymouth's last frame, so all three draw from
 one set of pixels.
@@ -21,7 +22,7 @@ screen, and every canvas edge is a multiple of 5 so it lands on a whole device
 pixel at every scale; wildos.script and BootHandoff.qml use the same canvases.
 
 The W appears in two places: in the start-up animation's 240px logo box
-(BootIntro.dc.html) and, after the disk is unlocked, smaller and lower, where
+(BootPace.dc.html) and, after the disk is unlocked, smaller and lower, where
 it lands after gliding out of the unlock screen's tile (AfterUnlockD.dc.html).
 Assets for the first end in -i, for the second in -u.
 """
@@ -56,18 +57,8 @@ os.environ["FONTCONFIG_FILE"] = _fontconf.name
 
 SCALES = (0.8, 1.0, 1.2, 1.6, 2.0, 2.4)
 
-# The splash clock t against BootIntro's design time d: the spark and the W
-# drawing itself (design 0.7 s to 3.1 s) play on a fixed 1.5 s, everything
-# after at the design's own speed.
-INTRO = 1.5
-
-
-def design_time(t):
-    return 0.7 + 1.6 * t if t <= INTRO else t + 1.6
-
-
-def splash_time(d):
-    return (d - 0.7) / 1.6 if d <= 3.1 else d - 1.6
+# Frames that play on a fixed clock are drawn for 50 frames a second.
+FPS = 50
 
 
 def bezier(u, x1=0.4, y1=0.0, x2=0.2, y2=1.0):
@@ -178,7 +169,7 @@ def light_path(width, dasharray, offset, filt):
 # Canvases: (x, y, width, height) from the screen centre.
 W_CANVAS = (-115, -180, 185, 160)
 SPARK_CANVAS = (35, -195, 110, 110)
-FLASH_SIZE = 200
+FLASH_SIZE = 210
 WORD_CANVAS = (-150, 45, 300, 45)
 
 # Where the mark's own units land on screen: x' = scale * x + dx. POSE_I is the
@@ -196,17 +187,15 @@ SPARK_U_CANVAS = (40, -75, 75, 75)
 # drop-shadow(0 0 3px) is a Gaussian with a 1.5 unit deviation.
 LIGHT = {"i": (1.3, 1.5, 5.0), "u": (1.8, 1.5, 4.5)}
 BASE_WIDTH = {"i": 0.9, "u": 1.2}
-# One lap of the light: 1.75 s in the start-up animation, 1.6 s after
-# unlocking, at 50 frames a second.
-LAP_FRAMES = {"i": 88, "u": 80}
+# One lap of the light takes 1.2 s wherever the W is, at 50 frames a second.
+LAP_FRAMES = {"i": 60, "u": 60}
 DASH = 64
-COMPLETE_FRAMES = 46
 
-# "Starting securely" where it comes to rest: in the start-up animation it
-# rises 62px from under the wordmark (BootIntro's column: the 240px box, 30px
-# gaps, 30px and 14px lines); after unlocking it sits at artboard 548.
-STATUS_TOP = {"i": 50 + 30 * LINE + 30 - 62, "u": 548 - 450}
-STATUS_CANVAS = {"i": (-100, 50, 200, 25), "u": (-100, 95, 200, 25)}
+# "Starting securely" under the wordmark (BootPace's column: the 240px box,
+# a 30px gap, the 30px name, another 30px gap less the line's -14px margin);
+# after unlocking it sits at artboard 548.
+STATUS_TOP = {"i": 50 + 30 * LINE + 30 - 14, "u": 548 - 450}
+STATUS_CANVAS = {"i": (-100, 100, 200, 25), "u": (-100, 95, 200, 25)}
 
 # The glide from the tile to the glass W: 1 s at 50 frames a second. The
 # canvas spans where the W ends up (78px either side of centre), or its left
@@ -222,9 +211,14 @@ BULLET_CANVAS = (0, 0, 10, 15)
 HINT_CANVAS = (-200, 70, 400, 20)
 CAPS_CANVAS = (-200, 95, 400, 20)
 
-SPARK_FRAMES = 26
-STROKE_FRAMES = 54
+# The spark's arrival (0 to 0.26 s), one frame per 50th of a second. The W's
+# outline and the name are drawn per step of their eased progress instead,
+# so the player picks a frame from its own clock.
+SPARK_FRAMES = 14
+STROKE_FRAMES = 46
 WORD_FRAMES = 41
+# The flash, drawn at its largest (1.9 times the 34 unit circle).
+FLASH_GROW = 1.9
 STROKE_DASH = 441
 
 
@@ -259,14 +253,14 @@ def text_el(text, size, weight, fill, top, tracking=0.0, anchor="middle", x=0.0)
             f'font-weight="{weight}" fill="{fill}" text-anchor="{anchor}"{attr}>{text}</text>')
 
 
-def spark_state(d):
-    if d < 0.7:
-        return 0.0, 0.0, -45.0
-    if d < 1.2:
-        e = segment(d, 0.7, 1.2)
-        return e, 1.35 * e, -45.0 * (1 - e)
-    if d < 1.5:
-        return 1.0, 1.35 - 0.35 * segment(d, 1.2, 1.5), 0.0
+def spark_state(t):
+    """The spark at t seconds: in from nothing, turned an eighth, past full
+    size by 0.14 s, settled at 0.26 s (the board's "dia" keyframes)."""
+    if t < 0.14:
+        e = segment(t, 0.0, 0.14)
+        return e, 1.3 * e, -45.0 * (1 - e)
+    if t < 0.26:
+        return 1.0, 1.3 - 0.3 * segment(t, 0.14, 0.26), 0.0
     return 1.0, 1.0, 0.0
 
 
@@ -287,33 +281,33 @@ def jobs_for_scale(scale, dest):
     add("fill", W_CANVAS, logo(f'<path d="{W_PATH}" fill="url(#bia)"/>'))
 
     # The W's outline traced from its first corner, as the design's
-    # stroke-dashoffset animation draws it. The first frame is empty.
-    t0, t1 = splash_time(1.4), splash_time(3.1)
+    # stroke-dashoffset animation draws it: frame k shows k/(n-1) of it, so
+    # the first frame is empty.
     for k in range(STROKE_FRAMES):
-        d = design_time(t0 + (t1 - t0) * k / (STROKE_FRAMES - 1))
-        offset = STROKE_DASH * (1 - segment(d, 1.4, 3.1))
+        offset = STROKE_DASH * (1 - k / (STROKE_FRAMES - 1))
         add(f"stroke-{k:02d}", W_CANVAS, logo(
-            f'<path d="{W_PATH}" fill="none" stroke="#c9d8ff" stroke-width="1.6" '
+            f'<path d="{W_PATH}" fill="none" stroke="#c9d8ff" stroke-width="1" '
             f'stroke-linejoin="round" stroke-dasharray="{STROKE_DASH}" '
             f'stroke-dashoffset="{offset:.3f}"/>'))
 
     for k in range(SPARK_FRAMES):
-        d = design_time(splash_time(0.7) + (splash_time(1.5) - splash_time(0.7)) * k / (SPARK_FRAMES - 1))
-        add(f"spark-{k:02d}", SPARK_CANVAS, spark_svg(*spark_state(d)))
+        add(f"spark-{k:02d}", SPARK_CANVAS, spark_svg(*spark_state(k / FPS)))
 
-    # One flash at its largest; the script shrinks it per frame, which is
-    # harmless for a glow with no edges.
+    # One flash at its largest, the board's 34 unit circle grown 1.9 times;
+    # the players shrink it per frame, which is harmless for a glow with no
+    # edges.
     half = FLASH_SIZE / 2
+    r = 34 * POSE_I[0] * FLASH_GROW
     add("flash", (-half, -half, FLASH_SIZE, FLASH_SIZE),
-        '<circle cx="0" cy="0" r="99" fill="url(#fl)"/>',
-        '<radialGradient id="fl" cx="0" cy="0" r="99" gradientUnits="userSpaceOnUse">'
-        + stops([(0, (255, 255, 255, 0.9)), (0.45, (185, 207, 255, 0.35)), (1, (185, 207, 255, 0))])
+        f'<circle cx="0" cy="0" r="{r:.3f}" fill="url(#fl)"/>',
+        f'<radialGradient id="fl" cx="0" cy="0" r="{r:.3f}" gradientUnits="userSpaceOnUse">'
+        + stops([(0, (255, 255, 255, 0.95)), (0.45, (185, 207, 255, 0.4)), (1, (185, 207, 255, 0))])
         + '</radialGradient>')
 
-    # "Wild OS" settling from wide to its final tracking as it fades in.
-    t0, t1 = splash_time(3.6), splash_time(4.4)
+    # "Wild OS" settling from wide to its final tracking as it fades in, per
+    # step of its eased progress.
     for k in range(WORD_FRAMES):
-        e = segment(design_time(t0 + (t1 - t0) * k / (WORD_FRAMES - 1)), 3.6, 4.4)
+        e = k / (WORD_FRAMES - 1)
         tracking = 0.3 + (0.02 - 0.3) * e
         add(f"word-{k:02d}", WORD_CANVAS,
             f'<g opacity="{e:.4f}">{text_el("Wild OS", 30, 480, INK, 50, tracking)}</g>')
@@ -345,7 +339,7 @@ def jobs_for_scale(scale, dest):
         d = 1.6 + k / (GLIDE_FRAMES - 1)
         e = bezier((d - 1.6) / 1.0, 0.5, 0.0, 0.15, 1.0)
         pose = tuple(a + (b - a) * e for a, b in zip(TILE_POSE, POSE_U))
-        fill_op = 1 - 0.9 * segment(d, 1.6, 2.4)
+        fill_op = 1 - 0.86 * segment(d, 1.6, 2.4)
         base_op = segment(d, 2.0, 2.6)
         body = (tile_bg.format(op=1 - segment(d, 1.6, 2.2))
                 + f'<path d="{W_PATH}" fill="url(#bia)" opacity="{fill_op:.4f}"/>'
@@ -404,20 +398,10 @@ def text_width(text, size, weight):
 
 
 def handoff_jobs_for_scale(scale, dest):
-    """The final trace, which only the sign-in screen plays: the whole
-    outline drawn once from its first corner (frame k shows k/(n-1) of it)."""
-    out = os.path.join(dest, f"s{round(scale * 100):03d}")
-    os.makedirs(out, exist_ok=True)
-    jobs = []
-    for g, pose in (("i", POSE_I), ("u", POSE_U)):
-        width = LIGHT[g][0]
-        for k in range(COMPLETE_FRAMES):
-            offset = STROKE_DASH * (1 - k / (COMPLETE_FRAMES - 1))
-            doc = svg_doc(GLASS[g], scale,
-                          at(pose, light_path(width, STROKE_DASH, offset, "cg")),
-                          LIGHT_DEFS + glow("cg", 2.0, 0))
-            jobs.append((doc, os.path.join(out, f"complete-{g}-{k:02d}.png")))
-    return jobs
+    """Frames only the sign-in screen and the session splash play. The
+    finish needs none of its own, so the folders stay empty."""
+    os.makedirs(os.path.join(dest, f"s{round(scale * 100):03d}"), exist_ok=True)
+    return []
 
 
 def main():

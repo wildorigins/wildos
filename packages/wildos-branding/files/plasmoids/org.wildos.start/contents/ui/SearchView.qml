@@ -18,6 +18,19 @@ FocusScope {
     property bool finished: false
     property int favouritesRevision: 0
 
+    // Nothing to show yet and the search still running. Most searches answer
+    // at once, so the "Searching" line waits a moment before it appears.
+    readonly property bool pending: rows.length === 0 && !finished && launcher.query.length > 0
+    property bool pendingShown: false
+    onPendingChanged: {
+        if (pending) {
+            pendingTimer.restart();
+        } else {
+            pendingTimer.stop();
+            pendingShown = false;
+        }
+    }
+
     readonly property var source: launcher.runnerModel.count > 0 ? launcher.runnerModel.modelForRow(0) : null
     readonly property var current: selected >= 0 && selected < rows.length ? rows[selected] : null
 
@@ -36,19 +49,19 @@ FocusScope {
     signal menuRequested(var entries, Item item, real x, real y)
 
     readonly property var filters: [
-        { key: "all", label: "All" },
-        { key: "apps", label: "Apps" },
-        { key: "files", label: "Files" },
-        { key: "settings", label: "Settings" },
-        { key: "folders", label: "Folders" },
+        { key: "all", label: qsTr("All") },
+        { key: "apps", label: qsTr("Apps") },
+        { key: "files", label: qsTr("Files") },
+        { key: "settings", label: qsTr("Settings") },
+        { key: "folders", label: qsTr("Folders") },
     ]
 
     readonly property var sectionTitles: ({
-        calc: "Calculator",
-        apps: "Apps",
-        files: "Files and folders",
-        folders: "Files and folders",
-        settings: "Settings",
+        calc: qsTr("Calculator"),
+        apps: qsTr("Apps"),
+        files: qsTr("Files and folders"),
+        folders: qsTr("Files and folders"),
+        settings: qsTr("Settings"),
     })
 
     readonly property var hiddenActions: ["addToDesktop", "addToPanel", "editApplication", "_kicker_fileItem_properties", "forget", "forgetAll", "_kicker_recentDocument", "_kicker_forgetRecentDocuments", "addToTaskManager"]
@@ -101,8 +114,8 @@ FocusScope {
         case "apps":
             return {
                 title: Helpers.appName(m.favoriteId, m.display),
-                subtitle: "App",
-                detail: "App",
+                subtitle: qsTr("App"),
+                detail: qsTr("App"),
             };
         case "settings": {
             const page = Helpers.settingsPage(url);
@@ -116,8 +129,8 @@ FocusScope {
             const trail = Helpers.folderTrail(url, launcher.homePath);
             return {
                 title: m.display ?? "",
-                subtitle: trail.length > 0 ? trail : "Folder",
-                detail: trail.length > 0 ? "Folder in " + trail : "Folder",
+                subtitle: trail.length > 0 ? trail : qsTr("Folder"),
+                detail: trail.length > 0 ? qsTr("Folder in %1").arg(trail) : qsTr("Folder"),
             };
         }
         default: {
@@ -125,7 +138,7 @@ FocusScope {
             return {
                 title: Helpers.withoutExtension(m.display),
                 subtitle: trail.length > 0 ? trail : (m.description ?? ""),
-                detail: trail.length > 0 ? "File in " + trail : (m.description ?? "File"),
+                detail: trail.length > 0 ? qsTr("File in %1").arg(trail) : (m.description ?? qsTr("File")),
             };
         }
         }
@@ -168,7 +181,7 @@ FocusScope {
 
         const out = [];
         if (items.length > 0) {
-            out.push({ header: true, title: "Best match", first: true });
+            out.push({ header: true, title: qsTr("Best match"), first: true });
             out.push(Object.assign({ best: true }, items[0]));
             const order = [];
             const groups = {};
@@ -283,7 +296,7 @@ FocusScope {
     }
 
     function showMenuFor(entry: var, item: Item, x: real, y: real): void {
-        const open = { text: entry.kind === "calc" ? "Copy result" : "Open", icon: "external", run: () => search.open(entry) };
+        const open = { text: entry.kind === "calc" ? qsTr("Copy result") : qsTr("Open"), icon: "external", run: () => search.open(entry) };
         search.menuRequested([open].concat(actionsFor(entry, favouritesRevision, 6)), item, x, y);
     }
 
@@ -300,6 +313,12 @@ FocusScope {
         }
         onObjectAdded: rebuildTimer.restart()
         onObjectRemoved: rebuildTimer.restart()
+    }
+
+    Timer {
+        id: pendingTimer
+        interval: 300
+        onTriggered: search.pendingShown = true
     }
 
     // Runners report in bursts; batching keeps the list from flickering.
@@ -620,7 +639,7 @@ FocusScope {
                     kind: "primary"
                     size: "large"
                     focusPolicy: Qt.NoFocus
-                    text: search.current && search.current.kind === "calc" ? "Copy result" : "Open"
+                    text: search.current && search.current.kind === "calc" ? qsTr("Copy result") : qsTr("Open")
                     onClicked: search.open(search.current)
 
                     Keys.onLeftPressed: list.forceActiveFocus(Qt.BacktabFocusReason)
@@ -693,6 +712,25 @@ FocusScope {
             }
         }
 
+        Row {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -30
+            spacing: 10
+            visible: search.pendingShown
+
+            UI.Spinner {
+                anchors.verticalCenter: parent.verticalCenter
+                size: 14
+            }
+
+            UI.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                size: 13
+                color: UI.Style.inkMuted
+                text: qsTr("Searching")
+            }
+        }
+
         Column {
             anchors.centerIn: parent
             anchors.verticalCenterOffset: -30
@@ -705,14 +743,14 @@ FocusScope {
                 horizontalAlignment: Text.AlignHCenter
                 size: 15
                 font.weight: UI.Style.weightSemiBold
-                text: "No results for ‘" + search.launcher.query + "’"
+                text: qsTr("No results for ‘%1’").arg(search.launcher.query)
             }
 
             UI.Label {
                 anchors.horizontalCenter: parent.horizontalCenter
                 size: 12
                 color: UI.Style.inkMuted
-                text: search.filter === "all" ? "Check the spelling or try a shorter word." : "Try All to search everything."
+                text: search.filter === "all" ? qsTr("Check the spelling or try a shorter word.") : qsTr("Try All to search everything.")
             }
         }
     }

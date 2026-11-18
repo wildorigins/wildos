@@ -1,3 +1,17 @@
+wildos-capture (0.1.7) trixie; urgency=medium
+
+  * With more than one screen, the screenshot overlay appears on every
+    screen instead of all of them on the first.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 16:42:30 +0000
+
+wildos-capture (0.1.6) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-capture (0.1.5) trixie; urgency=medium
 
   * Text you type onto a screenshot has the right-click menu with Cut,

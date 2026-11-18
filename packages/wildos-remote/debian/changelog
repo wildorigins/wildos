@@ -1,3 +1,29 @@
+wildos-remote (0.1.10) trixie; urgency=medium
+
+  * The right-click menu in a session can be clicked and closes again; it
+    opened but ignored the mouse.
+  * Sessions use Terminal's settings and, for anything not changed there,
+    Terminal's own defaults: colours, font, cursor, Ctrl+C copying a
+    selection not yet copied, and the check before pasting several lines.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 10:00:00 +0000
+
+wildos-remote (0.1.9) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
+wildos-remote (0.1.8) trixie; urgency=medium
+
+  * The terminal copies text as soon as you select it, and right-click
+    opens Copy, Paste and Clear. Ctrl+V pastes, Ctrl+Shift+C copies,
+    Ctrl+= and Ctrl+- change the text size (Ctrl+0 resets it), and the
+    cursor blinks, as in Terminal. Ctrl+C still stops the running command.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 20:30:00 +0000
+
 wildos-remote (0.1.7) trixie; urgency=medium
 
   * Connection details and public keys can be copied from a right-

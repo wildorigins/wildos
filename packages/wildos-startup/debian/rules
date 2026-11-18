@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- -Wno-dev -DCMAKE_BUILD_TYPE=Release
+
+# Windows checkouts lose the executable bit; these must run.
+execute_after_dh_fixperms:
+	chmod 0755 debian/wildos-startup/usr/lib/wildos/grub.d/14_wildos_startup
+	chmod 0755 debian/wildos-startup/usr/lib/wildos/grub.d/16_wildos_startup
+	chmod 0755 debian/wildos-startup/usr/libexec/wildos/startup-ctl
+	chmod 0755 debian/wildos-startup/usr/libexec/wildos/startup-status
+	chmod 0755 debian/wildos-startup/usr/lib/dracut/modules.d/90wildos-startup/module-setup.sh

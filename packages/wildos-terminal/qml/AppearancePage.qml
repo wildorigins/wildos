@@ -15,12 +15,12 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Colour scheme"
+            text: qsTr("Colour scheme")
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Homebrew is green text on black, like the Homebrew theme of the Terminal on a Mac."
+            text: qsTr("Homebrew is green text on black, like the Homebrew theme of the Terminal on a Mac.")
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
             elide: Text.ElideNone
@@ -48,7 +48,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Text"
+            text: qsTr("Text")
         }
 
         UI.Card {
@@ -59,12 +59,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "font"
-                    title: "Font"
-                    description: "Fonts with letters all the same width."
+                    title: qsTr("Font")
+                    description: qsTr("Fonts with letters all the same width.")
 
                     Choice {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Font"
+                        Accessible.name: qsTr("Font")
                         options: Config.monospaceFonts.map(f => ({ value: f, text: f }))
                         value: Config.fontFamily
                         onChosen: v => Config.fontFamily = v
@@ -73,13 +73,13 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "font"
-                    title: "Font size"
-                    description: "Ctrl+plus and Ctrl+minus zoom one tab for a while; this is the size every tab starts at."
+                    title: qsTr("Font size")
+                    description: qsTr("Ctrl+plus and Ctrl+minus zoom one tab for a while; this is the size every tab starts at.")
 
                     Choice {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Font size"
-                        options: [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28].map(n => ({ value: n, text: n + " pt" }))
+                        Accessible.name: qsTr("Font size")
+                        options: [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28].map(n => ({ value: n, text: qsTr("%1 pt").arg(n) }))
                         value: Config.fontSize
                         onChosen: v => Config.fontSize = v
                     }
@@ -87,8 +87,8 @@ PageScroll {
 
                 ToggleRow {
                     iconName: "bolt"
-                    title: "Show bold text in bright colours"
-                    description: "Bold green turns bright green, as programs written for the classic terminals expect."
+                    title: qsTr("Show bold text in bright colours")
+                    description: qsTr("Bold green turns bright green, as programs written for the classic terminals expect.")
                     value: Config.boldBright
                     onSwitched: v => Config.boldBright = v
                 }
@@ -101,7 +101,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Cursor"
+            text: qsTr("Cursor")
         }
 
         UI.Card {
@@ -112,15 +112,15 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "pencil"
-                    title: "Cursor shape"
+                    title: qsTr("Cursor shape")
 
                     Choice {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Cursor shape"
+                        Accessible.name: qsTr("Cursor shape")
                         options: [
-                            { value: "bar", text: "Bar" },
-                            { value: "block", text: "Block" },
-                            { value: "underline", text: "Underline" }
+                            { value: "bar", text: qsTr("Bar") },
+                            { value: "block", text: qsTr("Block") },
+                            { value: "underline", text: qsTr("Underline") }
                         ]
                         value: Config.cursorShape
                         onChosen: v => Config.cursorShape = v
@@ -129,7 +129,7 @@ PageScroll {
 
                 ToggleRow {
                     iconName: "clock"
-                    title: "Blinking cursor"
+                    title: qsTr("Blinking cursor")
                     value: Config.cursorBlink
                     onSwitched: v => Config.cursorBlink = v
                 }
@@ -142,7 +142,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Transparency"
+            text: qsTr("Transparency")
         }
 
         UI.Card {
@@ -153,8 +153,8 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "drop"
-                    title: "Background opacity"
-                    description: "How much of the desktop shows through behind the text."
+                    title: qsTr("Background opacity")
+                    description: qsTr("How much of the desktop shows through behind the text.")
 
                     UI.Label {
                         anchors.verticalCenter: parent.verticalCenter
@@ -173,17 +173,17 @@ PageScroll {
                         to: 100
                         stepSize: 5
                         value: Config.opacity
-                        accessibleName: "Background opacity"
+                        accessibleName: qsTr("Background opacity")
                         onMoved: Config.opacity = value
                     }
                 }
 
                 ToggleRow {
                     iconName: "drop"
-                    title: "Frosted glass"
-                    description: !host.blurAvailable ? "Turn on Transparency effects in Settings, Personalisation to use this."
-                               : Config.opacity >= 100 ? "Blurs the desktop behind the text once the background is see-through."
-                               : "Blurs the desktop behind the text so it stays easy to read."
+                    title: qsTr("Frosted glass")
+                    description: !host.blurAvailable ? qsTr("Turn on Transparency effects in Settings, Personalisation to use this.")
+                               : Config.opacity >= 100 ? qsTr("Blurs the desktop behind the text once the background is see-through.")
+                               : qsTr("Blurs the desktop behind the text so it stays easy to read.")
                     enabled: host.blurAvailable && Config.opacity < 100
                     value: Config.blur
                     onSwitched: v => Config.blur = v

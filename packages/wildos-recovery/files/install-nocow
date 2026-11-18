@@ -5,8 +5,18 @@
 # badly and double every write. The swap file is left to Calamares, which
 # sets it up itself and fails if its folder is already set this way.
 # Nothing to do when the new root is not Btrfs.
+#
+# /var/tmp too: programs rewrite their temporary files in small pieces, which
+# copy-on-write makes slow. SQLite's spill-over file took twice as long. Only
+# the folder is set here; files made in it later inherit it. Temporary files
+# give up Btrfs's checksums and compression.
 set -eu
 root=$1
+if [ "$(stat -f -c %T "$root")" = btrfs ]; then
+    mkdir -p "$root/var/tmp"
+    chmod 1777 "$root/var/tmp"
+    chattr +C "$root/var/tmp"
+fi
 for d in "$root/var/lib/wildos/winmode" "$root/var/lib/libvirt"; do
     if [ -d "$d" ] && [ "$(stat -f -c %T "$d")" = btrfs ]; then
         chattr +C "$d"

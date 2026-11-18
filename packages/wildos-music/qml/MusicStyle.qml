@@ -14,10 +14,12 @@ QtObject {
     // window glass, as the board draws them.
     readonly property color barShade: UI.Style.contrast ? "#000000" : Qt.rgba(0, 0, 0, UI.Style.dark ? 0.22 : 0.11)
     readonly property color sideShade: UI.Style.contrast ? "#000000" : Qt.rgba(0, 0, 0, UI.Style.dark ? 0.12 : 0.06)
-    // The seek and volume bars: a white fill on a faint track, and the big
-    // round play button, white with a near black glyph in both schemes.
+    // The seek and volume bars: a faint track with a fill in the ink of
+    // the scheme, white on dark and near black on light, where a white
+    // fill would be lost against the pale window. The big round play
+    // button is white with a near black glyph in both schemes.
     readonly property color barTrack: UI.Style.contrast ? UI.Style.contrastDivider : UI.Style.dark ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(0, 0, 0, 0.126)
-    readonly property color barFill: "#ffffff"
+    readonly property color barFill: UI.Style.dark ? UI.Style.ink : UI.Style.iconInk
     readonly property color playDisc: "#ffffff"
     readonly property color playGlyph: "#111319"
     // Art that is missing: a neutral tile, never a made-up colour.

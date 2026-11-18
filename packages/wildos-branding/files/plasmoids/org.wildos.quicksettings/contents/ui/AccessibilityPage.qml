@@ -27,7 +27,7 @@ FocusScope {
         PageHeader {
             id: header
             Layout.fillWidth: true
-            title: "Accessibility"
+            title: qsTr("Accessibility")
             onBack: page.back()
         }
 

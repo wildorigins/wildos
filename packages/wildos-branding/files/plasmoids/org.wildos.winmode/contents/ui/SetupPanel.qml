@@ -58,20 +58,20 @@ FocusScope {
     }
 
     // The panel is narrower than the setup window, so its steps use board
-    // 9.12's shorter words for the service's usual ones; anything the
-    // service says about the step under way (how much has downloaded) is
-    // shown as it is.
+    // 9.12's shorter words for the service's usual ones. Its other fixed
+    // lines are translated in wildos-winmode's list of them (ServiceText.js);
+    // a line with numbers in it (how much has downloaded) stays as it is.
     readonly property var shorter: ({
-        "Download Windows 11 from Microsoft": "Download Windows 11",
-        "About 6 GB, checked against Microsoft's signature": "From Microsoft, checked against its signature",
-        "Automatic, no questions to answer": "Automatic, nothing to answer",
-        "Removes adverts, tracking and apps you won't use": "Removes adverts, tracking and extras",
-        "Install Microsoft 365": "Install Microsoft Office",
-        "Word, Excel, PowerPoint, Outlook, OneNote": "Word, Excel, PowerPoint and Outlook"
+        "Download Windows 11 from Microsoft": qsTr("Download Windows 11"),
+        "About 6 GB, checked against Microsoft's signature": qsTr("From Microsoft, checked against its signature"),
+        "Automatic, no questions to answer": qsTr("Automatic, nothing to answer"),
+        "Removes adverts, tracking and apps you won't use": qsTr("Removes adverts, tracking and extras"),
+        "Install Microsoft 365": qsTr("Install Microsoft Office"),
+        "Word, Excel, PowerPoint, Outlook, OneNote": qsTr("Word, Excel, PowerPoint and Outlook")
     })
 
     function words(text: string): string {
-        return shorter[text] || text;
+        return shorter[text] || qsTranslate("WinmodeService", text);
     }
 
     ColumnLayout {
@@ -106,7 +106,7 @@ FocusScope {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Setting up Windows mode"
+                    text: qsTr("Setting up Windows mode")
                     size: 15
                     font.weight: UI.Style.weightSemiBold
                     Accessible.role: Accessible.Heading
@@ -116,12 +116,12 @@ FocusScope {
                     Layout.fillWidth: true
                     size: 12
                     color: panel.problem ? Tones.dot("attention") : UI.Style.inkMuted
-                    text: panel.problem ? "Needs attention" : panel.paused ? "Paused" : (panel.record.left || "")
+                    text: panel.problem ? qsTr("Needs attention") : panel.paused ? qsTr("Paused") : panel.words(panel.record.left || "")
                 }
             }
 
             UI.Label {
-                text: panel.winmode.setupPercent + "%"
+                text: qsTr("%1%").arg(panel.winmode.setupPercent)
                 size: 20
                 font.weight: UI.Style.weightSemiBold
                 font.features: ({ "tnum": 1 })
@@ -134,7 +134,7 @@ FocusScope {
             radius: 3
             color: UI.Style.tone(0.12)
             Accessible.role: Accessible.ProgressBar
-            Accessible.name: "Windows mode setup"
+            Accessible.name: qsTr("Windows mode setup")
 
             Rectangle {
                 width: Math.round(parent.width * panel.winmode.setupPercent / 100)
@@ -169,7 +169,7 @@ FocusScope {
                     Layout.preferredHeight: 46
                     spacing: 12
                     Accessible.role: Accessible.ListItem
-                    Accessible.name: panel.words(modelData.title) + ", " + (state === "done" ? "done" : state === "active" ? modelData.percent + "%" : "not started")
+                    Accessible.name: state === "done" ? qsTr("%1, done").arg(panel.words(modelData.title)) : state === "active" ? qsTr("%1, %2%").arg(panel.words(modelData.title)).arg(modelData.percent) : qsTr("%1, not started").arg(panel.words(modelData.title))
 
                     Item {
                         Layout.preferredWidth: 20
@@ -229,7 +229,7 @@ FocusScope {
                     }
 
                     UI.Label {
-                        text: step.state === "done" ? "Done" : step.state === "active" ? (Number(step.modelData.percent) || 0) + "%" : ""
+                        text: step.state === "done" ? qsTr("Done") : step.state === "active" ? qsTr("%1%").arg(Number(step.modelData.percent) || 0) : ""
                         size: 12
                         color: UI.Style.inkMuted
                         font.features: ({ "tnum": 1 })
@@ -247,7 +247,7 @@ FocusScope {
             elide: Text.ElideNone
             color: panel.problem ? UI.Style.ink : UI.Style.inkMuted
             text: panel.problem ? panel.winmode.attentionText()
-                : "Uses spare capacity, so your PC stays quick. If it restarts or sleeps, setup carries on where it left off."
+                : qsTr("Uses spare capacity, so your PC stays quick. If it restarts or sleeps, setup carries on where it left off.")
         }
     }
 
@@ -280,7 +280,7 @@ FocusScope {
             UI.Button {
                 Layout.preferredHeight: 32
                 visible: !panel.problem
-                text: panel.paused ? "Resume" : "Pause"
+                text: panel.paused ? qsTr("Resume") : qsTr("Pause")
                 onClicked: panel.winmode.setupControl(panel.paused ? "resume" : "pause")
             }
 
@@ -291,7 +291,7 @@ FocusScope {
             UI.Button {
                 Layout.preferredHeight: 32
                 kind: panel.problem ? "primary" : "secondary"
-                text: "Open full window"
+                text: qsTr("Open full window")
                 onClicked: panel.winmode.setupControl("window")
             }
         }

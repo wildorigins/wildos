@@ -21,13 +21,13 @@ QtObject {
     readonly property color rowHover: contrast ? UI.Style.surfaceHover : dark ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(0, 0, 0, 0.049)
     readonly property color rowSelected: UI.Style.accentAlpha(0.16, 0.11)
 
-    // Status only: green when backed up, amber when caught up late or
-    // waiting, the system's danger red when a backup failed.
-    readonly property color good: contrast ? "#7dffb0" : dark ? "#5fd38d" : "#3a8257"
-    readonly property color goodSoft: dark ? Qt.rgba(95 / 255, 211 / 255, 141 / 255, 0.16) : Qt.rgba(57 / 255, 126 / 255, 84 / 255, 0.112)
-    readonly property color late: contrast ? "#ffd27a" : dark ? "#ffc46a" : "#9e7941"
-    readonly property color lateText: contrast ? "#ffd27a" : dark ? "#ffc46a" : "#8c6b3a"
-    readonly property color lateSoft: dark ? Qt.rgba(1, 196 / 255, 106 / 255, 0.14) : Qt.rgba(158 / 255, 121 / 255, 65 / 255, 0.12)
+    // Status only, in the system's own status colours: green when backed
+    // up, amber when caught up late or waiting, red when a backup failed.
+    readonly property color good: UI.Style.success
+    readonly property color goodSoft: UI.Style.successSoft
+    readonly property color late: UI.Style.warning
+    readonly property color lateText: UI.Style.warning
+    readonly property color lateSoft: UI.Style.warningSoft
     readonly property color bad: UI.Style.danger
     readonly property color badSoft: dark ? Qt.rgba(242 / 255, 139 / 255, 130 / 255, 0.14) : Qt.rgba(197 / 255, 55 / 255, 44 / 255, 0.10)
     readonly property color link: dark ? UI.Style.accent : UI.Style.accentText

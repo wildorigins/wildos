@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Store
+Name[fr]=Store
 GenericName=App store
+GenericName[fr]=Boutique d'applications
 Comment=Find, install and update apps
+Comment[fr]=Trouvez, installez et mettez à jour des applications
 Exec=wildos-store %U
 Icon=org.wildos.store
 Terminal=false

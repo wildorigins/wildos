@@ -17,19 +17,19 @@ PageFlick {
     readonly property var apps: keys.map(k => Catalog.app(k)).filter(a => !!a)
     // Read again whenever an app's state changes.
     readonly property int revision: Catalog.stateRevision
-    readonly property var putting: revision >= 0 ? apps.filter(a => (a.busy || a.queued) && !a.installed && a.action !== "remove") : []
-    readonly property var removed: revision >= 0 ? apps.filter(a => !a.installed && !a.busy && !a.queued) : []
+    readonly property var putting: revision >= 0 ? apps.filter(a => (a.busy || a.queued) && !a.installed && a.action !== "remove" && !Catalog.isOptional(a.key)) : []
+    readonly property var removed: revision >= 0 ? apps.filter(a => !a.installed && !a.busy && !a.queued && !Catalog.isOptional(a.key)) : []
 
     PageTitle {
         title: "Wild OS"
-        subtitle: "The apps we make. They come with Wild OS, cost nothing and need no account."
+        subtitle: qsTr("The apps we make. They come with Wild OS, cost nothing and need no account.")
 
         PillButton {
             visible: page.removed.length > 0 || page.putting.length > 0
             big: true
             filled: true
             enabled: page.removed.length > 0 && page.putting.length === 0
-            text: "Reinstall all"
+            text: qsTr("Reinstall all")
             onClicked: Catalog.reinstallWildOS()
         }
     }
@@ -39,7 +39,7 @@ PageFlick {
         spacing: 0
 
         SectionHeader {
-            title: "All " + page.apps.length + " apps"
+            title: qsTr("All %1 apps").arg(page.apps.length)
         }
 
         Grid {

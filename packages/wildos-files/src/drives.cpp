@@ -1,6 +1,7 @@
 #include "drives.h"
 #include "driveformat.h"
 
+#include <QCoreApplication>
 #include <QLocale>
 #include <QDir>
 #include <QFile>
@@ -77,21 +78,21 @@ bool isNtfs(const QString &fsType)
 QString sizeName(qint64 bytes)
 {
     if (bytes <= 0) {
-        return QStringLiteral("Drive");
+        return QCoreApplication::translate("Drives", "Drive");
     }
     // Drives are sold in decimal sizes, so a 500 GB stick reads 500 GB.
     double value = bytes / 1e9;
-    QString unit = QStringLiteral("GB");
+    QString unit = QCoreApplication::translate("Drives", "GB");
     if (value >= 1000) {
         value /= 1000;
-        unit = QStringLiteral("TB");
+        unit = QCoreApplication::translate("Drives", "TB");
     }
     const QLocale numbers = QLocale::system();
     QString number = numbers.toString(value, 'f', value < 10 ? 1 : 0);
     if (number.endsWith(numbers.decimalPoint() + QLatin1Char('0'))) {
         number.chop(numbers.decimalPoint().size() + 1);
     }
-    return number + QLatin1Char(' ') + unit + QStringLiteral(" drive");
+    return QCoreApplication::translate("Drives", "%1 %2 drive").arg(number, unit);
 }
 }
 
@@ -146,7 +147,7 @@ QList<Drive> Drives::scan() const
 
     Drive system;
     system.name = QStringLiteral("Wild OS");
-    system.chip = rootEncrypted() || qEnvironmentVariableIsSet("WILDOS_FILES_RIG_ENCRYPTED") ? QStringLiteral("Encrypted") : QString();
+    system.chip = rootEncrypted() || qEnvironmentVariableIsSet("WILDOS_FILES_RIG_ENCRYPTED") ? QCoreApplication::translate("Drives", "Encrypted") : QString();
     system.themeIcon = QStringLiteral("drive-harddisk");
     system.lineIcon = QStringLiteral("drive");
     system.mountPath = QStringLiteral("/");
@@ -206,7 +207,7 @@ QList<Drive> Drives::scan() const
             continue;
         }
         const bool windowsSystem = ntfs && drive.mounted && QFileInfo::exists(drive.mountPath + QStringLiteral("/Windows/System32"));
-        drive.chip = encrypted ? QStringLiteral("Encrypted") : drive.removable ? QStringLiteral("Removable") : ntfs ? QStringLiteral("Windows") : QString();
+        drive.chip = encrypted ? QCoreApplication::translate("Drives", "Encrypted") : drive.removable ? QCoreApplication::translate("Drives", "Removable") : ntfs ? QStringLiteral("Windows") : QString();
         QString label = volume ? volume->label().trimmed() : QString();
         if (encrypted && label.isEmpty()) {
             for (const Solid::Device &inner : devices) {
@@ -230,9 +231,9 @@ QList<Drive> Drives::scan() const
         } else if (!label.isEmpty()) {
             drive.name = label;
         } else if (optical) {
-            drive.name = QStringLiteral("Disc");
+            drive.name = QCoreApplication::translate("Drives", "Disc");
         } else if (drive.removable) {
-            drive.name = QStringLiteral("USB drive");
+            drive.name = QCoreApplication::translate("Drives", "USB drive");
         } else {
             drive.name = sizeName(volume ? qint64(volume->size()) : drive.total);
         }
@@ -249,8 +250,8 @@ QList<Drive> Drives::scan() const
         drive.blank = true;
         drive.removable = true;
         drive.total = blank.size;
-        drive.name = blank.kind.left(1).toUpper() + blank.kind.mid(1) + QStringLiteral(" (needs formatting)");
-        drive.chip = QStringLiteral("Removable");
+        drive.name = blank.kind.left(1).toUpper() + blank.kind.mid(1) + QCoreApplication::translate("Drives", " (needs formatting)");
+        drive.chip = QCoreApplication::translate("Drives", "Removable");
         drive.themeIcon = QStringLiteral("drive-removable-media-usb");
         drive.lineIcon = QStringLiteral("usb");
         drives.append(drive);
@@ -322,7 +323,7 @@ void Drives::mount(const QString &udi)
         if (error == Solid::NoError && access) {
             Q_EMIT mounted(udi, access->filePath());
         } else if (error != Solid::UserCanceled) {
-            Q_EMIT failed(QStringLiteral("This drive could not be opened. Check that it is plugged in properly and try again."));
+            Q_EMIT failed(QCoreApplication::translate("Drives", "This drive could not be opened. Check that it is plugged in properly and try again."));
         }
     }, Qt::SingleShotConnection);
     access->setup();
@@ -341,7 +342,7 @@ void Drives::eject(const QString &udi)
     }
     connect(access, &Solid::StorageAccess::teardownDone, this, [this](Solid::ErrorType error, const QVariant &, const QString &) {
         if (error != Solid::NoError && error != Solid::UserCanceled) {
-            Q_EMIT failed(QStringLiteral("This drive is still in use. Close any files or apps using it, then try again."));
+            Q_EMIT failed(QCoreApplication::translate("Drives", "This drive is still in use. Close any files or apps using it, then try again."));
         }
         Q_EMIT changed();
     }, Qt::SingleShotConnection);

@@ -72,15 +72,15 @@ DeskDialog {
         columns: 2
         columnSpacing: 16
         rowSpacing: 4
-        UI.Label { text: "Copying"; color: UI.Style.inkMuted; font.pixelSize: UI.Style.px(12) }
+        UI.Label { text: qsTr("Copying"); color: UI.Style.inkMuted; font.pixelSize: UI.Style.px(12) }
         UI.Label { text: prompt.p.incoming ?? ""; font.pixelSize: UI.Style.px(12) }
-        UI.Label { text: "Already there"; color: UI.Style.inkMuted; font.pixelSize: UI.Style.px(12) }
+        UI.Label { text: qsTr("Already there"); color: UI.Style.inkMuted; font.pixelSize: UI.Style.px(12) }
         UI.Label { text: prompt.p.existing ?? ""; font.pixelSize: UI.Style.px(12) }
     }
 
     UI.CheckBox {
         visible: prompt.p.multiple === true
-        text: "Do this for every clash"
+        text: qsTr("Do this for every clash")
         checked: prompt.all
         onToggled: prompt.all = checked
     }
@@ -89,29 +89,29 @@ DeskDialog {
         UI.Button {
             visible: prompt.kind === "conflict" && prompt.p.canReplace === true
             kind: "primary"
-            text: prompt.p.replace ?? "Replace"
+            text: prompt.p.replace ?? qsTr("Replace")
             onClicked: prompt.reply("replace")
         },
         UI.Button {
             visible: prompt.kind === "conflict" && prompt.p.canKeepBoth === true
-            text: "Keep both"
+            text: qsTr("Keep both")
             onClicked: prompt.reply("both")
         },
         UI.Button {
             visible: (prompt.kind === "conflict" && prompt.p.canSkip === true) || prompt.kind === "skip"
-            text: "Skip"
+            text: qsTr("Skip")
             onClicked: prompt.reply("skip")
         },
         UI.Button {
             visible: prompt.kind === "skip"
-            text: "Try again"
+            text: qsTr("Try again")
             onClicked: prompt.reply("retry")
         },
         UI.Button {
             visible: prompt.kind === "confirm"
             kind: prompt.cancelDefault ? "secondary" : "primary"
             danger: prompt.cancelDefault
-            text: prompt.p.primary ?? "Continue"
+            text: prompt.p.primary ?? qsTr("Continue")
             onClicked: prompt.reply("primary")
         },
         UI.Button {
@@ -122,7 +122,7 @@ DeskDialog {
         UI.Button {
             id: cancelButton
             visible: prompt.p.informational !== true
-            text: prompt.kind === "confirm" ? "Cancel" : "Stop"
+            text: prompt.kind === "confirm" ? qsTr("Cancel") : qsTr("Stop")
             onClicked: prompt.reply("cancel")
         }
     ]

@@ -6,3 +6,4 @@ files/systemd/swap-file-creator.service.d usr/lib/systemd/system/
 files/dracut/91wildos-restore usr/lib/dracut/modules.d/
 files/grub/15_wildos_recovery usr/lib/wildos/grub.d/
 files/generator/wildos-safe-mode usr/lib/systemd/user-generators/
+files/autostart/wildos-restore-preview.desktop etc/xdg/autostart/

@@ -40,7 +40,7 @@ Item {
         onTextChanged: page.text = text
         Keys.onDownPressed: {
             if (list.count > 0) {
-                list.currentIndex = 0;
+                list.select(0, Qt.NoModifier);
                 list.forceActiveFocus();
             }
         }
@@ -59,7 +59,13 @@ Item {
         readonly property var paths: tracks.map(t => t.path)
 
         onPlayAt: index => page.app.play(paths, index, false)
-        onMenuAt: (index, row, x, y) => page.app.trackMenu(tracks[index], "", row, x, y)
+        onMenuAt: (index, row, x, y) => {
+            if (selectedCount > 1) {
+                page.app.tracksMenu(picked(), "", row, x, y);
+            } else {
+                page.app.trackMenu(tracks[index], "", row, x, y);
+            }
+        }
 
         heading: Component {
             Column {

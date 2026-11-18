@@ -23,41 +23,41 @@ QByteArray arg(const QString &text)
 QPair<QString, QString> explain(const QString &code, const QString &name, const QString &address, bool wasOpen)
 {
     if (code.contains(QLatin1String("DISCONNECTED_BY_OTHERCONNECTION"))) {
-        return {QStringLiteral("%1 disconnected").arg(name),
-                QStringLiteral("Someone signed in at the PC itself or from another device, which ends a remote session. Your apps are still open there.")};
+        return {QCoreApplication::translate("RemoteDesktop", "%1 disconnected").arg(name),
+                QCoreApplication::translate("RemoteDesktop", "Someone signed in at the PC itself or from another device, which ends a remote session. Your apps are still open there.")};
     }
     if (code.contains(QLatin1String("RPC_INITIATED_DISCONNECT"))) {
-        return {QStringLiteral("%1 disconnected").arg(name), QStringLiteral("Someone on %1 ended the session.").arg(name)};
+        return {QCoreApplication::translate("RemoteDesktop", "%1 disconnected").arg(name), QCoreApplication::translate("RemoteDesktop", "Someone on %1 ended the session.").arg(name)};
     }
     if (code.contains(QLatin1String("IDLE_TIMEOUT")) || code.contains(QLatin1String("LOGON_TIMEOUT"))) {
-        return {QStringLiteral("%1 disconnected").arg(name), QStringLiteral("%1 ends sessions left idle for a while. Your apps are still open there.").arg(name)};
+        return {QCoreApplication::translate("RemoteDesktop", "%1 disconnected").arg(name), QCoreApplication::translate("RemoteDesktop", "%1 ends sessions left idle for a while. Your apps are still open there.").arg(name)};
     }
     if (code.contains(QLatin1String("INSUFFICIENT_PRIVILEGES")) || code.contains(QLatin1String("ACCOUNT_RESTRICTION"))) {
-        return {QStringLiteral("Not allowed on %1").arg(name), QStringLiteral("That account isn't allowed to use Remote Desktop on %1. Its administrator can add it to Remote Desktop Users.").arg(name)};
+        return {QCoreApplication::translate("RemoteDesktop", "Not allowed on %1").arg(name), QCoreApplication::translate("RemoteDesktop", "That account isn't allowed to use Remote Desktop on %1. Its administrator can add it to Remote Desktop Users.").arg(name)};
     }
     if (code.contains(QLatin1String("LOCKED_OUT"))) {
-        return {QStringLiteral("Account locked"), QStringLiteral("%1 has locked that account after too many tries. Try again later, or ask its administrator.").arg(name)};
+        return {QCoreApplication::translate("RemoteDesktop", "Account locked"), QCoreApplication::translate("RemoteDesktop", "%1 has locked that account after too many tries. Try again later, or ask its administrator.").arg(name)};
     }
     if (code.contains(QLatin1String("PASSWORD_EXPIRED")) || code.contains(QLatin1String("PASSWORD_MUST_CHANGE"))) {
-        return {QStringLiteral("Password needs changing"), QStringLiteral("The account's password has expired. Sign in at the PC itself to set a new one.")};
+        return {QCoreApplication::translate("RemoteDesktop", "Password needs changing"), QCoreApplication::translate("RemoteDesktop", "The account's password has expired. Sign in at the PC itself to set a new one.")};
     }
     if (code.contains(QLatin1String("DNS_NAME_NOT_FOUND"))) {
-        return {QStringLiteral("Couldn't find %1").arg(name), QStringLiteral("There's no computer called %1 on this network. Check the address.").arg(address)};
+        return {QCoreApplication::translate("RemoteDesktop", "Couldn't find %1").arg(name), QCoreApplication::translate("RemoteDesktop", "There's no computer called %1 on this network. Check the address.").arg(address)};
     }
     if (code.contains(QLatin1String("CONNECT_CANCELLED"))) {
         return {};
     }
     if (code.contains(QLatin1String("TRANSPORT_FAILED")) || code.contains(QLatin1String("CONNECT_FAILED")) || code.contains(QLatin1String("TLS_CONNECT"))) {
         if (wasOpen) {
-            return {QStringLiteral("%1 disconnected").arg(name), QStringLiteral("The connection was lost and didn't come back. Your session is still running on the PC, so reconnecting picks it up.")};
+            return {QCoreApplication::translate("RemoteDesktop", "%1 disconnected").arg(name), QCoreApplication::translate("RemoteDesktop", "The connection was lost and didn't come back. Your session is still running on the PC, so reconnecting picks it up.")};
         }
-        return {QStringLiteral("Couldn't reach %1").arg(name),
-                QStringLiteral("Check %1 is switched on, that Remote Desktop is on in its settings, and that its firewall lets it through.").arg(name)};
+        return {QCoreApplication::translate("RemoteDesktop", "Couldn't reach %1").arg(name),
+                QCoreApplication::translate("RemoteDesktop", "Check %1 is switched on, that Remote Desktop is on in its settings, and that its firewall lets it through.").arg(name)};
     }
     if (code.isEmpty()) {
         return {};
     }
-    return {QStringLiteral("%1 disconnected").arg(name), QStringLiteral("The connection ended (%1).").arg(code)};
+    return {QCoreApplication::translate("RemoteDesktop", "%1 disconnected").arg(name), QCoreApplication::translate("RemoteDesktop", "The connection ended (%1).").arg(code)};
 }
 }
 
@@ -195,7 +195,7 @@ void RemoteDesktop::start(const QString &password)
     QString error;
     QList<QByteArray> args = arguments(password);
     if (!m_session->configure(args, &error)) {
-        m_endTitle = QStringLiteral("Couldn't connect to %1").arg(name());
+        m_endTitle = tr("Couldn't connect to %1").arg(name());
         m_endText = error;
         setState(QStringLiteral("ended"));
         return;

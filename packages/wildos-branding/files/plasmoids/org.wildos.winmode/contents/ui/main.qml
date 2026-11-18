@@ -62,24 +62,24 @@ PlasmoidItem {
     // chip still says Ready.
     readonly property string baseLevel: levelFor(system, agent, answering, openApps.length)
     readonly property string stateText: ({
-        settingup: (setupRecord && setupRecord.paused ? "Setup paused · " : "Setting up · ") + setupPercent + "%",
-        ready: "Ready",
-        running: appCount === 0 ? "Running" : appCount === 1 ? "Running, 1 app" : "Running, " + appCount + " apps",
-        paused: "Paused",
-        saved: "Saved to disk",
-        off: "Not running",
-        starting: "Starting",
-        updating: "Updating",
-        attention: "Needs attention"
+        settingup: (setupRecord && setupRecord.paused ? qsTr("Setup paused · %1%") : qsTr("Setting up · %1%")).arg(setupPercent),
+        ready: qsTr("Ready"),
+        running: appCount === 0 ? qsTr("Running") : appCount === 1 ? qsTr("Running, 1 app") : qsTr("Running, %1 apps").arg(appCount),
+        paused: qsTr("Paused"),
+        saved: qsTr("Saved to disk"),
+        off: qsTr("Not running"),
+        starting: qsTr("Starting"),
+        updating: qsTr("Updating"),
+        attention: qsTr("Needs attention")
     })[level]
 
     function pillFor(state: string): string {
         return pillWords[state] || "";
     }
     readonly property var pillWords: ({
-        settingup: "Setting up", ready: "Ready",
-        running: "Running", paused: "Paused", saved: "Saved", off: "Off",
-        starting: "Starting", updating: "Updating", attention: "Needs attention"
+        settingup: qsTr("Setting up"), ready: qsTr("Ready"),
+        running: qsTr("Running"), paused: qsTr("Paused"), saved: qsTr("Saved"), off: qsTr("Off"),
+        starting: qsTr("Starting"), updating: qsTr("Updating"), attention: qsTr("Needs attention")
     })
 
     readonly property var qemu: system && system.qemu ? system.qemu : null
@@ -122,14 +122,15 @@ PlasmoidItem {
 
     function bytesText(bytes: real): string {
         if (bytes < 1073741824) {
-            return Math.max(1, Math.round(bytes / 1048576)) + " MB";
+            return qsTr("%1 MB").arg(Math.max(1, Math.round(bytes / 1048576)));
         }
         const gb = bytes / 1073741824;
-        return (gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10) + " GB";
+        return qsTr("%1 GB").arg(gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10);
     }
 
+    // one is the whole phrase for 1 ("1 minute"), many has %1 for the count.
     function plural(n: int, one: string, many: string): string {
-        return n === 1 ? "1 " + one : n + " " + many;
+        return n === 1 ? one : many.arg(n);
     }
 
     // QEMU's processor seconds over the time between the first and last
@@ -176,38 +177,39 @@ PlasmoidItem {
         };
         const name = names[id] || "Windows 11";
         const activated = setupRecord && setupRecord.licence ? setupRecord.licence.activated : null;
-        return activated === true ? name + ", activated" : activated === false ? name + ", not activated" : name;
+        return activated === true ? qsTr("%1, activated").arg(name) : activated === false ? qsTr("%1, not activated").arg(name) : name;
     }
 
     // "12 minutes", "2 hours": how long ago a moment was, in whole units.
     function agoText(at: real): string {
         const minutes = Math.floor((now / 1000 - at) / 60);
         if (minutes < 60) {
-            return plural(Math.max(1, minutes), "minute", "minutes");
+            return plural(Math.max(1, minutes), qsTr("1 minute"), qsTr("%1 minutes"));
         }
         const hours = Math.floor(minutes / 60);
-        return hours < 24 ? plural(hours, "hour", "hours") : plural(Math.floor(hours / 24), "day", "days");
+        return hours < 24 ? plural(hours, qsTr("1 hour"), qsTr("%1 hours")) : plural(Math.floor(hours / 24), qsTr("1 day"), qsTr("%1 days"));
     }
 
     // "Paused for 12 minutes", "Shut down 2 hours ago": from when Windows
     // went into the state it is in (system.py note_since), or the state
     // alone when the service can't know.
-    function sinceText(vm: string, lead: string, ago: bool): string {
+    // lead alone, lead just now, and lead with %1 for how long.
+    function sinceText(vm: string, lead: string, justNow: string, withTime: string): string {
         const since = system ? system.since : null;
         const at = since && since.state === vm && since.at > 0 ? since.at : 0;
         if (!at) {
             return lead;
         }
         if (now / 1000 - at < 60) {
-            return lead + " just now";
+            return justNow;
         }
-        return ago ? lead + " " + agoText(at) + " ago" : lead + " for " + agoText(at);
+        return withTime.arg(agoText(at));
     }
 
     // What the service is doing for a button, said in place of the state.
     readonly property string actionText: ({
-        pause: "Pausing", save: "Saving to disk", keep: "Saving to disk", resume: "Resuming", start: "Starting Windows",
-        restart: "Restarting Windows", shutdown: "Shutting down Windows"
+        pause: qsTr("Pausing"), save: qsTr("Saving to disk"), keep: qsTr("Saving to disk"), resume: qsTr("Resuming"), start: qsTr("Starting Windows"),
+        restart: qsTr("Restarting Windows"), shutdown: qsTr("Shutting down Windows")
     })[system && system.action ? system.action : pendingAction] || ""
 
     function subtitle(): string {
@@ -218,19 +220,19 @@ PlasmoidItem {
         case "running":
             return editionText();
         case "paused":
-            return sinceText("paused", "Paused", false);
+            return sinceText("paused", qsTr("Paused"), qsTr("Paused just now"), qsTr("Paused for %1"));
         case "saved":
             // The pill says Saved; "Saved to disk 25 minutes ago" is too
             // long for the panel's width.
-            return sinceText("saved", "Saved", true);
+            return sinceText("saved", qsTr("Saved"), qsTr("Saved just now"), qsTr("Saved %1 ago"));
         case "off":
-            return sinceText("shut off", "Shut down", true);
+            return sinceText("shut off", qsTr("Shut down"), qsTr("Shut down just now"), qsTr("Shut down %1 ago"));
         case "starting":
-            return "Getting Windows ready";
+            return qsTr("Getting Windows ready");
         case "updating":
-            return "Installing updates";
+            return qsTr("Installing updates");
         }
-        return "Needs attention";
+        return qsTr("Needs attention");
     }
 
     // "about 20 seconds", from how long the last start or restore took on
@@ -240,24 +242,27 @@ PlasmoidItem {
             return "";
         }
         if (seconds < 1.5) {
-            return "about a second";
+            return qsTr("about a second");
         }
         if (seconds < 10) {
-            return "about " + Math.round(seconds) + " seconds";
+            return qsTr("about %1 seconds").arg(Math.round(seconds));
         }
         if (seconds < 55) {
-            return "about " + Math.round(seconds / 5) * 5 + " seconds";
+            return qsTr("about %1 seconds").arg(Math.round(seconds / 5) * 5);
         }
-        return seconds < 90 ? "about a minute" : "about " + Math.round(seconds / 60) + " minutes";
+        return seconds < 90 ? qsTr("about a minute") : qsTr("about %1 minutes").arg(Math.round(seconds / 60));
     }
 
     // Saved or off: what it costs now and to come back.
     function restingText(): string {
         const timings = system && system.timings ? system.timings : {};
         const about = aboutText(Number(baseLevel === "saved" ? timings.restore : timings.start));
-        const lead = baseLevel === "saved" ? "Ready in " : "Starts in ";
-        return "Uses no memory or processor. " + (about ? lead + about + ", or by itself when a Windows app opens."
-            : (baseLevel === "saved" ? "Ready again" : "Starts") + " by itself when a Windows app opens.");
+        if (baseLevel === "saved") {
+            return about ? qsTr("Uses no memory or processor. Ready in %1, or by itself when a Windows app opens.").arg(about)
+                : qsTr("Uses no memory or processor. Ready again by itself when a Windows app opens.");
+        }
+        return about ? qsTr("Uses no memory or processor. Starts in %1, or by itself when a Windows app opens.").arg(about)
+            : qsTr("Uses no memory or processor. Starts by itself when a Windows app opens.");
     }
 
     // What the panel says the idle policy will do (winmode/lifecycle.py).
@@ -268,29 +273,30 @@ PlasmoidItem {
         }
         const toDisk = canSave && (system.when_idle === "save" || (system.when_idle === "automatic" && system.on_battery));
         const seconds = Number(system.idle_seconds) || 60;
-        const wait = seconds === 60 ? "a minute" : seconds % 60 === 0 ? plural(seconds / 60, "minute", "minutes") : plural(seconds, "second", "seconds");
+        const wait = seconds === 60 ? qsTr("a minute") : seconds % 60 === 0 ? plural(seconds / 60, qsTr("1 minute"), qsTr("%1 minutes")) : plural(seconds, qsTr("1 second"), qsTr("%1 seconds"));
         if (openApps.length > 0) {
-            return (toDisk ? "Saves to disk " : "Pauses ") + wait + " after you close the last one.";
+            return (toDisk ? qsTr("Saves to disk %1 after you close the last one.") : qsTr("Pauses %1 after you close the last one.")).arg(wait);
         }
         if (typeof system.idle_in === "number") {
-            const left = Math.max(1, Math.round(system.idle_in));
-            return "No Windows apps are open. " + (toDisk ? "Saves to disk in " : "Pauses in ") + plural(left, "second", "seconds") + ".";
+            const left = plural(Math.max(1, Math.round(system.idle_in)), qsTr("1 second"), qsTr("%1 seconds"));
+            return (toDisk ? qsTr("No Windows apps are open. Saves to disk in %1.") : qsTr("No Windows apps are open. Pauses in %1.")).arg(left);
         }
         return "";
     }
 
     function attentionText(): string {
         if (settingUp) {
-            return (setupRecord.problem && setupRecord.problem.text) || "Windows mode couldn't finish setting up. Open the full window to try again.";
+            return (setupRecord.problem && setupRecord.problem.text && qsTranslate("WinmodeService", setupRecord.problem.text)) || qsTr("Windows mode couldn't finish setting up. Open the full window to try again.");
         }
         if (!answering || !system) {
-            return "Windows mode isn't answering. Restart the PC, then try again.";
+            return qsTr("Windows mode isn't answering. Restart the PC, then try again.");
         }
         if (system.state === "Error") {
-            return "Windows stopped unexpectedly. Restart the PC, then open a Windows app to start it again.";
+            return qsTr("Windows stopped unexpectedly. Restart the PC, then open a Windows app to start it again.");
         }
-        const last = system.last && system.last.action === "save" ? "save Windows to disk" : "pause Windows";
-        return "Windows mode couldn't " + last + ", so it's still using memory. Restarting the PC puts it right.";
+        return system.last && system.last.action === "save"
+            ? qsTr("Windows mode couldn't save Windows to disk, so it's still using memory. Restarting the PC puts it right.")
+            : qsTr("Windows mode couldn't pause Windows, so it's still using memory. Restarting the PC puts it right.");
     }
 
     P5Support.DataSource {
@@ -523,9 +529,10 @@ PlasmoidItem {
     // Settings ships with Wild OS, but if it has gone the click still says
     // something rather than doing nothing.
     function openSettings(): void {
+        const quoted = text => "'" + text.replace(/'/g, "'\\''") + "'";
         run("if command -v wildos-settings >/dev/null; then setsid -f wildos-settings --page windowsmode >/dev/null 2>&1; "
-            + "else notify-send -a 'Wild OS' -i preferences-system 'Settings is missing' "
-            + "'Reinstall it from the Store to change this.'; fi");
+            + "else notify-send -a 'Wild OS' -i preferences-system " + quoted(qsTr("Settings is missing")) + " "
+            + quoted(qsTr("Reinstall it from the Store to change this.")) + "; fi");
         expanded = false;
     }
 
@@ -538,12 +545,14 @@ PlasmoidItem {
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "wildos-windows-app"
-    Plasmoid.title: "Windows mode"
+    Plasmoid.title: qsTr("Windows mode")
+    // Never "needs attention": Plasma keeps a hidden taskbar on screen for as
+    // long as anything on it says that.
     Plasmoid.status: !shown ? PlasmaCore.Types.HiddenStatus
-        : level === "attention" ? PlasmaCore.Types.NeedsAttentionStatus : PlasmaCore.Types.PassiveStatus
-    toolTipMainText: "Windows mode: " + stateText.charAt(0).toLowerCase() + stateText.slice(1)
+        : level === "attention" ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
+    toolTipMainText: qsTr("Windows mode: %1").arg(stateText.charAt(0).toLowerCase() + stateText.slice(1))
     toolTipSubText: level === "attention" ? attentionText()
-        : memoryHeld > 0 ? bytesText(memoryHeld) + " of memory held" : "Holding no memory"
+        : memoryHeld > 0 ? qsTr("%1 of memory held").arg(bytesText(memoryHeld)) : qsTr("Holding no memory")
 
     preferredRepresentation: compactRepresentation
     compactRepresentation: Chip {

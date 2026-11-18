@@ -1,6 +1,5 @@
 {
     "homeSwaps": [
-        "libreoffice",
         "krita",
         "vlc"
     ],
@@ -14,7 +13,6 @@
         "org.kde.spectacle"
     ],
     "essentials": [
-        "libreoffice",
         "brave",
         "thunderbird",
         "vlc",
@@ -24,7 +22,6 @@
     "featured": {
         "popular": [
             "brave",
-            "libreoffice",
             "vlc",
             "thunderbird",
             "gimp",
@@ -62,6 +59,7 @@
     "wildos": [
         "org.wildos.write",
         "org.wildos.tables",
+        "org.wildos.slides",
         "org.wildos.mail",
         "org.wildos.pdf",
         "org.wildos.screenshot",
@@ -74,46 +72,10 @@
         "org.wildos.archive",
         "org.kde.kcalc",
         "org.wildos.terminal",
+        "org.wildos.cooler",
         "io.wildos.ganger"
     ],
     "apps": [
-        {
-            "key": "libreoffice",
-            "ids": [
-                "org.libreoffice.LibreOffice",
-                "libreoffice-impress.desktop"
-            ],
-            "packages": [
-                "libreoffice-impress",
-                "libreoffice-draw",
-                "libreoffice-kf6"
-            ],
-            "flatpak": "org.libreoffice.LibreOffice",
-            "desktop": "libreoffice-impress",
-            "name": "LibreOffice",
-            "summary": "Presentations and drawings that work with PowerPoint files. Write and Tables, for documents and spreadsheets, come with Wild OS",
-            "tagline": "Slides and drawings",
-            "insteadOf": "PowerPoint",
-            "aliases": [
-                "office",
-                "word",
-                "excel",
-                "powerpoint",
-                "microsoft 365",
-                "office 365",
-                "docx",
-                "xlsx",
-                "pptx",
-                "spreadsheet"
-            ],
-            "cardNote": "Free, opens Office files",
-            "chip": "Opens Office files",
-            "swapTitle": "A good swap for Microsoft Office",
-            "swapText": "Opens your Word, Excel and PowerPoint files, and saves back to them.",
-            "description": "A full office suite: Writer for documents, Calc for spreadsheets and Impress for presentations. It opens and saves Word, Excel and PowerPoint files, so you can keep working with people who use Office.",
-            "icon": "libreoffice-startcenter",
-            "category": "office"
-        },
         {
             "key": "krita",
             "name": "Krita",
@@ -589,6 +551,19 @@
             "icon": "org.wildos.tables"
         },
         {
+            "key": "org.wildos.slides",
+            "ids": [
+                "org.wildos.slides"
+            ],
+            "packages": [
+                "wildos-slides"
+            ],
+            "desktop": "libreoffice-impress",
+            "name": "Slides",
+            "tagline": "Opens your PowerPoint files.",
+            "icon": "org.wildos.slides"
+        },
+        {
             "key": "org.wildos.mail",
             "ids": [
                 "org.wildos.mail"
@@ -754,9 +729,24 @@
             ],
             "desktop": "Ganger",
             "name": "Ganger",
-            "tagline": "AI coding agents on this PC.",
+            "tagline": "AI coding agents on this PC. Beta.",
             "icon": "wildos-ganger",
-            "onlyIfAvailable": true
+            "onlyIfAvailable": true,
+            "optional": true
+        },
+        {
+            "key": "org.wildos.cooler",
+            "ids": [
+                "org.wildos.cooler"
+            ],
+            "packages": [
+                "wildos-cooler"
+            ],
+            "desktop": "org.wildos.cooler",
+            "name": "Cooler",
+            "tagline": "The screen, pump and fans of an NZXT Kraken.",
+            "icon": "wildos-cooler",
+            "optional": true
         }
     ]
 }

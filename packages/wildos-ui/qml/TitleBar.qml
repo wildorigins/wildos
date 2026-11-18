@@ -2,7 +2,9 @@ import QtQuick
 import QtQuick.Window
 
 // The 42px title bar of a Wild OS app that draws its own (Files, Settings,
-// Store, Terminal): an optional Back button (Settings.dc, 34 by 30, radius
+// Store, Terminal), or the 44px one of the apps drawn with a taller bar
+// (`tall: true`, which sizes the window buttons to match): an optional
+// Back button (Settings.dc, 34 by 30, radius
 // 6), the app's title in 13px, anything the app puts in the middle (tabs,
 // a search box) and the window buttons at the right. Dragging the empty
 // bar moves the window once the pointer has travelled 4px, so the second
@@ -16,6 +18,7 @@ Item {
     property string title
     property bool showTitle: title.length > 0
     property bool showBack: false
+    property bool tall: false
     property bool backEnabled: true
     // Files tints its bar; Settings' bar is the window glass itself.
     property bool tinted: false
@@ -35,7 +38,7 @@ Item {
     signal maximiseRequested()
     signal windowMenuRequested()
 
-    implicitHeight: Style.titleBarHeight
+    implicitHeight: tall ? Style.titleBarHeightTall : Style.titleBarHeight
 
     Rectangle {
         anchors.fill: parent
@@ -107,7 +110,7 @@ Item {
             iconName: "back"
             iconSize: 15
             enabled: bar.backEnabled
-            tip: "Back"
+            tip: qsTr("Back")
             onClicked: bar.backClicked()
         }
 
@@ -134,5 +137,6 @@ Item {
         anchors.top: parent.top
         frame: bar.frame
         handleActions: bar.handleActions
+        buttonHeight: bar.implicitHeight
     }
 }

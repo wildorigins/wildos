@@ -59,10 +59,10 @@ FocusScope {
                     width: ListView.view.width - 8
                     title: model.ItemUniqueName
                     active: connState === PlasmaNM.Enums.Activated
-                    subtitle: connState === PlasmaNM.Enums.Activated ? "Connected"
-                        : connState === PlasmaNM.Enums.Activating ? "Connecting"
-                        : connState === PlasmaNM.Enums.Deactivating ? "Disconnecting"
-                        : "Not connected"
+                    subtitle: connState === PlasmaNM.Enums.Activated ? qsTr("Connected")
+                        : connState === PlasmaNM.Enums.Activating ? qsTr("Connecting")
+                        : connState === PlasmaNM.Enums.Deactivating ? qsTr("Disconnecting")
+                        : qsTr("Not connected")
                     icon: Component {
                         UI.Glyph {
                             path: Icons.vpn
@@ -86,9 +86,9 @@ FocusScope {
                 width: Math.min(parent.width - 24, 320)
                 visible: !list.visible
                 iconPath: Icons.vpn
-                heading: "No VPN set up yet"
-                explanation: "Your VPN provider gives you the details to add one in Settings."
-                actionText: "Add a VPN"
+                heading: qsTr("No VPN set up yet")
+                explanation: qsTr("Your VPN provider gives you the details to add one in Settings.")
+                actionText: qsTr("Add a VPN")
                 onAction: page.quick.openSettings("network")
             }
         }
@@ -97,7 +97,7 @@ FocusScope {
             Layout.alignment: Qt.AlignLeft
             Layout.leftMargin: -4
             visible: list.visible
-            text: "VPN settings"
+            text: qsTr("VPN settings")
             onClicked: page.quick.openSettings("network")
         }
     }

@@ -71,22 +71,22 @@ Item {
     function dayAndMonth(when: var): string {
         const format = Qt.locale().dateFormat(Locale.LongFormat)
             .replace(/d{4}[,.\s]*/, "").replace(/[,.\s]*y+[.年]?/, "").replace("MMMM", "MMM").trim();
-        return Qt.locale("en_GB").toString(when, format);
+        return Qt.locale(qsTr("en_GB", "locale for day and month names")).toString(when, format);
     }
 
     function ago(time: real): string {
         const minutes = Math.floor((now - time) / 60000);
         if (minutes < 1) {
-            return "Just now";
+            return qsTr("Just now");
         }
         if (minutes < 60) {
-            return minutes + " min ago";
+            return qsTr("%1 min ago").arg(minutes);
         }
         const hours = Math.floor(minutes / 60);
         if (hours < 24) {
-            return hours + " hr ago";
+            return qsTr("%1 hr ago").arg(hours);
         }
-        return hours < 48 ? "Yesterday" : dayAndMonth(new Date(time));
+        return hours < 48 ? qsTr("Yesterday") : dayAndMonth(new Date(time));
     }
 
     // A file path as people read it: ~ for home, and how many more.
@@ -100,7 +100,7 @@ Item {
         if (home.length > 0 && first.startsWith(home + "/")) {
             first = "~" + first.substring(home.length);
         }
-        return lines.length > 1 ? first + " and " + (lines.length - 1) + " more" : first;
+        return lines.length > 1 ? qsTr("%1 and %n more", "", lines.length - 1).arg(first) : first;
     }
 
     function paste(item: var): void {
@@ -152,16 +152,28 @@ Item {
         function onDataChanged() { page.rebuild(); }
     }
 
+    // Item by item, because Klipper's own clearHistory() asks first in a
+    // dialog of its own, which takes the keyboard from this panel and closes
+    // it, and which the lock screen would hide until sign-in.
+    function emptyHistory(): void {
+        for (let i = history.count - 1; i >= 0; i--) {
+            history.remove(String(history.data(history.index(i, 0), page.uuidRole)));
+        }
+    }
+
+    // "Clear all", as on Windows: everything copied goes at once, what is
+    // on the clipboard now included, and pinned items stay.
+    function clearAll(): void {
+        emptyHistory();
+        PanelApp.clearClipboard();
+    }
+
     // The history goes first: Klipper puts its newest item back on the
-    // clipboard when the clipboard empties. Item by item, because Klipper's
-    // own clearHistory() asks first in a dialog, which the lock screen
-    // would hide until sign-in.
+    // clipboard when the clipboard empties.
     Connections {
         target: PanelApp
         function onClearRequested() {
-            for (let i = history.count - 1; i >= 0; i--) {
-                history.remove(String(history.data(history.index(i, 0), page.uuidRole)));
-            }
+            page.emptyHistory();
             Pins.clear();
             PanelApp.clearClipboard();
         }
@@ -200,15 +212,15 @@ Item {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Clipboard history"
+                text: qsTr("Clipboard history")
                 font.weight: UI.Style.weightSemiBold
             }
 
             UI.LinkButton {
                 visible: history.count > 0
-                text: "Clear all"
+                text: qsTr("Clear all")
                 size: 12
-                onClicked: history.clearHistory()
+                onClicked: page.clearAll()
             }
         }
 
@@ -265,7 +277,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.topMargin: 6
                 horizontalAlignment: Text.AlignHCenter
-                text: "Nothing copied yet"
+                text: qsTr("Nothing copied yet")
                 font.weight: UI.Style.weightSemiBold
             }
             UI.Label {
@@ -274,7 +286,7 @@ Item {
                 wrapMode: Text.Wrap
                 size: 12
                 color: UI.Style.inkMuted
-                text: "Text, pictures and file paths you copy will show up here."
+                text: qsTr("Text, pictures and file paths you copy will show up here.")
             }
 
             Item { Layout.fillHeight: true }
@@ -288,8 +300,8 @@ Item {
             size: 11
             color: UI.Style.inkPlaceholder
             text: PanelApp.canPaste
-                ? "History stays on this computer and is cleared when you restart, except pinned items."
-                : "Click an item to copy it, then press Ctrl+V. History is cleared when you restart, except pinned items."
+                ? qsTr("History stays on this computer and is cleared when you restart, except pinned items.")
+                : qsTr("Click an item to copy it, then press Ctrl+V. History is cleared when you restart, except pinned items.")
         }
     }
 }

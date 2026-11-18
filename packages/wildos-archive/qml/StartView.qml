@@ -79,6 +79,24 @@ Item {
                 Layout.preferredHeight: 48
                 radius: 6
                 color: rowMouse.pressed ? ArchiveStyle.rowPressed : rowMouse.containsMouse ? ArchiveStyle.rowHover : "transparent"
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: modelData.name
+                Accessible.description: modelData.folder
+                Accessible.onPressAction: view.openRecent(modelData.path)
+                Keys.onReturnPressed: view.openRecent(modelData.path)
+                Keys.onEnterPressed: view.openRecent(modelData.path)
+                Keys.onSpacePressed: view.openRecent(modelData.path)
+                Keys.onDeletePressed: ArchiveApp.removeRecent(modelData.path)
+
+                Rectangle {
+                    anchors.fill: parent
+                    visible: recentRow.activeFocus
+                    radius: parent.radius
+                    color: "transparent"
+                    border.width: 2
+                    border.color: UI.Style.accent
+                }
 
                 MouseArea {
                     id: rowMouse
@@ -86,8 +104,6 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: view.openRecent(recentRow.modelData.path)
-                    Accessible.role: Accessible.Button
-                    Accessible.name: recentRow.modelData.name
                 }
 
                 RowLayout {
@@ -137,7 +153,7 @@ Item {
                         iconSize: 14
                         iconName: "x"
                         tip: qsTr("Remove from the list")
-                        opacity: rowMouse.containsMouse || hovered ? 1 : 0
+                        opacity: rowMouse.containsMouse || hovered || activeFocus || recentRow.activeFocus ? 1 : 0
                         onClicked: ArchiveApp.removeRecent(recentRow.modelData.path)
                     }
                 }

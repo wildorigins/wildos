@@ -11,8 +11,15 @@ import WildOS.UI as UI
 Item {
     id: page
 
+    // Services gives the status in English, which this page compares;
+    // listed here for the translations and shown with qsTr().
+    readonly property var statusNames: [QT_TR_NOOP("Running"), QT_TR_NOOP("Starting"), QT_TR_NOOP("Stopping"), QT_TR_NOOP("Failed"), QT_TR_NOOP("Stopped")]
+
     property string selectedKey: ""
-    readonly property var selected: Services.services.find(s => s.key === selectedKey) || null
+    property string sortColumn: Prefs.sortColumn("services", "name")
+    property bool sortDescending: Prefs.sortDescending("services")
+    readonly property var rows: heading.sorted(Services.services)
+    readonly property var selected: rows.find(s => s.key === selectedKey) || null
 
     signal message(string text)
 
@@ -20,6 +27,33 @@ Item {
         if (page.selected) {
             Services.act(page.selected.unit, page.selected.user, action);
         }
+    }
+
+    function sortBy(column) {
+        sortDescending = sortColumn === column ? !sortDescending : false;
+        sortColumn = column;
+        Prefs.setSort("services", sortColumn, sortDescending);
+    }
+
+    function rowIndex() {
+        return rows.findIndex(s => s.key === selectedKey);
+    }
+
+    function selectRow(index) {
+        selectedKey = rows[index].key;
+    }
+
+    function rowName(index) {
+        return rows[index].name;
+    }
+
+    function showMenu(service, item, at) {
+        menu.entries = [
+            { text: qsTr("Start"), icon: "play", enabled: !service.running && !service.masked, run: () => page.act("start") },
+            { text: qsTr("Stop"), icon: "close", enabled: service.running, run: () => page.act("stop") },
+            { text: qsTr("Restart"), icon: "restart", enabled: service.running, run: () => page.act("restart") }
+        ];
+        menu.popup(item, at.x, at.y);
     }
 
     Connections {
@@ -32,7 +66,7 @@ Item {
     PageHeader {
         id: header
         width: parent.width
-        title: "Services"
+        title: qsTr("Services")
 
         Row {
             height: 32
@@ -40,14 +74,14 @@ Item {
 
             UI.Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Show all"
+                text: qsTr("Show all")
                 size: 12
             }
 
             UI.Toggle {
                 anchors.verticalCenter: parent.verticalCenter
                 checked: Services.showAll
-                Accessible.name: "Show all services"
+                Accessible.name: qsTr("Show all services")
                 onToggled: Services.showAll = checked
             }
 
@@ -58,14 +92,14 @@ Item {
         }
 
         HeaderButton {
-            text: "Start"
+            text: qsTr("Start")
             iconName: "play"
             enabled: page.selected !== null && !page.selected.running && !page.selected.masked
             onClicked: page.act("start")
         }
 
         HeaderButton {
-            text: "Restart"
+            text: qsTr("Restart")
             iconName: "restart"
             enabled: page.selected !== null && page.selected.running
             onClicked: page.act("restart")
@@ -73,7 +107,7 @@ Item {
 
         HeaderButton {
             kind: "primary"
-            text: "Stop"
+            text: qsTr("Stop")
             iconName: "close"
             enabled: page.selected !== null && page.selected.running
             onClicked: page.act("stop")
@@ -85,12 +119,15 @@ Item {
         y: header.height
         width: parent.width
         columns: [
-            { title: "Name", width: 0 },
-            { title: "Service", width: 220 },
-            { title: "Status", width: 110 },
-            { title: "Starts", width: 130 },
-            { title: "Runs for", width: 90 }
+            { id: "name", title: qsTr("Name"), width: 0 },
+            { id: "unit", title: qsTr("Service"), width: 220 },
+            { id: "status", title: qsTr("Status"), width: 110 },
+            { id: "starts", title: qsTr("Starts"), width: 130 },
+            { id: "owner", title: qsTr("Runs for"), width: 90 }
         ]
+        sortColumn: page.sortColumn
+        sortDescending: page.sortDescending
+        onSortRequested: column => page.sortBy(column)
     }
 
     ListView {
@@ -99,10 +136,22 @@ Item {
         width: parent.width
         height: parent.height - y
         clip: true
-        model: Services.services
+        model: page.rows
         boundsBehavior: Flickable.StopAtBounds
         reuseItems: true
+        activeFocusOnTab: true
+        keyNavigationEnabled: false
+        Accessible.role: Accessible.List
+        Accessible.name: qsTr("Services")
         T.ScrollBar.vertical: UI.ScrollBar {}
+
+        Keys.onPressed: event => listKeys.handle(event)
+        Keys.onMenuPressed: {
+            const item = itemAtIndex(page.rowIndex());
+            if (item && page.selected) {
+                page.showMenu(page.selected, item, Qt.point(40, item.height));
+            }
+        }
 
         delegate: TableRow {
             id: row
@@ -110,16 +159,13 @@ Item {
             width: list.width
             implicitHeight: 40
             selected: modelData.key === page.selectedKey
-            Accessible.name: modelData.name + ", " + modelData.status
-            onClicked: page.selectedKey = modelData.key
-            onMenuRequested: at => {
-                menu.entries = [
-                    { text: "Start", icon: "play", enabled: !row.modelData.running && !row.modelData.masked, run: () => page.act("start") },
-                    { text: "Stop", icon: "close", enabled: row.modelData.running, run: () => page.act("stop") },
-                    { text: "Restart", icon: "restart", enabled: row.modelData.running, run: () => page.act("restart") }
-                ];
-                menu.popup(row, at.x, at.y);
+            focused: selected && listKeys.shown
+            Accessible.name: modelData.name + ", " + qsTr(modelData.status)
+            onClicked: {
+                page.selectedKey = modelData.key;
+                listKeys.clicked();
             }
+            onMenuRequested: at => page.showMenu(row.modelData, row, at)
 
             UI.Label {
                 width: row.width - 220 - 110 - 130 - 90
@@ -143,7 +189,7 @@ Item {
                 width: 110
                 height: row.height
                 leftPadding: 12
-                text: row.modelData.status
+                text: qsTr(row.modelData.status)
                 size: 12
                 color: row.modelData.status === "Failed" ? UI.Style.danger : UI.Style.inkMuted
             }
@@ -171,8 +217,15 @@ Item {
     UI.Label {
         visible: list.count === 0
         anchors.centerIn: list
-        text: Services.search.length > 0 ? "No service matches “" + Services.search + "”." : "Wild OS could not read the list of services."
+        text: Services.search.length > 0 ? qsTr("No service matches “%1”.").arg(Services.search) : qsTr("Wild OS could not read the list of services.")
         color: UI.Style.inkMuted
+    }
+
+    ListKeys {
+        id: listKeys
+        view: list
+        host: page
+        rowMenu: menu
     }
 
     UI.Menu {

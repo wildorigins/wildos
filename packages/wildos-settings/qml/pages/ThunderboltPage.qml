@@ -16,13 +16,13 @@ PageScroll {
 
     function statusText(device) {
         switch (device.status) {
-        case "authorized": return device.stored ? "Connected, allowed" : "Connected, allowed until it is unplugged";
-        case "connected": return "Waiting to be allowed";
-        case "authorizing": return "Allowing";
-        case "auth-error": return "Could not be allowed";
-        case "connecting": return "Connecting";
-        case "disconnected": return "Not connected, allowed when plugged in";
-        default: return "Not ready";
+        case "authorized": return device.stored ? qsTr("Connected, allowed") : qsTr("Connected, allowed until it is unplugged");
+        case "connected": return qsTr("Waiting to be allowed");
+        case "authorizing": return qsTr("Allowing");
+        case "auth-error": return qsTr("Could not be allowed");
+        case "connecting": return qsTr("Connecting");
+        case "disconnected": return qsTr("Not connected, allowed when plugged in");
+        default: return qsTr("Not ready");
         }
     }
 
@@ -41,8 +41,8 @@ PageScroll {
         visible: !page.usable
         iconName: "bolt"
         warning: true
-        title: Thunderbolt.firmwareOff ? "Thunderbolt is turned off in this PC's firmware" : "This PC has no Thunderbolt ports"
-        description: Thunderbolt.firmwareOff ? "Turn on Thunderbolt support in the PC's UEFI settings to use Thunderbolt devices."
+        title: Thunderbolt.firmwareOff ? qsTr("Thunderbolt is turned off in this PC's firmware") : qsTr("This PC has no Thunderbolt ports")
+        description: Thunderbolt.firmwareOff ? qsTr("Turn on Thunderbolt support in the PC's UEFI settings to use Thunderbolt devices.")
             : ""
     }
 
@@ -52,7 +52,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Devices"
+            text: qsTr("Devices")
         }
 
         UI.Card {
@@ -79,7 +79,7 @@ PageScroll {
                             visible: deviceRow.modelData.status === "connected" || deviceRow.modelData.status === "auth-error"
                                 || (deviceRow.modelData.status === "authorized" && !deviceRow.modelData.stored)
                             kind: deviceRow.modelData.status === "authorized" ? "secondary" : "primary"
-                            text: deviceRow.modelData.status === "authorized" ? "Always allow" : "Allow"
+                            text: deviceRow.modelData.status === "authorized" ? qsTr("Always allow") : qsTr("Allow")
                             busy: deviceRow.busy
                             enabled: Thunderbolt.busy.length === 0
                             onClicked: Thunderbolt.allow(deviceRow.modelData.uid)
@@ -88,7 +88,7 @@ PageScroll {
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: deviceRow.modelData.stored === true
-                            text: "Forget"
+                            text: qsTr("Forget")
                             busy: deviceRow.busy
                             enabled: Thunderbolt.busy.length === 0
                             onClicked: Thunderbolt.forget(deviceRow.modelData.uid)
@@ -98,8 +98,8 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: deviceList.count === 0
-                    title: "No Thunderbolt devices connected"
-                    description: "Plug in a dock or other Thunderbolt device and it appears here."
+                    title: qsTr("No Thunderbolt devices connected")
+                    description: qsTr("Plug in a dock or other Thunderbolt device and it appears here.")
                 }
             }
         }

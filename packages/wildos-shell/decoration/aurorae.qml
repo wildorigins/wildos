@@ -38,6 +38,13 @@ Decoration {
         maximizedBorders.right  = Qt.binding(function() { return Math.max(0, auroraeTheme.borderRightMaximized);});
         maximizedBorders.bottom = Qt.binding(function() { return Math.max(0, auroraeTheme.borderBottomMaximized);});
         maximizedBorders.top    = Qt.binding(function() { return Math.max(0, auroraeTheme.borderTopMaximized);});
+        // Wild OS: the frame is one pixel, too thin to catch with the
+        // pointer. As on Windows 11, a band just outside the sides and the
+        // bottom of the window resizes it and draws nothing. Not on a
+        // maximised edge, where the band would lie on the next screen.
+        extendedBorders.left   = Qt.binding(function() { return decoration.client.maximizedHorizontally ? 0 : 8; });
+        extendedBorders.right  = Qt.binding(function() { return decoration.client.maximizedHorizontally ? 0 : 8; });
+        extendedBorders.bottom = Qt.binding(function() { return decoration.client.maximizedVertically ? 0 : 8; });
         padding.left   = auroraeTheme.paddingLeft;
         padding.right  = auroraeTheme.paddingRight;
         padding.bottom = auroraeTheme.paddingBottom;

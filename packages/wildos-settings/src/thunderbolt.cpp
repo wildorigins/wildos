@@ -120,7 +120,7 @@ void Thunderbolt::call(const QString &uid, const QString &method, const QVariant
         setBusy(QString());
         if (reply.isError()) {
             const QDBusError error = reply.error();
-            Q_EMIT failed(failure, error.type() == QDBusError::AccessDenied ? QStringLiteral("Only an administrator can do this.") : error.message());
+            Q_EMIT failed(failure, error.type() == QDBusError::AccessDenied ? tr("Only an administrator can do this.") : error.message());
         }
         reload();
     });
@@ -131,10 +131,10 @@ void Thunderbolt::allow(const QString &uid)
     // The policy and flags KDE's module enrols with: let the device in
     // again at start-up too, without a key challenge, which most devices
     // cannot answer.
-    call(uid, QStringLiteral("EnrollDevice"), {uid, QStringLiteral("default"), QStringLiteral("boot | nokey")}, QStringLiteral("The device was not allowed"));
+    call(uid, QStringLiteral("EnrollDevice"), {uid, QStringLiteral("default"), QStringLiteral("boot | nokey")}, tr("The device was not allowed"));
 }
 
 void Thunderbolt::forget(const QString &uid)
 {
-    call(uid, QStringLiteral("ForgetDevice"), {uid}, QStringLiteral("The device was not forgotten"));
+    call(uid, QStringLiteral("ForgetDevice"), {uid}, tr("The device was not forgotten"));
 }

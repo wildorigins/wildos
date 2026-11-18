@@ -18,7 +18,7 @@ T.AbstractButton {
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
     Accessible.role: Accessible.Button
-    Accessible.name: title + ", " + caption
+    Accessible.name: qsTr("%1, %2").arg(title).arg(caption)
 
     background: Rectangle {
         radius: UI.Style.radiusMd

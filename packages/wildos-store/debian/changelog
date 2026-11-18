@@ -1,3 +1,60 @@
+wildos-store (0.1.16) trixie; urgency=medium
+
+  * Cooler is in the Wild OS section: the screen, pump and fans of an NZXT
+    Kraken liquid cooler. Offered with Get, never installed by Reinstall
+    all.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 12:45:00 +0000
+
+wildos-store (0.1.15) trixie; urgency=medium
+
+  * Ganger shows in the Store straight after the update that brings its
+    repository. The Store read a newly added source only at its hourly
+    refresh and never looked again while open.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 12:30:00 +0000
+
+wildos-store (0.1.14) trixie; urgency=medium
+
+  * Ganger, our app for running AI coding agents, is in the Wild OS
+    section as a beta. It is offered with Get and is never installed by
+    Reinstall all.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 14:00:00 +0000
+
+wildos-store (0.1.13) trixie; urgency=medium
+
+  * Closing the Store while it is still loading no longer brings up
+    "Store closed unexpectedly", and opening it again straight after
+    closing it works.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 10:00:00 +0000
+
+wildos-store (0.1.12) trixie; urgency=medium
+
+  * Slides is listed with the other Wild OS apps, so it can be removed and
+    put back like Write and Tables.
+  * LibreOffice is no longer suggested in place of PowerPoint: Write,
+    Tables and Slides open Word, Excel and PowerPoint files.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 16:00:00 +0000
+
+wildos-store (0.1.11) trixie; urgency=medium
+
+  * Uninstall from Start on an app installed from a package file opens
+    its Uninstall in Settings. The Store has no page for such an app and
+    showed "Nothing matches". Searching the Store for one now says where
+    to remove it.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 14:03:35 +0000
+
+wildos-store (0.1.10) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-store (0.1.9) trixie; urgency=medium
 
   * An app from a repository only some PCs use is listed only where that

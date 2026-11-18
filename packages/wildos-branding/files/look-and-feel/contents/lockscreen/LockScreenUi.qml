@@ -30,6 +30,8 @@ Item {
     // Set when PAM explains that signing in is blocked for now, so the
     // failure that follows does not claim the password was wrong.
     property bool blocked: false
+    // What the PAM module that blocked it said, in plain words.
+    property string blockedMessage: ""
 
     // kscreenlocker runs the fingerprint (/etc/pam.d/kde-fingerprint) beside
     // the password and lists it in authenticatorTypes (Fingerprint is bit
@@ -40,6 +42,7 @@ Item {
     property bool fingerprintReady: false
     onFingerprintOfferedChanged: {
         if (fingerprintOffered) {
+            fingerprintSince = Date.now();
             fingerprintTimer.restart();
         } else {
             fingerprintTimer.stop();
@@ -51,6 +54,41 @@ Item {
         id: fingerprintTimer
         interval: 1000
         onTriggered: lockScreenUi.fingerprintReady = lockScreenUi.fingerprintOffered
+    }
+
+    // pam_fprintd stops listening after 30 seconds without a touch, and
+    // after three touches that don't match. Nothing started it again unless
+    // the pointer happened to wake the screen, so a PC left locked for a
+    // minute no longer took a finger. It is started again each time it
+    // stops, for as long as the screen is locked.
+    //
+    // Not when it stopped at once, which is fprintd saying there is no
+    // reader, no finger enrolled or fingerprint unlock is off. And three
+    // rounds of touches that don't match (nine touches) end it until the
+    // password is typed, as Windows does, so the reader can't be tried
+    // without limit.
+    property double fingerprintSince: 0
+    property int fingerprintMisses: 0
+
+    function fingerprintStopped() {
+        const lasted = fingerprintSince > 0 ? Date.now() - fingerprintSince : 0;
+        fingerprintSince = 0;
+        if (lasted < 1500) {
+            return;
+        }
+        if (lasted < 25000) {
+            fingerprintMisses += 1;
+            if (fingerprintMisses >= 3) {
+                return;
+            }
+        }
+        fingerprintRestart.restart();
+    }
+
+    Timer {
+        id: fingerprintRestart
+        interval: 400
+        onTriggered: authenticator.startAuthenticating()
     }
 
     function showMessage(msg) {
@@ -68,6 +106,7 @@ Item {
         if (plain.length === 0)
             return;
         blocked = true;
+        blockedMessage = plain;
         showMessage(plain);
         notificationRemoveTimer.restart();
     }
@@ -78,10 +117,14 @@ Item {
         function onFailed(kind) {
             // A finger that doesn't match is retried by pam_fprintd itself,
             // and smartcards are not part of Wild OS, so only the password's
-            // failures reach the screen.
+            // failures reach the screen. 1 is the fingerprint.
+            if (kind == 1)
+                lockScreenUi.fingerprintStopped();
             if (kind != 0)
                 return;
-            lockScreenUi.showMessage(lockScreenUi.blocked ? Messages.unavailable : Messages.wrongPassword);
+            const pin = UI.System.pinSet !== undefined && UI.System.pinSet();
+            lockScreenUi.showMessage(lockScreenUi.blocked ? lockScreenUi.blockedMessage
+                : pin ? Messages.wrongPasswordOrPin : Messages.wrongPassword);
             mainBlock.passwordHint = lockScreenUi.blocked ? "" : UI.System.passwordHint();
             graceLockTimer.restart();
             notificationRemoveTimer.restart();
@@ -358,6 +401,14 @@ Item {
             opacity: lockScreenRoot.uiVisible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: UI.Style.motionSlow; easing.type: UI.Style.easeStandard } }
 
+            // Loaded on its own, so a computer without the network status
+            // parts still locks and unlocks exactly as before.
+            Loader {
+                visible: status === Loader.Ready
+                source: "NetworkStatus.qml"
+                onLoaded: item.backdrop = Qt.binding(() => lockScreenUi.backdrop)
+            }
+
             Item {
                 id: battery
 
@@ -365,7 +416,7 @@ Item {
                 width: batteryRow.implicitWidth + 28
                 height: 44
                 Accessible.role: Accessible.StaticText
-                Accessible.name: "Battery at " + batteryControl.percent + "%"
+                Accessible.name: qsTr("Battery at %1%").arg(batteryControl.percent)
 
                 Glass {
                     anchors.fill: parent
@@ -402,7 +453,7 @@ Item {
                 backdrop: lockScreenUi.backdrop
                 checked: inputPanel.keyboardActive
                 iconName: "accessibility"
-                label: inputPanel.keyboardActive ? "Hide on-screen keyboard" : "Show on-screen keyboard"
+                label: inputPanel.keyboardActive ? qsTr("Hide on-screen keyboard") : qsTr("Show on-screen keyboard")
                 focusPolicy: Qt.TabFocus
                 onClicked: {
                     // Keep focus in the password field, otherwise keys typed on
@@ -421,16 +472,16 @@ Item {
                 readonly property var actions: {
                     const list = [];
                     if (lockRoot.suspendToRamSupported) {
-                        list.push({ text: "Sleep", icon: "moon", run: () => lockRoot.suspendToRam() });
+                        list.push({ text: qsTr("Sleep"), icon: "moon", run: () => lockRoot.suspendToRam() });
                     }
                     if (lockRoot.suspendToDiskSupported) {
-                        list.push({ text: "Hibernate", icon: "hibernate", run: () => lockRoot.suspendToDisk() });
+                        list.push({ text: qsTr("Hibernate"), icon: "hibernate", run: () => lockRoot.suspendToDisk() });
                     }
                     if (sessionManagement.canShutdown) {
-                        list.push({ text: "Shut down", icon: "power", run: () => sessionManagement.requestShutdown(SessionManagement.ConfirmationMode.Skip) });
+                        list.push({ text: qsTr("Shut down"), icon: "power", run: () => sessionManagement.requestShutdown(SessionManagement.ConfirmationMode.Skip) });
                     }
                     if (sessionManagement.canReboot) {
-                        list.push({ text: "Restart", icon: "restart", run: () => sessionManagement.requestReboot(SessionManagement.ConfirmationMode.Skip) });
+                        list.push({ text: qsTr("Restart"), icon: "restart", run: () => sessionManagement.requestReboot(SessionManagement.ConfirmationMode.Skip) });
                     }
                     return list;
                 }
@@ -438,7 +489,7 @@ Item {
                 visible: actions.length > 0
                 backdrop: lockScreenUi.backdrop
                 iconName: "power"
-                label: "Power"
+                label: qsTr("Power")
                 checked: powerMenu.opened
                 focusPolicy: Qt.TabFocus
                 onClicked: powerMenu.opened ? powerMenu.close() : powerMenu.open()

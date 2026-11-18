@@ -22,8 +22,18 @@ Item {
 
     implicitWidth: coverSize
     implicitHeight: coverSize + 10 + titleLabel.implicitHeight + 2 + subtitleLabel.implicitHeight
+    activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: subtitle.length > 0 ? qsTr("%1, %2").arg(title).arg(subtitle) : title
+    Accessible.onPressAction: tile.clicked()
+    Keys.onReturnPressed: tile.clicked()
+    Keys.onEnterPressed: tile.clicked()
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            tile.menuRequested(tile.coverSize / 2, tile.coverSize / 2);
+            event.accepted = true;
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -32,6 +42,13 @@ Item {
         color: mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
         Behavior on color {
             ColorAnimation { duration: UI.Style.hoverDuration }
+        }
+
+        // On the plate itself, which already stands 8px clear of the cover.
+        UI.FocusRing {
+            anchors.margins: 0
+            targetRadius: UI.Style.radiusMd - 4
+            visible: tile.activeFocus
         }
     }
 

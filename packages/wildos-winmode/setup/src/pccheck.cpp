@@ -1,5 +1,6 @@
 #include "pccheck.h"
 
+#include <QCoreApplication>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
@@ -107,7 +108,7 @@ QString memoryLabel(qint64 bytes)
             fitted = size;
         }
     }
-    return fitted > 0 ? QStringLiteral("%1 GB").arg(fitted) : sizeLabel(bytes);
+    return fitted > 0 ? QCoreApplication::translate("PcCheck", "%1 GB").arg(fitted) : sizeLabel(bytes);
 }
 
 qint64 freeBytes(const QString &path)
@@ -128,12 +129,12 @@ QString sizeLabel(qint64 bytes)
     const QLocale locale = QLocale::system();
     const double gb = double(bytes) / 1e9;
     if (gb >= 10) {
-        return QStringLiteral("%1 GB").arg(qRound64(gb));
+        return QCoreApplication::translate("PcCheck", "%1 GB").arg(qRound64(gb));
     }
     if (gb >= 1) {
-        return QStringLiteral("%1 GB").arg(locale.toString(gb, 'f', 1));
+        return QCoreApplication::translate("PcCheck", "%1 GB").arg(locale.toString(gb, 'f', 1));
     }
-    return QStringLiteral("%1 MB").arg(qMax<qint64>(1, qRound64(double(bytes) / 1e6)));
+    return QCoreApplication::translate("PcCheck", "%1 MB").arg(qMax<qint64>(1, qRound64(double(bytes) / 1e6)));
 }
 
 qint64 folderBytes(const QString &path)

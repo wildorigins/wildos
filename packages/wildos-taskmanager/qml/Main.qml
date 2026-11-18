@@ -14,19 +14,19 @@ UI.AppWindow {
     required property string requestedPage
     property string currentPage: ""
     readonly property var pages: [
-        { id: "processes", title: "Processes", icon: "processes" },
-        { id: "performance", title: "Performance", icon: "performance" },
-        { id: "startup", title: "Startup apps", icon: "startup-apps" },
-        { id: "windowsapps", title: "Windows apps", icon: "monitor" },
-        { id: "services", title: "Services", icon: "services" }
+        { id: "processes", title: qsTr("Processes"), icon: "processes" },
+        { id: "performance", title: qsTr("Performance"), icon: "performance" },
+        { id: "startup", title: qsTr("Startup apps"), icon: "startup-apps" },
+        { id: "windowsapps", title: qsTr("Windows apps"), icon: "monitor" },
+        { id: "services", title: qsTr("Services"), icon: "services" }
     ]
     readonly property var placeholders: ({
-        processes: "Search for a name or process",
-        performance: "Search for a name or process",
-        startup: "Search for an app",
-        windowsapps: "Search for an app",
-        services: "Search for a service",
-        settings: "Search for a name or process"
+        processes: qsTr("Search for a name or process"),
+        performance: qsTr("Search for a name or process"),
+        startup: qsTr("Search for an app"),
+        windowsapps: qsTr("Search for an app"),
+        services: qsTr("Search for a service"),
+        settings: qsTr("Search for a name or process")
     })
 
     width: 1140
@@ -34,7 +34,7 @@ UI.AppWindow {
     minimumWidth: 860
     minimumHeight: 520
     visible: true
-    title: "Task Manager"
+    title: qsTr("Task Manager")
     deep: true
 
     function showPage(id) {
@@ -49,7 +49,24 @@ UI.AppWindow {
         }
     }
 
-    Component.onCompleted: showPage(requestedPage.length > 0 ? requestedPage : Prefs.startPage)
+    Component.onCompleted: {
+        const column = Prefs.sortColumn("processes", "name");
+        if (["name", "status", "cpu", "memory", "disk", "network"].includes(column)) {
+            // Read before the column is set: setting it saves the sort, with
+            // the direction as it stands, over the one saved last time.
+            const descending = Prefs.sortDescending("processes");
+            Processes.sortColumn = column;
+            Processes.sortDescending = descending;
+        }
+        showPage(requestedPage.length > 0 ? requestedPage : Prefs.startPage);
+    }
+
+    Connections {
+        target: Processes
+        function onSortChanged() {
+            Prefs.setSort("processes", Processes.sortColumn, Processes.sortDescending);
+        }
+    }
 
     // The numbers update at the speed chosen in Task Manager's settings;
     // "Paused" stops both the list and the graphs, as in Windows.
@@ -123,7 +140,7 @@ UI.AppWindow {
 
             UI.Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Task Manager"
+                text: qsTr("Task Manager")
                 font.weight: UI.Style.weightMedium
                 color: window.active ? UI.Style.ink : UI.Style.inkMuted
             }
@@ -144,7 +161,6 @@ UI.AppWindow {
             font.pixelSize: UI.Style.px(12)
             visible: window.currentPage !== "performance" && window.currentPage !== "settings"
             placeholderText: window.placeholders[window.currentPage] || ""
-            Accessible.name: "Search processes"
             onEscapePressed: window.contentItem.forceActiveFocus()
         }
     }
@@ -187,7 +203,7 @@ UI.AppWindow {
             x: 10
             y: parent.height - height - 12
             width: nav.width
-            text: "Settings"
+            text: qsTr("Settings")
             iconName: "options"
             current: window.currentPage === "settings"
             onClicked: window.showPage("settings")

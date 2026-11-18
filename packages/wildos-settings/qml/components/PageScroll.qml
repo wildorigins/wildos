@@ -17,6 +17,22 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     T.ScrollBar.vertical: UI.ScrollBar {}
 
+    // Keys a control on the page has no use for come up to here.
+    Keys.onPressed: event => scrollKeys.handle(event)
+
+    function keyPressed(event) {
+        scrollKeys.handle(event);
+    }
+
+    function scrollByKey(key) {
+        scrollKeys.press(key);
+    }
+
+    ScrollKeys {
+        id: scrollKeys
+        view: flick
+    }
+
     ColumnLayout {
         id: column
         x: Metrics.contentLeft

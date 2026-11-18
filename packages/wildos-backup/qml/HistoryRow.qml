@@ -78,6 +78,10 @@ Rectangle {
                 maximumLineCount: 2
                 elide: Text.ElideRight
             }
+            ErrorDetails {
+                Layout.fillWidth: true
+                text: row.entry.result === "failed" ? (row.entry.detail || "") : ""
+            }
         }
     }
 }

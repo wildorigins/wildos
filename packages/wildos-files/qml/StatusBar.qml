@@ -29,13 +29,13 @@ Item {
         UI.Label {
             // This computer lists its six Home folders above the drives the
             // model holds, and counts both, as Windows does.
-            text: status.folder ? status.plural(status.folder.count + (status.folder.url.toString() === "wildos:computer" ? 6 : 0), "item", "items") : ""
+            text: status.folder ? status.plural(status.folder.count + (status.folder.url.toString() === "wildos:computer" ? 6 : 0), qsTr("item"), qsTr("items")) : ""
             font.pixelSize: UI.Style.px(12)
             color: UI.Style.inkStatus
         }
         UI.Label {
             visible: status.folder && status.folder.selectedCount > 0
-            text: status.folder ? status.plural(status.folder.selectedCount, "item selected", "items selected") : ""
+            text: status.folder ? status.plural(status.folder.selectedCount, qsTr("item selected"), qsTr("items selected")) : ""
             font.pixelSize: UI.Style.px(12)
             color: UI.Style.inkStatus
         }
@@ -47,7 +47,7 @@ Item {
         }
         UI.Label {
             visible: status.folder && status.folder.searching
-            text: "Searching folders inside…"
+            text: qsTr("Searching folders inside…")
             font.pixelSize: UI.Style.px(12)
             color: UI.Style.inkStatus
         }
@@ -66,7 +66,7 @@ Item {
             enabled: status.folder && status.folder.kind !== "computer"
             iconName: "list"
             iconSize: 14
-            tip: "Details"
+            tip: qsTr("Details")
             checked: status.folder && status.folder.viewMode === "details"
             Accessible.checkable: true
             Accessible.checked: checked
@@ -79,7 +79,7 @@ Item {
             enabled: status.folder && status.folder.kind !== "computer"
             iconName: "grid"
             iconSize: 14
-            tip: "Icons"
+            tip: qsTr("Icons")
             checked: status.folder && ["xlarge", "large", "icons"].indexOf(status.folder.viewMode) >= 0
             Accessible.checkable: true
             Accessible.checked: checked

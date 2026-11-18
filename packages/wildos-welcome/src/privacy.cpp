@@ -127,8 +127,8 @@ void Privacy::setUpdateChecks(bool on)
             setNotifierHidden(!on);
             m_updateChecks = on;
         } else {
-            m_error = exitCode == 126 || exitCode == 127 ? QStringLiteral("Changing this needs the administrator password, and it was not given.")
-                                                         : QStringLiteral("Wild OS couldn't change this. Try again in Settings.");
+            m_error = exitCode == 126 || exitCode == 127 ? tr("Changing this needs the administrator password, and it was not given.")
+                                                         : tr("Wild OS couldn't change this. Try again in Settings.");
         }
         Q_EMIT changed();
         Q_EMIT busyChanged();

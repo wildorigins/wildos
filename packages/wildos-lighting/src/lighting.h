@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lights.h"
+
 #include <KConfigWatcher>
 
 #include <QDBusObjectPath>
@@ -17,6 +19,10 @@
 // devices, so this account keeps no hold on them meanwhile. The colours are
 // set through openrgb's command line, which joins the running server as a
 // client instead of opening the devices itself.
+//
+// Once something has been chosen on Cooler's Lighting page, the colours
+// come from Lights instead (lights.h), which keeps the server's hours and
+// the underglow's colours from here.
 class Lighting : public QObject
 {
     Q_OBJECT
@@ -38,6 +44,7 @@ private:
     void setServer(bool on);
     void waitForServer();
     void apply();
+    void tellLights();
     void run(const QStringList &arguments, std::function<void(const QString &)> done);
 
     KConfigWatcher::Ptr m_wildos;
@@ -61,4 +68,6 @@ private:
     int m_waits = 0;
     QProcess *m_running = nullptr;
     bool m_applyAgain = false;
+
+    Lights m_lights;
 };

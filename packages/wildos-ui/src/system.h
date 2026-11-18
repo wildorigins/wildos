@@ -39,4 +39,27 @@ public:
     // once the chosen hours have passed since (wildos-desktop's
     // fingerprint-turn decides the same way, from the same files).
     Q_INVOKABLE bool fingerprintAllowed(const QString &userName) const;
+    // Whether the account running this has a lock screen PIN
+    // (wildos-system-dialogs' wildos-pin keeps it; only that it exists can
+    // be seen from here).
+    Q_INVOKABLE bool pinSet() const;
+    // Whether the sign-in screen takes that account's PIN: it has one, and
+    // Advanced protection's "Fingerprint needs your password sometimes" is
+    // off (pam_wildos_pin sends the PIN to the password while it is on).
+    Q_INVOKABLE bool pinSignIn(const QString &userName) const;
+
+    // A PC with two graphics cards, usually a laptop with a power-saving
+    // one for the desktop and a faster one that stays off until asked for.
+    Q_INVOKABLE bool twoGraphicsCards() const;
+    // Whether a right-click menu can offer the faster card for this: an app
+    // (its .desktop file, by id or path, with or without "applications:")
+    // or a Linux program such as an AppImage (its path or file: address).
+    Q_INVOKABLE bool canChooseGraphics(const QString &target) const;
+    // The faster card is chosen for it. The choice is a list in wildosrc
+    // ([Graphics] Dedicated: an app's .desktop file name, or a program's or
+    // a shortcut's path), which Wild OS's KIO reads each time it starts
+    // something, so every launcher honours it. An app that asks for the
+    // card itself (PrefersNonDefaultGPU) is not offered the choice.
+    Q_INVOKABLE bool dedicatedGraphics(const QString &target) const;
+    Q_INVOKABLE void setDedicatedGraphics(const QString &target, bool on) const;
 };

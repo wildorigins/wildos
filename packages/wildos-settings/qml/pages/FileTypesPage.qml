@@ -33,7 +33,7 @@ PageScroll {
         id: search
         Layout.fillWidth: true
         Layout.maximumWidth: 420
-        placeholderText: "Enter a file type, such as .pdf"
+        placeholderText: qsTr("Enter a file type, such as .pdf")
         onTextChanged: searchTimer.restart()
         Component.onCompleted: forceActiveFocus()
     }
@@ -47,9 +47,9 @@ PageScroll {
             UI.SettingRow {
                 visible: page.results.length === 0
                 iconName: "search"
-                title: search.text.trim().length === 0 ? "Search for a file type" : "No file types match"
-                description: search.text.trim().length === 0 ? "Type an extension, such as .docx or .mp3, or a kind of file, such as spreadsheet"
-                    : "Check the spelling, or try the extension on its own"
+                title: search.text.trim().length === 0 ? qsTr("Search for a file type") : qsTr("No file types match")
+                description: search.text.trim().length === 0 ? qsTr("Type an extension, such as .docx or .mp3, or a kind of file, such as spreadsheet")
+                    : qsTr("Check the spelling, or try the extension on its own")
             }
 
             Repeater {
@@ -60,14 +60,14 @@ PageScroll {
                     required property var modelData
                     themeIcon: modelData.icon
                     title: modelData.extensions
-                    description: modelData.apps.length === 0 ? modelData.description + ". No app installed can open these."
+                    description: modelData.apps.length === 0 ? qsTr("%1. No app installed can open these.").arg(modelData.description)
                         : modelData.description
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: row.modelData.apps.length > 0
-                        Accessible.name: "Default app for " + row.modelData.extensions
-                        model: row.modelData.current.length === 0 ? [{ value: "", text: "Choose an app" }].concat(row.modelData.apps)
+                        Accessible.name: qsTr("Default app for %1").arg(row.modelData.extensions)
+                        model: row.modelData.current.length === 0 ? [{ value: "", text: qsTr("Choose an app") }].concat(row.modelData.apps)
                             : row.modelData.apps.some(a => a.value === row.modelData.current) ? row.modelData.apps
                             : row.modelData.apps.concat([{ value: row.modelData.current, text: row.modelData.current.replace(/\.desktop$/, "") }])
                         readonly property var choice: row.modelData.current
@@ -86,7 +86,7 @@ PageScroll {
     UI.Label {
         Layout.fillWidth: true
         visible: page.results.length >= 40
-        text: "Only the first 40 matches are shown. Type more of the name to find others."
+        text: qsTr("Only the first 40 matches are shown. Type more of the name to find others.")
         size: 12
         color: UI.Style.inkMuted
         wrapMode: Text.Wrap

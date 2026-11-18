@@ -27,7 +27,7 @@ Item {
     implicitWidth: Style.windowButtonWidth
     implicitHeight: Style.titleBarHeight
     Accessible.role: Accessible.Button
-    Accessible.name: kind === "minimise" ? "Minimise" : kind === "maximise" ? "Maximise" : kind === "restore" ? "Restore" : "Close"
+    Accessible.name: kind === "minimise" ? qsTr("Minimise") : kind === "maximise" ? qsTr("Maximise") : kind === "restore" ? qsTr("Restore") : qsTr("Close")
     Accessible.onPressAction: clicked()
 
     Rectangle {

@@ -1,4 +1,4 @@
-Wild OS icons for Write and Tables
+Wild OS icons for Write, Tables and Slides
 
 svg/ holds the icons drawn on the Wild OS design boards for Write and Tables
 (Paste, Cut, Copy, the text and paragraph buttons, Picture, Table, Find,
@@ -10,4 +10,7 @@ except that tools/gen-icons.py draws them with the boards' 1.8 stroke and
 Wild OS colours. Lucide is under the ISC licence, with the icons it took
 from Feather under the MIT licence; both are in lucide/LICENSE.
 droplet, languages and library-big come from lucide-static 0.460.0, with
+the same licence.
+copy-plus, film, layout-panel-left, list-video, mouse-pointer-click, play,
+presentation, sparkles, timer and video come from lucide-react 1.7.0, with
 the same licence.

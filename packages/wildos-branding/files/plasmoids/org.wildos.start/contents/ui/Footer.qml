@@ -47,7 +47,7 @@ Item {
         width: userRow.implicitWidth + 18
         height: 44
         radius: 22
-        accessibleName: "Account options for " + footer.userName
+        accessibleName: qsTr("Account options for %1").arg(footer.userName)
         highlighted: footer.accountMenuOpen
         onClicked: footer.accountRequested()
         Keys.onPressed: event => footer.arrows(event, null, filesButton)
@@ -88,7 +88,7 @@ Item {
             iconName: "folder"
             iconSize: 19
             stroke: 1.8
-            tip: "Files"
+            tip: qsTr("Files")
             onClicked: footer.launcher.launchApp("org.wildos.files.desktop", footer.launcher.homeUrl)
             Keys.onPressed: event => footer.arrows(event, userButton, settingsButton)
         }
@@ -102,7 +102,7 @@ Item {
             iconName: "cog"
             iconSize: 19
             stroke: 1.6
-            tip: "Settings"
+            tip: qsTr("Settings")
             onClicked: footer.launcher.openSettings()
             Keys.onPressed: event => footer.arrows(event, filesButton, powerButton)
         }
@@ -116,7 +116,7 @@ Item {
             iconName: "power"
             iconSize: 19
             stroke: 1.8
-            tip: "Power options"
+            tip: qsTr("Power options")
             checked: footer.powerMenuOpen
             onClicked: footer.powerRequested()
             Keys.onPressed: event => footer.arrows(event, settingsButton, null)

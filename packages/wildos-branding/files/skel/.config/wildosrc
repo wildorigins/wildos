@@ -1,9 +1,10 @@
-# Hot corners for new accounts (Settings > Multitasking). The bottom
-# corners sit beside Start and the show desktop end of the taskbar, so they
-# do nothing until chosen. Accounts made before hot corners had these keep
-# the corners they had: KWin's wildos_hotcorners plugin copies them over once.
+# Hot corners for new accounts (Settings > Multitasking). Every corner does
+# nothing until chosen, as on Windows, since a corner that fires on its own
+# is easy to set off by accident. Accounts made before hot corners had these
+# keep the corners they had: KWin's wildos_hotcorners plugin copies them over
+# once.
 [HotCorners]
-TopLeft=taskview
-TopRight=notifications
+TopLeft=none
+TopRight=none
 BottomLeft=none
 BottomRight=none

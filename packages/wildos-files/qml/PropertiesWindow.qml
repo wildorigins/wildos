@@ -32,11 +32,12 @@ UI.AppWindow {
     property bool wantShared: false
 
     deep: true
+    stateKey: "properties"
     width: 460
     height: 640
     minimumWidth: 420
     minimumHeight: 480
-    title: info.name + " properties"
+    title: qsTr("%1 properties").arg(info.name)
 
     function reset() {
         typedName = info.name;
@@ -230,10 +231,10 @@ UI.AppWindow {
             Layout.topMargin: 12
             spacing: 4
 
-            PageTab { index: 0; text: "General" }
-            PageTab { index: 1; text: "Sharing"; visible: props.single && props.local }
-            PageTab { index: 2; text: "Details"; visible: props.single }
-            PageTab { index: 3; text: "Previous versions"; visible: props.single && props.local }
+            PageTab { index: 0; text: qsTr("General") }
+            PageTab { index: 1; text: qsTr("Sharing"); visible: props.single && props.local }
+            PageTab { index: 2; text: qsTr("Details"); visible: props.single }
+            PageTab { index: 3; text: qsTr("Previous versions"); visible: props.single && props.local }
         }
 
         Flickable {
@@ -274,7 +275,7 @@ UI.AppWindow {
                             Layout.fillWidth: true
                             enabled: info.canRename
                             text: props.typedName
-                            Accessible.name: "Name"
+                            Accessible.name: qsTr("Name")
                             onTextEdited: props.typedName = text
                             Keys.onReturnPressed: props.apply()
                             Keys.onEnterPressed: props.apply()
@@ -291,17 +292,17 @@ UI.AppWindow {
 
                     Rule {}
 
-                    Field { label: "Type"; value: info.type }
+                    Field { label: qsTr("Type"); value: info.type }
                     Field {
-                        label: "Opens with"
+                        label: qsTr("Opens with")
                         value: ""
                         visible: info.single && !info.isDir
 
                         UI.Label {
-                            text: info.opensWith.length > 0 ? info.opensWith : "No app chosen yet"
+                            text: info.opensWith.length > 0 ? info.opensWith : qsTr("No app chosen yet")
                         }
                         UI.LinkButton {
-                            text: "Change"
+                            text: qsTr("Change")
                             onClicked: {
                                 props.view.chooseApp(props.urls);
                                 props.close();
@@ -312,21 +313,21 @@ UI.AppWindow {
 
                     Rule {}
 
-                    Field { label: "Location"; value: info.location }
-                    Field { label: "Size"; value: info.size }
-                    Field { label: "Size on disk"; value: info.sizeOnDisk }
-                    Field { label: "Contains"; value: info.contains }
+                    Field { label: qsTr("Location"); value: info.location }
+                    Field { label: qsTr("Size"); value: info.size }
+                    Field { label: qsTr("Size on disk"); value: info.sizeOnDisk }
+                    Field { label: qsTr("Contains"); value: info.contains }
 
                     Rule {}
 
-                    Field { label: "Created"; value: info.created }
-                    Field { label: "Modified"; value: info.modified }
-                    Field { label: "Opened"; value: info.accessed }
+                    Field { label: qsTr("Created"); value: info.created }
+                    Field { label: qsTr("Modified"); value: info.modified }
+                    Field { label: qsTr("Opened"); value: info.accessed }
 
                     Rule { visible: info.single && props.local }
 
                     Field {
-                        label: "Access"
+                        label: qsTr("Access")
                         value: ""
                         visible: info.single && props.local
 
@@ -336,13 +337,13 @@ UI.AppWindow {
 
                             UI.CheckBox {
                                 visible: !info.isDir
-                                text: "Read-only"
+                                text: qsTr("Read-only")
                                 enabled: info.canChangeReadOnly
                                 checked: props.wantReadOnly
                                 onToggled: props.wantReadOnly = checked
                             }
                             UI.CheckBox {
-                                text: "Hidden"
+                                text: qsTr("Hidden")
                                 enabled: info.canRename
                                 checked: props.wantHidden
                                 onToggled: props.wantHidden = checked
@@ -353,14 +354,14 @@ UI.AppWindow {
                                 UI.Label {
                                     size: 12
                                     color: UI.Style.inkMuted
-                                    text: !info.ownedByMe ? info.owner + " owns this " + (info.isDir ? "folder." : "file.")
-                                        : props.wantOthers ? "Other people on this computer can open it."
-                                        : "Only you can open this " + (info.isDir ? "folder." : "file.")
+                                    text: !info.ownedByMe ? (info.isDir ? qsTr("%1 owns this folder.") : qsTr("%1 owns this file.")).arg(info.owner)
+                                        : props.wantOthers ? qsTr("Other people on this computer can open it.")
+                                        : info.isDir ? qsTr("Only you can open this folder.") : qsTr("Only you can open this file.")
                                 }
                                 UI.LinkButton {
                                     y: -3
                                     size: 12
-                                    text: "Change who can"
+                                    text: qsTr("Change who can")
                                     onClicked: props.page = 1
                                 }
                             }
@@ -373,11 +374,11 @@ UI.AppWindow {
                     spacing: 14
 
                     UI.Label {
-                        text: "On this computer"
+                        text: qsTr("On this computer")
                         font.weight: UI.Style.weightSemiBold
                     }
                     UI.CheckBox {
-                        text: "Other people who use this computer can open it"
+                        text: qsTr("Other people who use this computer can open it")
                         enabled: info.ownedByMe
                         checked: props.wantOthers
                         onToggled: props.wantOthers = checked
@@ -385,7 +386,7 @@ UI.AppWindow {
                     UI.Label {
                         visible: !info.ownedByMe
                         Layout.fillWidth: true
-                        text: "Only " + info.owner + ", who owns it, can change this."
+                        text: qsTr("Only %1, who owns it, can change this.").arg(info.owner)
                         size: 12
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
@@ -394,12 +395,12 @@ UI.AppWindow {
                     Rule {}
 
                     UI.Label {
-                        text: "On your network"
+                        text: qsTr("On your network")
                         font.weight: UI.Style.weightSemiBold
                     }
                     UI.CheckBox {
                         visible: info.isDir && props.share.available === true
-                        text: "Share this folder on your network"
+                        text: qsTr("Share this folder on your network")
                         checked: props.wantShared
                         onToggled: props.wantShared = checked
                     }
@@ -410,16 +411,16 @@ UI.AppWindow {
                         wrapMode: Text.Wrap
                         elide: Text.ElideNone
                         lineHeight: 1.3
-                        text: !info.isDir ? "Only folders can be shared on the network. Share the folder it is in instead."
-                            : props.share.available !== true ? "Sharing folders on the network needs Windows file sharing (Samba), which is not installed on this computer."
-                            : props.wantShared ? "Other computers on your network can open it as \\\\" + props.share.computer + "\\" + (props.share.name ?? info.name) + ", read only, after signing in with an account on this computer."
-                            : "Not shared. Other computers on your network cannot see it."
+                        text: !info.isDir ? qsTr("Only folders can be shared on the network. Share the folder it is in instead.")
+                            : props.share.available !== true ? qsTr("Sharing folders on the network needs Windows file sharing (Samba), which is not installed on this computer.")
+                            : props.wantShared ? qsTr("Other computers on your network can open it as %1, read only, after signing in with an account on this computer.").arg("\\\\" + props.share.computer + "\\" + (props.share.name ?? info.name))
+                            : qsTr("Not shared. Other computers on your network cannot see it.")
                     }
                     UI.LinkButton {
                         visible: !info.isDir
                         Layout.leftMargin: -4
                         size: 12
-                        text: "Open the folder's properties"
+                        text: qsTr("Open the folder's properties")
                         onClicked: props.view.properties([info.folderUrl])
                     }
 
@@ -427,13 +428,13 @@ UI.AppWindow {
 
                     UI.Label {
                         visible: !info.isDir
-                        text: "Send a copy"
+                        text: qsTr("Send a copy")
                         font.weight: UI.Style.weightSemiBold
                     }
                     UI.Button {
                         id: shareButton
                         visible: !info.isDir
-                        text: "Share"
+                        text: qsTr("Share")
                         iconName: "share"
                         onClicked: {
                             const targets = FileOps.shareTargets(props.urls);
@@ -441,7 +442,7 @@ UI.AppWindow {
                             if (entries.length > 0) {
                                 entries.push({ separator: true });
                             }
-                            entries.push({ text: "Copy as path", icon: "link", run: () => FileOps.copyPaths(props.urls) });
+                            entries.push({ text: qsTr("Copy as path"), icon: "link", run: () => FileOps.copyPaths(props.urls) });
                             shareMenu.entries = entries;
                             shareMenu.popup(shareButton, 0, shareButton.height + 4);
                         }
@@ -452,16 +453,16 @@ UI.AppWindow {
                 ColumnLayout {
                     spacing: 14
 
-                    Field { label: "Name"; value: info.fileName }
-                    Field { label: "Type"; value: info.type }
-                    Field { label: "Size"; value: info.size }
-                    Field { label: "Contains"; value: info.contains }
+                    Field { label: qsTr("Name"); value: info.fileName }
+                    Field { label: qsTr("Type"); value: info.type }
+                    Field { label: qsTr("Size"); value: info.size }
+                    Field { label: qsTr("Contains"); value: info.contains }
 
                     Rule { visible: meta.fields.length > 0 || meta.loading }
 
                     UI.Label {
                         visible: meta.loading
-                        text: "Reading the file…"
+                        text: qsTr("Reading the file…")
                         color: UI.Style.inkMuted
                     }
 
@@ -478,7 +479,7 @@ UI.AppWindow {
                     UI.Label {
                         visible: !meta.loading && meta.fields.length === 0 && !info.isDir
                         Layout.fillWidth: true
-                        text: "This file does not carry any other details, such as an author or a camera."
+                        text: qsTr("This file does not carry any other details, such as an author or a camera.")
                         size: 12
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
@@ -493,7 +494,7 @@ UI.AppWindow {
                         visible: props.versions.length > 0
                         Layout.fillWidth: true
                         Layout.bottomMargin: 6
-                        text: "Earlier copies kept by the drive's snapshots, newest first."
+                        text: qsTr("Earlier copies kept by the drive's snapshots, newest first.")
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
                     }
@@ -531,14 +532,14 @@ UI.AppWindow {
                                     }
                                     UI.Button {
                                         size: "small"
-                                        text: "Open"
+                                        text: qsTr("Open")
                                         onClicked: FileOps.open([version.modelData.url])
                                     }
                                     UI.Button {
                                         visible: !info.isDir && info.canRename
                                         Layout.rightMargin: 12
                                         size: "small"
-                                        text: "Restore"
+                                        text: qsTr("Restore")
                                         onClicked: FileOps.restoreVersion(version.modelData.url, props.urls[0])
                                     }
                                 }
@@ -549,12 +550,12 @@ UI.AppWindow {
                     Empty {
                         visible: props.versions.length === 0
                         iconName: "restore"
-                        heading: "No previous versions"
-                        text: "This drive does not keep snapshots, so there are no earlier copies of this " + (info.isDir ? "folder" : "file") + ". Make a copy now to keep one by hand."
+                        heading: qsTr("No previous versions")
+                        text: info.isDir ? qsTr("This drive does not keep snapshots, so there are no earlier copies of this folder. Make a copy now to keep one by hand.") : qsTr("This drive does not keep snapshots, so there are no earlier copies of this file. Make a copy now to keep one by hand.")
 
                         UI.Button {
                             enabled: info.canRename
-                            text: "Make a copy now"
+                            text: qsTr("Make a copy now")
                             onClicked: FileOps.duplicate(props.urls[0])
                         }
                     }
@@ -578,12 +579,12 @@ UI.AppWindow {
             Item { Layout.fillWidth: true }
 
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: props.close()
             }
             UI.Button {
                 kind: "primary"
-                text: "OK"
+                text: qsTr("OK")
                 onClicked: props.apply()
             }
         }

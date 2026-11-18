@@ -29,7 +29,7 @@ Rectangle {
         spacing: 4
 
         UI.Label {
-            text: "When setup can't go ahead"
+            text: qsTr("When setup can't go ahead")
             size: 15
             font.weight: UI.Style.weightSemiBold
             color: UI.Style.inkOnWallpaper
@@ -37,7 +37,7 @@ Rectangle {
 
         UI.Label {
             width: parent.width
-            text: "Each problem says what's wrong in plain words, what to do about it, and offers the one button that helps. Nothing is ever left half installed."
+            text: qsTr("Each problem says what's wrong in plain words, what to do about it, and offers the one button that helps. Nothing is ever left half installed.")
             size: 13
             color: UI.Style.inkOnWallpaper
             wrapMode: Text.Wrap

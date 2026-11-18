@@ -244,15 +244,15 @@ int changePassword(const QStringList &arguments)
         std::fputs("The current password isn't right.\n", stderr);
         return 3;
     }
-    // The account as the real user, root as the effective one. pam_unix
-    // and pwquality skip their rules when root changes a password, and apply
-    // them when an account changes its own; root is still what writes
-    // /etc/shadow.
-    if (::setresuid(who.uid, 0, 0) != 0) {
+    if (next == current) {
         forget();
-        std::fputs("The password was not changed.\n", stderr);
-        return 1;
+        std::fputs("The new password is the same as the current one.\n", stderr);
+        return 4;
     }
+    // As root, with the current password checked above: pam_unix turns
+    // down a short or simple password when an account changes its own, and
+    // Settings says when a password is weak and leaves the choice to the
+    // person.
     ChangeConversation conversation{current, next};
     forget();
     const struct pam_conv conv = {converseChange, &conversation};
@@ -365,8 +365,8 @@ void WalletKeys::Store(const QString &password)
     if (!callerUid(&uid)) {
         return;
     }
-    if (!account(uid, &who) || WalletKey::autoLoginUser().toUtf8() != who.name) {
-        refuse(QStringLiteral("NotAutoSignIn"), QStringLiteral("This account does not sign in automatically."));
+    if (!account(uid, &who) || (WalletKey::autoLoginUser().toUtf8() != who.name && !WalletKey::hasPin(who.name))) {
+        refuse(QStringLiteral("NotAutoSignIn"), QStringLiteral("This account does not sign in automatically or with a PIN."));
         return;
     }
     QByteArray secret = password.toUtf8();
@@ -389,8 +389,21 @@ QByteArray WalletKeys::Key()
         return {};
     }
     WalletKey::forgetOthers();
-    if (!account(uid, &who) || WalletKey::autoLoginUser().toUtf8() != who.name) {
-        refuse(QStringLiteral("NotAutoSignIn"), QStringLiteral("This account does not sign in automatically."));
+    if (!account(uid, &who)) {
+        refuse(QStringLiteral("NotAutoSignIn"), QStringLiteral("This account does not sign in automatically or with a PIN."));
+        return {};
+    }
+    // The note goes whether or not a key is kept, so it never outlasts the
+    // sign-in that left it.
+    if (WalletKey::hasPin(who.name) && WalletKey::takePinSignIn(uid)) {
+        const QByteArray key = WalletKey::load(uid);
+        if (key.isEmpty()) {
+            refuse(QStringLiteral("NoKey"), QStringLiteral("There is no key for this account."));
+        }
+        return key;
+    }
+    if (WalletKey::autoLoginUser().toUtf8() != who.name) {
+        refuse(QStringLiteral("NotAutoSignIn"), QStringLiteral("This account did not sign in automatically or with its PIN."));
         return {};
     }
     const QByteArray marker = givenMarker(uid);
@@ -421,6 +434,12 @@ void WalletKeys::Forget()
     if (callerUid(&uid)) {
         WalletKey::forget(uid);
     }
+}
+
+void WalletKeys::Tidy()
+{
+    m_idle.start();
+    WalletKey::forgetOthers();
 }
 
 void WalletKeys::CheckPassword(const QString &password)

@@ -37,10 +37,10 @@ QString appName(const QString &exe, const QString &comm)
 {
     const QString name = QFileInfo(exe).fileName();
     if (name == QLatin1String("plasmashell") || comm == QLatin1String("plasmashell")) {
-        return QStringLiteral("The desktop");
+        return QCoreApplication::translate("CrashNotify", "The desktop");
     }
     if (name == QLatin1String("kwin_wayland")) {
-        return QStringLiteral("The window manager");
+        return QCoreApplication::translate("CrashNotify", "The window manager");
     }
     const QStringList dirs = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QStringLiteral("applications"), QStandardPaths::LocateDirectory);
     for (const QString &dir : dirs) {
@@ -142,16 +142,16 @@ void CrashNotify::notify(const QString &app, const QString &part, const QString 
 {
     auto *notification = new KNotification(QStringLiteral("crashed"));
     notification->setComponentName(QStringLiteral("wildos-report"));
-    notification->setTitle(QStringLiteral("%1 closed unexpectedly").arg(app));
-    notification->setText(QStringLiteral("Want to tell us what happened? You'll see everything before it's shared."));
+    notification->setTitle(tr("%1 closed unexpectedly").arg(app));
+    notification->setText(tr("Want to tell us what happened? You'll see everything before it's shared."));
     notification->setIconName(QStringLiteral("wildos-report"));
     notification->setHint(QStringLiteral("desktop-entry"), QStringLiteral("org.wildos.report"));
     // Kept in the notification list after the popup goes, with its buttons
     // still working while this waits for them.
     notification->setHint(QStringLiteral("resident"), true);
-    auto *later = notification->addAction(QStringLiteral("Not now"));
+    auto *later = notification->addAction(tr("Not now"));
     connect(later, &KNotificationAction::activated, notification, &KNotification::close);
-    auto *report = notification->addAction(QStringLiteral("Report a problem"));
+    auto *report = notification->addAction(tr("Report a problem"));
     connect(report, &KNotificationAction::activated, this, [notification, app, part, time]() {
         // In a unit of its own: this service's processes all end when it
         // does, and the window must outlive the notice. It also gets the

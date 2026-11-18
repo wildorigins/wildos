@@ -20,7 +20,7 @@ Window {
     width: Screen.width
     height: Screen.height
     color: "#000000"
-    title: "Start-up recovery"
+    title: qsTr("Start-up recovery")
 
     readonly property var info: Env.info
     readonly property bool btrfs: info.backend === "btrfs"
@@ -56,8 +56,8 @@ Window {
         "trash": "M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"
     })
 
-    readonly property var months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-    readonly property var days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    readonly property var months: [qsTr("January"), qsTr("February"), qsTr("March"), qsTr("April"), qsTr("May"), qsTr("June"), qsTr("July"), qsTr("August"), qsTr("September"), qsTr("October"), qsTr("November"), qsTr("December")]
+    readonly property var days: [qsTr("Sunday"), qsTr("Monday"), qsTr("Tuesday"), qsTr("Wednesday"), qsTr("Thursday"), qsTr("Friday"), qsTr("Saturday")]
 
     function pad(n) {
         return n < 10 ? "0" + n : "" + n;
@@ -67,8 +67,8 @@ Window {
         const d = new Date(seconds * 1000);
         const now = new Date();
         const diff = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
-        const day = diff <= 0 ? "today" : diff === 1 ? "yesterday" : diff < 7 ? days[d.getDay()] : d.getDate() + " " + months[d.getMonth()];
-        return day + " at " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+        const day = diff <= 0 ? qsTr("today") : diff === 1 ? qsTr("yesterday") : diff < 7 ? days[d.getDay()] : qsTr("%1 %2", "day of the month, then the month").arg(d.getDate()).arg(months[d.getMonth()]);
+        return qsTr("%1 at %2", "a day, then a time like 14:05").arg(day).arg(pad(d.getHours()) + ":" + pad(d.getMinutes()));
     }
 
     function lowerFirst(text) {
@@ -79,8 +79,10 @@ Window {
         if (!p) {
             return "";
         }
-        const from = p.label.startsWith("Before ") ? "From " + lowerFirst(p.label) + ", " : p.label + ", ";
-        return (btrfs ? "" : "Takes a few minutes. ") + from + when(p.time);
+        // The label comes from the restore-points tool, in English.
+        const from = p.label.startsWith("Before ") ? qsTr("From %1", "a restore point label like: before installing updates").arg(lowerFirst(p.label)) : p.label;
+        return btrfs ? qsTr("%1, %2", "a restore point, then when it was made").arg(from).arg(when(p.time))
+            : qsTr("Takes a few minutes. %1, %2").arg(from).arg(when(p.time));
     }
 
     function go(name) {
@@ -109,7 +111,7 @@ Window {
     }
 
     function goBack(point) {
-        start("go-back", ["go-back", String(point.id)], btrfs ? "Going back to the earlier version" : "Restoring the earlier version. This takes a few minutes.");
+        start("go-back", ["go-back", String(point.id)], btrfs ? qsTr("Going back to the earlier version") : qsTr("Restoring the earlier version. This takes a few minutes."));
     }
 
     Timer {
@@ -148,22 +150,22 @@ Window {
             }
             if (answer.ok) {
                 if (tag === "go-back" || tag === "reset-keep" || tag === "repair-startup") {
-                    win.working = tag === "repair-startup" ? "Start-up repaired. Restarting" : "Done. Restarting";
+                    win.working = tag === "repair-startup" ? qsTr("Start-up repaired. Restarting") : qsTr("Done. Restarting");
                     Env.call("reboot", ["reboot"]);
                 } else if (tag === "check-disk") {
                     win.go("repair");
-                    win.problem = "No problems found on the disk.";
+                    win.problem = qsTr("No problems found on the disk.");
                 } else if (tag === "report") {
                     win.go("report");
-                    win.problem = "The report is on the USB stick. Send it from another device.";
+                    win.problem = qsTr("The report is on the USB stick. Send it from another device.");
                 } else if (tag === "prepare-wipe") {
-                    win.working = "Opening the installer";
+                    win.working = qsTr("Opening the installer");
                     Env.openInstaller();
                 }
             } else if (tag !== "reboot" && tag !== "poweroff" && tag !== "try-again" && tag !== "safe-mode") {
                 // go() moves the keyboard to the screen's first choice.
                 win.go(tag === "check-disk" || tag === "repair-startup" ? "repair" : tag === "report" ? "report" : "problem");
-                win.problem = answer.why || "That didn't work. Nothing was changed.";
+                win.problem = answer.why || qsTr("That didn't work. Nothing was changed.");
             }
         }
     }
@@ -209,7 +211,7 @@ Window {
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 6
-                    text: win.failed ? "Wild OS didn't start properly" : "Start-up options"
+                    text: win.failed ? qsTr("Wild OS didn't start properly") : qsTr("Start-up options")
                     color: "#ffffff"
                     font.family: "Albert Sans"
                     font.pixelSize: 24 * win.textScale
@@ -221,8 +223,8 @@ Window {
                     Layout.maximumWidth: 470 * win.textScale
                     Layout.bottomMargin: 14
                     horizontalAlignment: Text.AlignHCenter
-                    text: win.failed ? "It stopped twice while starting, which usually means the last update didn't agree with this PC. Your files are safe."
-                        : "Choose how Wild OS starts. Your files are safe."
+                    text: win.failed ? qsTr("It stopped twice while starting, which usually means the last update didn't agree with this PC. Your files are safe.")
+                        : qsTr("Choose how Wild OS starts. Your files are safe.")
                     color: Qt.rgba(1, 1, 1, 0.75)
                     font.family: "Albert Sans"
                     font.pixelSize: 14 * win.textScale
@@ -240,11 +242,11 @@ Window {
                         visible: win.latest !== null
                         scale_: win.textScale
                         iconPath: win.icons.history
-                        text: win.btrfs ? "Start the earlier version" : "Restore the earlier version"
-                        badge: "Recommended"
+                        text: win.btrfs ? qsTr("Start the earlier version") : qsTr("Restore the earlier version")
+                        badge: qsTr("Recommended")
                         detail: win.pointDetail(win.latest)
                         KeyNavigation.down: again
-                        onClicked: win.withPassword("to go back to the earlier version", () => win.goBack(win.latest))
+                        onClicked: win.withPassword(qsTr("to go back to the earlier version"), () => win.goBack(win.latest))
                     }
 
                     OptionRow {
@@ -252,8 +254,8 @@ Window {
                         Layout.fillWidth: true
                         scale_: win.textScale
                         iconPath: win.icons.again
-                        text: "Try again"
-                        detail: "Start normally, as if nothing happened"
+                        text: qsTr("Try again")
+                        detail: qsTr("Start normally, as if nothing happened")
                         KeyNavigation.up: earlier.visible ? earlier : null
                         KeyNavigation.down: more
                         // The rows take the arrow keys before the page's
@@ -261,7 +263,7 @@ Window {
                         // recommended choice is what stops the countdown.
                         onActiveFocusChanged: if (activeFocus) win.counting = false
                         onClicked: {
-                            win.working = "Restarting";
+                            win.working = qsTr("Restarting");
                             win.screen = "working";
                             Env.call("try-again", ["try-again"]);
                         }
@@ -272,8 +274,8 @@ Window {
                         Layout.fillWidth: true
                         scale_: win.textScale
                         iconPath: win.icons.wrench
-                        text: "More options"
-                        detail: "Safe mode, reset Wild OS, repair tools, report a problem"
+                        text: qsTr("More options")
+                        detail: qsTr("Safe mode, reset Wild OS, repair tools, report a problem")
                         chevron: true
                         KeyNavigation.up: again
                         onActiveFocusChanged: if (activeFocus) win.counting = false
@@ -302,8 +304,8 @@ Window {
                     }
 
                 Hint {
-                    text: win.counting ? "Arrow keys to choose, Enter to start. Starting the earlier version in " + win.countdown + " seconds."
-                        : "Arrow keys to choose, Enter to start."
+                    text: win.counting ? qsTr("Arrow keys to choose, Enter to start. Starting the earlier version in %n seconds.", "", win.countdown)
+                        : qsTr("Arrow keys to choose, Enter to start.")
                 }
                 }
 
@@ -324,7 +326,7 @@ Window {
                 }
 
                 Heading {
-                    text: "More options"
+                    text: qsTr("More options")
                 }
 
                 OptionRow {
@@ -334,8 +336,8 @@ Window {
                     scale_: win.textScale
                     enabled: win.points.length > 0
                     iconPath: win.icons.history
-                    text: "Choose an earlier version"
-                    detail: win.points.length > 1 ? "Pick from all " + win.points.length + " restore points" : win.points.length === 1 ? "Pick the one restore point on this PC" : "There are no restore points on this PC"
+                    text: qsTr("Choose an earlier version")
+                    detail: win.points.length > 1 ? qsTr("Pick from all %n restore points", "", win.points.length) : win.points.length === 1 ? qsTr("Pick the one restore point on this PC") : qsTr("There are no restore points on this PC")
                     KeyNavigation.down: safe
                     onClicked: win.go("versions")
                 }
@@ -346,12 +348,12 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.shield
-                    text: "Safe mode"
-                    detail: "Start with basic graphics and no extra drivers or startup apps"
+                    text: qsTr("Safe mode")
+                    detail: qsTr("Start with basic graphics and no extra drivers or startup apps")
                     KeyNavigation.up: choose
                     KeyNavigation.down: reset
                     onClicked: {
-                        win.working = "Starting in safe mode";
+                        win.working = qsTr("Starting in safe mode");
                         win.screen = "working";
                         Env.call("safe-mode", ["safe-mode"]);
                     }
@@ -363,8 +365,8 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.reset
-                    text: "Reset Wild OS"
-                    detail: "Back to how it was when installed, with or without your files"
+                    text: qsTr("Reset Wild OS")
+                    detail: qsTr("Back to how it was when installed, with or without your files")
                     KeyNavigation.up: safe
                     KeyNavigation.down: repair
                     onClicked: {
@@ -380,8 +382,8 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.terminal
-                    text: "Repair tools"
-                    detail: "Check the disk, repair start-up, open a terminal"
+                    text: qsTr("Repair tools")
+                    detail: qsTr("Check the disk, repair start-up, open a terminal")
                     KeyNavigation.up: reset
                     KeyNavigation.down: report
                     onClicked: win.go("repair")
@@ -393,8 +395,8 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.report
-                    text: "Report a problem"
-                    detail: win.info.report ? "Save a report to a USB stick to send from another device" : "Report a problem isn't installed on this PC"
+                    text: qsTr("Report a problem")
+                    detail: win.info.report ? qsTr("Save a report to a USB stick to send from another device") : qsTr("Report a problem isn't installed on this PC")
                     enabled: win.info.report === true
                     KeyNavigation.up: repair
                     onClicked: {
@@ -423,7 +425,7 @@ Window {
                 }
 
                 Heading {
-                    text: "Choose an earlier version"
+                    text: qsTr("Choose an earlier version")
                 }
 
                 Repeater {
@@ -441,7 +443,7 @@ Window {
                         detail: win.when(modelData.time).charAt(0).toUpperCase() + win.when(modelData.time).slice(1) + (modelData.summary ? " · " + modelData.summary : "")
                         Keys.onUpPressed: if (index > 0) versionList.itemAt(index - 1).forceActiveFocus()
                         Keys.onDownPressed: if (index < versionList.count - 1) versionList.itemAt(index + 1).forceActiveFocus()
-                        onClicked: win.withPassword("to go back to this version", () => win.goBack(modelData))
+                        onClicked: win.withPassword(qsTr("to go back to this version"), () => win.goBack(modelData))
                     }
                 }
 
@@ -462,7 +464,7 @@ Window {
                 }
 
                 Heading {
-                    text: "Repair tools"
+                    text: qsTr("Repair tools")
                 }
 
                 OptionRow {
@@ -471,10 +473,10 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.disk
-                    text: "Check the disk"
-                    detail: "Looks for damage and fixes the start-up partitions"
+                    text: qsTr("Check the disk")
+                    detail: qsTr("Looks for damage and fixes the start-up partitions")
                     KeyNavigation.down: repairStart
-                    onClicked: win.withPassword("to check the disk", () => win.start("check-disk", ["check-disk"], "Checking the disk"))
+                    onClicked: win.withPassword(qsTr("to check the disk"), () => win.start("check-disk", ["check-disk"], qsTr("Checking the disk")))
                 }
 
                 OptionRow {
@@ -483,11 +485,11 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.wrench
-                    text: "Repair start-up"
-                    detail: "Puts the start-up menu and start-up files back"
+                    text: qsTr("Repair start-up")
+                    detail: qsTr("Puts the start-up menu and start-up files back")
                     KeyNavigation.up: checkDisk
                     KeyNavigation.down: terminal
-                    onClicked: win.withPassword("to repair start-up", () => win.start("repair-startup", ["repair-startup"], "Repairing start-up"))
+                    onClicked: win.withPassword(qsTr("to repair start-up"), () => win.start("repair-startup", ["repair-startup"], qsTr("Repairing start-up")))
                 }
 
                 OptionRow {
@@ -496,10 +498,10 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.terminal
-                    text: "Open a terminal"
-                    detail: "For people who know what they are doing"
+                    text: qsTr("Open a terminal")
+                    detail: qsTr("For people who know what they are doing")
                     KeyNavigation.up: repairStart
-                    onClicked: win.withPassword("to open a terminal", () => Env.openTerminal())
+                    onClicked: win.withPassword(qsTr("to open a terminal"), () => Env.openTerminal())
                 }
 
                 Hint {
@@ -529,13 +531,13 @@ Window {
                 }
 
                 Heading {
-                    text: "Report a problem"
+                    text: qsTr("Report a problem")
                 }
 
                 Hint {
                     Layout.fillWidth: true
-                    text: win.sticks.length > 0 ? "Choose the USB stick to save the report on. Nothing else on it changes."
-                        : "Put in a USB stick to save the report on, then choose Look again."
+                    text: win.sticks.length > 0 ? qsTr("Choose the USB stick to save the report on. Nothing else on it changes.")
+                        : qsTr("Put in a USB stick to save the report on, then choose Look again.")
                 }
 
                 Repeater {
@@ -550,7 +552,7 @@ Window {
                         iconPath: win.icons.usb
                         text: modelData.label
                         detail: modelData.size + " · " + modelData.device
-                        onClicked: win.start("report", ["report", modelData.device], "Saving the report")
+                        onClicked: win.start("report", ["report", modelData.device], qsTr("Saving the report"))
                     }
                 }
 
@@ -560,8 +562,8 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.again
-                    text: "Look again"
-                    detail: "Find USB sticks put in since"
+                    text: qsTr("Look again")
+                    detail: qsTr("Find USB sticks put in since")
                     onClicked: Env.call("usb", ["usb-list"])
                 }
 
@@ -589,18 +591,18 @@ Window {
                 }
 
                 Heading {
-                    text: win.resetStep === 2 ? (win.resetHow === "keep" ? "Ready to reset" : "Remove everything?") : "Reset Wild OS"
+                    text: win.resetStep === 2 ? (win.resetHow === "keep" ? qsTr("Ready to reset") : qsTr("Remove everything?")) : qsTr("Reset Wild OS")
                 }
 
                 Hint {
                     Layout.fillWidth: true
-                    text: win.resetStep === 0 ? "Choose what happens to your files."
+                    text: win.resetStep === 0 ? qsTr("Choose what happens to your files.")
                         : win.resetStep === 1 ? (win.resetHow === "keep"
-                            ? "Removed: apps you installed (a list goes on your Desktop so you can get them back) and system settings, back to default. Kept: your home folder, Mail, Calendar and Notes, Windows mode and its apps, Wi-Fi and your password."
-                            : "Removed: everything on this PC, your files, apps, accounts and Windows mode. You choose a new disk password and get a new recovery key.")
+                            ? qsTr("Removed: apps you installed (a list goes on your Desktop so you can get them back) and system settings, back to default. Kept: your home folder, Mail, Calendar and Notes, Windows mode and its apps, Wi-Fi and your password.")
+                            : qsTr("Removed: everything on this PC, your files, apps, accounts and Windows mode. You choose a new disk password and get a new recovery key."))
                         : (win.resetHow === "keep"
-                            ? "Takes about 15 minutes and the PC restarts once. It uses the copy of Wild OS kept on this PC, so it works without the internet."
-                            : "Every file on this PC is deleted for good. The PC restarts, then Wild OS sets up again from the copy kept on this PC.")
+                            ? qsTr("Takes about 15 minutes and the PC restarts once. It uses the copy of Wild OS kept on this PC, so it works without the internet.")
+                            : qsTr("Every file on this PC is deleted for good. The PC restarts, then Wild OS sets up again from the copy kept on this PC."))
                 }
 
                 OptionRow {
@@ -610,8 +612,8 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.keep
-                    text: "Keep my files"
-                    detail: "The system and apps go back to how they were when installed. Your home folder, Mail and Windows mode stay."
+                    text: qsTr("Keep my files")
+                    detail: qsTr("The system and apps go back to how they were when installed. Your home folder, Mail and Windows mode stay.")
                     selected: activeFocus || win.resetHow === "keep"
                     KeyNavigation.down: everythingChoice
                     onClicked: {
@@ -629,9 +631,9 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.trash
-                    text: "Remove everything"
-                    detail: win.info.wipe_fits === true ? "Wipes the whole disk and sets up encryption again with a new key. For selling or giving the PC away."
-                        : "Needs at least 4 GB of memory, because Wild OS runs from memory while the disk is wiped."
+                    text: qsTr("Remove everything")
+                    detail: win.info.wipe_fits === true ? qsTr("Wipes the whole disk and sets up encryption again with a new key. For selling or giving the PC away.")
+                        : qsTr("Needs at least 4 GB of memory, because Wild OS runs from memory while the disk is wiped.")
                     selected: activeFocus || win.resetHow === "everything"
                     KeyNavigation.up: keepChoice
                     onClicked: {
@@ -648,14 +650,14 @@ Window {
                     rowHeight: 56
                     scale_: win.textScale
                     iconPath: win.resetHow === "keep" ? win.icons.reset : win.icons.trash
-                    text: win.resetStep === 1 ? "Next" : win.resetHow === "keep" ? "Reset" : "Remove everything"
+                    text: win.resetStep === 1 ? qsTr("Next") : win.resetHow === "keep" ? qsTr("Reset") : qsTr("Remove everything")
                     onClicked: {
                         if (win.resetStep === 1) {
                             win.resetStep = 2;
                         } else if (win.resetHow === "keep") {
-                            win.withPassword("to reset Wild OS", () => win.start("reset-keep", ["reset-keep"], "Resetting Wild OS. This takes about 15 minutes."));
+                            win.withPassword(qsTr("to reset Wild OS"), () => win.start("reset-keep", ["reset-keep"], qsTr("Resetting Wild OS. This takes about 15 minutes.")));
                         } else {
-                            win.withPassword("to remove everything", () => win.start("reset-everything", ["reset-everything"], "Restarting to remove everything"));
+                            win.withPassword(qsTr("to remove everything"), () => win.start("reset-everything", ["reset-everything"], qsTr("Restarting to remove everything")));
                         }
                     }
                 }
@@ -693,7 +695,7 @@ Window {
 
                 Hint {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "Keep the PC switched on."
+                    text: qsTr("Keep the PC switched on.")
                 }
 
                 Item {
@@ -709,7 +711,7 @@ Window {
                 }
 
                 Heading {
-                    text: "That didn't work"
+                    text: qsTr("That didn't work")
                 }
 
                 Hint {
@@ -723,7 +725,7 @@ Window {
                     rowHeight: 56
                     scale_: win.textScale
                     iconPath: win.icons.again
-                    text: "Back to start-up options"
+                    text: qsTr("Back to start-up options")
                     onClicked: win.go("home")
                 }
 
@@ -741,12 +743,12 @@ Window {
                 }
 
                 Heading {
-                    text: "Remove everything"
+                    text: qsTr("Remove everything")
                 }
 
                 Hint {
                     Layout.fillWidth: true
-                    text: "Wild OS is running from memory, so the disk can be wiped. The installer opens next: choose the disk, set a new disk password and write down the new recovery key. Every file on this PC is deleted."
+                    text: qsTr("Wild OS is running from memory, so the disk can be wiped. The installer opens next: choose the disk, set a new disk password and write down the new recovery key. Every file on this PC is deleted.")
                 }
 
                 OptionRow {
@@ -755,10 +757,10 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.trash
-                    text: "Wipe the disk and set up Wild OS"
-                    detail: "Asks for the disk password one last time"
+                    text: qsTr("Wipe the disk and set up Wild OS")
+                    detail: qsTr("Asks for the disk password one last time")
                     KeyNavigation.down: wipeCancel
-                    onClicked: win.withPassword("to wipe the disk", () => win.start("prepare-wipe", ["prepare-wipe"], "Getting the disk ready"))
+                    onClicked: win.withPassword(qsTr("to wipe the disk"), () => win.start("prepare-wipe", ["prepare-wipe"], qsTr("Getting the disk ready")))
                 }
 
                 OptionRow {
@@ -767,11 +769,11 @@ Window {
                     rowHeight: 64
                     scale_: win.textScale
                     iconPath: win.icons.again
-                    text: "Don't remove anything"
-                    detail: "Restart and start Wild OS as it is"
+                    text: qsTr("Don't remove anything")
+                    detail: qsTr("Restart and start Wild OS as it is")
                     KeyNavigation.up: wipeGo
                     onClicked: {
-                        win.working = "Restarting";
+                        win.working = qsTr("Restarting");
                         win.screen = "working";
                         Env.call("try-again", ["try-again"]);
                     }
@@ -794,9 +796,9 @@ Window {
             width: chipRow.implicitWidth + 28
             radius: 18
             color: chipArea.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.06)
-            property string name: Env.layoutName() || "English (UK)"
+            property string name: Env.layoutName() || qsTr("English (UK)")
             Accessible.role: Accessible.Button
-            Accessible.name: "Keyboard: " + name
+            Accessible.name: qsTr("Keyboard: %1").arg(name)
 
             Connections {
                 target: Env
@@ -826,7 +828,7 @@ Window {
                 }
 
                 Text {
-                    text: "Keyboard: " + layoutChip.name
+                    text: qsTr("Keyboard: %1").arg(layoutChip.name)
                     color: Qt.rgba(1, 1, 1, 0.82)
                     font.family: "Albert Sans"
                     font.pixelSize: 12 * win.textScale
@@ -850,7 +852,7 @@ Window {
             spacing: 10
 
             RoundButton {
-                label: "Accessibility"
+                label: qsTr("Accessibility")
                 iconPath: "M12 4.5m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0 -3.6 0M5 8.5l7 1.5 7-1.5M12 10v5M9 21l3-6 3 6"
                 onClicked: accessMenu.open()
 
@@ -858,14 +860,14 @@ Window {
                     id: accessMenu
                     y: -height - 8
                     C.MenuItem {
-                        text: win.textScale > 1 ? "Normal text size" : "Larger text"
+                        text: win.textScale > 1 ? qsTr("Normal text size") : qsTr("Larger text")
                         onTriggered: win.textScale = win.textScale > 1 ? 1 : 1.3
                     }
                 }
             }
 
             RoundButton {
-                label: "Power"
+                label: qsTr("Power")
                 iconPath: "M12 3v9M6.3 6.8a8 8 0 1 0 11.4 0"
                 onClicked: powerMenu.open()
 
@@ -874,11 +876,11 @@ Window {
                     y: -height - 8
                     x: -width + 40
                     C.MenuItem {
-                        text: "Restart"
+                        text: qsTr("Restart")
                         onTriggered: Env.call("reboot", ["reboot"])
                     }
                     C.MenuItem {
-                        text: "Shut down"
+                        text: qsTr("Shut down")
                         onTriggered: Env.call("poweroff", ["poweroff"])
                     }
                 }
@@ -919,19 +921,19 @@ Window {
             spacing: 12
 
             Text {
-                text: "Enter your disk password"
+                text: qsTr("Enter your disk password")
                 color: "#ffffff"
                 font.family: "Albert Sans"
-                font.pixelSize: 17
+                font.pixelSize: 17 * win.textScale
                 font.weight: 600
             }
 
             Text {
                 Layout.fillWidth: true
-                text: passwordDialog.wrong ? "That isn't the disk password. Try again." : "It's the password you type when the PC starts, needed " + passwordDialog.purpose + "."
+                text: passwordDialog.wrong ? qsTr("That isn't the disk password. Try again.") : qsTr("It's the password you type when the PC starts, needed %1.", "%1 is a purpose like: to check the disk").arg(passwordDialog.purpose)
                 color: passwordDialog.wrong ? "#ffc46a" : Qt.rgba(1, 1, 1, 0.75)
                 font.family: "Albert Sans"
-                font.pixelSize: 13
+                font.pixelSize: 13 * win.textScale
                 wrapMode: Text.Wrap
             }
 
@@ -941,8 +943,8 @@ Window {
                 echoMode: TextInput.Password
                 color: "#ffffff"
                 font.family: "Albert Sans"
-                font.pixelSize: 14
-                placeholderText: "Disk password"
+                font.pixelSize: 14 * win.textScale
+                placeholderText: qsTr("Disk password")
                 // Only what is typed: no Ctrl+V, Shift+Insert or middle click.
                 Keys.onPressed: event => {
                     if (event.matches(StandardKey.Paste) || (event.key === Qt.Key_Insert && (event.modifiers & Qt.ShiftModifier)))
@@ -975,16 +977,16 @@ Window {
                 spacing: 8
 
                 C.Button {
-                    text: "Cancel"
+                    text: qsTr("Cancel")
                     onClicked: passwordDialog.close()
-                    contentItem: Text { text: parent.text; color: "#ffffff"; font.family: "Albert Sans"; font.pixelSize: 13; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    contentItem: Text { text: parent.text; color: "#ffffff"; font.family: "Albert Sans"; font.pixelSize: 13 * win.textScale; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     background: Rectangle { implicitWidth: 84; implicitHeight: 32; radius: 6; color: parent.hovered ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.06); border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.10) }
                 }
 
                 C.Button {
-                    text: "Continue"
+                    text: qsTr("Continue")
                     onClicked: field.check()
-                    contentItem: Text { text: parent.text; color: "#0d1530"; font.family: "Albert Sans"; font.pixelSize: 13; font.weight: 600; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    contentItem: Text { text: parent.text; color: "#0d1530"; font.family: "Albert Sans"; font.pixelSize: 13 * win.textScale; font.weight: 600; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     background: Rectangle { implicitWidth: 96; implicitHeight: 32; radius: 6; color: parent.hovered ? "#a3c1ff" : "#8fb4ff" }
                 }
             }
@@ -1035,7 +1037,7 @@ Window {
         implicitHeight: 24
         cursorShape: Qt.PointingHandCursor
         Accessible.role: Accessible.Button
-        Accessible.name: "Back"
+        Accessible.name: qsTr("Back")
 
         RowLayout {
             id: backRow
@@ -1058,7 +1060,7 @@ Window {
             }
 
             Text {
-                text: "Back"
+                text: qsTr("Back")
                 color: Qt.rgba(1, 1, 1, 0.7)
                 font.family: "Albert Sans"
                 font.pixelSize: 13 * win.textScale

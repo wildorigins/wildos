@@ -13,27 +13,27 @@ Item {
     required property var settings
 
     readonly property var actions: [
-        { value: "none", text: "Nothing" },
-        { value: "taskview", text: "Task view (all windows)", divider: true },
-        { value: "appwindows", text: "This app's windows" },
-        { value: "desktop", text: "Show desktop" },
-        { value: "appgrid", text: "App grid" },
-        { value: "notifications", text: "Notifications", divider: true },
-        { value: "quicknote", text: "Quick note" },
-        { value: "lock", text: "Lock", divider: true },
-        { value: "screenoff", text: "Turn screen off" },
-        { value: "keepawake", text: "Keep awake", divider: true },
-        { value: "dnd", text: "Do not disturb" }
+        { value: "none", text: qsTr("Nothing") },
+        { value: "taskview", text: qsTr("Task view (all windows)"), divider: true },
+        { value: "appwindows", text: qsTr("This app's windows") },
+        { value: "desktop", text: qsTr("Show desktop") },
+        { value: "appgrid", text: qsTr("App grid") },
+        { value: "notifications", text: qsTr("Notifications"), divider: true },
+        { value: "quicknote", text: qsTr("Quick note") },
+        { value: "lock", text: qsTr("Lock"), divider: true },
+        { value: "screenoff", text: qsTr("Turn screen off") },
+        { value: "keepawake", text: qsTr("Keep awake"), divider: true },
+        { value: "dnd", text: qsTr("Do not disturb") }
     ]
 
     readonly property var keys: [
-        { value: "none", text: "None" },
+        { value: "none", text: qsTr("None") },
         { value: "ctrl", text: "Ctrl" },
         { value: "alt", text: "Alt" },
-        { value: "shift", text: "Shift" },
+        { value: "shift", text: qsTr("Shift") },
         { value: "super", text: "Super" },
         { value: "ctrl+alt", text: "Ctrl + Alt" },
-        { value: "ctrl+shift", text: "Ctrl + Shift" }
+        { value: "ctrl+shift", text: qsTr("Ctrl + Shift") }
     ]
 
     readonly property int inset: 12
@@ -124,7 +124,7 @@ Item {
             UI.Chip {
                 anchors.right: corner.alignRight ? parent.right : undefined
                 visible: corner.key !== "none" && corner.keyIndex > 0
-                text: visible ? "Hold " + preview.keys[corner.keyIndex].text : ""
+                text: visible ? qsTr("Hold %1").arg(preview.keys[corner.keyIndex].text) : ""
             }
 
             Row {
@@ -134,13 +134,13 @@ Item {
 
                 UI.Label {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Hold"
+                    text: qsTr("Hold")
                     size: 13
                     color: UI.Style.inkMuted
                 }
 
                 UI.ComboBox {
-                    Accessible.name: corner.title + ", key to hold"
+                    Accessible.name: qsTr("%1, key to hold").arg(corner.title)
                     model: preview.keys
                     currentIndex: Math.max(0, corner.keyIndex)
                     onActivated: index => System.setHotCorner(corner.name + "Key", model[index].value)
@@ -152,7 +152,7 @@ Item {
     Corner {
         id: topLeft
         name: "TopLeft"
-        title: "Top left corner"
+        title: qsTr("Top left corner")
         x: preview.inset
         y: preview.inset
     }
@@ -160,7 +160,7 @@ Item {
     Corner {
         id: topRight
         name: "TopRight"
-        title: "Top right corner"
+        title: qsTr("Top right corner")
         alignRight: true
         x: preview.width - width - preview.inset
         y: preview.inset
@@ -169,7 +169,7 @@ Item {
     Corner {
         id: bottomLeft
         name: "BottomLeft"
-        title: "Bottom left corner"
+        title: qsTr("Bottom left corner")
         x: preview.inset
         y: bar.y - height - preview.inset
     }
@@ -177,7 +177,7 @@ Item {
     Corner {
         id: bottomRight
         name: "BottomRight"
-        title: "Bottom right corner"
+        title: qsTr("Bottom right corner")
         alignRight: true
         x: preview.width - width - preview.inset
         y: bar.y - height - preview.inset

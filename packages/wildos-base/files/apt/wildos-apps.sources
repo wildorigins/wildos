@@ -1,0 +1,9 @@
+# Wild OS apps that do not come with Wild OS (Ganger). Signed with the
+# same key as updates. Nothing here is installed unless you choose it in
+# the Store.
+Types: deb
+URIs: https://dl.wildos.io/apps
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/wildos-updates-keyring.asc

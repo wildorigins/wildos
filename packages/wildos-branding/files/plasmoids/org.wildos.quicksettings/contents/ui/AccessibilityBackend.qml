@@ -15,9 +15,9 @@ Item {
     id: access
 
     readonly property var features: [
-        { id: "zoom", title: "Magnifier", description: "Zooms in on the screen. Meta and plus or minus change how far." },
-        { id: "invert", title: "Invert colours", description: "Swaps light and dark across the whole screen." },
-        { id: "colorblindnesscorrection", title: "Colour filters", description: "Adjusts colours to make them easier to tell apart." }
+        { id: "zoom", title: qsTr("Magnifier"), description: qsTr("Zooms in on the screen. Meta and plus or minus change how far.") },
+        { id: "invert", title: qsTr("Invert colours"), description: qsTr("Swaps light and dark across the whole screen.") },
+        { id: "colorblindnesscorrection", title: qsTr("Colour filters"), description: qsTr("Adjusts colours to make them easier to tell apart.") }
     ]
 
     // feature id -> on.

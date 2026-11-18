@@ -17,10 +17,10 @@ Page {
     readonly property var word: apps.find(a => a.id === "word")
     readonly property bool home: licence.edition === "home"
 
-    title: "Windows mode is ready"
-    text: home ? "Windows 11 Home is set up. Upgrade to Pro in the Microsoft Store window that opened, and your apps will open in their own windows."
-               : "Your Windows apps are in Start, and open in their own windows like everything else."
-    note: "Change how Windows mode works in Settings, under Windows apps."
+    title: qsTr("Windows mode is ready")
+    text: home ? qsTr("Windows 11 Home is set up. Upgrade to Pro in the Microsoft Store window that opened, and your apps will open in their own windows.")
+               : qsTr("Your Windows apps are in Start, and open in their own windows like everything else.")
+    note: qsTr("Change how Windows mode works in Settings, under Windows apps.")
 
     leading: Rectangle {
         width: 64
@@ -44,7 +44,7 @@ Page {
         rowSpacing: 12
 
         Repeater {
-            model: page.apps.slice(0, 5).concat([{ id: "", name: "Install a program", icon: "" }])
+            model: page.apps.slice(0, 5).concat([{ id: "", name: qsTr("Install a program"), icon: "" }])
 
             Rectangle {
                 id: tile
@@ -113,7 +113,7 @@ Page {
 
                         UI.Label {
                             Layout.fillWidth: true
-                            text: tile.program ? "Double-click any .exe" : "Windows mode"
+                            text: tile.program ? qsTr("Double-click any .exe") : qsTr("Windows mode")
                             size: 12
                             color: UI.Style.inkMuted
                         }
@@ -126,15 +126,15 @@ Page {
     Banner {
         visible: Setup.hyperThreadingNeedsRestart
         iconName: "restart"
-        title: "Restart to use every processor thread"
-        text: "Windows apps get the extra speed after the PC restarts."
+        title: qsTr("Restart to use every processor thread")
+        text: qsTr("Windows apps get the extra speed after the PC restarts.")
     }
 
     Banner {
         visible: page.options.office === true
         iconName: "account"
-        title: "Sign in to Microsoft 365"
-        text: "Open any of the apps and sign in once with your Microsoft account."
+        title: qsTr("Sign in to Microsoft 365")
+        text: qsTr("Open any of the apps and sign in once with your Microsoft account.")
     }
 
     UI.Card {
@@ -147,21 +147,21 @@ Page {
             CheckRow {
                 readonly property bool none: page.licence.source === "none"
                 state: page.licence.activated === true ? "ok" : "warning"
-                title: page.licence.activated === true ? "Activated" : none ? "Not activated" : "Not activated yet"
+                title: page.licence.activated === true ? qsTr("Activated") : none ? qsTr("Not activated") : qsTr("Not activated yet")
                 detail: page.licence.activated === true
-                    ? (page.licence.edition === "home" ? "Windows 11 Home" : page.licence.edition === "pro" ? "Windows 11 Pro" : "Windows 11")
-                      + (page.licence.source === "key" ? ", using your product key" : ", using this PC's licence")
-                    : none ? "Add a product key any time in Settings" : "Windows tries again by itself when it's online"
+                    ? (page.licence.source === "key" ? qsTr("%1, using your product key") : qsTr("%1, using this PC's licence"))
+                      .arg(page.licence.edition === "home" ? qsTr("Windows 11 Home") : page.licence.edition === "pro" ? "Windows 11 Pro" : "Windows 11")
+                    : none ? qsTr("Add a product key any time in Settings") : qsTr("Windows tries again by itself when it's online")
             }
 
             CheckRow {
                 readonly property string how: page.options.whenIdle || "automatic"
                 state: "ok"
-                title: how === "disk" ? "Ready in about 5 seconds" : how === "shutdown" ? "Ready in about 30 seconds" : "Ready in about a second"
-                detail: how === "disk" ? "Saved to disk while no Windows app is open"
-                      : how === "shutdown" ? "Shut down while no Windows app is open"
-                      : how === "memory" ? "Paused in memory while no Windows app is open"
-                      : "Paused in memory while no Windows app is open, saved to disk on battery"
+                title: how === "disk" ? qsTr("Ready in about 5 seconds") : how === "shutdown" ? qsTr("Ready in about 30 seconds") : qsTr("Ready in about a second")
+                detail: how === "disk" ? qsTr("Saved to disk while no Windows app is open")
+                      : how === "shutdown" ? qsTr("Shut down while no Windows app is open")
+                      : how === "memory" ? qsTr("Paused in memory while no Windows app is open")
+                      : qsTr("Paused in memory while no Windows app is open, saved to disk on battery")
             }
         }
     }
@@ -169,12 +169,12 @@ Page {
     buttons: [
         UI.Button {
             visible: page.word !== undefined && !page.home
-            text: "Open Word"
+            text: qsTr("Open Word")
             onClicked: Setup.openApp("word")
         },
         UI.Button {
             kind: "primary"
-            text: "Done"
+            text: qsTr("Done")
             onClicked: page.done()
         }
     ]

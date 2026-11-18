@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.wildos.cooler</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Cooler</name>
+  <summary>Choose the face on your cooler's screen and how fast its pump and fans run</summary>
+  <description>
+    <p>
+      Cooler looks after a liquid cooler that has a screen. Choose the face
+      the screen shows, from a calm liquid level to a clock or a ring of
+      colour, and set its brightness and which way up it sits.
+    </p>
+    <p>
+      Pick how the pump and fans behave, Quiet, Balanced or Performance, or
+      drag the points of your own curve, and watch the temperatures and
+      speeds as they change. Cooler works with NZXT Kraken coolers that
+      have a screen. Settings are kept on this PC and nothing is sent
+      anywhere: no accounts and no tracking.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.wildos.cooler.desktop</launchable>
+  <icon type="stock">wildos-cooler</icon>
+  <categories>
+    <category>System</category>
+    <category>Settings</category>
+  </categories>
+  <provides>
+    <binary>wildos-cooler</binary>
+  </provides>
+  <pkgname>wildos-cooler</pkgname>
+  <url type="homepage">https://wildos.io</url>
+  <developer id="io.wildos">
+    <name>Wild OS</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-18"/>
+  </releases>
+</component>

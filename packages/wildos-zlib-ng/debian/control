@@ -1,0 +1,18 @@
+Source: wildos-zlib-ng
+Section: libs
+Priority: optional
+Maintainer: Wild OS Developers <dev@wildos.io>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: wildos-zlib-ng
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, zlib1g
+Description: Faster zlib for Wild OS (zlib-ng in zlib-compatible mode)
+ zlib-ng 2.3.3 built as a drop-in libz.so.1, about twice as fast as zlib at
+ packing and unpacking. It lives in a directory of its own, ahead of the
+ system's zlib in the loader's search order, and never replaces a file of
+ zlib1g. A check runs whenever zlib1g changes: if the system's zlib is ever
+ newer than the one this build stands in for, or the build fails its own
+ test, the loader goes back to the system's zlib until an update fits again.

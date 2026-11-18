@@ -23,6 +23,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <vector>
+#include <QCoreApplication>
 
 namespace
 {
@@ -463,7 +464,7 @@ Contents list7z(const QString &archive, const QByteArray &password, Progress *pr
     }
     if (outcome.exitCode != 0) {
         const QString errors = QString::fromUtf8(outcome.errors).trimmed();
-        contents.error = errors.isEmpty() ? QStringLiteral("7-Zip couldn't read this archive.") : errors;
+        contents.error = errors.isEmpty() ? QCoreApplication::translate("Tools", "7-Zip couldn't read this archive.") : errors;
         return contents;
     }
 
@@ -559,7 +560,7 @@ Contents listLsar(const QString &archive, Progress *progress)
     const QJsonDocument document = QJsonDocument::fromJson(outcome.output, &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
         const QString errors = QString::fromUtf8(outcome.errors).trimmed();
-        contents.error = errors.isEmpty() ? QStringLiteral("The Unarchiver couldn't read this archive.") : errors;
+        contents.error = errors.isEmpty() ? QCoreApplication::translate("Tools", "The Unarchiver couldn't read this archive.") : errors;
         return contents;
     }
     const QJsonObject root = document.object();
@@ -570,7 +571,7 @@ Contents listLsar(const QString &archive, Progress *progress)
         // Archive picks entries for unar by this index, so the listing
         // must have them in that order.
         if (o.value(QLatin1String("XADIndex")).toInt(-1) != int(i)) {
-            contents.error = QStringLiteral("The Unarchiver listed this archive out of order.");
+            contents.error = QCoreApplication::translate("Tools", "The Unarchiver listed this archive out of order.");
             return contents;
         }
         Item item;

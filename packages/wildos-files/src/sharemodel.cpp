@@ -4,6 +4,7 @@
 #include <Purpose/Configuration>
 #include <Purpose/Job>
 #include <QClipboard>
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -59,7 +60,7 @@ void Sharer::share(int row)
     auto config = m_model->configureJob(row);
     if (!config || !config->isReady()) {
         delete config;
-        Q_EMIT failed(QStringLiteral("That way of sharing is not available any more. Pick another from the Share menu."));
+        Q_EMIT failed(QCoreApplication::translate("Sharer", "That way of sharing is not available any more. Pick another from the Share menu."));
         return;
     }
     Purpose::Job *job = config->createJob();
@@ -67,14 +68,14 @@ void Sharer::share(int row)
     connect(job, &KJob::result, this, [this, job] {
         if (job->error()) {
             if (job->error() != KJob::KilledJobError) {
-                Q_EMIT failed(job->errorString().isEmpty() ? QStringLiteral("Sharing did not finish.") : job->errorString());
+                Q_EMIT failed(job->errorString().isEmpty() ? QCoreApplication::translate("Sharer", "Sharing did not finish.") : job->errorString());
             }
             return;
         }
         const QString link = job->output().value(QStringLiteral("url")).toString();
         if (!link.isEmpty()) {
             QGuiApplication::clipboard()->setText(link);
-            Q_EMIT finished(QStringLiteral("Link copied. Paste it wherever you want to share it."));
+            Q_EMIT finished(QCoreApplication::translate("Sharer", "Link copied. Paste it wherever you want to share it."));
         }
     });
     job->start();

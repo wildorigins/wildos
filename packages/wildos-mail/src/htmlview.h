@@ -102,6 +102,12 @@ public:
 
     void paint(QPainter *painter) override;
 
+    // Asks which printer, then prints the message on white paper in dark
+    // ink whatever the window's colours: who it is from and to, when it was
+    // sent and its subject, then the message. False only when the printer
+    // couldn't be started; closing the dialog is not a failure.
+    Q_INVOKABLE bool print();
+
 Q_SIGNALS:
     void htmlChanged();
     void messageChanged();
@@ -154,6 +160,8 @@ private:
 
     void rebuild();
     void relayout();
+    void drawSlice(QPainter *painter, int top, int bottom);
+    int drawHeading(QPainter *painter, int width, const QString &subject, const QStringList &lines) const;
     QString resolve(const QString &src) const;
     void fetch(const QString &url);
     QFont fontFor(litehtml::uint_ptr handle) const;
@@ -183,6 +191,11 @@ private:
     QString m_baseUrl;
     QPainter *m_painter = nullptr;
     QStack<QRect> m_clips;
+    // While printing: the part of the message that belongs on this sheet,
+    // which nothing may draw outside, and where each line of text and each
+    // picture sits, so a page can end between them.
+    QRect m_slice;
+    QList<QPair<int, int>> *m_boxes = nullptr;
     // The colour a newsletter gives its <body>, which browsers paint across
     // the whole page and litehtml only behind the body's own box.
     QColor m_pageColour;

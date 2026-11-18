@@ -269,7 +269,7 @@ QQC.Popup {
                     text: {
                         const parts = [];
                         if (peek.event.going > 0)
-                            parts.push(qsTr("%1 going").arg(peek.event.going));
+                            parts.push(qsTr("%n going", "", peek.event.going));
                         if (peek.event.maybe > 0)
                             parts.push(qsTr("%1 maybe").arg(peek.event.maybe));
                         return parts.join(", ");

@@ -17,6 +17,15 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     ScrollBar.vertical: UI.ScrollBar {}
 
+    function keyPressed(event) {
+        scrollKeys.handle(event);
+    }
+
+    ScrollKeys {
+        id: scrollKeys
+        view: flick
+    }
+
     ColumnLayout {
         id: column
         x: Metrics.sidePadding

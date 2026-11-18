@@ -21,6 +21,8 @@ Build-Depends:
  libkpipewire-dev,
  libsane-dev,
  pkgconf,
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -29,7 +31,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.11),
+ wildos-ui (>= 0.1.16),
  wildos-overlays (>= 0.1.1),
  kwin-wayland,
  layer-shell-qt,

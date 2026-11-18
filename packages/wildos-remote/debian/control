@@ -17,6 +17,8 @@ Build-Depends:
  wayland-protocols,
  freerdp3-dev (>= 3.32),
  libwinpr3-dev (>= 3.32),
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -25,7 +27,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.11),
+ wildos-ui (>= 0.1.16),
  openssh-client,
  libfreerdp3-3 (>= 3.32),
  libfreerdp-client3-3 (>= 3.32),

@@ -2,6 +2,8 @@
 
 #include <KService>
 
+#include <QCoreApplication>
+
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -288,7 +290,53 @@ struct FileCheck {
     QString why;
 };
 
-FileCheck checkFile(const QString &path, const QString &what)
+enum class Subject { Request, Program, App, Script };
+
+QString unknownTo(Subject what)
+{
+    switch (what) {
+    case Subject::Request: return QCoreApplication::translate("Verifier", "The request isn't part of Wild OS.");
+    case Subject::Program: return QCoreApplication::translate("Verifier", "The program isn't part of Wild OS.");
+    case Subject::App: return QCoreApplication::translate("Verifier", "The app isn't part of Wild OS.");
+    case Subject::Script: return QCoreApplication::translate("Verifier", "The script isn't part of Wild OS.");
+    }
+    return {};
+}
+
+QString changedSince(Subject what)
+{
+    switch (what) {
+    case Subject::Request: return QCoreApplication::translate("Verifier", "The request was changed after it was installed.");
+    case Subject::Program: return QCoreApplication::translate("Verifier", "The program was changed after it was installed.");
+    case Subject::App: return QCoreApplication::translate("Verifier", "The app was changed after it was installed.");
+    case Subject::Script: return QCoreApplication::translate("Verifier", "The script was changed after it was installed.");
+    }
+    return {};
+}
+
+QString fromOutside(Subject what)
+{
+    switch (what) {
+    case Subject::Request: return QCoreApplication::translate("Verifier", "The request comes from outside Wild OS.");
+    case Subject::Program: return QCoreApplication::translate("Verifier", "The program comes from outside Wild OS.");
+    case Subject::App: return QCoreApplication::translate("Verifier", "The app comes from outside Wild OS.");
+    case Subject::Script: return QCoreApplication::translate("Verifier", "The script comes from outside Wild OS.");
+    }
+    return {};
+}
+
+QString fromOther(Subject what, const QString &origin)
+{
+    switch (what) {
+    case Subject::Request: return QCoreApplication::translate("Verifier", "The request comes from %1, not from Wild OS.").arg(origin);
+    case Subject::Program: return QCoreApplication::translate("Verifier", "The program comes from %1, not from Wild OS.").arg(origin);
+    case Subject::App: return QCoreApplication::translate("Verifier", "The app comes from %1, not from Wild OS.").arg(origin);
+    case Subject::Script: return QCoreApplication::translate("Verifier", "The script comes from %1, not from Wild OS.").arg(origin);
+    }
+    return {};
+}
+
+FileCheck checkFile(const QString &path, Subject what)
 {
     FileCheck check;
     if (path.isEmpty()) {
@@ -297,18 +345,17 @@ FileCheck checkFile(const QString &path, const QString &what)
     }
     check.package = ownerOf(path);
     if (check.package.isEmpty()) {
-        check.why = QStringLiteral("%1 isn't part of Wild OS.").arg(what);
+        check.why = unknownTo(what);
         return check;
     }
     if (!unchanged(check.package, path)) {
-        check.why = QStringLiteral("%1 was changed after it was installed.").arg(what);
+        check.why = changedSince(what);
         return check;
     }
     const Source source = sourceOf(check.package);
     check.origin = source.origin;
     if (!source.trusted) {
-        check.why = source.origin.isEmpty() ? QStringLiteral("%1 comes from outside Wild OS.").arg(what)
-                                            : QStringLiteral("%1 comes from %2, not from Wild OS.").arg(what, source.origin);
+        check.why = source.origin.isEmpty() ? fromOutside(what) : fromOther(what, source.origin);
         return check;
     }
     check.ok = true;
@@ -430,143 +477,143 @@ struct Wording {
 const QHash<QString, Wording> &wordings()
 {
     static const QHash<QString, Wording> map = {
-        {QStringLiteral("org.freedesktop.packagekit.system-update"), {"Wants to install updates for the system.", "Updates", "wildos-updates"}},
-        {QStringLiteral("org.freedesktop.packagekit.trigger-offline-update"), {"Wants to install updates the next time the computer restarts.", "Updates", "wildos-updates"}},
-        {QStringLiteral("org.freedesktop.packagekit.clear-offline-update"), {"Wants to cancel updates waiting for a restart.", "Updates", "wildos-updates"}},
-        {QStringLiteral("org.freedesktop.packagekit.trigger-offline-upgrade"), {"Wants to upgrade Wild OS the next time the computer restarts.", "Updates", "wildos-updates"}},
-        {QStringLiteral("org.freedesktop.packagekit.upgrade-system"), {"Wants to upgrade Wild OS to a new version.", "Updates", "wildos-updates"}},
-        {QStringLiteral("org.freedesktop.packagekit.package-install"), {"Wants to install an app for everyone on this computer."}},
-        {QStringLiteral("org.freedesktop.packagekit.package-install-untrusted"), {"Wants to install a package from a file. Its setup runs with full access to this computer."}},
-        {QStringLiteral("org.freedesktop.packagekit.package-reinstall"), {"Wants to repair an app by installing it again."}},
-        {QStringLiteral("org.freedesktop.packagekit.package-downgrade"), {"Wants to replace an app with an older version."}},
-        {QStringLiteral("org.freedesktop.packagekit.package-remove"), {"Wants to remove an app from this computer."}},
-        {QStringLiteral("org.freedesktop.packagekit.system-sources-configure"), {"Wants to change where apps and updates come from."}},
-        {QStringLiteral("org.freedesktop.packagekit.repo-enable"), {"Wants to change where apps and updates come from."}},
-        {QStringLiteral("org.freedesktop.packagekit.system-sources-refresh"), {"Wants to check for new apps and updates."}},
-        {QStringLiteral("org.freedesktop.packagekit.system-network-proxy-configure"), {"Wants to change the proxy used to download updates."}},
-        {QStringLiteral("org.freedesktop.packagekit.cancel-foreign"), {"Wants to stop an install another person started."}},
-        {QStringLiteral("org.freedesktop.packagekit.repair-system"), {"Wants to repair the apps on this computer."}},
-        {QStringLiteral("org.freedesktop.packagekit.system-trust-signing-key"), {"Wants to trust a new source of apps and updates."}},
+        {QStringLiteral("org.freedesktop.packagekit.system-update"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install updates for the system."), QT_TRANSLATE_NOOP("Verifier", "Updates"), "wildos-updates"}},
+        {QStringLiteral("org.freedesktop.packagekit.trigger-offline-update"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install updates the next time the computer restarts."), QT_TRANSLATE_NOOP("Verifier", "Updates"), "wildos-updates"}},
+        {QStringLiteral("org.freedesktop.packagekit.clear-offline-update"), {QT_TRANSLATE_NOOP("Verifier", "Wants to cancel updates waiting for a restart."), QT_TRANSLATE_NOOP("Verifier", "Updates"), "wildos-updates"}},
+        {QStringLiteral("org.freedesktop.packagekit.trigger-offline-upgrade"), {QT_TRANSLATE_NOOP("Verifier", "Wants to upgrade Wild OS the next time the computer restarts."), QT_TRANSLATE_NOOP("Verifier", "Updates"), "wildos-updates"}},
+        {QStringLiteral("org.freedesktop.packagekit.upgrade-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to upgrade Wild OS to a new version."), QT_TRANSLATE_NOOP("Verifier", "Updates"), "wildos-updates"}},
+        {QStringLiteral("org.freedesktop.packagekit.package-install"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install an app for everyone on this computer.")}},
+        {QStringLiteral("org.freedesktop.packagekit.package-install-untrusted"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install a package from a file. Its setup runs with full access to this computer.")}},
+        {QStringLiteral("org.freedesktop.packagekit.package-reinstall"), {QT_TRANSLATE_NOOP("Verifier", "Wants to repair an app by installing it again.")}},
+        {QStringLiteral("org.freedesktop.packagekit.package-downgrade"), {QT_TRANSLATE_NOOP("Verifier", "Wants to replace an app with an older version.")}},
+        {QStringLiteral("org.freedesktop.packagekit.package-remove"), {QT_TRANSLATE_NOOP("Verifier", "Wants to remove an app from this computer.")}},
+        {QStringLiteral("org.freedesktop.packagekit.system-sources-configure"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change where apps and updates come from.")}},
+        {QStringLiteral("org.freedesktop.packagekit.repo-enable"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change where apps and updates come from.")}},
+        {QStringLiteral("org.freedesktop.packagekit.system-sources-refresh"), {QT_TRANSLATE_NOOP("Verifier", "Wants to check for new apps and updates.")}},
+        {QStringLiteral("org.freedesktop.packagekit.system-network-proxy-configure"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the proxy used to download updates.")}},
+        {QStringLiteral("org.freedesktop.packagekit.cancel-foreign"), {QT_TRANSLATE_NOOP("Verifier", "Wants to stop an install another person started.")}},
+        {QStringLiteral("org.freedesktop.packagekit.repair-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to repair the apps on this computer.")}},
+        {QStringLiteral("org.freedesktop.packagekit.system-trust-signing-key"), {QT_TRANSLATE_NOOP("Verifier", "Wants to trust a new source of apps and updates.")}},
 
-        {QStringLiteral("org.freedesktop.udisks2.filesystem-mount"), {"Wants to open a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.filesystem-mount-system"), {"Wants to open a drive that belongs to the system."}},
-        {QStringLiteral("org.freedesktop.udisks2.filesystem-mount-other-seat"), {"Wants to open a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.filesystem-unmount-others"), {"Wants to close a drive another person opened."}},
-        {QStringLiteral("org.freedesktop.udisks2.filesystem-take-ownership"), {"Wants to take ownership of the files on a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.filesystem-fstab"), {"Wants to open a drive set up for the whole system."}},
-        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock"), {"Wants to unlock an encrypted drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock-system"), {"Wants to unlock an encrypted drive that belongs to the system."}},
-        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock-other-seat"), {"Wants to unlock an encrypted drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock-crypttab"), {"Wants to unlock an encrypted drive set up for the whole system."}},
-        {QStringLiteral("org.freedesktop.udisks2.encrypted-change-passphrase"), {"Wants to change the password of an encrypted drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.encrypted-change-passphrase-system"), {"Wants to change the password of an encrypted drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.loop-setup"), {"Wants to open a disk image."}},
-        {QStringLiteral("org.freedesktop.udisks2.eject-media"), {"Wants to eject a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.eject-media-system"), {"Wants to eject a drive that belongs to the system."}},
-        {QStringLiteral("org.freedesktop.udisks2.power-off-drive"), {"Wants to switch off a drive so it can be unplugged."}},
-        {QStringLiteral("org.freedesktop.udisks2.power-off-drive-system"), {"Wants to switch off a drive that belongs to the system."}},
-        {QStringLiteral("org.freedesktop.udisks2.modify-device"), {"Wants to erase, format or partition a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.modify-device-system"), {"Wants to erase, format or partition a drive that belongs to the system."}},
-        {QStringLiteral("org.freedesktop.udisks2.modify-system-configuration"), {"Wants to change how drives open when the computer starts."}},
-        {QStringLiteral("org.freedesktop.udisks2.open-device"), {"Wants to read a whole drive directly."}},
-        {QStringLiteral("org.freedesktop.udisks2.open-device-system"), {"Wants to read a system drive directly."}},
-        {QStringLiteral("org.freedesktop.udisks2.ata-smart-update"), {"Wants to check the health of a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.ata-smart-selftest"), {"Wants to test the health of a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.rescan"), {"Wants to look for changes on a drive."}},
-        {QStringLiteral("org.freedesktop.udisks2.manage-md-raid"), {"Wants to change a group of drives used together."}},
+        {QStringLiteral("org.freedesktop.udisks2.filesystem-mount"), {QT_TRANSLATE_NOOP("Verifier", "Wants to open a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.filesystem-mount-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to open a drive that belongs to the system.")}},
+        {QStringLiteral("org.freedesktop.udisks2.filesystem-mount-other-seat"), {QT_TRANSLATE_NOOP("Verifier", "Wants to open a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.filesystem-unmount-others"), {QT_TRANSLATE_NOOP("Verifier", "Wants to close a drive another person opened.")}},
+        {QStringLiteral("org.freedesktop.udisks2.filesystem-take-ownership"), {QT_TRANSLATE_NOOP("Verifier", "Wants to take ownership of the files on a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.filesystem-fstab"), {QT_TRANSLATE_NOOP("Verifier", "Wants to open a drive set up for the whole system.")}},
+        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock"), {QT_TRANSLATE_NOOP("Verifier", "Wants to unlock an encrypted drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to unlock an encrypted drive that belongs to the system.")}},
+        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock-other-seat"), {QT_TRANSLATE_NOOP("Verifier", "Wants to unlock an encrypted drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.encrypted-unlock-crypttab"), {QT_TRANSLATE_NOOP("Verifier", "Wants to unlock an encrypted drive set up for the whole system.")}},
+        {QStringLiteral("org.freedesktop.udisks2.encrypted-change-passphrase"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the password of an encrypted drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.encrypted-change-passphrase-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the password of an encrypted drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.loop-setup"), {QT_TRANSLATE_NOOP("Verifier", "Wants to open a disk image.")}},
+        {QStringLiteral("org.freedesktop.udisks2.eject-media"), {QT_TRANSLATE_NOOP("Verifier", "Wants to eject a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.eject-media-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to eject a drive that belongs to the system.")}},
+        {QStringLiteral("org.freedesktop.udisks2.power-off-drive"), {QT_TRANSLATE_NOOP("Verifier", "Wants to switch off a drive so it can be unplugged.")}},
+        {QStringLiteral("org.freedesktop.udisks2.power-off-drive-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to switch off a drive that belongs to the system.")}},
+        {QStringLiteral("org.freedesktop.udisks2.modify-device"), {QT_TRANSLATE_NOOP("Verifier", "Wants to erase, format or partition a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.modify-device-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to erase, format or partition a drive that belongs to the system.")}},
+        {QStringLiteral("org.freedesktop.udisks2.modify-system-configuration"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how drives open when the computer starts.")}},
+        {QStringLiteral("org.freedesktop.udisks2.open-device"), {QT_TRANSLATE_NOOP("Verifier", "Wants to read a whole drive directly.")}},
+        {QStringLiteral("org.freedesktop.udisks2.open-device-system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to read a system drive directly.")}},
+        {QStringLiteral("org.freedesktop.udisks2.ata-smart-update"), {QT_TRANSLATE_NOOP("Verifier", "Wants to check the health of a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.ata-smart-selftest"), {QT_TRANSLATE_NOOP("Verifier", "Wants to test the health of a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.rescan"), {QT_TRANSLATE_NOOP("Verifier", "Wants to look for changes on a drive.")}},
+        {QStringLiteral("org.freedesktop.udisks2.manage-md-raid"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change a group of drives used together.")}},
 
-        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.system"), {"Wants to change network settings for everyone on this computer."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.own"), {"Wants to change your network settings."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.hostname"), {"Wants to rename this computer."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.global-dns"), {"Wants to change how this computer looks up websites."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.network-control"), {"Wants to connect to or disconnect from a network."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.enable-disable-network"), {"Wants to turn networking on or off."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.enable-disable-wifi"), {"Wants to turn Wi-Fi on or off."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.enable-disable-wwan"), {"Wants to turn mobile broadband on or off."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.wifi.share.open"), {"Wants to share this computer's internet connection over open Wi-Fi."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.wifi.share.protected"), {"Wants to share this computer's internet connection over Wi-Fi."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.wifi.scan"), {"Wants to look for Wi-Fi networks."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.reload"), {"Wants to restart the network service."}},
-        {QStringLiteral("org.freedesktop.NetworkManager.checkpoint-rollback"), {"Wants to undo a change to the network settings."}},
+        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.system"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change network settings for everyone on this computer.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.own"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change your network settings.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.hostname"), {QT_TRANSLATE_NOOP("Verifier", "Wants to rename this computer.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.settings.modify.global-dns"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how this computer looks up websites.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.network-control"), {QT_TRANSLATE_NOOP("Verifier", "Wants to connect to or disconnect from a network.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.enable-disable-network"), {QT_TRANSLATE_NOOP("Verifier", "Wants to turn networking on or off.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.enable-disable-wifi"), {QT_TRANSLATE_NOOP("Verifier", "Wants to turn Wi-Fi on or off.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.enable-disable-wwan"), {QT_TRANSLATE_NOOP("Verifier", "Wants to turn mobile broadband on or off.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.wifi.share.open"), {QT_TRANSLATE_NOOP("Verifier", "Wants to share this computer's internet connection over open Wi-Fi.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.wifi.share.protected"), {QT_TRANSLATE_NOOP("Verifier", "Wants to share this computer's internet connection over Wi-Fi.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.wifi.scan"), {QT_TRANSLATE_NOOP("Verifier", "Wants to look for Wi-Fi networks.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.reload"), {QT_TRANSLATE_NOOP("Verifier", "Wants to restart the network service.")}},
+        {QStringLiteral("org.freedesktop.NetworkManager.checkpoint-rollback"), {QT_TRANSLATE_NOOP("Verifier", "Wants to undo a change to the network settings.")}},
 
-        {QStringLiteral("org.freedesktop.login1.reboot"), {"Wants to restart the computer."}},
-        {QStringLiteral("org.freedesktop.login1.power-off"), {"Wants to shut down the computer."}},
-        {QStringLiteral("org.freedesktop.login1.halt"), {"Wants to shut down the computer."}},
-        {QStringLiteral("org.freedesktop.login1.suspend"), {"Wants to put the computer to sleep."}},
-        {QStringLiteral("org.freedesktop.login1.hibernate"), {"Wants to hibernate the computer."}},
-        {QStringLiteral("org.freedesktop.login1.set-reboot-to-firmware-setup"), {"Wants to restart into the computer's firmware settings."}},
-        {QStringLiteral("org.freedesktop.login1.set-wall-message"), {"Wants to show a message to everyone signed in."}},
-        {QStringLiteral("org.freedesktop.login1.lock-sessions"), {"Wants to lock everyone's screen."}},
-        {QStringLiteral("org.freedesktop.login1.manage"), {"Wants to sign out or manage other people's sessions."}},
-        {QStringLiteral("org.freedesktop.login1.attach-device"), {"Wants to give a device to another screen and keyboard."}},
+        {QStringLiteral("org.freedesktop.login1.reboot"), {QT_TRANSLATE_NOOP("Verifier", "Wants to restart the computer.")}},
+        {QStringLiteral("org.freedesktop.login1.power-off"), {QT_TRANSLATE_NOOP("Verifier", "Wants to shut down the computer.")}},
+        {QStringLiteral("org.freedesktop.login1.halt"), {QT_TRANSLATE_NOOP("Verifier", "Wants to shut down the computer.")}},
+        {QStringLiteral("org.freedesktop.login1.suspend"), {QT_TRANSLATE_NOOP("Verifier", "Wants to put the computer to sleep.")}},
+        {QStringLiteral("org.freedesktop.login1.hibernate"), {QT_TRANSLATE_NOOP("Verifier", "Wants to hibernate the computer.")}},
+        {QStringLiteral("org.freedesktop.login1.set-reboot-to-firmware-setup"), {QT_TRANSLATE_NOOP("Verifier", "Wants to restart into the computer's firmware settings.")}},
+        {QStringLiteral("org.freedesktop.login1.set-wall-message"), {QT_TRANSLATE_NOOP("Verifier", "Wants to show a message to everyone signed in.")}},
+        {QStringLiteral("org.freedesktop.login1.lock-sessions"), {QT_TRANSLATE_NOOP("Verifier", "Wants to lock everyone's screen.")}},
+        {QStringLiteral("org.freedesktop.login1.manage"), {QT_TRANSLATE_NOOP("Verifier", "Wants to sign out or manage other people's sessions.")}},
+        {QStringLiteral("org.freedesktop.login1.attach-device"), {QT_TRANSLATE_NOOP("Verifier", "Wants to give a device to another screen and keyboard.")}},
 
-        {QStringLiteral("org.freedesktop.timedate1.set-time"), {"Wants to change the date and time."}},
-        {QStringLiteral("org.freedesktop.timedate1.set-timezone"), {"Wants to change the time zone."}},
-        {QStringLiteral("org.freedesktop.timedate1.set-ntp"), {"Wants to change whether the clock sets itself."}},
-        {QStringLiteral("org.freedesktop.timedate1.set-local-rtc"), {"Wants to change how the hardware clock keeps time."}},
-        {QStringLiteral("org.kde.kcontrol.kcmclock.save"), {"Wants to change the date and time."}},
-        {QStringLiteral("org.freedesktop.hostname1.set-hostname"), {"Wants to rename this computer."}},
-        {QStringLiteral("org.freedesktop.hostname1.set-static-hostname"), {"Wants to rename this computer."}},
-        {QStringLiteral("org.freedesktop.hostname1.set-machine-info"), {"Wants to change this computer's description."}},
-        {QStringLiteral("org.freedesktop.locale1.set-locale"), {"Wants to change the language for everyone on this computer."}},
-        {QStringLiteral("org.freedesktop.locale1.set-keyboard"), {"Wants to change the keyboard layout for everyone on this computer."}},
+        {QStringLiteral("org.freedesktop.timedate1.set-time"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the date and time.")}},
+        {QStringLiteral("org.freedesktop.timedate1.set-timezone"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the time zone.")}},
+        {QStringLiteral("org.freedesktop.timedate1.set-ntp"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change whether the clock sets itself.")}},
+        {QStringLiteral("org.freedesktop.timedate1.set-local-rtc"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how the hardware clock keeps time.")}},
+        {QStringLiteral("org.kde.kcontrol.kcmclock.save"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the date and time.")}},
+        {QStringLiteral("org.freedesktop.hostname1.set-hostname"), {QT_TRANSLATE_NOOP("Verifier", "Wants to rename this computer.")}},
+        {QStringLiteral("org.freedesktop.hostname1.set-static-hostname"), {QT_TRANSLATE_NOOP("Verifier", "Wants to rename this computer.")}},
+        {QStringLiteral("org.freedesktop.hostname1.set-machine-info"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change this computer's description.")}},
+        {QStringLiteral("org.freedesktop.locale1.set-locale"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the language for everyone on this computer.")}},
+        {QStringLiteral("org.freedesktop.locale1.set-keyboard"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the keyboard layout for everyone on this computer.")}},
 
-        {QStringLiteral("org.freedesktop.accounts.user-administration"), {"Wants to change the accounts on this computer."}},
-        {QStringLiteral("org.freedesktop.accounts.change-own-user-data"), {"Wants to change your account's details."}},
-        {QStringLiteral("org.freedesktop.accounts.change-own-password"), {"Wants to change your password."}},
-        {QStringLiteral("org.freedesktop.accounts.set-login-option"), {"Wants to change how people sign in."}},
-        {QStringLiteral("org.freedesktop.systemd1.manage-units"), {"Wants to start, stop or restart a system service."}},
-        {QStringLiteral("org.freedesktop.systemd1.manage-unit-files"), {"Wants to change which system services start with the computer."}},
-        {QStringLiteral("org.freedesktop.systemd1.reload-daemon"), {"Wants to reload the system's service settings."}},
-        {QStringLiteral("org.freedesktop.systemd1.set-environment"), {"Wants to change settings every system service sees."}},
+        {QStringLiteral("org.freedesktop.accounts.user-administration"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the accounts on this computer.")}},
+        {QStringLiteral("org.freedesktop.accounts.change-own-user-data"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change your account's details.")}},
+        {QStringLiteral("org.freedesktop.accounts.change-own-password"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change your password.")}},
+        {QStringLiteral("org.freedesktop.accounts.set-login-option"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how people sign in.")}},
+        {QStringLiteral("org.freedesktop.systemd1.manage-units"), {QT_TRANSLATE_NOOP("Verifier", "Wants to start, stop or restart a system service.")}},
+        {QStringLiteral("org.freedesktop.systemd1.manage-unit-files"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change which system services start with the computer.")}},
+        {QStringLiteral("org.freedesktop.systemd1.reload-daemon"), {QT_TRANSLATE_NOOP("Verifier", "Wants to reload the system's service settings.")}},
+        {QStringLiteral("org.freedesktop.systemd1.set-environment"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change settings every system service sees.")}},
 
-        {QStringLiteral("org.freedesktop.Flatpak.app-install"), {"Wants to install an app for everyone on this computer."}},
-        {QStringLiteral("org.freedesktop.Flatpak.runtime-install"), {"Wants to install a part apps need, for everyone on this computer."}},
-        {QStringLiteral("org.freedesktop.Flatpak.app-uninstall"), {"Wants to remove an app for everyone on this computer."}},
-        {QStringLiteral("org.freedesktop.Flatpak.runtime-uninstall"), {"Wants to remove a part apps need."}},
-        {QStringLiteral("org.freedesktop.Flatpak.app-update"), {"Wants to update apps for everyone on this computer."}},
-        {QStringLiteral("org.freedesktop.Flatpak.runtime-update"), {"Wants to update the parts apps need."}},
-        {QStringLiteral("org.freedesktop.Flatpak.modify-repo"), {"Wants to change where apps come from."}},
-        {QStringLiteral("org.freedesktop.Flatpak.configure-remote"), {"Wants to change where apps come from."}},
-        {QStringLiteral("org.freedesktop.Flatpak.configure"), {"Wants to change how apps are installed."}},
-        {QStringLiteral("org.freedesktop.Flatpak.metadata-update"), {"Wants to refresh the list of apps."}},
-        {QStringLiteral("org.freedesktop.Flatpak.override-parental-controls"), {"Wants to install an app that parental controls block."}},
+        {QStringLiteral("org.freedesktop.Flatpak.app-install"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install an app for everyone on this computer.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.runtime-install"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install a part apps need, for everyone on this computer.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.app-uninstall"), {QT_TRANSLATE_NOOP("Verifier", "Wants to remove an app for everyone on this computer.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.runtime-uninstall"), {QT_TRANSLATE_NOOP("Verifier", "Wants to remove a part apps need.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.app-update"), {QT_TRANSLATE_NOOP("Verifier", "Wants to update apps for everyone on this computer.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.runtime-update"), {QT_TRANSLATE_NOOP("Verifier", "Wants to update the parts apps need.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.modify-repo"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change where apps come from.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.configure-remote"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change where apps come from.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.configure"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how apps are installed.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.metadata-update"), {QT_TRANSLATE_NOOP("Verifier", "Wants to refresh the list of apps.")}},
+        {QStringLiteral("org.freedesktop.Flatpak.override-parental-controls"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install an app that parental controls block.")}},
 
-        {QStringLiteral("org.freedesktop.fwupd.update-internal"), {"Wants to update your computer's firmware."}},
-        {QStringLiteral("org.freedesktop.fwupd.update-internal-trusted"), {"Wants to update your computer's firmware."}},
-        {QStringLiteral("org.freedesktop.fwupd.update-hotplug"), {"Wants to update the firmware of a connected device."}},
-        {QStringLiteral("org.freedesktop.fwupd.update-hotplug-trusted"), {"Wants to update the firmware of a connected device."}},
-        {QStringLiteral("org.freedesktop.fwupd.downgrade-internal"), {"Wants to install older firmware on your computer."}},
-        {QStringLiteral("org.freedesktop.fwupd.downgrade-hotplug"), {"Wants to install older firmware on a connected device."}},
-        {QStringLiteral("org.freedesktop.fwupd.modify-config"), {"Wants to change how firmware updates work."}},
-        {QStringLiteral("org.freedesktop.fwupd.device-unlock"), {"Wants to unlock a device for a firmware update."}},
+        {QStringLiteral("org.freedesktop.fwupd.update-internal"), {QT_TRANSLATE_NOOP("Verifier", "Wants to update your computer's firmware.")}},
+        {QStringLiteral("org.freedesktop.fwupd.update-internal-trusted"), {QT_TRANSLATE_NOOP("Verifier", "Wants to update your computer's firmware.")}},
+        {QStringLiteral("org.freedesktop.fwupd.update-hotplug"), {QT_TRANSLATE_NOOP("Verifier", "Wants to update the firmware of a connected device.")}},
+        {QStringLiteral("org.freedesktop.fwupd.update-hotplug-trusted"), {QT_TRANSLATE_NOOP("Verifier", "Wants to update the firmware of a connected device.")}},
+        {QStringLiteral("org.freedesktop.fwupd.downgrade-internal"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install older firmware on your computer.")}},
+        {QStringLiteral("org.freedesktop.fwupd.downgrade-hotplug"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install older firmware on a connected device.")}},
+        {QStringLiteral("org.freedesktop.fwupd.modify-config"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how firmware updates work.")}},
+        {QStringLiteral("org.freedesktop.fwupd.device-unlock"), {QT_TRANSLATE_NOOP("Verifier", "Wants to unlock a device for a firmware update.")}},
 
-        {QStringLiteral("org.kde.ksysguard.processlisthelper.sendsignal"), {"Wants to stop a process that belongs to the system or another person."}},
-        {QStringLiteral("org.kde.ksysguard.processlisthelper.renice"), {"Wants to change the priority of a system process."}},
-        {QStringLiteral("org.kde.powerdevil.chargethresholdhelper.setchargethreshold"), {"Wants to change how full the battery charges."}},
-        {QStringLiteral("org.kde.powerdevil.backlighthelper.setbrightness"), {"Wants to change the screen brightness."}},
-        {QStringLiteral("org.kde.powerdevil.discretegpuhelper.hasdualgpu"), {"Wants to check which graphics card is in use."}},
-        {QStringLiteral("org.kde.kcontrol.kcmsddm.save"), {"Wants to change the sign-in screen."}},
-        {QStringLiteral("org.kde.fontinst.manage"), {"Wants to install fonts for everyone on this computer."}},
-        {QStringLiteral("org.kde.kpmcore.externalcommand.init"), {"Wants to change how the drives are divided up."}},
-        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.all-edit"), {"Wants to change printer settings."}},
-        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.printer-local-edit"), {"Wants to set up a printer."}},
-        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.printer-remote-edit"), {"Wants to set up a network printer."}},
-        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.server-settings"), {"Wants to change how printing works on this computer."}},
-        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.job-not-owned-edit"), {"Wants to change another person's print job."}},
-        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.devices-get"), {"Wants to look for printers."}},
+        {QStringLiteral("org.kde.ksysguard.processlisthelper.sendsignal"), {QT_TRANSLATE_NOOP("Verifier", "Wants to stop a process that belongs to the system or another person.")}},
+        {QStringLiteral("org.kde.ksysguard.processlisthelper.renice"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the priority of a system process.")}},
+        {QStringLiteral("org.kde.powerdevil.chargethresholdhelper.setchargethreshold"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how full the battery charges.")}},
+        {QStringLiteral("org.kde.powerdevil.backlighthelper.setbrightness"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the screen brightness.")}},
+        {QStringLiteral("org.kde.powerdevil.discretegpuhelper.hasdualgpu"), {QT_TRANSLATE_NOOP("Verifier", "Wants to check which graphics card is in use.")}},
+        {QStringLiteral("org.kde.kcontrol.kcmsddm.save"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change the sign-in screen.")}},
+        {QStringLiteral("org.kde.fontinst.manage"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install fonts for everyone on this computer.")}},
+        {QStringLiteral("org.kde.kpmcore.externalcommand.init"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how the drives are divided up.")}},
+        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.all-edit"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change printer settings.")}},
+        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.printer-local-edit"), {QT_TRANSLATE_NOOP("Verifier", "Wants to set up a printer.")}},
+        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.printer-remote-edit"), {QT_TRANSLATE_NOOP("Verifier", "Wants to set up a network printer.")}},
+        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.server-settings"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how printing works on this computer.")}},
+        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.job-not-owned-edit"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change another person's print job.")}},
+        {QStringLiteral("org.opensuse.cupspkhelper.mechanism.devices-get"), {QT_TRANSLATE_NOOP("Verifier", "Wants to look for printers.")}},
 
-        {QStringLiteral("org.wildos.appbridge.enable-32bit"), {"Wants to install Windows app support.", "Windows apps", "wildos-windows-app"}},
-        {QStringLiteral("org.wildos.usb.allow-device"), {"Wants to allow a USB device Wild OS blocked, until you unplug it."}},
-        {QStringLiteral("org.wildos.camera-mic.block"), {"Wants to turn off the camera or microphone for every app.", "Camera and microphone", "camera-web"}},
-        {QStringLiteral("org.wildos.camera-mic.unblock"), {"Wants to turn the camera or microphone back on for every app.", "Camera and microphone", "camera-web"}},
-        {QStringLiteral("org.wildos.camera-mic.release"), {"Wants to stop an app using the camera.", "Camera and microphone", "camera-web"}},
-        {QStringLiteral("org.wildos.update-checks"), {"Wants to change how this computer checks for updates.", "Updates", "wildos-updates"}},
-        {QStringLiteral("org.wildos.settings.update-policy"), {"Wants to change how Wild OS installs updates.", "Updates", "wildos-updates"}},
-        {QStringLiteral("org.wildos.settings.users"), {"Wants to change who can use this computer."}},
-        {QStringLiteral("org.wildos.settings.locale"), {"Wants to set up a new language on this computer."}},
-        {QStringLiteral("org.wildos.setup.create-account"), {"Wants to create the first account on this computer."}},
-        {QStringLiteral("org.wildos.setup.finish"), {"Wants to finish setting up this computer."}},
+        {QStringLiteral("org.wildos.appbridge.enable-32bit"), {QT_TRANSLATE_NOOP("Verifier", "Wants to install Windows app support."), QT_TRANSLATE_NOOP("Verifier", "Windows apps"), "wildos-windows-app"}},
+        {QStringLiteral("org.wildos.usb.allow-device"), {QT_TRANSLATE_NOOP("Verifier", "Wants to allow a USB device Wild OS blocked, until you unplug it.")}},
+        {QStringLiteral("org.wildos.camera-mic.block"), {QT_TRANSLATE_NOOP("Verifier", "Wants to turn off the camera or microphone for every app."), QT_TRANSLATE_NOOP("Verifier", "Camera and microphone"), "camera-web"}},
+        {QStringLiteral("org.wildos.camera-mic.unblock"), {QT_TRANSLATE_NOOP("Verifier", "Wants to turn the camera or microphone back on for every app."), QT_TRANSLATE_NOOP("Verifier", "Camera and microphone"), "camera-web"}},
+        {QStringLiteral("org.wildos.camera-mic.release"), {QT_TRANSLATE_NOOP("Verifier", "Wants to stop an app using the camera."), QT_TRANSLATE_NOOP("Verifier", "Camera and microphone"), "camera-web"}},
+        {QStringLiteral("org.wildos.update-checks"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how this computer checks for updates."), QT_TRANSLATE_NOOP("Verifier", "Updates"), "wildos-updates"}},
+        {QStringLiteral("org.wildos.settings.update-policy"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change how Wild OS installs updates."), QT_TRANSLATE_NOOP("Verifier", "Updates"), "wildos-updates"}},
+        {QStringLiteral("org.wildos.settings.users"), {QT_TRANSLATE_NOOP("Verifier", "Wants to change who can use this computer.")}},
+        {QStringLiteral("org.wildos.settings.locale"), {QT_TRANSLATE_NOOP("Verifier", "Wants to set up a new language on this computer.")}},
+        {QStringLiteral("org.wildos.setup.create-account"), {QT_TRANSLATE_NOOP("Verifier", "Wants to create the first account on this computer.")}},
+        {QStringLiteral("org.wildos.setup.finish"), {QT_TRANSLATE_NOOP("Verifier", "Wants to finish setting up this computer.")}},
     };
     return map;
 }
@@ -575,22 +622,22 @@ const QHash<QString, Wording> &wordings()
 // covers the same programs when something runs them with plain pkexec.
 QString programPurpose(const QString &program)
 {
-    static const QHash<QString, QString> helpers = {
-        {QStringLiteral("/usr/libexec/wildos/settings-users"), QStringLiteral("Wants to change who can use this computer.")},
-        {QStringLiteral("/usr/libexec/wildos/settings-locale"), QStringLiteral("Wants to set up a new language on this computer.")},
-        {QStringLiteral("/usr/libexec/wildos/settings-update-policy"), QStringLiteral("Wants to change how Wild OS installs updates.")},
-        {QStringLiteral("/usr/libexec/wildos/usb-allow"), QStringLiteral("Wants to allow a USB device Wild OS blocked, until you unplug it.")},
-        {QStringLiteral("/usr/libexec/wildos/camera-mic-block"), QStringLiteral("Wants to turn the camera or microphone on or off for every app.")},
-        {QStringLiteral("/usr/libexec/wildos/update-checks"), QStringLiteral("Wants to change how this computer checks for updates.")},
-        {QStringLiteral("/usr/libexec/wildos/appbridge-enable-32bit"), QStringLiteral("Wants to install Windows app support.")},
+    static const QHash<QString, const char *> helpers = {
+        {QStringLiteral("/usr/libexec/wildos/settings-users"), QT_TRANSLATE_NOOP("Verifier", "Wants to change who can use this computer.")},
+        {QStringLiteral("/usr/libexec/wildos/settings-locale"), QT_TRANSLATE_NOOP("Verifier", "Wants to set up a new language on this computer.")},
+        {QStringLiteral("/usr/libexec/wildos/settings-update-policy"), QT_TRANSLATE_NOOP("Verifier", "Wants to change how Wild OS installs updates.")},
+        {QStringLiteral("/usr/libexec/wildos/usb-allow"), QT_TRANSLATE_NOOP("Verifier", "Wants to allow a USB device Wild OS blocked, until you unplug it.")},
+        {QStringLiteral("/usr/libexec/wildos/camera-mic-block"), QT_TRANSLATE_NOOP("Verifier", "Wants to turn the camera or microphone on or off for every app.")},
+        {QStringLiteral("/usr/libexec/wildos/update-checks"), QT_TRANSLATE_NOOP("Verifier", "Wants to change how this computer checks for updates.")},
+        {QStringLiteral("/usr/libexec/wildos/appbridge-enable-32bit"), QT_TRANSLATE_NOOP("Verifier", "Wants to install Windows app support.")},
     };
     if (helpers.contains(program)) {
-        return helpers.value(program);
+        return QCoreApplication::translate("Verifier", helpers.value(program));
     }
     if (program.isEmpty()) {
-        return QStringLiteral("Wants to run a program as administrator.");
+        return QCoreApplication::translate("Verifier", "Wants to run a program as administrator.");
     }
-    return QStringLiteral("Wants to run %1 as administrator, with full access to this computer.").arg(QFileInfo(program).fileName());
+    return QCoreApplication::translate("Verifier", "Wants to run %1 as administrator, with full access to this computer.").arg(QFileInfo(program).fileName());
 }
 
 QString fromPolkitMessage(const QString &message)
@@ -617,18 +664,18 @@ QString Verifier::purposeOf(const QString &actionId, const QString &program)
     const auto &map = wordings();
     auto it = map.constFind(actionId);
     if (it != map.constEnd()) {
-        return QString::fromUtf8(it->purpose);
+        return QCoreApplication::translate("Verifier", it->purpose);
     }
     // login1 adds suffixes for the harder cases of the same request.
     static const QList<std::pair<QLatin1String, const char *>> suffixes = {
-        {QLatin1String("-multiple-sessions"), " while other people are signed in."},
-        {QLatin1String("-ignore-inhibit"), " even though an app asked to hold it off."},
+        {QLatin1String("-multiple-sessions"), QT_TRANSLATE_NOOP("Verifier", "%1 while other people are signed in.")},
+        {QLatin1String("-ignore-inhibit"), QT_TRANSLATE_NOOP("Verifier", "%1 even though an app asked to hold it off.")},
     };
     for (const auto &[suffix, tail] : suffixes) {
         if (actionId.endsWith(suffix)) {
             const QString base = purposeOf(actionId.chopped(suffix.size()), program);
             if (!base.isEmpty()) {
-                return base.chopped(1) + QString::fromUtf8(tail);
+                return QCoreApplication::translate("Verifier", tail).arg(base.chopped(1));
             }
         }
     }
@@ -641,7 +688,7 @@ QString Verifier::quickName(const QString &actionId, const QHash<QString, QStrin
     const auto wording = map.constFind(actionId);
     if (wording != map.constEnd() && wording->app) {
         *iconName = QString::fromUtf8(wording->icon);
-        return QString::fromUtf8(wording->app);
+        return QCoreApplication::translate("Verifier", wording->app);
     }
     bool ok = false;
     const qint64 pid = details.value(QStringLiteral("polkit.subject-pid")).toLongLong(&ok);
@@ -688,21 +735,21 @@ Verdict Verifier::check(const QString &actionId, const QString &message, const Q
     }
 
     QStringList reasons;
-    const FileCheck policyCheck = checkFile(policy.file, QStringLiteral("The request"));
+    const FileCheck policyCheck = checkFile(policy.file, Subject::Request);
     if (policy.file.isEmpty()) {
-        reasons << QStringLiteral("Wild OS doesn't know this request.");
+        reasons << QCoreApplication::translate("Verifier", "Wild OS doesn't know this request.");
     } else if (!policyCheck.ok) {
         reasons << policyCheck.why;
     }
-    const FileCheck programCheck = checkFile(verdict.program, QStringLiteral("The program"));
+    const FileCheck programCheck = checkFile(verdict.program, Subject::Program);
     if (!programCheck.ok) {
         reasons << programCheck.why;
     }
     FileCheck callerCheck;
     if (flatpak) {
-        reasons << QStringLiteral("The app was installed from an outside app source.");
+        reasons << QCoreApplication::translate("Verifier", "The app was installed from an outside app source.");
     } else {
-        callerCheck = checkFile(script.isEmpty() ? verdict.caller : script, script.isEmpty() ? QStringLiteral("The app") : QStringLiteral("The script"));
+        callerCheck = checkFile(script.isEmpty() ? verdict.caller : script, script.isEmpty() ? Subject::App : Subject::Script);
         if (!callerCheck.ok) {
             reasons << callerCheck.why;
         }
@@ -717,7 +764,7 @@ Verdict Verifier::check(const QString &actionId, const QString &message, const Q
     const bool fromFile = actionId == QLatin1String("org.freedesktop.packagekit.package-install-untrusted")
         || details.value(QStringLiteral("role")) == QLatin1String("install-files");
     if (fromFile) {
-        reasons.prepend(QStringLiteral("It installs a package from a file, from outside Wild OS, and nothing has checked it."));
+        reasons.prepend(QCoreApplication::translate("Verifier", "It installs a package from a file, from outside Wild OS, and nothing has checked it."));
     }
     verdict.verified = reasons.isEmpty();
     verdict.why = reasons.isEmpty() ? QString() : reasons.constFirst();
@@ -730,7 +777,7 @@ Verdict Verifier::check(const QString &actionId, const QString &message, const Q
     const auto &map = wordings();
     const auto wording = map.constFind(actionId);
     if (wording != map.constEnd() && wording->app) {
-        verdict.appName = QString::fromUtf8(wording->app);
+        verdict.appName = QCoreApplication::translate("Verifier", wording->app);
         verdict.iconName = QString::fromUtf8(wording->icon);
     }
     KService::Ptr service;
@@ -749,7 +796,7 @@ Verdict Verifier::check(const QString &actionId, const QString &message, const Q
     }
     if (verdict.appName.isEmpty()) {
         const QString file = !script.isEmpty() ? script : !verdict.program.isEmpty() ? verdict.program : verdict.caller;
-        verdict.appName = file.isEmpty() ? QStringLiteral("An app") : QFileInfo(file).fileName();
+        verdict.appName = file.isEmpty() ? QCoreApplication::translate("Verifier", "An app") : QFileInfo(file).fileName();
     }
 
     verdict.purpose = purposeOf(actionId, verdict.program);

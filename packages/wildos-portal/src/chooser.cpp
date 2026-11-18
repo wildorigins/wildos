@@ -4,10 +4,13 @@
 
 #include <KService>
 #include <QDBusArgument>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QMimeDatabase>
 #include <QRegularExpression>
+#include <QScreen>
 #include <QSettings>
 #include <QStandardPaths>
 
@@ -20,17 +23,41 @@ QString plainLabel(QString text)
     return text.trimmed();
 }
 
+// The extension a "*.ext" pattern names, with its dot and in lower case, or
+// nothing when the pattern is not one extension. GTK apps, every browser
+// among them, write the pattern so it matches either case: "*.[pP][dD][fF]"
+// is ".pdf".
+QString suffixOfPattern(const QString &pattern)
+{
+    if (!pattern.startsWith(QStringLiteral("*.")) || pattern == QStringLiteral("*.*")) {
+        return QString();
+    }
+    static const QRegularExpression bothCases(QStringLiteral("\\[(.)(.)\\]"));
+    QString suffix;
+    int at = 1;
+    auto it = bothCases.globalMatch(pattern, at);
+    while (it.hasNext()) {
+        const auto m = it.next();
+        if (m.captured(1).toLower() != m.captured(2).toLower()) {
+            return QString();
+        }
+        suffix += pattern.mid(at, m.capturedStart() - at) + m.captured(1);
+        at = int(m.capturedEnd());
+    }
+    suffix = (suffix + pattern.mid(at)).toLower();
+    static const QRegularExpression wildcard(QStringLiteral("[*?\\[\\]]"));
+    return suffix.size() < 2 || suffix.contains(wildcard) ? QString() : suffix;
+}
+
 QStringList suffixesOf(const Portal::Filter &filter)
 {
     static QMimeDatabase db;
     QStringList list;
     for (const Portal::FilterRule &rule : filter.rules) {
         if (rule.type == 0) {
-            if (rule.pattern.startsWith(QStringLiteral("*.")) && rule.pattern != QStringLiteral("*.*")) {
-                const QString suffix = rule.pattern.mid(1).toLower();
-                if (!list.contains(suffix)) {
-                    list.append(suffix);
-                }
+            const QString suffix = suffixOfPattern(rule.pattern);
+            if (!suffix.isEmpty() && !list.contains(suffix)) {
+                list.append(suffix);
             }
         } else {
             const QMimeType mime = db.mimeTypeForName(rule.pattern);
@@ -58,7 +85,7 @@ QString filterLabel(const Portal::Filter &filter)
     // Apps call this "All Files", "All files (*)" or, for
     // application/octet-stream, "Unknown"; it reads the same everywhere.
     if (matchesAll(filter)) {
-        return QStringLiteral("All files");
+        return QCoreApplication::translate("Chooser", "All files");
     }
     QString name = filter.name.trimmed();
     // Qt keeps the patterns in the name ("Text files (*.txt)"); they are
@@ -75,7 +102,7 @@ QString filterLabel(const Portal::Filter &filter)
     if (suffixes.size() > 3) {
         shown.append(QStringLiteral("..."));
     }
-    return QStringLiteral("%1 (%2)").arg(name.isEmpty() ? QStringLiteral("Files") : name, shown.join(QStringLiteral(", ")));
+    return QStringLiteral("%1 (%2)").arg(name.isEmpty() ? QCoreApplication::translate("Chooser", "Files") : name, shown.join(QStringLiteral(", ")));
 }
 
 // What the files on offer are, from the types the app lists: "pictures",
@@ -91,7 +118,7 @@ QString purposeOf(const Portal::Filters &filters)
             continue;
         }
         for (const Portal::FilterRule &rule : filter.rules) {
-            QString mime = rule.type == 1 ? rule.pattern : db.mimeTypeForFile(QStringLiteral("x") + rule.pattern.mid(1), QMimeDatabase::MatchExtension).name();
+            QString mime = rule.type == 1 ? rule.pattern : db.mimeTypeForFile(QStringLiteral("x") + suffixOfPattern(rule.pattern), QMimeDatabase::MatchExtension).name();
             const QString kind = mime.startsWith(QLatin1String("image/")) ? QStringLiteral("pictures")
                 : mime.startsWith(QLatin1String("video/"))                ? QStringLiteral("videos")
                 : mime.startsWith(QLatin1String("audio/"))                ? QStringLiteral("music")
@@ -169,12 +196,33 @@ Chooser::Chooser(const Request &request, QObject *parent)
     }
 
     m_purpose = m_request.mode == Folder || m_request.mode == SaveFiles ? QStringLiteral("folders") : purposeOf(m_request.filters);
+
+    // The order last picked for this kind of file, so pictures can stay
+    // newest first while documents stay by name.
+    const QSettings recent(recentFoldersFile(), QSettings::IniFormat);
+    const int sortColumn = recent.value(QStringLiteral("sort-column/") + m_purpose, 0).toInt();
+    if (sortColumn >= 0 && sortColumn <= 3) {
+        m_folder->setSortColumn(sortColumn);
+        m_folder->setSortDescending(recent.value(QStringLiteral("sort-descending/") + m_purpose, sortColumn == 1).toBool());
+    }
+    connect(m_folder, &DirModel::sortChanged, this, [this] {
+        QDir().mkpath(QFileInfo(recentFoldersFile()).absolutePath());
+        QSettings settings(recentFoldersFile(), QSettings::IniFormat);
+        settings.setValue(QStringLiteral("sort-column/") + m_purpose, m_folder->sortColumn());
+        settings.setValue(QStringLiteral("sort-descending/") + m_purpose, m_folder->sortDescending());
+    });
+
     m_folder->openUrl(startFolder());
     m_initialName = displayName(m_request.name);
 
+    // A size saved on a larger screen never opens bigger than this one.
+    m_windowSize = recent.value(QStringLiteral("window/size"), QSize(920, 620)).toSize().expandedTo(QSize(640, 420));
+    if (const QScreen *screen = QGuiApplication::primaryScreen()) {
+        m_windowSize = m_windowSize.boundedTo(screen->availableSize()).expandedTo(QSize(640, 420));
+    }
+
     // Pictures open in Large icons so they can be told apart, everything
     // else in Details, until the person picks a view for that kind.
-    const QSettings recent(recentFoldersFile(), QSettings::IniFormat);
     const QString saved = recent.value(QStringLiteral("view/") + m_purpose).toString();
     m_viewMode = saved == QLatin1String("icons") || saved == QLatin1String("details") ? saved
         : m_purpose == QLatin1String("pictures")                                     ? QStringLiteral("icons")
@@ -191,6 +239,25 @@ void Chooser::setViewMode(const QString &mode)
     QDir().mkpath(QFileInfo(recentFoldersFile()).absolutePath());
     QSettings recent(recentFoldersFile(), QSettings::IniFormat);
     recent.setValue(QStringLiteral("view/") + m_purpose, mode);
+}
+
+void Chooser::setWindowSize(int width, int height)
+{
+    const QSize size(width, height);
+    if (size != m_windowSize && width >= 640 && height >= 420) {
+        m_windowSize = size;
+        m_windowSizeChanged = true;
+    }
+}
+
+void Chooser::rememberWindowSize()
+{
+    if (!m_windowSizeChanged) {
+        return;
+    }
+    QDir().mkpath(QFileInfo(recentFoldersFile()).absolutePath());
+    QSettings recent(recentFoldersFile(), QSettings::IniFormat);
+    recent.setValue(QStringLiteral("window/size"), m_windowSize);
 }
 
 QString Chooser::recentKey() const
@@ -292,13 +359,13 @@ QString Chooser::title() const
     }
     switch (m_request.mode) {
     case Save:
-        return QStringLiteral("Save as");
+        return tr("Save as");
     case SaveFiles:
-        return QStringLiteral("Choose where to save");
+        return tr("Choose where to save");
     case Folder:
-        return QStringLiteral("Select folder");
+        return tr("Select folder");
     default:
-        return QStringLiteral("Open");
+        return tr("Open");
     }
 }
 
@@ -311,11 +378,11 @@ QString Chooser::acceptLabel() const
     switch (m_request.mode) {
     case Save:
     case SaveFiles:
-        return QStringLiteral("Save");
+        return tr("Save");
     case Folder:
-        return QStringLiteral("Select folder");
+        return tr("Select folder");
     default:
-        return QStringLiteral("Open");
+        return tr("Open");
     }
 }
 
@@ -369,12 +436,12 @@ QVariantList Chooser::choices() const
 
 QString Chooser::nameLabel() const
 {
-    return m_request.mode == Folder || m_request.mode == SaveFiles ? QStringLiteral("Folder") : QStringLiteral("File name");
+    return m_request.mode == Folder || m_request.mode == SaveFiles ? tr("Folder") : tr("File name");
 }
 
 QString Chooser::typeLabel() const
 {
-    return m_request.mode == Save ? QStringLiteral("Save as type") : QStringLiteral("File type");
+    return m_request.mode == Save ? tr("Save as type") : tr("File type");
 }
 
 void Chooser::setChoice(const QString &id, const QString &value)
@@ -535,7 +602,7 @@ QString Chooser::accept(const QString &typedText)
             if (row >= 0 && folder->isDirAt(row)) {
                 target = folder->urlAt(row);
             } else if (!openIfFolder(typed)) {
-                return QStringLiteral("There is no folder called \"%1\" here.").arg(typed);
+                return tr("There is no folder called \"%1\" here.").arg(typed);
             } else {
                 return QString();
             }
@@ -665,20 +732,20 @@ QString Chooser::accept(const QString &typedText)
         }
         const QFileInfo info(path);
         if (!info.absoluteDir().exists()) {
-            return QStringLiteral("The folder \"%1\" does not exist.").arg(info.absolutePath());
+            return tr("The folder \"%1\" does not exist.").arg(info.absolutePath());
         }
         base = QUrl::fromLocalFile(info.absolutePath());
         name = info.fileName();
     }
     static const QRegularExpression bad(QStringLiteral("^\\.{1,2}$"));
     if (bad.match(name).hasMatch() || name.isEmpty()) {
-        return QStringLiteral("A file name cannot be just dots. Type a different name.");
+        return tr("A file name cannot be just dots. Type a different name.");
     }
     if (base.isLocalFile() && !QFileInfo(base.toLocalFile()).isWritable()) {
-        return QStringLiteral("You cannot save in this folder. Pick a folder of your own, such as Documents.");
+        return tr("You cannot save in this folder. Pick a folder of your own, such as Documents.");
     }
     if (folder->isComputer()) {
-        return QStringLiteral("Pick a folder to save in first.");
+        return tr("Pick a folder to save in first.");
     }
     const QString fileName = finalName(name);
     QUrl url = base;
@@ -709,6 +776,7 @@ void Chooser::cancel()
         return;
     }
     m_done = true;
+    rememberWindowSize();
     QVariantMap results;
     Q_EMIT finished(1, results);
 }
@@ -719,6 +787,7 @@ void Chooser::finish(const QList<QUrl> &urls)
         return;
     }
     m_done = true;
+    rememberWindowSize();
     rememberFolder(urls);
     QStringList uris;
     for (const QUrl &url : urls) {

@@ -4,7 +4,8 @@ Priority: optional
 Maintainer: Wild OS Developers <dev@wildos.io>
 Build-Depends: debhelper-compat (= 13), cmake, qt6-base-dev, qt6-declarative-dev,
  extra-cmake-modules, kwin-dev (>= 4:6.3), kwin-dev (<< 4:6.4), libkf6config-dev,
- libkf6screen-dev, libkf6globalaccel-dev, libinput-dev (>= 1.27), pkgconf
+ libkf6screen-dev, libkf6globalaccel-dev, libinput-dev (>= 1.27), pkgconf,
+ qt6-tools-dev, qt6-l10n-tools
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 

@@ -6,7 +6,8 @@
      /usr/libexec/wildos, which takes only its own fixed requests:
      settings-update-policy (Updates), settings-users and
      settings-fingerprint (Accounts),
-     settings-locale (Time and language), settings-protection,
+     settings-locale and settings-time-source (Time and language),
+     settings-protection,
      settings-firewall and settings-firewall-off (Privacy and security),
      settings-advanced (Advanced protection), settings-network (the VPN
      kill switch), settings-brave-spelling (Typing)
@@ -26,6 +27,18 @@
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-update-policy</annotate>
+  </action>
+
+  <action id="org.wildos.settings.time-source">
+    <description>Change where the clock is set from</description>
+    <message>Change where Wild OS sets the clock from?</message>
+    <icon_name>preferences-system-time</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-time-source</annotate>
   </action>
 
   <action id="org.wildos.settings.protection">

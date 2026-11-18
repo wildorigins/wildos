@@ -8,6 +8,7 @@
 #include <KIO/StoredTransferJob>
 #include <KService>
 #include <QCollator>
+#include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
@@ -57,9 +58,24 @@ QString stripDots(QString text)
 
 const QStringList &commonNouns()
 {
-    static const QStringList nouns = {QStringLiteral("File"), QStringLiteral("Document"), QStringLiteral("Spreadsheet"), QStringLiteral("Presentation"),
-                                      QStringLiteral("Drawing"), QStringLiteral("Image"), QStringLiteral("Text"), QStringLiteral("Page"),
-                                      QStringLiteral("Formula"), QStringLiteral("Database"), QStringLiteral("Illustration")};
+    // The English nouns, for KDE's untranslated template names, and the
+    // same nouns in the display language, for the names Files gives.
+    static const QStringList nouns = [] {
+        static const char *const english[] = {
+            QT_TRANSLATE_NOOP("FileOps", "File"), QT_TRANSLATE_NOOP("FileOps", "Document"), QT_TRANSLATE_NOOP("FileOps", "Spreadsheet"),
+            QT_TRANSLATE_NOOP("FileOps", "Presentation"), QT_TRANSLATE_NOOP("FileOps", "Drawing"), QT_TRANSLATE_NOOP("FileOps", "Image"),
+            QT_TRANSLATE_NOOP("FileOps", "Text"), QT_TRANSLATE_NOOP("FileOps", "Page"), QT_TRANSLATE_NOOP("FileOps", "Formula"),
+            QT_TRANSLATE_NOOP("FileOps", "Database"), QT_TRANSLATE_NOOP("FileOps", "Illustration")};
+        QStringList list;
+        for (const char *noun : english) {
+            list.append(QString::fromLatin1(noun));
+            const QString local = QCoreApplication::translate("FileOps", noun);
+            if (!list.contains(local)) {
+                list.append(local);
+            }
+        }
+        return list;
+    }();
     return nouns;
 }
 
@@ -68,7 +84,7 @@ const QStringList &commonNouns()
 QString newBase(const QString &text)
 {
     const QString first = text.section(QLatin1Char(' '), 0, 0);
-    return QStringLiteral("New ") + (commonNouns().contains(first) ? text.at(0).toLower() + text.mid(1) : text);
+    return QCoreApplication::translate("FileOps", "New %1").arg(commonNouns().contains(first) ? text.at(0).toLower() + text.mid(1) : text);
 }
 
 QString sentenceCase(const QString &text)
@@ -159,19 +175,21 @@ QList<Template> templates()
         // that way too; an empty file opens as a new document of its kind.
         // LibreOffice's own OpenDocument templates are left out, or they
         // would show beside these under LibreOffice's names.
-        builtIn(QStringLiteral("writer"), QStringLiteral("Write document"),
+        builtIn(QStringLiteral("writer"), QCoreApplication::translate("FileOps", "Write document"),
                 QStringLiteral("application/vnd.openxmlformats-officedocument.wordprocessingml.document"), QStringLiteral(".docx"));
         installed.remove(QStringLiteral("application/vnd.oasis.opendocument.text"));
     }
     if (hasService({QStringLiteral("libreoffice-calc"), QStringLiteral("org.libreoffice.LibreOffice.calc")})) {
-        builtIn(QStringLiteral("calc"), QStringLiteral("Tables spreadsheet"),
+        builtIn(QStringLiteral("calc"), QCoreApplication::translate("FileOps", "Tables spreadsheet"),
                 QStringLiteral("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), QStringLiteral(".xlsx"));
         installed.remove(QStringLiteral("application/vnd.oasis.opendocument.spreadsheet"));
     }
     if (hasService({QStringLiteral("libreoffice-impress"), QStringLiteral("org.libreoffice.LibreOffice.impress")})) {
-        builtIn(QStringLiteral("impress"), QStringLiteral("Impress presentation"), QStringLiteral("application/vnd.oasis.opendocument.presentation"), QStringLiteral(".odp"));
+        builtIn(QStringLiteral("impress"), QCoreApplication::translate("FileOps", "Slides presentation"),
+                QStringLiteral("application/vnd.openxmlformats-officedocument.presentationml.presentation"), QStringLiteral(".pptx"));
+        installed.remove(QStringLiteral("application/vnd.oasis.opendocument.presentation"));
     }
-    builtIn(QStringLiteral("text"), QStringLiteral("Text document"), QStringLiteral("text/plain"), QStringLiteral(".txt"));
+    builtIn(QStringLiteral("text"), QCoreApplication::translate("FileOps", "Text document"), QStringLiteral("text/plain"), QStringLiteral(".txt"));
     // Anything else that would make a plain text file too is already
     // covered by Text document.
     installed.remove(QStringLiteral("application/x-zerosize"));
@@ -240,7 +258,7 @@ Target resolve(const QString &typed)
         text = text.mid(1, text.size() - 2);
     }
     if (text.isEmpty()) {
-        target.error = QStringLiteral("Type where the shortcut should go.");
+        target.error = QCoreApplication::translate("FileOps", "Type where the shortcut should go.");
         return target;
     }
     if (text == QLatin1String("~") || text.startsWith(QLatin1String("~/"))) {
@@ -251,7 +269,7 @@ Target resolve(const QString &typed)
     if (QDir::isAbsolutePath(text) || asUrl.isLocalFile()) {
         const QFileInfo info(asUrl.isLocalFile() ? asUrl.toLocalFile() : text);
         if (!info.exists()) {
-            target.error = QStringLiteral("Wild OS cannot find “%1”. Check the spelling and try again.").arg(typed.trimmed());
+            target.error = QCoreApplication::translate("FileOps", "Wild OS cannot find “%1”. Check the spelling and try again.").arg(typed.trimmed());
             return target;
         }
         target.url = QUrl::fromLocalFile(info.absoluteFilePath());
@@ -273,7 +291,7 @@ Target resolve(const QString &typed)
         }
     }
     if (!url.isValid() || url.scheme().isEmpty() || (url.host().isEmpty() && url.scheme() != QLatin1String("mailto"))) {
-        target.error = QStringLiteral("That is not a place Wild OS knows. Type a folder or file such as ~/Documents, or a web address.");
+        target.error = QCoreApplication::translate("FileOps", "That is not a place Wild OS knows. Type a folder or file such as ~/Documents, or a web address.");
         return target;
     }
     target.url = url;
@@ -311,7 +329,7 @@ void FileOps::putNew(const QUrl &folder, const QUrl &url, const QByteArray &data
             Q_EMIT created(folder, {url}, rename);
         }
     });
-    watchJob(job, QStringLiteral("make a file"));
+    watchJob(job, QCoreApplication::translate("FileOps", "make a file"));
 }
 
 void FileOps::newFile(const QUrl &folder, const QString &id)
@@ -331,10 +349,10 @@ void FileOps::newFile(const QUrl &folder, const QString &id)
                 Q_EMIT created(folder, {url}, true);
             }
         });
-        watchJob(job, QStringLiteral("make a file"));
+        watchJob(job, QCoreApplication::translate("FileOps", "make a file"));
         return;
     }
-    Q_EMIT failed(QStringLiteral("That kind of document cannot be made any more. The app for it may have been removed."));
+    Q_EMIT failed(QCoreApplication::translate("FileOps", "That kind of document cannot be made any more. The app for it may have been removed."));
 }
 
 QVariantMap FileOps::checkShortcut(const QString &target) const

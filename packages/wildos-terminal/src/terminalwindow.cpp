@@ -436,7 +436,9 @@ void TerminalWindow::openLink()
 void TerminalWindow::copyLink()
 {
     if (m_menuLink.isValid()) {
-        QApplication::clipboard()->setText(m_menuLink.toString());
+        // As written in the terminal: the default form decodes parts of an
+        // address, and a sign-in link has to arrive as it was sent.
+        QApplication::clipboard()->setText(m_menuLink.toString(QUrl::FullyEncoded));
     }
     m_menuView = nullptr;
 }
@@ -657,7 +659,7 @@ void TerminalWindow::paintEvent(QPaintEvent *)
 void TerminalWindow::updateTitle()
 {
     Tab *tab = tabAt(m_current);
-    setWindowTitle(tab ? tab->title() : QStringLiteral("Terminal"));
+    setWindowTitle(tab ? tab->title() : tr("Terminal"));
 }
 
 void TerminalWindow::applyConfig()

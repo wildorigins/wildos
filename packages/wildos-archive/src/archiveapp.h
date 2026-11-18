@@ -7,6 +7,7 @@
 #include <QQuickWindow>
 #include <QUrl>
 #include <QVariantList>
+#include <QCoreApplication>
 
 // The one Archive process: its windows, the recent archives and what Files
 // asks of it. A second start hands its command line to the running one.
@@ -39,7 +40,7 @@ public:
     QVariantList recent() const;
     QString formatsText() const
     {
-        return QStringLiteral("Opens ZIP, 7z, RAR, TAR and GZ");
+        return QCoreApplication::translate("ArchiveApp", "Opens ZIP, 7z, RAR, TAR and GZ");
     }
     void addRecent(const QString &path);
     // A fresh private folder for a file opened from an archive.

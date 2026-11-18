@@ -16,6 +16,10 @@
 # programs are not affected either way. The kernel decides ia32_emulation at
 # boot, so it takes a restart.
 #
+# It also lets a program watch the programs it started itself (ptrace), which
+# Kicksecure switches off for everything and which some games will not start
+# without.
+#
 # Steam's controller rules (Debian's steam-devices) come with it. They let
 # the signed-in user open game controllers directly and create virtual input
 # devices through /dev/uinput, which Steam Input and Remote Play need, and
@@ -25,6 +29,7 @@
 #
 #   on | off   save the choice and rebuild the boot menu
 #   devices    link or unlink the controller rules to match the saved choice
+#   ptrace     write the ptrace file on PCs that turned this on before it existed
 
 set -eu
 
@@ -37,6 +42,40 @@ RULES_SRC=/usr/share/wildos/steam-devices
 RULES_DST=/etc/udev/rules.d
 RULES="60-steam-input.rules 60-steam-vr.rules"
 NTSYNC=/etc/modules-load.d/wildos-ntsync.conf
+# Takes the place of Kicksecure's file of the same name in /usr/lib/sysctl.d.
+# A later file cannot do it: that one sets 3, and the kernel never lets 3
+# be lowered again until the next start-up.
+PTRACE=/etc/sysctl.d/30_security-misc_ptrace-disable.conf
+
+# Some games and launchers (Sober, which runs Roblox, is one) watch a program
+# they started themselves, and refuse to start when they can't. Kicksecure
+# forbids every program from watching another (3); 1 lets a program watch
+# only the ones it started, which is what Debian and Ubuntu ship. It applies
+# from the next start-up, the restart the switch already asks for.
+ptrace_own() {
+    cat > "$PTRACE" <<'EOF'
+# Written by Wild OS Settings: Steam and 32-bit apps are on, so a program may
+# watch the programs it started itself. Kicksecure's own file, which this one
+# stands in for, allows none.
+kernel.yama.ptrace_scope = 1
+EOF
+}
+
+# The start-up image carries its own copy of these settings and applies it
+# before the disk is opened, so a change to the file only counts once the
+# image is rebuilt. It takes a minute or two. The live session has no image
+# of its own to rebuild.
+start_up_image() {
+    if [ ! -d /run/initramfs/live ] && command -v dracut >/dev/null 2>&1; then
+        # One kernel at a time: --regenerate-all also tries the module
+        # folders a removed kernel leaves behind, and fails on those.
+        for kernel in /boot/vmlinuz-*; do
+            [ -e "$kernel" ] || continue
+            dracut --force --kver "${kernel#/boot/vmlinuz-}" >/dev/null 2>&1 ||
+                echo "settings-32bit: the start-up image for ${kernel#/boot/vmlinuz-} could not be rebuilt, so it keeps the old setting" >&2
+        done
+    fi
+}
 
 # Controllers plugged in now pick up the change straight away. uinput is
 # loaded here because udev only sees it once the module is in; at start-up
@@ -103,21 +142,35 @@ abi.vsyscall32 = 1
 -kernel.split_lock_mitigate = 0
 EOF
     sysctl -q -w kernel.split_lock_mitigate=0 2>/dev/null || true
+    ptrace_own
+    start_up_image
     devices
     ;;
 off)
     [ -e "$CHOICE" ] || [ -e "$DROPIN" ] || [ -e "$SYSCTL" ] || exit 0
-    rm -f "$CHOICE" "$DROPIN" "$SYSCTL"
+    had_ptrace=no
+    [ -e "$PTRACE" ] && had_ptrace=yes
+    rm -f "$CHOICE" "$DROPIN" "$SYSCTL" "$PTRACE"
+    [ "$had_ptrace" = yes ] && start_up_image
     sysctl -q -w abi.vsyscall32=0 2>/dev/null || true
     sysctl -q -w kernel.split_lock_mitigate=1 2>/dev/null || true
+    # Raising this back takes effect at once; only lowering needs a restart.
+    sysctl -q -w kernel.yama.ptrace_scope=3 2>/dev/null || true
     devices
     ;;
 devices)
     devices
     exit 0
     ;;
+ptrace)
+    if [ -e "$CHOICE" ] && [ ! -e "$PTRACE" ]; then
+        ptrace_own
+        start_up_image
+    fi
+    exit 0
+    ;;
 *)
-    echo "usage: $0 on|off|devices" >&2
+    echo "usage: $0 on|off|devices|ptrace" >&2
     exit 2
     ;;
 esac

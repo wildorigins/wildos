@@ -15,6 +15,8 @@
 #include <AppStreamQt/pool.h>
 #include <AppStreamQt/screenshot.h>
 
+#include <KApplicationTrader>
+#include <KService>
 #include <KSycoca>
 
 #include <QCoreApplication>
@@ -56,14 +58,14 @@ struct CategoryDef {
 const QList<CategoryDef> &appCategoryDefs()
 {
     static const QList<CategoryDef> defs = {
-        {"office", "Office", {QStringLiteral("Office")}},
-        {"internet", "Internet", {QStringLiteral("Network")}},
-        {"graphics", "Photos and graphics", {QStringLiteral("Graphics")}},
-        {"media", "Music and video", {QStringLiteral("AudioVideo"), QStringLiteral("Audio"), QStringLiteral("Video")}},
-        {"education", "Learning", {QStringLiteral("Education"), QStringLiteral("Science")}},
-        {"development", "Developer tools", {QStringLiteral("Development")}},
-        {"utilities", "Utilities", {QStringLiteral("Utility")}},
-        {"system", "System", {QStringLiteral("System"), QStringLiteral("Settings")}},
+        {"office", QT_TRANSLATE_NOOP("Catalog", "Office"), {QStringLiteral("Office")}},
+        {"internet", QT_TRANSLATE_NOOP("Catalog", "Internet"), {QStringLiteral("Network")}},
+        {"graphics", QT_TRANSLATE_NOOP("Catalog", "Photos and graphics"), {QStringLiteral("Graphics")}},
+        {"media", QT_TRANSLATE_NOOP("Catalog", "Music and video"), {QStringLiteral("AudioVideo"), QStringLiteral("Audio"), QStringLiteral("Video")}},
+        {"education", QT_TRANSLATE_NOOP("Catalog", "Learning"), {QStringLiteral("Education"), QStringLiteral("Science")}},
+        {"development", QT_TRANSLATE_NOOP("Catalog", "Developer tools"), {QStringLiteral("Development")}},
+        {"utilities", QT_TRANSLATE_NOOP("Catalog", "Utilities"), {QStringLiteral("Utility")}},
+        {"system", QT_TRANSLATE_NOOP("Catalog", "System"), {QStringLiteral("System"), QStringLiteral("Settings")}},
     };
     return defs;
 }
@@ -71,14 +73,14 @@ const QList<CategoryDef> &appCategoryDefs()
 const QList<CategoryDef> &gameCategoryDefs()
 {
     static const QList<CategoryDef> defs = {
-        {"game-action", "Action", {QStringLiteral("ActionGame"), QStringLiteral("Shooter")}},
-        {"game-adventure", "Adventure", {QStringLiteral("AdventureGame"), QStringLiteral("RolePlaying")}},
-        {"game-arcade", "Arcade", {QStringLiteral("ArcadeGame")}},
-        {"game-puzzle", "Puzzles", {QStringLiteral("LogicGame"), QStringLiteral("BlocksGame")}},
-        {"game-board", "Board and cards", {QStringLiteral("BoardGame"), QStringLiteral("CardGame")}},
-        {"game-strategy", "Strategy", {QStringLiteral("StrategyGame")}},
-        {"game-sports", "Sports and racing", {QStringLiteral("SportsGame")}},
-        {"game-emulator", "Emulators", {QStringLiteral("Emulator")}},
+        {"game-action", QT_TRANSLATE_NOOP("Catalog", "Action"), {QStringLiteral("ActionGame"), QStringLiteral("Shooter")}},
+        {"game-adventure", QT_TRANSLATE_NOOP("Catalog", "Adventure"), {QStringLiteral("AdventureGame"), QStringLiteral("RolePlaying")}},
+        {"game-arcade", QT_TRANSLATE_NOOP("Catalog", "Arcade"), {QStringLiteral("ArcadeGame")}},
+        {"game-puzzle", QT_TRANSLATE_NOOP("Catalog", "Puzzles"), {QStringLiteral("LogicGame"), QStringLiteral("BlocksGame")}},
+        {"game-board", QT_TRANSLATE_NOOP("Catalog", "Board and cards"), {QStringLiteral("BoardGame"), QStringLiteral("CardGame")}},
+        {"game-strategy", QT_TRANSLATE_NOOP("Catalog", "Strategy"), {QStringLiteral("StrategyGame")}},
+        {"game-sports", QT_TRANSLATE_NOOP("Catalog", "Sports and racing"), {QStringLiteral("SportsGame")}},
+        {"game-emulator", QT_TRANSLATE_NOOP("Catalog", "Emulators"), {QStringLiteral("Emulator")}},
     };
     return defs;
 }
@@ -531,6 +533,7 @@ Catalog::Catalog(QObject *parent)
     connect(m_packagekit, &PackageKitBackend::installedChanged, this, installsChanged);
     connect(m_packagekit, &PackageKitBackend::updatesChanged, this, &Catalog::bumpState);
     connect(m_packagekit, &PackageKitBackend::catalogueRefreshed, this, &Catalog::loadOsPool);
+    connect(m_packagekit, &PackageKitBackend::catalogueRefreshed, this, &Catalog::checkWaitingApps);
     connect(m_packagekit, &PackageKitBackend::refreshFinished, this, &Catalog::checkPartDone);
     connect(m_packagekit, &PackageKitBackend::progress, this, &Catalog::onProgress);
     connect(m_packagekit, &PackageKitBackend::finished, this, &Catalog::onFinished);
@@ -676,16 +679,25 @@ void Catalog::loadCurated()
         c.aliases = strings(o.value(QStringLiteral("aliases")));
         c.cardNote = o.value(QStringLiteral("cardNote")).toString();
         c.chip = o.value(QStringLiteral("chip")).toString();
+        c.optional = o.value(QStringLiteral("optional")).toBool();
         c.swapTitle = o.value(QStringLiteral("swapTitle")).toString();
         c.swapText = o.value(QStringLiteral("swapText")).toString();
         c.description = o.value(QStringLiteral("description")).toString();
         c.icon = o.value(QStringLiteral("icon")).toString();
         c.desktop = o.value(QStringLiteral("desktop")).toString();
         c.category = o.value(QStringLiteral("category")).toString();
-        // An app from a repository only some PCs have (such as Ganger's)
-        // is listed only where apt knows its package.
-        if (o.value(QStringLiteral("onlyIfAvailable")).toBool() && (c.packages.isEmpty() || !aptKnows(c.packages.constFirst()))) {
-            continue;
+        // An app from the apps repository (Ganger) is listed only where
+        // apt knows its package: a PC whose wildos-base predates that
+        // repository has nothing to install it from. Where the repository
+        // is there but not read yet, the app waits for the Store's refresh.
+        if (o.value(QStringLiteral("onlyIfAvailable")).toBool()) {
+            if (c.packages.isEmpty()) {
+                continue;
+            }
+            if (!aptKnows(c.packages.constFirst())) {
+                m_curatedWaiting.append(c);
+                continue;
+            }
         }
         m_curated.append(c);
     }
@@ -700,6 +712,42 @@ void Catalog::loadCurated()
     for (const QString &id : strings(root.value(QStringLiteral("hidden")))) {
         m_hidden.insert(normalise(id));
     }
+}
+
+void Catalog::checkWaitingApps()
+{
+    if (m_curatedWaiting.isEmpty() || m_checkingWaiting) {
+        return;
+    }
+    m_checkingWaiting = true;
+    QStringList packages;
+    for (const Curated &c : std::as_const(m_curatedWaiting)) {
+        packages << c.packages.constFirst();
+    }
+    runAsync(this, [packages] {
+        QStringList known;
+        for (const QString &p : packages) {
+            if (aptKnows(p)) {
+                known << p;
+            }
+        }
+        return known;
+    }, [this](QStringList known) {
+        m_checkingWaiting = false;
+        if (known.isEmpty()) {
+            return;
+        }
+        for (auto it = m_curatedWaiting.begin(); it != m_curatedWaiting.end();) {
+            if (known.contains(it->packages.constFirst())) {
+                m_curatedArrived.append(*it);
+                it = m_curatedWaiting.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        qCInfo(lcStore) << "apps from a newly read repository:" << known;
+        rebuild();
+    });
 }
 
 void Catalog::loadOsPool()
@@ -774,6 +822,10 @@ void Catalog::rebuild()
         m_rebuildAgain = true;
         return;
     }
+    // A build reads m_curated on another thread, so arrivals join only
+    // between builds.
+    m_curated.append(m_curatedArrived);
+    m_curatedArrived.clear();
     m_building = true;
     BuildInput input{m_osPool, m_flatPool, &m_curated, m_hidden, m_flatpak->appstreamDir()};
     const qint64 began = storeClock();
@@ -1118,11 +1170,17 @@ QStringList Catalog::wildosPackages() const
     return out;
 }
 
+bool Catalog::isOptional(const QString &key) const
+{
+    const Record *r = record(key);
+    return r && r->curated && r->curated->optional;
+}
+
 void Catalog::reinstallWildOS()
 {
     for (const QString &key : wildosApps()) {
         const Record *r = record(key);
-        if (r && !isInstalled(key)) {
+        if (r && !isInstalled(key) && !isOptional(key)) {
             install(key);
         }
     }
@@ -1174,7 +1232,7 @@ QVariantList Catalog::appCategories() const
 {
     QVariantList out;
     for (const CategoryDef &d : appCategoryDefs()) {
-        out << QVariantMap{{QStringLiteral("id"), QString::fromLatin1(d.id)}, {QStringLiteral("label"), QString::fromLatin1(d.label)}};
+        out << QVariantMap{{QStringLiteral("id"), QString::fromLatin1(d.id)}, {QStringLiteral("label"), tr(d.label)}};
     }
     return out;
 }
@@ -1183,7 +1241,7 @@ QVariantList Catalog::gameCategories() const
 {
     QVariantList out;
     for (const CategoryDef &d : gameCategoryDefs()) {
-        out << QVariantMap{{QStringLiteral("id"), QString::fromLatin1(d.id)}, {QStringLiteral("label"), QString::fromLatin1(d.label)}};
+        out << QVariantMap{{QStringLiteral("id"), QString::fromLatin1(d.id)}, {QStringLiteral("label"), tr(d.label)}};
     }
     return out;
 }
@@ -1192,18 +1250,18 @@ QString Catalog::categoryLabel(const QString &id) const
 {
     for (const CategoryDef &d : appCategoryDefs()) {
         if (id == QLatin1String(d.id)) {
-            return QString::fromLatin1(d.label);
+            return tr(d.label);
         }
     }
     for (const CategoryDef &d : gameCategoryDefs()) {
         if (id == QLatin1String(d.id)) {
-            return QString::fromLatin1(d.label);
+            return tr(d.label);
         }
     }
     if (id == QLatin1String("games")) {
-        return QStringLiteral("Games");
+        return tr("Games");
     }
-    return QStringLiteral("All apps");
+    return tr("All apps");
 }
 
 QString Catalog::pickImage(const QVariantList &images, int width, int height) const
@@ -1547,10 +1605,10 @@ QString Catalog::dayText(qint64 msecs) const
     const QDate day = QDateTime::fromMSecsSinceEpoch(msecs).date();
     const QDate today = QDate::currentDate();
     if (day == today) {
-        return QStringLiteral("Today");
+        return tr("Today");
     }
     if (day == today.addDays(-1)) {
-        return QStringLiteral("Yesterday");
+        return tr("Yesterday");
     }
     if (day > today.addDays(-7)) {
         return QLocale().dayName(day.dayOfWeek(), QLocale::ShortFormat);
@@ -1855,6 +1913,38 @@ void Catalog::openSettings(const QString &page)
     QProcess::startDetached(QStringLiteral("wildos-settings"), {QStringLiteral("--page"), page});
 }
 
+QVariantMap Catalog::installedOutside(const QString &text) const
+{
+    const QString wanted = text.trimmed();
+    if (wanted.size() < 3) {
+        return {};
+    }
+    KService::Ptr found;
+    const KService::List services = KApplicationTrader::query([](const KService::Ptr &service) {
+        return !service->noDisplay();
+    });
+    for (const KService::Ptr &service : services) {
+        const QString id = service->desktopEntryName();
+        // Wild OS's own apps and Windows mode's are Settings' already, and
+        // Start sends those there itself.
+        if (id.startsWith(QLatin1String("org.wildos.")) || id.startsWith(QLatin1String("wildos-"))
+            || !service->property<QString>(QStringLiteral("X-Flatpak")).isEmpty() || !keyFor(id).isEmpty()) {
+            continue;
+        }
+        if (id.compare(wanted, Qt::CaseInsensitive) == 0) {
+            found = service;
+            break;
+        }
+        if (!found && service->name().startsWith(wanted, Qt::CaseInsensitive)) {
+            found = service;
+        }
+    }
+    if (!found) {
+        return {};
+    }
+    return {{QStringLiteral("id"), found->desktopEntryName()}, {QStringLiteral("name"), found->name()}};
+}
+
 Catalog::Job *Catalog::job(int id)
 {
     for (Job &j : m_jobs) {
@@ -2048,7 +2138,8 @@ void Catalog::onFinished(int id, bool ok, const QString &error)
     const bool cancelled = m_cancelled.remove(id);
     // Stopped with its stop button, or cut off from Flathub: either way it
     // can carry on from what it already fetched.
-    const bool paused = m_pausing.remove(id) || (!ok && error.startsWith(QLatin1String("Couldn't reach")));
+    const bool paused = m_pausing.remove(id) || (!ok && (error == QCoreApplication::translate("FlatpakBackend", "Couldn't reach Flathub. Check you're online.")
+                                                       || error == QCoreApplication::translate("FlatpakBackend", "Couldn't reach the place this app downloads from. Check you're online.")));
     Job j = *found;
     m_jobs.removeIf([id](const Job &x) {
         return x.id == id;

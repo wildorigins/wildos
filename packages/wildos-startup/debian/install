@@ -1,0 +1,6 @@
+files/grub/14_wildos_startup usr/lib/wildos/grub.d/
+files/grub/16_wildos_startup usr/lib/wildos/grub.d/
+files/dracut/90wildos-startup usr/lib/dracut/modules.d/
+files/startup-ctl usr/libexec/wildos/
+files/startup-status usr/libexec/wildos/
+files/polkit/org.wildos.startup.policy usr/share/polkit-1/actions/

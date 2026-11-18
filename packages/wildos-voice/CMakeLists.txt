@@ -64,6 +64,7 @@ qt_add_qml_module(wildos-voice
         src/recordings.cpp src/recordings.h
         src/recorder.cpp src/recorder.h
         src/player.cpp src/player.h
+        src/mpris.cpp src/mpris.h
         src/modeldownload.cpp src/modeldownload.h
         src/transcriber.cpp src/transcriber.h
         src/transcripts.cpp src/transcripts.h
@@ -84,3 +85,20 @@ install(FILES data/org.wildos.voice.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}
 install(FILES data/org.wildos.voice.metainfo.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
 # The splash reads the icon from here, and it shows under any icon theme.
 install(FILES data/wildos-voice.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+
+# Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
+# WildOS.UI for the language chosen in Settings.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

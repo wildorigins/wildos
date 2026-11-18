@@ -21,7 +21,7 @@ T.AbstractButton {
     property string note
     property color noteColor: Metrics.inkTertiary
     // What Get says: "Reinstall" for one of Wild OS's own apps.
-    property string getLabel: "Get"
+    property string getLabel: qsTr("Get")
 
     // Turned into Open (or Update, or Installed) from a ring: the app page
     // gives its icon a small bounce.
@@ -33,10 +33,10 @@ T.AbstractButton {
     property bool asked: false
     readonly property string shown: asked && (realState === "get" || realState === "retry" || realState === "paused") ? "waiting" : realState
     readonly property bool ring: ["waiting", "preparing", "downloading", "installing", "removing", "paused"].indexOf(shown) >= 0
-    readonly property string label: shown === "open" ? "Open"
-        : shown === "installed" ? "Installed"
-        : shown === "update" ? "Update"
-        : shown === "retry" ? "Retry"
+    readonly property string label: shown === "open" ? qsTr("Open")
+        : shown === "installed" ? qsTr("Installed")
+        : shown === "update" ? qsTr("Update")
+        : shown === "retry" ? qsTr("Retry")
         : getLabel
 
     readonly property int buttonHeight: big ? 34 : 28
@@ -57,15 +57,15 @@ T.AbstractButton {
     Accessible.name: {
         const name = app ? app.name : "";
         switch (shown) {
-        case "waiting": return name + ", waiting to download. Press to cancel.";
-        case "preparing": return name + ", getting ready";
-        case "downloading": return name + ", downloading, " + app.progress + "%. Press to pause.";
-        case "installing": return name + ", installing";
-        case "removing": return name + ", uninstalling";
-        case "paused": return name + ", paused. Press to carry on.";
-        case "nospace": return "Get " + name + ". " + (app ? app.statusLine : "");
+        case "waiting": return qsTr("%1, waiting to download. Press to cancel.").arg(name);
+        case "preparing": return qsTr("%1, getting ready").arg(name);
+        case "downloading": return qsTr("%1, downloading, %2%. Press to pause.").arg(name).arg(app.progress);
+        case "installing": return qsTr("%1, installing").arg(name);
+        case "removing": return qsTr("%1, uninstalling").arg(name);
+        case "paused": return qsTr("%1, paused. Press to carry on.").arg(name);
+        case "nospace": return qsTr("Get %1. %2").arg(name).arg(app ? app.statusLine : "");
         }
-        return label + " " + name;
+        return qsTr("%1 %2").arg(label).arg(name);
     }
 
     onRealStateChanged: asked = false
@@ -138,7 +138,7 @@ T.AbstractButton {
         font.letterSpacing: UI.Style.tracking(UI.Style.px(control.fontSize))
         font.pixelSize: UI.Style.px(control.fontSize)
         font.weight: UI.Style.weightBold
-        text: control.getLabel.length > "Installed".length ? control.getLabel : "Installed"
+        text: control.getLabel.length > qsTr("Installed").length ? control.getLabel : qsTr("Installed")
     }
 
     contentItem: Item {}

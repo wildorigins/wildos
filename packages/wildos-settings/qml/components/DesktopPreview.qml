@@ -17,7 +17,7 @@ Rectangle {
     radius: UI.Style.radiusMd
     color: UI.Style.surfaceSunken
     Accessible.role: Accessible.Graphic
-    Accessible.name: "Current wallpaper, " + System.wallpaperName
+    Accessible.name: qsTr("Current wallpaper, %1").arg(System.wallpaperName)
 
     Image {
         id: picture

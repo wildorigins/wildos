@@ -25,13 +25,13 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
-                title: "Name"
-                description: "Shown on the tab and in the new tab menu."
+                title: qsTr("Name")
+                description: qsTr("Shown on the tab and in the new tab menu.")
 
                 Field {
                     anchors.verticalCenter: parent.verticalCenter
                     value: page.profile.name || ""
-                    placeholderText: "Profile name"
+                    placeholderText: qsTr("Profile name")
                     onCommitted: text => {
                         if (text.trim().length > 0) {
                             Config.setProfileValue(page.profileId, "name", text.trim());
@@ -41,8 +41,8 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Command"
-                description: "The program to run, with its options. Leave it empty for your usual shell."
+                title: qsTr("Command")
+                description: qsTr("The program to run, with its options. Leave it empty for your usual shell.")
 
                 Field {
                     anchors.verticalCenter: parent.verticalCenter
@@ -54,8 +54,8 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Starting folder"
-                description: "Where new tabs with this profile open. Leave it empty for your home folder."
+                title: qsTr("Starting folder")
+                description: qsTr("Where new tabs with this profile open. Leave it empty for your home folder.")
 
                 Field {
                     anchors.verticalCenter: parent.verticalCenter
@@ -67,8 +67,8 @@ PageScroll {
             }
 
             UI.SettingRow {
-                title: "Icon"
-                description: "Shown on the tab."
+                title: qsTr("Icon")
+                description: qsTr("Shown on the tab.")
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
@@ -132,36 +132,36 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "star"
-                title: page.isDefault ? "This is the default profile" : "Make this the default profile"
-                description: "The default profile opens in new windows and with Ctrl+Shift+T."
+                title: page.isDefault ? qsTr("This is the default profile") : qsTr("Make this the default profile")
+                description: qsTr("The default profile opens in new windows and with Ctrl+Shift+T.")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: !page.isDefault
-                    text: "Make default"
+                    text: qsTr("Make default")
                     onClicked: Config.defaultProfile = page.profileId
                 }
             }
 
             UI.SettingRow {
                 iconName: "plus"
-                title: "Open a tab with this profile"
+                title: qsTr("Open a tab with this profile")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Open"
+                    text: qsTr("Open")
                     onClicked: host.newTab(page.profileId)
                 }
             }
 
             UI.SettingRow {
                 iconName: "duplicate"
-                title: "Duplicate this profile"
-                description: "A copy to change without losing this one."
+                title: qsTr("Duplicate this profile")
+                description: qsTr("A copy to change without losing this one.")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Duplicate"
+                    text: qsTr("Duplicate")
                     onClicked: {
                         const copy = Config.duplicateProfile(page.profileId);
                         if (copy.length > 0) {
@@ -173,13 +173,13 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "trash"
-                title: "Delete this profile"
-                description: Config.profiles.length > 1 ? "Tabs already open with it keep running."
-                                                        : "Terminal needs at least one profile, so the last one stays."
+                title: qsTr("Delete this profile")
+                description: Config.profiles.length > 1 ? qsTr("Tabs already open with it keep running.")
+                                                        : qsTr("Terminal needs at least one profile, so the last one stays.")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Delete"
+                    text: qsTr("Delete")
                     danger: true
                     enabled: Config.profiles.length > 1
                     onClicked: Config.removeProfile(page.profileId)

@@ -9,6 +9,7 @@ import org.kde.plasma.private.sessions as Sessions
 import org.kde.coreaddons as KCoreAddons
 import org.kde.plasma.plasma5support as P5Support
 import org.wildos.shell as WildOS
+import WildOS.UI as UI
 import "code/helpers.js" as Helpers
 
 PlasmoidItem {
@@ -39,8 +40,25 @@ PlasmoidItem {
     }
 
     // Set by the Start button: an item in the panel whose centre is the centre
-    // of the screen. The popup is anchored to it so Start opens centred.
+    // of the screen, or the button's own with the taskbar aligned left. The
+    // popup is anchored to it.
     property Item popupAnchor: null
+
+    // Settings aligns the taskbar left by switching off the spacer before
+    // Start (the last spacer on the bar is fixed either way, so it has to be
+    // that one).
+    function taskbarLeftAligned(): bool {
+        const applets = Plasmoid.containment ? Plasmoid.containment.applets : [];
+        let spacer = null;
+        for (let i = 0; i < applets.length; i++) {
+            if (applets[i].pluginName === "org.kde.plasma.panelspacer") {
+                spacer = applets[i];
+            } else if (applets[i].pluginName === "org.wildos.start") {
+                break;
+            }
+        }
+        return spacer !== null && spacer.configuration !== undefined && spacer.configuration.expanding === false;
+    }
 
     readonly property string homeUrl: StandardPaths.writableLocation(StandardPaths.HomeLocation).toString()
     readonly property string homePath: homeUrl.replace(/^file:\/\//, "")
@@ -190,8 +208,8 @@ PlasmoidItem {
     // Settings ships with Wild OS; if it has gone, say so rather than open
     // KDE's own settings, which Wild OS never shows.
     function settingsMissing(): void {
-        executable.connectSource("notify-send -a 'Wild OS' -i preferences-system 'Settings is missing' "
-            + "'Reinstall it from the Store to change this.'");
+        executable.connectSource("notify-send -a 'Wild OS' -i preferences-system " + Helpers.shellQuote(qsTr("Settings is missing"))
+            + " " + Helpers.shellQuote(qsTr("Reinstall it from the Store to change this.")));
         start.close();
     }
 
@@ -303,28 +321,36 @@ PlasmoidItem {
             const url = Helpers.taskbarUrl(favoriteId);
             const launchers = Array.from(taskbar.configuration.launchers);
             if (launchers.indexOf(url) >= 0) {
-                commands.push({ text: "Unpin from taskbar", icon: "menu-unpin", run: () => taskbar.configuration.launchers = launchers.filter(l => l !== url) });
+                commands.push({ text: qsTr("Unpin from taskbar"), icon: "menu-unpin", run: () => taskbar.configuration.launchers = launchers.filter(l => l !== url) });
             } else {
-                commands.push({ text: "Pin to taskbar", icon: "menu-pin", run: () => taskbar.configuration.launchers = launchers.concat(url) });
+                commands.push({ text: qsTr("Pin to taskbar"), icon: "menu-pin", run: () => taskbar.configuration.launchers = launchers.concat(url) });
             }
         }
         if (favoriteId.length > 0) {
             if (favourites.isFavorite(favoriteId)) {
-                commands.push({ text: "Unpin from Start", icon: "menu-unpin", run: () => favourites.removeFavorite(favoriteId) });
+                commands.push({ text: qsTr("Unpin from Start"), icon: "menu-unpin", run: () => favourites.removeFavorite(favoriteId) });
                 const place = pinnedIndex >= 0 ? pinnedIndex : favouriteIndex(favoriteId);
                 if (place > 0) {
-                    commands.push({ text: "Move to front", icon: "menu-front", run: () => favourites.moveRow(place, 0) });
+                    commands.push({ text: qsTr("Move to front"), icon: "menu-front", run: () => favourites.moveRow(place, 0) });
                 }
             } else {
-                commands.push({ text: "Pin to Start", icon: "menu-pin", run: () => favourites.addFavorite(favoriteId) });
+                commands.push({ text: qsTr("Pin to Start"), icon: "menu-pin", run: () => favourites.addFavorite(favoriteId) });
             }
+        }
+        // On a PC with two graphics cards, as Windows offers per app. A
+        // Windows app draws inside Windows mode, which has no card to pick.
+        if (favoriteId.endsWith(".desktop") && favoriteId.indexOf("wildos-winapp-") < 0
+                && UI.System.twoGraphicsCards() && UI.System.canChooseGraphics(favoriteId)) {
+            const dedicated = UI.System.dedicatedGraphics(favoriteId);
+            commands.push({ text: qsTr("Dedicated graphics card"), checked: dedicated,
+                run: () => UI.System.setDedicatedGraphics(favoriteId, !dedicated) });
         }
         const last = [];
         if (hasWildSettings && isSandboxed(favoriteId)) {
-            last.push({ text: "App permissions", icon: "shield", run: () => start.openSettingsPage("apppermissions") });
+            last.push({ text: qsTr("App permissions"), icon: "shield", run: () => start.openSettingsPage("apppermissions") });
         }
         if (canUninstall(favoriteId)) {
-            last.push({ text: "Uninstall", icon: "menu-uninstall", danger: true, run: () => start.uninstallApp(favoriteId) });
+            last.push({ text: qsTr("Uninstall"), icon: "menu-uninstall", danger: true, run: () => start.uninstallApp(favoriteId) });
         }
         if (commands.length > 0 && last.length > 0) {
             commands.push({ separator: true });
@@ -333,7 +359,7 @@ PlasmoidItem {
     }
 
     Plasmoid.icon: Plasmoid.configuration.icon
-    toolTipMainText: "Start"
+    toolTipMainText: qsTr("Start")
     toolTipSubText: ""
 
     preferredRepresentation: compactRepresentation

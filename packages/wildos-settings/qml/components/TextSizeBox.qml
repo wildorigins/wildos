@@ -9,7 +9,7 @@ UI.ComboBox {
     readonly property var sizes: [100, 110, 125, 150]
     readonly property var choice: System.textScale
 
-    Accessible.name: "Text size"
+    Accessible.name: qsTr("Text size")
     model: sizes.concat(sizes.includes(System.textScale) ? [] : [System.textScale]).map(p => ({ value: p, text: p + "%" }))
     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
     onActivated: index => System.setTextScale(model[index].value)

@@ -15,6 +15,11 @@ PageScroll {
 
     property string message
     property bool messageIsError: false
+    readonly property var sorts: [
+        { value: "name", text: qsTr("Name (A to Z)") },
+        { value: "name-desc", text: qsTr("Name (Z to A)") },
+        { value: "date", text: qsTr("Recently installed or updated") }
+    ]
 
     // Start's Uninstall for an app it can't remove itself (Wild OS's own,
     // one in the home folder or in Windows mode) opens this page with
@@ -33,7 +38,7 @@ PageScroll {
             page.ask(id, name);
         } else {
             page.messageIsError = true;
-            page.message = name + " is part of Wild OS, so it can't be uninstalled.";
+            page.message = qsTr("%1 is part of Wild OS, so it can't be uninstalled.").arg(name);
         }
     }
 
@@ -60,15 +65,15 @@ PageScroll {
         id: apps
         onUninstalled: name => {
             page.messageIsError = false;
-            page.message = name + " was uninstalled.";
+            page.message = qsTr("%1 was uninstalled.").arg(name);
         }
         onUninstallOpened: name => {
             page.messageIsError = false;
-            page.message = name + "'s uninstaller is open in Windows. Finish there, and " + name + " leaves this list once it's done.";
+            page.message = qsTr("%1's uninstaller is open in Windows. Finish there, and %1 leaves this list once it's done.").arg(name);
         }
         onUninstallFailed: (name, reason) => {
             page.messageIsError = true;
-            page.message = name + " was not uninstalled. " + (reason.length > 0 ? reason : "Try again from the Store.");
+            page.message = qsTr("%1 was not uninstalled. %2").arg(name).arg(reason.length > 0 ? reason : qsTr("Try again from the Store."));
         }
     }
 
@@ -78,13 +83,20 @@ PageScroll {
 
         UI.SearchField {
             Layout.preferredWidth: 320
-            placeholderText: "Search apps"
+            placeholderText: qsTr("Search apps")
             onTextChanged: apps.filter = text
+        }
+
+        UI.ComboBox {
+            Accessible.name: qsTr("Sort by")
+            model: page.sorts
+            currentIndex: Math.max(0, page.sorts.findIndex(s => s.value === apps.sort))
+            onActivated: apps.sort = currentValue
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: Format.plural(apps.count, "app", "apps")
+            text: apps.count === 1 ? qsTr("1 app") : qsTr("%1 apps").arg(apps.count)
             color: UI.Style.inkMuted
             horizontalAlignment: Text.AlignRight
         }
@@ -94,11 +106,11 @@ PageScroll {
         visible: page.message.length > 0
         iconName: page.messageIsError ? "warning" : "check"
         warning: page.messageIsError
-        title: page.messageIsError ? "Not uninstalled" : "Uninstalled"
+        title: page.messageIsError ? qsTr("Not uninstalled") : qsTr("Uninstalled")
         description: page.message
 
         UI.Button {
-            text: "Dismiss"
+            text: qsTr("Dismiss")
             onClicked: page.message = ""
         }
     }
@@ -120,14 +132,16 @@ PageScroll {
                     required property string source
                     required property string packageName
                     required property bool canUninstall
+                    required property var lastChanged
                     themeIcon: appIcon.length > 0 ? appIcon : "application-x-executable"
+                    status: apps.sort === "date" && Format.isValid(lastChanged) ? Format.dayTitle(lastChanged) : ""
                     title: name
-                    description: source === "store" ? "From the Store" : source === "home" ? "Installed in your home folder" : source === "windows" ? "Runs in Windows mode" : canUninstall ? "Installed app" : "Part of Wild OS"
+                    description: source === "store" ? qsTr("From the Store") : source === "home" ? qsTr("Installed in your home folder") : source === "windows" ? qsTr("Runs in Windows mode") : canUninstall ? qsTr("Installed app") : qsTr("Part of Wild OS")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: app.canUninstall
-                        text: apps.busyId === app.appId ? "Uninstalling" : "Uninstall"
+                        text: apps.busyId === app.appId ? qsTr("Uninstalling") : qsTr("Uninstall")
                         enabled: apps.busyId.length === 0
                         onClicked: page.ask(app.appId, app.name)
                     }
@@ -147,12 +161,12 @@ PageScroll {
         property bool windows: false
         readonly property bool home: files.length > 0
 
-        title: "Uninstall " + appName + "?"
+        title: qsTr("Uninstall %1?").arg(appName)
         text: windows
-              ? "Windows uninstalls " + appName + ". If it has an uninstaller of its own, that opens in a window to finish. If it came as part of a bigger program, like Word in Microsoft 365, the whole program goes. Files you saved in your folders stay."
+              ? qsTr("Windows uninstalls %1. If it has an uninstaller of its own, that opens in a window to finish. If it came as part of a bigger program, like Word in Microsoft 365, the whole program goes. Files you saved in your folders stay.").arg(appName)
               : home
-              ? appName + " installed itself in your home folder. These go to the Recycle Bin, so you can put them back:"
-              : appName + " will be removed from this computer. Your own files are not touched."
+              ? qsTr("%1 installed itself in your home folder. These go to the Recycle Bin, so you can put them back:").arg(appName)
+              : qsTr("%1 will be removed from this computer. Your own files are not touched.").arg(appName)
 
         UI.Label {
             Layout.fillWidth: true
@@ -165,13 +179,13 @@ PageScroll {
 
         UI.CheckBox {
             visible: confirm.home && confirm.data.length > 0
-            text: "Also remove its settings and data"
+            text: qsTr("Also remove its settings and data")
             checked: confirm.withData
             onToggled: confirm.withData = checked
         }
         buttons: [
             UI.Button {
-                text: "Uninstall"
+                text: qsTr("Uninstall")
                 kind: "primary"
                 onClicked: {
                     confirm.close();
@@ -180,7 +194,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Keep it"
+                text: qsTr("Keep it")
                 onClicked: confirm.close()
             }
         ]

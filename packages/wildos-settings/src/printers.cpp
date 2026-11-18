@@ -46,25 +46,25 @@ QStringList texts(ipp_attribute_t *attr)
 QString problem(const QStringList &reasons)
 {
     static const QList<std::pair<const char *, const char *>> words = {
-        {"offline", "Offline"},
-        {"media-jam", "Paper jam"},
-        {"door-open", "A cover is open"},
-        {"cover-open", "A cover is open"},
-        {"media-empty", "Out of paper"},
-        {"media-needed", "Out of paper"},
-        {"toner-empty", "Out of toner"},
-        {"marker-supply-empty", "Out of ink or toner"},
-        {"input-tray-missing", "A paper tray is missing"},
-        {"connecting-to-device", "Connecting"},
-        {"toner-low", "Toner low"},
-        {"marker-supply-low", "Ink or toner low"},
-        {"media-low", "Paper low"},
+        {"offline", QT_TRANSLATE_NOOP("Printers", "Offline")},
+        {"media-jam", QT_TRANSLATE_NOOP("Printers", "Paper jam")},
+        {"door-open", QT_TRANSLATE_NOOP("Printers", "A cover is open")},
+        {"cover-open", QT_TRANSLATE_NOOP("Printers", "A cover is open")},
+        {"media-empty", QT_TRANSLATE_NOOP("Printers", "Out of paper")},
+        {"media-needed", QT_TRANSLATE_NOOP("Printers", "Out of paper")},
+        {"toner-empty", QT_TRANSLATE_NOOP("Printers", "Out of toner")},
+        {"marker-supply-empty", QT_TRANSLATE_NOOP("Printers", "Out of ink or toner")},
+        {"input-tray-missing", QT_TRANSLATE_NOOP("Printers", "A paper tray is missing")},
+        {"connecting-to-device", QT_TRANSLATE_NOOP("Printers", "Connecting")},
+        {"toner-low", QT_TRANSLATE_NOOP("Printers", "Toner low")},
+        {"marker-supply-low", QT_TRANSLATE_NOOP("Printers", "Ink or toner low")},
+        {"media-low", QT_TRANSLATE_NOOP("Printers", "Paper low")},
     };
     for (const auto &[key, word] : words) {
         for (QString reason : reasons) {
             reason.remove(QRegularExpression(QStringLiteral("-(report|warning|error)$")));
             if (reason == QLatin1String(key)) {
-                return QString::fromLatin1(word);
+                return QCoreApplication::translate("Printers", word);
             }
         }
     }
@@ -109,13 +109,16 @@ QString inkSummary(const QList<Marker> &markers)
         int &slot = isBlack(m) ? black : colour;
         slot = slot < 0 ? m.level : std::min(slot, m.level);
     }
-    const QString substance = toner && !ink ? QStringLiteral("toner") : QStringLiteral("ink");
+    const bool isToner = toner && !ink;
     QStringList parts;
     if (black >= 0) {
-        parts << QStringLiteral("Black %1 %2%").arg(substance).arg(black);
+        parts << (isToner ? QCoreApplication::translate("Printers", "Black toner %1%") : QCoreApplication::translate("Printers", "Black ink %1%")).arg(black);
     }
     if (colour >= 0) {
-        parts << (black >= 0 ? QStringLiteral("colour %1%").arg(colour) : QStringLiteral("Colour %1 %2%").arg(substance).arg(colour));
+        parts << (black >= 0 ? QCoreApplication::translate("Printers", "colour %1%")
+                  : isToner  ? QCoreApplication::translate("Printers", "Colour toner %1%")
+                             : QCoreApplication::translate("Printers", "Colour ink %1%"))
+                     .arg(colour);
     }
     return parts.join(QStringLiteral(", "));
 }
@@ -127,7 +130,7 @@ QString inkDetail(const QList<Marker> &markers)
     QStringList parts;
     for (const Marker &m : markers) {
         if (consumable(m)) {
-            parts << QStringLiteral("%1 %2%").arg(m.name.isEmpty() ? QStringLiteral("Ink") : m.name).arg(m.level);
+            parts << QStringLiteral("%1 %2%").arg(m.name.isEmpty() ? QCoreApplication::translate("Printers", "Ink") : m.name).arg(m.level);
         }
     }
     return parts.join(QStringLiteral(", "));
@@ -328,17 +331,17 @@ QVariantList readQueues()
                 && std::any_of(waiting.cbegin(), waiting.cend(), [&message](const QString &w) {
                        return message.startsWith(w);
                    })) {
-                trouble = QStringLiteral("Offline");
+                trouble = QCoreApplication::translate("Printers", "Offline");
             }
-            QString status = state == IPP_PSTATE_PROCESSING ? QStringLiteral("Printing")
-                : state == IPP_PSTATE_STOPPED                ? QStringLiteral("Paused")
-                                                             : QStringLiteral("Ready");
+            QString status = state == IPP_PSTATE_PROCESSING ? QCoreApplication::translate("Printers", "Printing")
+                : state == IPP_PSTATE_STOPPED                ? QCoreApplication::translate("Printers", "Paused")
+                                                             : QCoreApplication::translate("Printers", "Ready");
             if (!trouble.isEmpty()) {
                 status = trouble;
             }
             current.insert(QStringLiteral("status"), status);
             current.insert(QStringLiteral("paused"), state == IPP_PSTATE_STOPPED);
-            current.insert(QStringLiteral("problem"), !trouble.isEmpty() && trouble != QLatin1String("Connecting"));
+            current.insert(QStringLiteral("problem"), !trouble.isEmpty() && trouble != QCoreApplication::translate("Printers", "Connecting"));
             current.insert(QStringLiteral("isDefault"), name == userDefault);
             list << current;
         }
@@ -389,10 +392,10 @@ QVariantList readQueues()
     const int count = cupsGetJobs2(CUPS_HTTP_DEFAULT, &jobs, nullptr, 0, CUPS_WHICHJOBS_ACTIVE);
     for (int i = 0; i < count; ++i) {
         const cups_job_t &job = jobs[i];
-        const QString state = job.state == IPP_JSTATE_PROCESSING ? QStringLiteral("Printing")
-            : job.state == IPP_JSTATE_HELD                       ? QStringLiteral("Held")
-            : job.state == IPP_JSTATE_STOPPED                    ? QStringLiteral("Stopped")
-                                                                 : QStringLiteral("Waiting");
+        const QString state = job.state == IPP_JSTATE_PROCESSING ? QCoreApplication::translate("Printers", "Printing")
+            : job.state == IPP_JSTATE_HELD                       ? QCoreApplication::translate("Printers", "Held")
+            : job.state == IPP_JSTATE_STOPPED                    ? QCoreApplication::translate("Printers", "Stopped")
+                                                                 : QCoreApplication::translate("Printers", "Waiting");
         queues[QString::fromUtf8(job.dest)] << QVariantMap{
             {QStringLiteral("id"), job.id},
             {QStringLiteral("title"), QString::fromUtf8(job.title)},
@@ -475,10 +478,10 @@ QString plainReason(const QString &output)
                                                 QRegularExpression::CaseInsensitiveOption);
     static const QRegularExpression needsDriver(QStringLiteral("Unable to create PPD|does not support required IPP"), QRegularExpression::CaseInsensitiveOption);
     if (unreachable.match(output).hasMatch()) {
-        return QStringLiteral("Nothing answered at that address. Check the address, and that the printer is switched on and on the same network.");
+        return QCoreApplication::translate("Printers", "Nothing answered at that address. Check the address, and that the printer is switched on and on the same network.");
     }
     if (needsDriver.match(output).hasMatch()) {
-        return QStringLiteral("This printer doesn't work without a driver. Choose one in More printer settings.");
+        return QCoreApplication::translate("Printers", "This printer doesn't work without a driver. Choose one in More printer settings.");
     }
     return output.section(QLatin1Char('\n'), -1).remove(QRegularExpression(QStringLiteral("^\\S+: ")));
 }
@@ -662,7 +665,7 @@ void Printers::admin(const QString &busy, const QString &program, const QStringL
                 }
             } else {
                 if (code == 126 || code == 127) {
-                    Q_EMIT failed(failure, QStringLiteral("An administrator's password is needed for this."));
+                    Q_EMIT failed(failure, Printers::tr("An administrator's password is needed for this."));
                 } else {
                     Q_EMIT failed(failure, plainReason(more));
                 }
@@ -687,7 +690,7 @@ void Printers::add(const QString &uri, const QString &name)
     admin(QStringLiteral("add"), QStringLiteral("/usr/sbin/lpadmin"),
           {QStringLiteral("-p"), queue, QStringLiteral("-E"), QStringLiteral("-v"), uri, QStringLiteral("-m"), QStringLiteral("everywhere"),
            QStringLiteral("-D"), name},
-          QStringLiteral("Printer added"), name + QStringLiteral(" is ready to use."), QStringLiteral("The printer was not added"), [this, queue, first, uri] {
+          Printers::tr("Printer added"), tr("%1 is ready to use.").arg(name), Printers::tr("The printer was not added"), [this, queue, first, uri] {
               for (int i = 0; i < m_found.size(); ++i) {
                   if (m_found.at(i).toMap().value(QStringLiteral("uri")).toString() == uri) {
                       m_found.removeAt(i);
@@ -723,7 +726,7 @@ void Printers::addAddress(const QString &address)
         url = QUrl(QStringLiteral("ipp://") + host + QStringLiteral("/ipp/print"));
     }
     if (!url.isValid() || url.host().isEmpty() || !QStringList{QStringLiteral("ipp"), QStringLiteral("ipps")}.contains(url.scheme())) {
-        Q_EMIT failed(QStringLiteral("The printer was not added"), QStringLiteral("Type the printer's network name or IP address, for example 192.168.1.20."));
+        Q_EMIT failed(Printers::tr("The printer was not added"), Printers::tr("Type the printer's network name or IP address, for example 192.168.1.20."));
         return;
     }
     add(url.toString(), url.host());
@@ -743,10 +746,10 @@ void Printers::setDefault(const QString &name, bool announce)
     }
     if (found && cupsSetDests2(CUPS_HTTP_DEFAULT, count, dests) == 0) {
         if (announce) {
-            Q_EMIT done(QStringLiteral("Default printer changed"), QStringLiteral("Apps will print to it unless you choose another printer."));
+            Q_EMIT done(Printers::tr("Default printer changed"), Printers::tr("Apps will print to it unless you choose another printer."));
         }
     } else {
-        Q_EMIT failed(QStringLiteral("The default printer was not changed"), QString::fromUtf8(cupsLastErrorString()));
+        Q_EMIT failed(Printers::tr("The default printer was not changed"), QString::fromUtf8(cupsLastErrorString()));
     }
     cupsFreeDests(count, dests);
     reload();
@@ -758,7 +761,8 @@ void Printers::printTestPage(const QString &name)
     QPointer<Printers> self(this);
     QThread *thread = QThread::create([self, name] {
         const QByteArray queue = name.toUtf8();
-        const int job = cupsPrintFile2(CUPS_HTTP_DEFAULT, queue.constData(), testPage.toUtf8().constData(), "Test page", 0, nullptr);
+        const QByteArray title = Printers::tr("Test page").toUtf8();
+        const int job = cupsPrintFile2(CUPS_HTTP_DEFAULT, queue.constData(), testPage.toUtf8().constData(), title.constData(), 0, nullptr);
         const QString error = job > 0 ? QString() : QString::fromUtf8(cupsLastErrorString());
         QMetaObject::invokeMethod(qApp, [self, job, error] {
             if (!self) {
@@ -767,9 +771,9 @@ void Printers::printTestPage(const QString &name)
             self->setBusy({});
             self->reload();
             if (job > 0) {
-                Q_EMIT self->done(QStringLiteral("Test page sent"), QStringLiteral("The test page is on its way to the printer."));
+                Q_EMIT self->done(Printers::tr("Test page sent"), Printers::tr("The test page is on its way to the printer."));
             } else {
-                Q_EMIT self->failed(QStringLiteral("The test page was not sent"), error);
+                Q_EMIT self->failed(Printers::tr("The test page was not sent"), error);
             }
         });
     });
@@ -779,24 +783,24 @@ void Printers::printTestPage(const QString &name)
 
 void Printers::remove(const QString &name)
 {
-    admin(name, QStringLiteral("/usr/sbin/lpadmin"), {QStringLiteral("-x"), name}, QStringLiteral("Printer removed"),
-          QStringLiteral("Apps no longer offer it. You can add it again at any time."),
-          QStringLiteral("The printer was not removed"));
+    admin(name, QStringLiteral("/usr/sbin/lpadmin"), {QStringLiteral("-x"), name}, Printers::tr("Printer removed"),
+          Printers::tr("Apps no longer offer it. You can add it again at any time."),
+          Printers::tr("The printer was not removed"));
 }
 
 void Printers::resume(const QString &name)
 {
-    admin(name, QStringLiteral("/usr/sbin/cupsenable"), {name}, QStringLiteral("Printing resumed"), QStringLiteral("Documents waiting for it will print now."),
-          QStringLiteral("The printer was not resumed"));
+    admin(name, QStringLiteral("/usr/sbin/cupsenable"), {name}, Printers::tr("Printing resumed"), Printers::tr("Documents waiting for it will print now."),
+          Printers::tr("The printer was not resumed"));
 }
 
 void Printers::cancelJobs(const QString &name)
 {
     const QByteArray queue = name.toUtf8();
     if (cupsCancelJob2(CUPS_HTTP_DEFAULT, queue.constData(), CUPS_JOBID_ALL, 0) == IPP_STATUS_OK) {
-        Q_EMIT done(QStringLiteral("Documents cancelled"), QStringLiteral("Your documents waiting for this printer were cancelled."));
+        Q_EMIT done(Printers::tr("Documents cancelled"), Printers::tr("Your documents waiting for this printer were cancelled."));
     } else {
-        Q_EMIT failed(QStringLiteral("The documents were not cancelled"), QString::fromUtf8(cupsLastErrorString()));
+        Q_EMIT failed(Printers::tr("The documents were not cancelled"), QString::fromUtf8(cupsLastErrorString()));
     }
     reload();
 }
@@ -805,17 +809,17 @@ void Printers::cancelJob(const QString &name, int job)
 {
     const QByteArray queue = name.toUtf8();
     if (cupsCancelJob2(CUPS_HTTP_DEFAULT, queue.constData(), job, 0) == IPP_STATUS_OK) {
-        Q_EMIT done(QStringLiteral("Document cancelled"), QStringLiteral("It was taken out of the queue."));
+        Q_EMIT done(Printers::tr("Document cancelled"), Printers::tr("It was taken out of the queue."));
     } else {
-        Q_EMIT failed(QStringLiteral("The document was not cancelled"), QString::fromUtf8(cupsLastErrorString()));
+        Q_EMIT failed(Printers::tr("The document was not cancelled"), QString::fromUtf8(cupsLastErrorString()));
     }
     reload();
 }
 
 void Printers::pause(const QString &name)
 {
-    admin(name, QStringLiteral("/usr/sbin/cupsdisable"), {name}, QStringLiteral("Printing paused"),
-          QStringLiteral("Documents wait in the queue until you resume the printer."), QStringLiteral("The printer was not paused"));
+    admin(name, QStringLiteral("/usr/sbin/cupsdisable"), {name}, Printers::tr("Printing paused"),
+          Printers::tr("Documents wait in the queue until you resume the printer."), Printers::tr("The printer was not paused"));
 }
 
 namespace
@@ -826,27 +830,27 @@ QString choiceText(const QString &option, const QString &value, cups_dest_t *des
 {
     if (option == QLatin1String("sides")) {
         if (value == QLatin1String("one-sided")) {
-            return QStringLiteral("One-sided");
+            return QCoreApplication::translate("Printers", "One-sided");
         }
         if (value == QLatin1String("two-sided-long-edge")) {
-            return QStringLiteral("Two-sided, flip on long edge");
+            return QCoreApplication::translate("Printers", "Two-sided, flip on long edge");
         }
         if (value == QLatin1String("two-sided-short-edge")) {
-            return QStringLiteral("Two-sided, flip on short edge");
+            return QCoreApplication::translate("Printers", "Two-sided, flip on short edge");
         }
     } else if (option == QLatin1String("print-color-mode")) {
         static const QList<std::pair<const char *, const char *>> words = {
-            {"color", "Colour"},
-            {"monochrome", "Black and white"},
-            {"auto", "Automatic"},
-            {"auto-monochrome", "Automatic, black and white"},
-            {"bi-level", "Black and white, no greys"},
-            {"process-monochrome", "Black and white, using every ink"},
-            {"highlight", "Black and one colour"},
+            {"color", QT_TRANSLATE_NOOP("Printers", "Colour")},
+            {"monochrome", QT_TRANSLATE_NOOP("Printers", "Black and white")},
+            {"auto", QT_TRANSLATE_NOOP("Printers", "Automatic")},
+            {"auto-monochrome", QT_TRANSLATE_NOOP("Printers", "Automatic, black and white")},
+            {"bi-level", QT_TRANSLATE_NOOP("Printers", "Black and white, no greys")},
+            {"process-monochrome", QT_TRANSLATE_NOOP("Printers", "Black and white, using every ink")},
+            {"highlight", QT_TRANSLATE_NOOP("Printers", "Black and one colour")},
         };
         for (const auto &[key, word] : words) {
             if (value == QLatin1String(key)) {
-                return QString::fromLatin1(word);
+                return QCoreApplication::translate("Printers", word);
             }
         }
     } else if (option == QLatin1String("media")) {
@@ -936,7 +940,7 @@ void Printers::setPreference(const QString &name, const QString &option, const Q
     }
     cupsFreeDests(count, dests);
     if (!saved) {
-        Q_EMIT failed(QStringLiteral("The printing preference was not saved"), QString::fromUtf8(cupsLastErrorString()));
+        Q_EMIT failed(Printers::tr("The printing preference was not saved"), QString::fromUtf8(cupsLastErrorString()));
     }
 }
 
@@ -1057,8 +1061,8 @@ void Printers::findDevices()
                 const bool ok = status == QProcess::NormalExit && code == 0;
                 self->finishDevices(ok ? parseLpinfo(output, known) : QVariantList());
                 if (!ok) {
-                    Q_EMIT self->failed(QStringLiteral("Printers plugged into this computer can't be listed"),
-                                        QStringLiteral("An administrator's password is needed to look for them."));
+                    Q_EMIT self->failed(Printers::tr("Printers plugged into this computer can't be listed"),
+                                        Printers::tr("An administrator's password is needed to look for them."));
                 }
             });
             process->start(QStringLiteral("pkexec"), {QStringLiteral("/usr/sbin/lpinfo"), QStringLiteral("-l"), QStringLiteral("-v")});
@@ -1123,8 +1127,8 @@ void Printers::loadDrivers()
             self->m_loadingDrivers = false;
             Q_EMIT self->driversChanged();
             if (drivers.isEmpty()) {
-                Q_EMIT self->failed(QStringLiteral("No printer drivers were found"),
-                                    QStringLiteral("Install the driver package from your printer's maker, then try again."));
+                Q_EMIT self->failed(Printers::tr("No printer drivers were found"),
+                                    Printers::tr("Install the driver package from your printer's maker, then try again."));
             }
         });
     });
@@ -1197,15 +1201,15 @@ void Printers::addWithDriver(const QString &uri, const QString &driver, const QS
     static const QRegularExpression scheme(QStringLiteral("^[a-z][a-z0-9+.-]*$"));
     if (!knownDriver || !url.isValid() || !scheme.match(url.scheme()).hasMatch() || uri.contains(QLatin1Char('\n')) || uri.startsWith(QLatin1Char('-'))
         || driver.startsWith(QLatin1Char('-'))) {
-        Q_EMIT failed(QStringLiteral("The printer was not added"), QStringLiteral("Choose the printer and its driver again."));
+        Q_EMIT failed(Printers::tr("The printer was not added"), Printers::tr("Choose the printer and its driver again."));
         return;
     }
-    const QString info = name.trimmed().isEmpty() ? QStringLiteral("Printer") : name.trimmed();
+    const QString info = name.trimmed().isEmpty() ? tr("Printer") : name.trimmed();
     const QString queue = queueName(info);
     const bool first = m_printers.isEmpty();
     admin(QStringLiteral("add"), QStringLiteral("/usr/sbin/lpadmin"),
           {QStringLiteral("-p"), queue, QStringLiteral("-E"), QStringLiteral("-v"), uri, QStringLiteral("-m"), driver, QStringLiteral("-D"), info},
-          QStringLiteral("Printer added"), info + QStringLiteral(" is ready to use."), QStringLiteral("The printer was not added"), [this, queue, first, uri] {
+          Printers::tr("Printer added"), tr("%1 is ready to use.").arg(info), Printers::tr("The printer was not added"), [this, queue, first, uri] {
               for (int i = 0; i < m_devices.size(); ++i) {
                   if (m_devices.at(i).toMap().value(QStringLiteral("uri")).toString() == uri) {
                       m_devices.removeAt(i);
@@ -1401,7 +1405,7 @@ void Printers::addScanner(const QString &name)
         group.sync();
     }
     Q_EMIT scannersChanged();
-    Q_EMIT done(QStringLiteral("Scanner added"), name + QStringLiteral(" is ready to use in Capture."));
+    Q_EMIT done(Printers::tr("Scanner added"), tr("%1 is ready to use in Capture.").arg(name));
 }
 
 void Printers::removeScanner(const QString &name)
@@ -1414,7 +1418,7 @@ void Printers::removeScanner(const QString &name)
     group.writeEntry("Added", added);
     group.sync();
     Q_EMIT scannersChanged();
-    Q_EMIT done(QStringLiteral("Scanner removed"), QStringLiteral("It's no longer in your list. Capture can still find it on the network."));
+    Q_EMIT done(Printers::tr("Scanner removed"), Printers::tr("It's no longer in your list. Capture can still find it on the network."));
 }
 
 bool Printers::openCapture() const

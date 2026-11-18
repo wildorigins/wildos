@@ -55,10 +55,10 @@ FocusScope {
         iconSize: 17
         iconInset: 16
         leftPadding: 45
-        placeholderText: "Search apps, files and settings"
+        placeholderText: qsTr("Search apps, files and settings")
         color: UI.Style.inkStrong
         font.pixelSize: UI.Style.px(box.active ? 15 : 14)
-        Accessible.name: "Search apps, files and settings"
+        Accessible.name: qsTr("Search apps, files and settings")
 
         background: Rectangle {
             radius: height / 2

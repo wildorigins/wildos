@@ -45,8 +45,9 @@ PlasmoidItem {
         return isNaN(n) ? 0 : n;
     }
 
+    // one is the whole phrase for 1 ("1 update"), many has %1 for the count.
     function plural(n: int, one: string, many: string): string {
-        return n === 1 ? "1 " + one : n + " " + many;
+        return n === 1 ? one : many.arg(n);
     }
 
     // Times in the regional format chosen in Settings > Language and region,
@@ -57,7 +58,7 @@ PlasmoidItem {
     }
 
     function dateText(when: var): string {
-        return Qt.locale("en_GB").toString(when, Qt.locale().dateFormat(Locale.ShortFormat));
+        return Qt.locale(qsTr("en_GB", "locale for day and month names")).toString(when, Qt.locale().dateFormat(Locale.ShortFormat));
     }
 
     // "just now", "10 minutes ago", "today at 13:10", "yesterday at 13:10",
@@ -65,67 +66,69 @@ PlasmoidItem {
     function ago(when: var): string {
         const minutes = Math.floor((now - when.getTime()) / 60000);
         if (minutes < 1) {
-            return "just now";
+            return qsTr("just now");
         }
         if (minutes < 60) {
-            return plural(minutes, "minute", "minutes") + " ago";
+            return plural(minutes, qsTr("1 minute ago"), qsTr("%1 minutes ago"));
         }
         const today = new Date(now);
         if (today.toDateString() === when.toDateString()) {
-            return "today at " + timeText(when);
+            return qsTr("today at %1").arg(timeText(when));
         }
         if (new Date(now - 86400000).toDateString() === when.toDateString()) {
-            return "yesterday at " + timeText(when);
+            return qsTr("yesterday at %1").arg(timeText(when));
         }
-        return dateText(when) + " at " + timeText(when);
+        return qsTr("%1 at %2").arg(dateText(when)).arg(timeText(when));
     }
 
     readonly property string checkedText: {
         const at = number(status.checked);
-        return at > 0 ? "Last checked " + ago(new Date(at * 1000)) : "Not checked yet";
+        return at > 0 ? qsTr("Last checked %1").arg(ago(new Date(at * 1000))) : qsTr("Not checked yet");
     }
 
     readonly property string readyText: securityCount > 0
-        ? plural(securityCount, "security fix is", "security fixes are") + " ready to install"
-        : plural(count, "update is", "updates are") + " ready to install"
+        ? plural(securityCount, qsTr("1 security fix is ready to install"), qsTr("%1 security fixes are ready to install"))
+        : plural(count, qsTr("1 update is ready to install"), qsTr("%1 updates are ready to install"))
 
     // One line for the tooltip and the screen reader.
     readonly property string summary: {
         switch (phase) {
-        case "loading": return "Updates";
-        case "na": return status.why === "live" ? "Updates start once Wild OS is installed" : "Updates are not available";
-        case "installing": return byAuto ? "Installing security updates" : "Installing updates";
-        case "checking": return "Checking for updates";
-        case "error": return "Couldn't check for updates";
-        case "available": return plural(count, "update", "updates") + " ready";
-        case "unchecked": return number(status.checked) > 0 ? "Updates not checked lately" : "Updates not checked yet";
-        default: return restartNeeded ? "Restart to finish updating" : "Wild OS is up to date";
+        case "loading": return qsTr("Updates");
+        case "na": return status.why === "live" ? qsTr("Updates start once Wild OS is installed") : qsTr("Updates are not available");
+        case "installing": return byAuto ? qsTr("Installing security updates") : qsTr("Installing updates");
+        case "checking": return qsTr("Checking for updates");
+        case "error": return qsTr("Couldn't check for updates");
+        case "available": return plural(count, qsTr("1 update ready"), qsTr("%1 updates ready"));
+        case "unchecked": return number(status.checked) > 0 ? qsTr("Updates not checked lately") : qsTr("Updates not checked yet");
+        default: return restartNeeded ? qsTr("Restart to finish updating") : qsTr("Wild OS is up to date");
         }
     }
 
     readonly property string title: {
         switch (phase) {
-        case "loading": return "Updates";
-        case "na": return status.why === "live" ? "Updates start once Wild OS is installed" : "Updates are not available";
-        case "installing": return byAuto ? "Installing security updates" : "Installing updates";
-        case "checking": return "Checking for updates";
-        case "error": return "Couldn't check for updates";
+        case "loading": return qsTr("Updates");
+        case "na": return status.why === "live" ? qsTr("Updates start once Wild OS is installed") : qsTr("Updates are not available");
+        case "installing": return byAuto ? qsTr("Installing security updates") : qsTr("Installing updates");
+        case "checking": return qsTr("Checking for updates");
+        case "error": return qsTr("Couldn't check for updates");
         case "available": return readyText;
-        case "unchecked": return number(status.checked) > 0 ? "Not checked for updates lately" : "Not checked for updates yet";
-        default: return restartNeeded ? "Restart to finish updating" : "You're up to date";
+        case "unchecked": return number(status.checked) > 0 ? qsTr("Not checked for updates lately") : qsTr("Not checked for updates yet");
+        default: return restartNeeded ? qsTr("Restart to finish updating") : qsTr("You're up to date");
         }
     }
 
     readonly property string detail: {
         switch (phase) {
         case "loading": return "";
-        case "na": return status.why === "live" ? "Wild OS keeps itself up to date once it is on your computer." : "The update service is not installed on this computer.";
-        case "installing": return byAuto ? "Small fixes install by themselves. You can keep working." : "You can keep working while they install.";
-        case "checking": return "This can take a minute on a slow connection.";
-        case "error": return status.error || "Try again in a few minutes.";
-        case "available": return "Install " + (count === 1 ? "it" : "them") + (securityCount > 0 ? " now to stay protected." : " when it suits you.");
-        case "unchecked": return "Check now to see what's new.";
-        default: return restartNeeded ? "Some updates only take effect after a restart." : "Nothing is waiting to install.";
+        case "na": return status.why === "live" ? qsTr("Wild OS keeps itself up to date once it is on your computer.") : qsTr("The update service is not installed on this computer.");
+        case "installing": return byAuto ? qsTr("Small fixes install by themselves. You can keep working.") : qsTr("You can keep working while they install.");
+        case "checking": return qsTr("This can take a minute on a slow connection.");
+        case "error": return status.error || qsTr("Try again in a few minutes.");
+        case "available": return count === 1
+            ? (securityCount > 0 ? qsTr("Install it now to stay protected.") : qsTr("Install it when it suits you."))
+            : (securityCount > 0 ? qsTr("Install them now to stay protected.") : qsTr("Install them when it suits you."));
+        case "unchecked": return qsTr("Check now to see what's new.");
+        default: return restartNeeded ? qsTr("Some updates only take effect after a restart.") : qsTr("Nothing is waiting to install.");
         }
     }
 
@@ -256,9 +259,10 @@ PlasmoidItem {
     // Settings ships with Wild OS, but if it has gone the click still says
     // something rather than doing nothing.
     function openSettings(page: string): void {
+        const quoted = text => "'" + text.replace(/'/g, "'\\''") + "'";
         run("if command -v wildos-settings >/dev/null; then setsid -f wildos-settings --page " + page + " >/dev/null 2>&1; "
-            + "else notify-send -a 'Wild OS' -i preferences-system 'Settings is missing' "
-            + "'Reinstall it from the Store to change this.'; fi");
+            + "else notify-send -a 'Wild OS' -i preferences-system " + quoted(qsTr("Settings is missing")) + " "
+            + quoted(qsTr("Reinstall it from the Store to change this.")) + "; fi");
         expanded = false;
     }
 
@@ -283,7 +287,7 @@ PlasmoidItem {
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "system-software-update"
-    Plasmoid.title: "Updates"
+    Plasmoid.title: qsTr("Updates")
     // On the taskbar while an update is under way, waiting to install or
     // has failed: the last two need the person.
     Plasmoid.status: installing || ready || failed ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus

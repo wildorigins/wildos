@@ -20,7 +20,7 @@ Item {
     property real artistWidth: 200
 
     signal play()
-    signal pressed()
+    signal pressed(int button, int modifiers)
     signal menuRequested(real x, real y)
 
     implicitHeight: 40
@@ -43,7 +43,7 @@ Item {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onPressed: function (event) {
-            row.pressed();
+            row.pressed(event.button, event.modifiers);
             if (event.button === Qt.RightButton) {
                 row.menuRequested(event.x, event.y);
             }

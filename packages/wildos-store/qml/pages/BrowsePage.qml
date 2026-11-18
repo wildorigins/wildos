@@ -24,9 +24,9 @@ AppGrid {
 
         PageTitle {
             width: parent.width
-            title: page.arg.length > 0 ? Catalog.categoryLabel(page.arg) : page.games ? "Games" : "All apps"
-            subtitle: !Catalog.ready ? "Getting the list of apps"
-                : page.keys.length === 1 ? (page.games ? "1 game" : "1 app") :page.keys.length + (page.games ? " games" : " apps")
+            title: page.arg.length > 0 ? Catalog.categoryLabel(page.arg) : page.games ? qsTr("Games") : qsTr("All apps")
+            subtitle: !Catalog.ready ? qsTr("Getting the list of apps")
+                : page.keys.length === 1 ? (page.games ? qsTr("1 game") : qsTr("1 app")) : (page.games ? qsTr("%1 games") : qsTr("%1 apps")).arg(page.keys.length)
         }
 
         Flow {
@@ -34,7 +34,7 @@ AppGrid {
             spacing: 8
 
             FilterPill {
-                text: page.games ? "All games" : "All apps"
+                text: page.games ? qsTr("All games") : qsTr("All apps")
                 selected: page.arg.length === 0
                 onClicked: page.store.open(page.kind, "")
             }

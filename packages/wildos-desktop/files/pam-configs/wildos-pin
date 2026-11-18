@@ -1,0 +1,7 @@
+Name: PIN for the sign-in screen (Wild OS)
+Default: yes
+Priority: 390
+Auth-Type: Primary
+Auth:
+	[success=ok default=1]	pam_wildos_pin.so
+	[success=end default=ignore]	pam_faillock.so authsucc

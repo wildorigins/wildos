@@ -13,8 +13,8 @@ PageFlick {
     property string kind
 
     PageTitle {
-        title: "Windows apps"
-        subtitle: "For the programs nothing here replaces, Wild OS can run the Windows version."
+        title: qsTr("Windows apps")
+        subtitle: qsTr("For the programs nothing here replaces, Wild OS can run the Windows version.")
     }
 
     ColumnLayout {
@@ -22,11 +22,11 @@ PageFlick {
         spacing: 0
 
         SectionHeader {
-            title: "Run a Windows program"
+            title: qsTr("Run a Windows program")
         }
 
         WindowsModeRow {
-            title: "Install the Windows program you already have"
+            title: qsTr("Install the Windows program you already have")
         }
     }
 
@@ -35,8 +35,8 @@ PageFlick {
         spacing: 0
 
         SectionHeader {
-            title: "Or swap it for a free app"
-            linkText: "See all"
+            title: qsTr("Or swap it for a free app")
+            linkText: qsTr("See all")
             onLinkClicked: page.store.open("swap")
         }
 

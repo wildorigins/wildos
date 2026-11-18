@@ -10,11 +10,16 @@ import QtQuick.Templates as T
 // could not. Text, if set, sits to the left like the "On" / "Off" label in
 // Windows Settings rows.
 //
+// A switch with no text, or whose text is only "On" or "Off", says what it
+// turns on through `accessibleName`; on the right of a ListRow it takes the
+// row's title by itself.
+//
 // Bind `checked` to the backend and write it back in onToggled; the binding
 // survives the click.
 T.Switch {
     id: control
 
+    property string accessibleName
     property bool locked: false
     property string lockedReason
     property bool previewHover: false
@@ -29,8 +34,8 @@ T.Switch {
     focusPolicy: Qt.StrongFocus
     hoverEnabled: true
     checkable: !locked
-    opacity: enabled && !locked ? 1 : 0.5
-    Accessible.name: text
+    opacity: enabled && !locked ? 1 : Style.disabledOpacity
+    Accessible.name: accessibleName.length > 0 ? accessibleName : text
     Accessible.description: locked ? lockedReason : ""
 
     indicator: Rectangle {

@@ -551,12 +551,58 @@ QString NoteStore::createNote(const QString &notebook)
 
 bool NoteStore::trashNote(const QString &path)
 {
-    if (!QFile::moveToTrash(path)) {
+    QString inBin;
+    if (!QFile::moveToTrash(path, &inBin)) {
         fail(tr("Notes couldn't move the note to the bin."));
         return false;
     }
+    rememberTrashed(path, inBin);
     rescan();
     return true;
+}
+
+void NoteStore::rememberTrashed(const QString &from, const QString &inBin)
+{
+    m_trashed = Trashed{from, inBin, {}};
+    const QString inside = from + u'/';
+    for (auto it = m_created.cbegin(); it != m_created.cend(); ++it) {
+        if (it.key() == from || it.key().startsWith(inside)) {
+            m_trashed.created.insert(it.key(), it.value());
+        }
+    }
+}
+
+QString NoteStore::restoreTrashed()
+{
+    const Trashed last = m_trashed;
+    m_trashed = Trashed();
+    if (last.inBin.isEmpty() || !QFileInfo::exists(last.inBin)) {
+        fail(tr("It isn't in the bin any more."));
+        return {};
+    }
+    // An empty folder of the same name, such as the first notebook Notes
+    // makes when there is none, gives way; rmdir never takes a full one.
+    if (QFileInfo(last.from).isDir()) {
+        QDir().rmdir(last.from);
+    }
+    if (QFileInfo::exists(last.from)) {
+        fail(tr("Something else has that name now. Yours is still in the bin."));
+        return {};
+    }
+    QDir().mkpath(QFileInfo(last.from).absolutePath());
+    if (!QDir().rename(last.inBin, last.from)) {
+        fail(tr("Notes couldn't bring it back. It is still in the bin."));
+        return {};
+    }
+    // The bin's record of where it came from, beside its files folder.
+    const QFileInfo binned(last.inBin);
+    QFile::remove(binned.absolutePath() + QStringLiteral("/../info/") + binned.fileName() + QStringLiteral(".trashinfo"));
+    for (auto it = last.created.cbegin(); it != last.created.cend(); ++it) {
+        m_created.insert(it.key(), it.value());
+    }
+    saveCreatedSoon();
+    rescan();
+    return last.from;
 }
 
 QString NoteStore::moveNote(const QString &path, const QString &notebook)
@@ -696,10 +742,12 @@ QString NoteStore::renameNotebook(const QString &from, const QString &to)
 
 bool NoteStore::trashNotebook(const QString &name)
 {
-    if (name.isEmpty() || !QFile::moveToTrash(notebookDir(name))) {
+    QString inBin;
+    if (name.isEmpty() || !QFile::moveToTrash(notebookDir(name), &inBin)) {
         fail(tr("Notes couldn't move %1 to the bin.").arg(name));
         return false;
     }
+    rememberTrashed(notebookDir(name), inBin);
     rescan();
     return true;
 }

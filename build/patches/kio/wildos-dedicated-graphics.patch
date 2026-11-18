@@ -1,0 +1,69 @@
+Description: Start apps and programs chosen for the dedicated graphics card on it
+ On a PC with two graphics cards, Wild OS's right-click menus offer "Use
+ the dedicated graphics card" for an app or a program such as an AppImage.
+ The choice is a list in wildosrc rather than PrefersNonDefaultGPU in a
+ copy of the app's .desktop file: a copy in the account's applications
+ folder hides the installed file from then on, so the app's updates never
+ reach its menu entry, and Plasma's favourites lose track of an app whose
+ file moves. KIO starts what is on the list with the same environment it
+ gives an app that asks for the card itself.
+Author: Wild OS Developers <dev@wildos.io>
+Forwarded: not-needed
+
+--- a/src/gui/kprocessrunner.cpp
++++ b/src/gui/kprocessrunner.cpp
+@@ -18,6 +18,8 @@
+ #include "desktopexecparser.h"
+ #include "gpudetection_p.h"
+ #include "krecentdocument.h"
++#include <KConfig>
++#include <KConfigGroup>
+ #include <KDesktopFile>
+ #include <KLocalizedString>
+ #include <KWindowSystem>
+@@ -82,6 +84,22 @@
+     }
+     env.insert(mod);
+     process.setProcessEnvironment(env);
++}
++
++// Wild OS: "Use the dedicated graphics card" on an app's or a program's
++// right-click menu keeps the choice in wildosrc (WildOS.UI's System writes
++// it), as an app's .desktop file name or a program's path. Asking for the
++// card in a copy of the app's .desktop file, as PrefersNonDefaultGPU wants,
++// would hide the installed file from then on, updates included. Read at
++// every start so a choice counts at once, in every program that starts
++// apps.
++static bool wildosDedicatedGraphics(const QString &target)
++{
++    if (target.isEmpty()) {
++        return false;
++    }
++    const KConfig config(QStringLiteral("wildosrc"), KConfig::NoGlobals);
++    return config.group(QStringLiteral("Graphics")).readEntry("Dedicated", QStringList()).contains(target);
+ }
+ #endif
+ 
+@@ -137,7 +155,7 @@
+     *instance->m_process << args;
+ 
+ #ifndef Q_OS_ANDROID
+-    if (service->runOnDiscreteGpu()) {
++    if (service->runOnDiscreteGpu() || wildosDedicatedGraphics(service->storageId()) || wildosDedicatedGraphics(service->entryPath())) {
+         modifyEnv(*instance->m_process, KIO::discreteGpuEnvironment());
+     }
+ #endif
+@@ -206,6 +224,13 @@
+     instance->m_executable = KIO::DesktopExecParser::executablePath(executable);
+     instance->m_process->setProgram(actualExec, args);
+     instance->initFromDesktopName(desktopName, executable, asn, workingDirectory, environment);
++#ifndef Q_OS_ANDROID
++    // Wild OS: a program, such as an AppImage, chosen to use the dedicated
++    // graphics card. After the line above, which sets the environment.
++    if (wildosDedicatedGraphics(actualExec)) {
++        modifyEnv(*instance->m_process, KIO::discreteGpuEnvironment());
++    }
++#endif
+     return instance;
+ }
+ 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Keep keyboard and mouse lighting in step with the taskbar underglow
+Description=Wild OS lighting: the taskbar underglow's colours, or the effects chosen in Cooler, on this PC's lights
 PartOf=graphical-session.target
 After=graphical-session.target
 # Debian trixie has no OpenRGB package; without one installed there is

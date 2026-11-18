@@ -12,6 +12,8 @@ Build-Depends:
  libkf6notifications-dev,
  libkf6archive-dev,
  libkf6windowsystem-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 
@@ -20,7 +22,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.10),
+ wildos-ui (>= 0.1.16),
  systemd-coredump,
  pkexec,
  polkitd,

@@ -10,15 +10,15 @@ PageScroll {
     id: page
 
     readonly property var choices: [
-        { level: 0, title: "Never", description: "Older apps only see what you type into them. Recommended." },
-        { level: 1, title: "Ctrl, Alt, Shift and the Windows key", description: "Lets them notice those keys pressed on their own" },
-        { level: 2, title: "Shortcuts", description: "Also keys pressed while holding Ctrl, Alt or the Windows key, for global shortcuts" },
-        { level: 3, title: "Everything", description: "Every key you press, in any app. Only for an app you fully trust." }
+        { level: 0, title: qsTr("Never"), description: qsTr("Older apps only see what you type into them. Recommended.") },
+        { level: 1, title: qsTr("Ctrl, Alt, Shift and the Windows key"), description: qsTr("Lets them notice those keys pressed on their own") },
+        { level: 2, title: qsTr("Shortcuts"), description: qsTr("Also keys pressed while holding Ctrl, Alt or the Windows key, for global shortcuts") },
+        { level: 3, title: qsTr("Everything"), description: qsTr("Every key you press, in any app. Only for an app you fully trust.") }
     ]
 
     UI.Label {
         Layout.fillWidth: true
-        text: "Older apps (built for X11) can be allowed to see keys you press while you use other apps, which a few need for a shortcut such as push to talk, but it also lets them see what you type, passwords included."
+        text: qsTr("Older apps (built for X11) can be allowed to see keys you press while you use other apps, which a few need for a shortcut such as push to talk, but it also lets them see what you type, passwords included.")
         color: UI.Style.inkMuted
         wrapMode: Text.Wrap
         elide: Text.ElideNone
@@ -29,7 +29,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Let older apps see keys typed in other apps"
+            text: qsTr("Let older apps see keys typed in other apps")
         }
 
         UI.Card {
@@ -73,24 +73,24 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "mouse"
-                title: "Mouse buttons too"
-                description: OlderApps.keys === 0 ? "Choose something other than Never first"
-                    : "Lets older apps see mouse clicks in other apps as well"
-                status: OlderApps.mouse ? "On" : "Off"
+                title: qsTr("Mouse buttons too")
+                description: OlderApps.keys === 0 ? qsTr("Choose something other than Never first")
+                    : qsTr("Lets older apps see mouse clicks in other apps as well")
+                status: OlderApps.mouse ? qsTr("On") : qsTr("Off")
                 enabled: OlderApps.keys > 0
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: OlderApps.mouse
-                    Accessible.name: "Mouse buttons too"
+                    Accessible.name: qsTr("Mouse buttons too")
                     onToggled: OlderApps.mouse = checked
                 }
             }
 
             UI.SettingRow {
                 iconName: "display"
-                title: "Screen"
-                description: "Older apps only see their own windows and those of other older apps. Seeing the rest of your screen needs your permission each time."
+                title: qsTr("Screen")
+                description: qsTr("Older apps only see their own windows and those of other older apps. Seeing the rest of your screen needs your permission each time.")
             }
         }
     }

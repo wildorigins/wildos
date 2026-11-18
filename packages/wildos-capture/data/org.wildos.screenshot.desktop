@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Capture
+Name[fr]=Capture
 GenericName=Screenshots and screen recording
+GenericName[fr]=Captures d'écran et enregistrement de l'écran
 Comment=Capture an area, a window or the whole screen, mark it up, or record it
+Comment[fr]=Capturez une zone, une fenêtre ou tout l'écran, annotez-la ou enregistrez-la
 Icon=wildos-capture
 Exec=/usr/bin/wildos-screenshot
 Terminal=false

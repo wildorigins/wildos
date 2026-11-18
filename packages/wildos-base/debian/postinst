@@ -103,6 +103,10 @@ if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
     systemctl enable --now systemd-oomd.service || true
     # The guest session's sign-out rule (50-wildos-guest.conf).
     systemctl reload systemd-logind.service || true
+    # systemd-timesyncd arrives with this update and starts itself when
+    # installed. It stops again here unless a time server was chosen in
+    # Settings (systemd-timesyncd.service.d/wildos-time-source.conf).
+    systemctl try-restart systemd-timesyncd.service || true
 elif [ "$1" = "configure" ]; then
     systemctl enable systemd-oomd.service || true
 fi

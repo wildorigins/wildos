@@ -2,7 +2,7 @@ import QtQuick
 import WildOS.Office
 import WildOS.UI as UI
 
-// Write's or Tables' loading splash (board 12.5) while LibreOffice starts a
+// Write's, Tables' or Slides' loading splash (boards 12.5 and 12.17) while LibreOffice starts a
 // document cold, in place of LibreOffice's own.
 UI.LoadingSplash {
     // What is opening, or empty for a new document.
@@ -12,13 +12,13 @@ UI.LoadingSplash {
     property bool launching: false
 
     appName: Office.appName
-    iconSource: Qt.resolvedUrl(Office.tables ? "data/org.wildos.tables.svg" : "data/org.wildos.write.svg")
-    accent: Office.tables ? "#2fd48a" : "#9d7bff"
-    accentDeep: Office.tables ? "#0d7a49" : "#5631c9"
+    iconSource: Qt.resolvedUrl(Office.tables ? "data/org.wildos.tables.svg" : Office.slides ? "data/org.wildos.slides.svg" : "data/org.wildos.write.svg")
+    accent: Office.tables ? "#2fd48a" : Office.slides ? "#ff8a5b" : "#9d7bff"
+    accentDeep: Office.tables ? "#0d7a49" : Office.slides ? "#e0452a" : "#5631c9"
     status: launching ? qsTr("Starting up")
         : fileName.length > 0 ? qsTr("Opening %1").arg(fileName)
-        : (Office.tables ? qsTr("Opening a new workbook") : qsTr("Opening a new document"))
-    noteStart: Office.tables ? qsTr("Opens and saves Excel files") : qsTr("Opens and saves Word files")
+        : (Office.tables ? qsTr("Opening a new workbook") : Office.slides ? qsTr("Opening a new presentation") : qsTr("Opening a new document"))
+    noteStart: Office.tables ? qsTr("Opens and saves Excel files") : Office.slides ? qsTr("Opens and saves PowerPoint files") : qsTr("Opens and saves Word files")
     noteEnd: qsTr("Built on LibreOffice")
     finishOnFocusLoss: !launching
     showDelay: launching ? 0 : 333

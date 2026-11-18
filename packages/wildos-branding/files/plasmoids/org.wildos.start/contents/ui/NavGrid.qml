@@ -1,7 +1,9 @@
 import QtQuick
 
 // A grid that moves with the arrow keys and hands focus to its neighbours
-// when the selection runs off the top or bottom edge.
+// when the selection runs off the top or bottom edge. With `reorder` its
+// items can be dragged to a new place, or moved with Alt+Shift and an
+// arrow as on Windows; the grid says where and its owner moves the row.
 GridView {
     id: grid
 
@@ -18,6 +20,50 @@ GridView {
     signal exitDown()
     signal activated(int index)
     signal menuRequested(int index, Item item, real x, real y)
+
+    property bool reorder: false
+    // While an item is being dragged: where it came from, the place it
+    // would take, its icon and where the pointer is in the grid's content.
+    property int dragFrom: -1
+    property int dragTo: -1
+    property var dragIcon: ""
+    property point dragAt: Qt.point(0, 0)
+    signal moved(int from, int to)
+
+    function dragStart(index: int, icon: var): void {
+        dragFrom = index;
+        dragTo = index;
+        dragIcon = icon;
+    }
+
+    function dragMove(x: real, y: real): void {
+        dragAt = Qt.point(x, y);
+        const over = indexAt(x, y);
+        dragTo = over >= 0 && over < shownCount ? over : dragFrom;
+    }
+
+    function dragEnd(drop: bool): void {
+        const from = dragFrom;
+        const to = dragTo;
+        dragFrom = -1;
+        dragTo = -1;
+        dragIcon = "";
+        if (drop && from >= 0 && to >= 0 && to !== from) {
+            moved(from, to);
+        }
+    }
+
+    // What is being dragged, under the pointer.
+    AppIcon {
+        visible: grid.dragFrom >= 0
+        x: grid.dragAt.x - width / 2
+        y: grid.dragAt.y - height / 2
+        z: 10
+        width: 42
+        height: 42
+        opacity: 0.85
+        source: grid.dragIcon
+    }
 
     // Callers size the view one gap wider than the content so the last
     // column fits; each delegate then leaves the gap on its right.
@@ -51,6 +97,18 @@ GridView {
     Keys.onPressed: event => {
         const current = Math.max(currentIndex, 0);
         const column = current % columns;
+        const arrows = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down];
+        if (reorder && (event.modifiers & Qt.AltModifier) && (event.modifiers & Qt.ShiftModifier) && arrows.indexOf(event.key) >= 0) {
+            const to = current + [-1, 1, -columns, columns][arrows.indexOf(event.key)];
+            if (currentIndex >= 0 && to >= 0 && to < shownCount) {
+                moved(current, to);
+                currentIndex = to;
+                positionViewAtIndex(to, GridView.Contain);
+            }
+            Nav.keyboard = true;
+            event.accepted = true;
+            return;
+        }
         switch (event.key) {
         case Qt.Key_Left:
             if (current > 0) {

@@ -3,6 +3,7 @@
 #include "paths.h"
 #include "secrets.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
@@ -20,12 +21,12 @@ namespace
 QString sizeText(qint64 bytes)
 {
     if (bytes < 1024 * 1024) {
-        return QStringLiteral("%1 KB").arg(std::max<qint64>(1, (bytes + 1023) / 1024));
+        return QCoreApplication::translate("FileBrowser", "%1 KB").arg(std::max<qint64>(1, (bytes + 1023) / 1024));
     }
     if (bytes < 1024LL * 1024 * 1024) {
-        return QStringLiteral("%1 MB").arg(QLocale::system().toString(bytes / (1024.0 * 1024.0), 'f', bytes < 10LL * 1024 * 1024 ? 1 : 0));
+        return QCoreApplication::translate("FileBrowser", "%1 MB").arg(QLocale::system().toString(bytes / (1024.0 * 1024.0), 'f', bytes < 10LL * 1024 * 1024 ? 1 : 0));
     }
-    return QStringLiteral("%1 GB").arg(QLocale::system().toString(bytes / (1024.0 * 1024.0 * 1024.0), 'f', 1));
+    return QCoreApplication::translate("FileBrowser", "%1 GB").arg(QLocale::system().toString(bytes / (1024.0 * 1024.0 * 1024.0), 'f', 1));
 }
 
 QString whenText(qint64 secs)
@@ -36,10 +37,10 @@ QString whenText(qint64 secs)
     const QDateTime t = QDateTime::fromSecsSinceEpoch(secs);
     const QDate today = QDate::currentDate();
     if (t.date() == today) {
-        return QStringLiteral("Today, ") + ClockFormat::time(t.time());
+        return QCoreApplication::translate("FileBrowser", "Today, %1").arg(ClockFormat::time(t.time()));
     }
     if (t.date() == today.addDays(-1)) {
-        return QStringLiteral("Yesterday");
+        return QCoreApplication::translate("FileBrowser", "Yesterday");
     }
     return QLocale::system().toString(t.date(), QLocale::ShortFormat);
 }
@@ -47,10 +48,10 @@ QString whenText(qint64 secs)
 QString secondsText(qint64 s)
 {
     if (s < 60) {
-        return s <= 1 ? QStringLiteral("about a second left") : QStringLiteral("about %1 seconds left").arg(s);
+        return s <= 1 ? QCoreApplication::translate("FileBrowser", "about a second left") : QCoreApplication::translate("FileBrowser", "about %1 seconds left").arg(s);
     }
     const qint64 m = (s + 30) / 60;
-    return m == 1 ? QStringLiteral("about a minute left") : QStringLiteral("about %1 minutes left").arg(m);
+    return m == 1 ? QCoreApplication::translate("FileBrowser", "about a minute left") : QCoreApplication::translate("FileBrowser", "about %1 minutes left").arg(m);
 }
 }
 
@@ -79,7 +80,7 @@ FileBrowser::FileBrowser(const QString &hostName, QObject *parent)
         m_loading = false;
         // ssh's own words, but plainer for the one everyone meets.
         m_remoteError = error.contains(QLatin1String("Control socket")) || error.contains(QLatin1String("Permission denied"))
-                            ? QStringLiteral("Files use the terminal's connection. Sign in to %1 in the terminal first, then try again.").arg(m_hostName)
+                            ? tr("Files use the terminal's connection. Sign in to %1 in the terminal first, then try again.").arg(m_hostName)
                             : error;
         Q_EMIT remoteChanged();
     });
@@ -263,7 +264,7 @@ void FileBrowser::refreshRemote()
 void FileBrowser::newLocalFolder(const QString &name)
 {
     if (!name.trimmed().isEmpty() && !QDir(m_localPath).mkdir(name.trimmed())) {
-        Q_EMIT notice(QStringLiteral("The folder couldn't be made here."));
+        Q_EMIT notice(tr("The folder couldn't be made here."));
     }
     listLocal();
 }
@@ -293,7 +294,7 @@ void FileBrowser::removeRemote(const QStringList &names)
         const QString path = joinRemote(m_remotePath, name);
         auto done = [this](const QString &error) {
             if (!error.isEmpty()) {
-                Q_EMIT notice(error.contains(QLatin1String("Failure")) ? QStringLiteral("Only empty folders can be deleted from here.") : error);
+                Q_EMIT notice(error.contains(QLatin1String("Failure")) ? tr("Only empty folders can be deleted from here.") : error);
             }
             listRemote();
         };
@@ -484,7 +485,7 @@ void FileBrowser::finishBatch()
     // Copies made for editing say so when they are back on the server.
     for (const Job &j : std::as_const(m_jobs)) {
         if (j.upload && m_editing.contains(j.local) && j.state == QLatin1String("done")) {
-            Q_EMIT notice(QStringLiteral("Saved %1 to %2").arg(j.name, m_hostName));
+            Q_EMIT notice(tr("Saved %1 to %2").arg(j.name, m_hostName));
         }
     }
     Q_EMIT transfersChanged();
@@ -499,10 +500,10 @@ QVariantList FileBrowser::transfers() const
             {QStringLiteral("upload"), j.upload},
             {QStringLiteral("state"), j.state},
             {QStringLiteral("progress"), j.size > 0 ? double(j.done) / double(j.size) : (j.state == QLatin1String("done") ? 1.0 : 0.0)},
-            {QStringLiteral("detail"), j.state == QLatin1String("done") ? QStringLiteral("Done")
+            {QStringLiteral("detail"), j.state == QLatin1String("done") ? tr("Done")
                                        : j.state == QLatin1String("failed") ? j.error
-                                       : j.state == QLatin1String("waiting") ? QStringLiteral("Waiting")
-                                       : QStringLiteral("%1 of %2").arg(sizeText(j.done).section(QLatin1Char(' '), 0, 0), sizeText(j.size))},
+                                       : j.state == QLatin1String("waiting") ? tr("Waiting")
+                                       : tr("%1 of %2").arg(sizeText(j.done).section(QLatin1Char(' '), 0, 0), sizeText(j.size))},
         });
     }
     return out;
@@ -525,11 +526,11 @@ QString FileBrowser::transferTitle() const
     }
     const bool upload = up >= down;
     const int n = upload ? up : down;
-    const QString files = n == 1 ? QStringLiteral("1 file") : QStringLiteral("%1 files").arg(n);
+    const QString files = n == 1 ? tr("1 file") : tr("%1 files").arg(n);
     if (m_active < 0) {
-        return upload ? QStringLiteral("Uploaded %1 to %2").arg(files, m_hostName) : QStringLiteral("Downloaded %1 from %2").arg(files, m_hostName);
+        return upload ? tr("Uploaded %1 to %2").arg(files, m_hostName) : tr("Downloaded %1 from %2").arg(files, m_hostName);
     }
-    return upload ? QStringLiteral("Uploading %1 to %2").arg(files, m_hostName) : QStringLiteral("Downloading %1 from %2").arg(files, m_hostName);
+    return upload ? tr("Uploading %1 to %2").arg(files, m_hostName) : tr("Downloading %1 from %2").arg(files, m_hostName);
 }
 
 QString FileBrowser::transferSummary() const
@@ -544,9 +545,9 @@ QString FileBrowser::transferSummary() const
         total += j.size;
         moved += j.done;
     }
-    QString text = QStringLiteral("%1 of %2 done").arg(done).arg(m_jobs.size());
+    QString text = tr("%1 of %2 done").arg(done).arg(m_jobs.size());
     if (failed > 0) {
-        text += failed == 1 ? QStringLiteral(", 1 didn't copy") : QStringLiteral(", %1 didn't copy").arg(failed);
+        text += failed == 1 ? tr(", 1 didn't copy") : tr(", %1 didn't copy").arg(failed);
     }
     // Only once there's enough to go on.
     if (m_active >= 0 && m_batchClock.isValid() && m_batchClock.elapsed() > 1000 && moved > 0) {
@@ -572,7 +573,7 @@ void FileBrowser::cancelTransfers()
     for (Job &j : m_jobs) {
         if (j.state == QLatin1String("waiting")) {
             j.state = QStringLiteral("failed");
-            j.error = QStringLiteral("Cancelled");
+            j.error = tr("Cancelled");
         }
     }
     Q_EMIT transfersChanged();

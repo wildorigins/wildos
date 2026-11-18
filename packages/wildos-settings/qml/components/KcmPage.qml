@@ -118,17 +118,17 @@ Item {
         StatusCard {
             iconName: "info"
             warning: true
-            title: "This setting isn't available"
+            title: qsTr("This setting isn't available")
             description: KcmHost.available(page.pluginId)
-                ? "Wild OS could not open it. Restarting Settings may help."
-                : "The part of Wild OS that provides it is not installed on this computer."
+                ? qsTr("Wild OS could not open it. Restarting Settings may help.")
+                : qsTr("The part of Wild OS that provides it is not installed on this computer.")
         }
 
         // The reason the module gave, for anyone helping to fix it.
         UI.Label {
             Layout.fillWidth: true
             visible: page.error.length > 0 && KcmHost.available(page.pluginId)
-            text: "Technical details: " + page.error
+            text: qsTr("Technical details: %1").arg(page.error)
             size: 12
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -160,18 +160,18 @@ Item {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "You have changes that are not applied yet."
+                text: qsTr("You have changes that are not applied yet.")
                 color: UI.Style.inkMuted
             }
 
             UI.Button {
-                text: "Apply"
+                text: qsTr("Apply")
                 kind: "primary"
                 onClicked: page.apply()
             }
 
             UI.Button {
-                text: "Discard changes"
+                text: qsTr("Discard changes")
                 onClicked: page.discard()
             }
         }

@@ -114,7 +114,7 @@ PageFlick {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "From the file " + pkg.fileName
+                text: qsTr("From the file %1").arg(pkg.fileName)
                 size: 13
                 color: Metrics.inkTertiary
             }
@@ -142,11 +142,11 @@ PageFlick {
                     UI.Label {
                         text: {
                             switch (pkg.phase) {
-                            case "auth": return "Waiting for the password";
-                            case "download": return "Downloading";
-                            case "install": return "Installing";
+                            case "auth": return qsTr("Waiting for the password");
+                            case "download": return qsTr("Downloading");
+                            case "install": return qsTr("Installing");
                             }
-                            return "Getting ready";
+                            return qsTr("Getting ready");
                         }
                         size: 13
                         font.weight: UI.Style.weightSemiBold
@@ -195,7 +195,7 @@ PageFlick {
 
                     UI.Label {
                         width: parent.width
-                        text: page.isDeb ? "Its own setup runs as part of this, which can take a minute." : "You can keep browsing."
+                        text: page.isDeb ? qsTr("Its own setup runs as part of this, which can take a minute.") : qsTr("You can keep browsing.")
                         size: 12
                         color: Metrics.inkTertiary
                         wrapMode: Text.Wrap
@@ -209,15 +209,15 @@ PageFlick {
                     readonly property bool bad: ["unreadable", "blocked", "failed"].indexOf(pkg.state) >= 0
                     text: {
                         switch (pkg.state) {
-                        case "reading": return "Reading the file";
+                        case "reading": return qsTr("Reading the file");
                         case "unreadable":
                         case "blocked":
                         case "failed":
                             return pkg.problem;
-                        case "update": return "Version " + pkg.installedVersion + " is installed. This file has " + pkg.version + ".";
-                        case "installed": return "This version is installed.";
-                        case "newer": return "A newer version is installed (" + pkg.installedVersion + ").";
-                        case "done": return pkg.canOpen ? "Installed. It's in Start too." : "Installed.";
+                        case "update": return qsTr("Version %1 is installed. This file has %2.").arg(pkg.installedVersion).arg(pkg.version);
+                        case "installed": return qsTr("This version is installed.");
+                        case "newer": return qsTr("A newer version is installed (%1).").arg(pkg.installedVersion);
+                        case "done": return pkg.canOpen ? qsTr("Installed. It's in Start too.") : qsTr("Installed.");
                         }
                         return "";
                     }
@@ -245,19 +245,19 @@ PageFlick {
             }
             const out = [];
             if (pkg.version.length > 0) {
-                out.push({ label: "Version", value: pkg.version, sub: pkg.installedVersion.length > 0 && pkg.installedVersion !== pkg.version ? "You have " + pkg.installedVersion : "" });
+                out.push({ label: qsTr("Version"), value: pkg.version, sub: pkg.installedVersion.length > 0 && pkg.installedVersion !== pkg.version ? qsTr("You have %1").arg(pkg.installedVersion) : "" });
             }
             if (pkg.installedSizeText.length > 0) {
-                out.push({ label: "Size", value: pkg.installedSizeText, sub: "Once installed" });
+                out.push({ label: qsTr("Size"), value: pkg.installedSizeText, sub: qsTr("Once installed") });
             } else if (pkg.fileSizeText.length > 0) {
-                out.push({ label: "Size", value: pkg.fileSizeText, sub: "The file" });
+                out.push({ label: qsTr("Size"), value: pkg.fileSizeText, sub: qsTr("The file") });
             }
-            out.push(page.isDeb ? { label: "Kind", value: "Debian package", sub: "Not sandboxed" } : { label: "Kind", value: "Flatpak", sub: "Sandboxed" });
+            out.push(page.isDeb ? { label: qsTr("Kind"), value: qsTr("Debian package"), sub: qsTr("Not sandboxed") } : { label: qsTr("Kind"), value: "Flatpak", sub: qsTr("Sandboxed") });
             if (pkg.maker.length > 0) {
-                out.push({ label: "Made by", value: pkg.maker, sub: "As the file says" });
+                out.push({ label: qsTr("Made by"), value: pkg.maker, sub: qsTr("As the file says") });
             }
             if (!page.isDeb) {
-                out.push({ label: "Updates from", value: pkg.origin.length > 0 ? pkg.origin : "None", sub: pkg.origin.length > 0 ? "" : "It won't update itself" });
+                out.push({ label: qsTr("Updates from"), value: pkg.origin.length > 0 ? pkg.origin : qsTr("None"), sub: pkg.origin.length > 0 ? "" : qsTr("It won't update itself") });
             }
             return out;
         }
@@ -269,39 +269,36 @@ PageFlick {
         visible: pkg.state !== "reading" && pkg.state !== "unreadable"
 
         SectionHeader {
-            title: "Where it comes from"
+            title: qsTr("Where it comes from")
         }
 
         ReachCard {
             visible: page.flathubKey.length > 0
-            title: "This app is on Flathub"
+            title: qsTr("This app is on Flathub")
             iconName: "info"
             tint: UI.Style.accent
-            text: "Its page in the Store shows what it can reach and whether Flathub has checked who makes it."
+            text: qsTr("Its page in the Store shows what it can reach and whether Flathub has checked who makes it.")
         }
 
         StoreLink {
             visible: page.flathubKey.length > 0
             Layout.leftMargin: -4
             Layout.topMargin: -6
-            text: "See it in the Store"
+            text: qsTr("See it in the Store")
             onClicked: page.store.openApp(page.flathubKey)
         }
 
         ReachCard {
             visible: page.flathubKey.length === 0
-            title: page.isDeb ? "Not from Wild OS, and not checked" : "Not from the Store, and not checked"
+            title: page.isDeb ? qsTr("Not from Wild OS, and not checked") : qsTr("Not from the Store, and not checked")
             iconName: "info"
             tint: Metrics.danger
             text: {
                 if (page.isDeb) {
-                    return "Wild OS didn't make this package and nothing has checked it. Installing it runs its own setup with full access to your computer, "
-                        + "and the app it installs can open any of your files. Wild OS won't update it, unless the package adds its own source of updates. "
-                        + "Only install it if you trust where it came from.";
+                    return qsTr("Wild OS didn't make this package and nothing has checked it. Installing it runs its own setup with full access to your computer, and the app it installs can open any of your files. Wild OS won't update it, unless the package adds its own source of updates. Only install it if you trust where it came from.");
                 }
-                const updates = pkg.origin.length > 0 ? "It downloads from " + pkg.origin + ", and its updates come from there too. " : "It won't get updates. ";
-                return "Nothing has checked this app. It runs in a sandbox, but the app itself decides how much that sandbox lets it reach. "
-                    + updates + "Only install it if you trust where it came from.";
+                const updates = pkg.origin.length > 0 ? qsTr("It downloads from %1, and its updates come from there too.").arg(pkg.origin) : qsTr("It won't get updates.");
+                return qsTr("Nothing has checked this app. It runs in a sandbox, but the app itself decides how much that sandbox lets it reach. %1 Only install it if you trust where it came from.").arg(updates);
             }
         }
     }
@@ -314,15 +311,15 @@ PageFlick {
         visible: page.isDeb && pkg.depends.length > 0 && pkg.state !== "unreadable"
 
         SectionHeader {
-            title: "What it needs"
+            title: qsTr("What it needs")
         }
 
         ReachCard {
-            readonly property string needs: "It asks for " + pkg.depends.join(", ") + "."
-            title: pkg.checkingDepends ? "Checking what it needs"
-                : !page.installable ? "Parts it needs"
-                : pkg.extras.length > 0 ? "Also installs " + pkg.extras.length + (pkg.extras.length === 1 ? " part" : " parts") + " from Wild OS"
-                : "Everything it needs is already here"
+            readonly property string needs: qsTr("It asks for %1.").arg(pkg.depends.join(", "))
+            title: pkg.checkingDepends ? qsTr("Checking what it needs")
+                : !page.installable ? qsTr("Parts it needs")
+                : pkg.extras.length > 0 ? (pkg.extras.length === 1 ? qsTr("Also installs 1 part from Wild OS") : qsTr("Also installs %1 parts from Wild OS").arg(pkg.extras.length))
+                : qsTr("Everything it needs is already here")
             iconName: pkg.state === "blocked" ? "close" : "tick"
             tint: pkg.state === "blocked" ? Metrics.danger : Metrics.success
             text: page.installable && pkg.extras.length > 0 ? pkg.extras.join(", ") + ".\n\n" + needs : needs
@@ -330,10 +327,10 @@ PageFlick {
 
         ReachCard {
             visible: page.installable && pkg.removes.length > 0
-            title: "Removes " + pkg.removes.length + (pkg.removes.length === 1 ? " part" : " parts") + " of your system"
+            title: pkg.removes.length === 1 ? qsTr("Removes 1 part of your system") : qsTr("Removes %1 parts of your system").arg(pkg.removes.length)
             iconName: "close"
             tint: Metrics.danger
-            text: "To make room, installing it takes " + pkg.removes.join(", ") + " off your computer. Anything that uses them stops working."
+            text: qsTr("To make room, installing it takes %1 off your computer. Anything that uses them stops working.").arg(pkg.removes.join(", "))
         }
     }
 
@@ -343,7 +340,7 @@ PageFlick {
         visible: pkg.description.length > 0 && pkg.state !== "unreadable"
 
         SectionHeader {
-            title: "What it says it does"
+            title: qsTr("What it says it does")
         }
 
         Text {
@@ -367,15 +364,15 @@ PageFlick {
 
         StoreLink {
             visible: pkg.homepage.length > 0
-            text: "Website"
-            Accessible.description: "Opens the website the file names"
+            text: qsTr("Website")
+            Accessible.description: qsTr("Opens the website the file names")
             onClicked: Qt.openUrlExternally(pkg.homepage)
         }
 
         UI.Label {
             visible: pkg.id.length > 0
             height: 26
-            text: (page.isDeb ? "Package " : "App ID ") + pkg.id
+            text: (page.isDeb ? qsTr("Package %1") : qsTr("App ID %1")).arg(pkg.id)
             size: 13
             color: Metrics.inkTertiary
         }

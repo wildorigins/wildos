@@ -19,7 +19,7 @@ Rectangle {
 
     Layout.fillWidth: true
     implicitHeight: Math.max(42, column.implicitHeight + 20)
-    radius: 8
+    radius: UI.Style.radiusSm
     color: mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRaised
     border.width: 1
     border.color: UI.Style.borderSubtle

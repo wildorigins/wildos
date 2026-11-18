@@ -1,12 +1,14 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Templates as T
 import WildOS.UI as UI
 
 // The taskbar light: a 36 px tall pill, 10 px padding, its device's colour
 // at 20% behind a 17 px icon and a 7 px dot, amber for the microphone and
 // green for the camera; both pills when both are in use. A device switched
 // off for every app, and not in use, shows its struck-through icon in a
-// plain 32 px cell like the shield's, so the switch can be found again.
+// plain 32 px cell with the shield's 32 by 40 hover, so the switch can be
+// found again.
 MouseArea {
     id: light
 
@@ -25,14 +27,44 @@ MouseArea {
     Layout.minimumHeight: 44
 
     hoverEnabled: true
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
     Accessible.role: Accessible.Button
     Accessible.name: lights.summary
     Accessible.description: lights.toolTipSubText
 
     // Remembering the state at press time stops a click that closes the popup
     // (it loses focus first) from opening it again straight away.
-    onPressed: wasExpanded = lights.expanded
-    onClicked: lights.expanded = !wasExpanded
+    onPressed: mouse => {
+        if (mouse.button === Qt.LeftButton) {
+            wasExpanded = lights.expanded;
+        }
+    }
+    onClicked: mouse => {
+        if (mouse.button === Qt.RightButton) {
+            openMenu(mouse.x);
+        } else {
+            lights.expanded = !wasExpanded;
+        }
+    }
+
+    // A right click leads to the week's use in History. It opens in a
+    // window of its own, above the taskbar, as the taskbar is too short to
+    // hold it.
+    function openMenu(px: real): void {
+        menu.entries = [
+            { text: qsTr("Camera and microphone history"), icon: "clock", run: () => lights.openHistory() }
+        ];
+        const scene = light.mapToItem(null, 0, 0);
+        menu.x = Math.round(px - menu.implicitWidth / 2);
+        menu.y = Math.round(-scene.y - 12 - menu.implicitHeight);
+        menu.open();
+    }
+
+    UI.Menu {
+        id: menu
+        popupType: T.Popup.Window
+        minimumWidth: 220
+    }
 
     Row {
         id: row
@@ -47,9 +79,10 @@ MouseArea {
                 id: pill
                 required property var modelData
                 readonly property bool lit: modelData.on
+                anchors.verticalCenter: parent.verticalCenter
                 width: lit ? 10 + 17 + 7 + 7 + 10 : 32
-                height: 36
-                radius: lit ? 10 : 8
+                height: lit ? 36 : 40
+                radius: lit ? 10 : UI.Style.radiusSm
                 color: {
                     const c = modelData.color;
                     const base = lit ? Qt.rgba(c.r, c.g, c.b, 0.20) : "transparent";

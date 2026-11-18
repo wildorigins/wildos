@@ -140,11 +140,11 @@ void Security::refresh()
         // connected to a network only.
         if (state >= 70) {
             m_networkConnected = true;
-            m_networkText = name.isEmpty() ? QStringLiteral("Connected to the internet") : QStringLiteral("Connected to %1").arg(name);
+            m_networkText = name.isEmpty() ? tr("Connected to the internet") : tr("Connected to %1").arg(name);
         } else if (state >= 50) {
-            m_networkText = name.isEmpty() ? QStringLiteral("Connected, no internet") : QStringLiteral("%1, no internet").arg(name);
+            m_networkText = name.isEmpty() ? tr("Connected, no internet") : tr("%1, no internet").arg(name);
         } else {
-            m_networkText = QStringLiteral("Not connected");
+            m_networkText = tr("Not connected");
         }
     }
     // Design reviews show every option, as the board does.

@@ -44,7 +44,9 @@ class PdfDocument : public QObject
     Q_PROPERTY(bool hasForm READ hasForm NOTIFY loadedChanged)
     Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY modifiedChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY modifiedChanged)
     Q_PROPERTY(QVariantList revisions READ revisions NOTIFY revisionsChanged)
+    Q_PROPERTY(QVariantList outline READ outline NOTIFY loadedChanged)
 
 public:
     static PdfDocument *instance();
@@ -64,7 +66,12 @@ public:
     bool hasForm() const;
     bool modified() const;
     bool canUndo() const;
+    bool canRedo() const;
     QVariantList revisions() const;
+    // The PDF's own contents, if it has one, as one flat list: { title,
+    // level (0 at the top), page (-1 when it leads nowhere in this file),
+    // top (how far down that page, 0 to 1) }.
+    QVariantList outline() const;
 
     // For PageProvider, on a worker thread: the page drawn pixelWidth wide,
     // or a null image if the document has changed since it was asked for.
@@ -85,9 +92,16 @@ public:
     Q_INVOKABLE bool addInk(int page, const QVariantList &points);
     Q_INVOKABLE bool addText(int page, const QRectF &rect, const QString &text, double pointSize);
     Q_INVOKABLE void undo();
+    // Puts back what Undo took off. Adding anything new empties it.
+    Q_INVOKABLE void redo();
 
     // Runs on a worker thread and answers with found().
     Q_INVOKABLE void find(const QString &text);
+    // The links on a page, read on a worker thread and answered with
+    // linksFound(): { x, y, width, height, page, top, url }. A link inside
+    // the file has its page and how far down it; a web or mail link has
+    // page -1 and its address. Other kinds are left out.
+    Q_INVOKABLE void findLinks(int page);
 
     // The fields of a page that can be filled in: { id, kind (text, check,
     // radio, choice), x, y, width, height, value, checked, choices,
@@ -118,13 +132,21 @@ Q_SIGNALS:
     void modifiedChanged();
     void revisionsChanged();
     void found(const QString &text, const QVariantList &hits);
+    void linksFound(int page, const QVariantList &links);
 
 private:
     explicit PdfDocument(QObject *parent = nullptr);
 
+    // What was added, with what it takes to add it again after an Undo.
     struct Added {
-        int page;
+        enum Kind { Highlight, Ink, Text, Stamp };
+        int page = 0;
         QString name;
+        Kind kind = Stamp;
+        QVariantList shape;
+        QRectF rect;
+        QString text;
+        double pointSize = 0;
     };
 
     QString load(const QString &path);
@@ -132,6 +154,8 @@ private:
     void touch(int page);
     // Called with m_lock held.
     void removeAnnotation(const Added &added);
+    // Called with m_lock held.
+    void record(const Added &added);
     QString nextName();
     bool writeTo(const QString &path);
     void setError(const QString &error);
@@ -143,8 +167,11 @@ private:
     int m_generation = 0;
     int m_pageCount = 0;
     QVariantList m_pageSizes;
+    QVariantList m_outline;
     QList<int> m_revisions;
     QList<Added> m_added;
+    QList<Added> m_undone;
+    bool m_redoing = false;
     bool m_modified = false;
     int m_names = 0;
     QString m_error;

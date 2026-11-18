@@ -593,11 +593,30 @@ void Scanner::addPage(const QImage &image, int dpi, const QString &note)
 void Scanner::remember(const QString &kind, int index)
 {
     const Page &page = m_pages.at(index);
-    m_history << Undo{kind, index, page, m_images->get(page.id)};
+    keep(Undo{kind, index, page, m_images->get(page.id)});
+}
+
+void Scanner::keep(const Undo &step)
+{
+    // Anything new done after an undo leaves nothing to redo.
+    if (!m_redoing) {
+        m_future.clear();
+    }
+    m_history << step;
     // Each copy is a whole page; ten steps back is plenty.
     while (m_history.size() > 10) {
         m_history.removeFirst();
     }
+}
+
+int Scanner::indexOfPage(int id) const
+{
+    for (int i = 0; i < m_pages.size(); ++i) {
+        if (m_pages.at(i).id == id) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void Scanner::changed(int index, const QImage &image, const QString &kind)
@@ -643,6 +662,12 @@ void Scanner::removePage()
         return;
     }
     const int index = m_current;
+    takeOut(index);
+    Q_EMIT said(tr("Page %1 removed").arg(index + 1), QStringLiteral("undo"));
+}
+
+void Scanner::takeOut(int index)
+{
     remember(QStringLiteral("remove"), index);
     m_images->remove(m_pages.at(index).id);
     m_pages.removeAt(index);
@@ -651,7 +676,18 @@ void Scanner::removePage()
     setCurrent(std::min(index, int(m_pages.size()) - 1));
     Q_EMIT currentChanged();
     m_measureTimer.start();
-    Q_EMIT said(tr("Page %1 removed").arg(index + 1), QStringLiteral("undo"));
+}
+
+void Scanner::movePage(int from, int to)
+{
+    if (from < 0 || from >= m_pages.size() || to < 0 || to >= m_pages.size() || from == to) {
+        return;
+    }
+    keep(Undo{QStringLiteral("move"), from, m_pages.at(from), QImage(), to});
+    m_pages.move(from, to);
+    Q_EMIT pagesChanged();
+    m_current = -1;
+    setCurrent(to);
 }
 
 void Scanner::undo()
@@ -664,21 +700,65 @@ void Scanner::undo()
         const int at = std::clamp(step.index, 0, int(m_pages.size()));
         m_pages.insert(at, step.page);
         m_images->set(step.page.id, step.image);
+        m_future << step;
         Q_EMIT pagesChanged();
         m_current = -1;
         setCurrent(at);
-    } else {
-        for (int i = 0; i < m_pages.size(); ++i) {
-            if (m_pages.at(i).id == step.page.id) {
-                m_images->set(step.page.id, step.image);
-                ++m_pages[i].rev;
-                m_pages[i].pdfBytes = -1;
-                Q_EMIT pagesChanged();
-                setCurrent(i);
-            }
+    } else if (step.kind == QLatin1String("move")) {
+        const int at = indexOfPage(step.page.id);
+        if (at >= 0) {
+            const int back = std::clamp(step.index, 0, int(m_pages.size()) - 1);
+            m_pages.move(at, back);
+            m_future << step;
+            m_current = -1;
+            setCurrent(back);
         }
+        Q_EMIT pagesChanged();
+    } else {
+        const int at = indexOfPage(step.page.id);
+        if (at >= 0) {
+            // The page as it is now, to put back on Redo.
+            m_future << Undo{step.kind, at, m_pages.at(at), m_images->get(step.page.id)};
+            m_images->set(step.page.id, step.image);
+            ++m_pages[at].rev;
+            m_pages[at].pdfBytes = -1;
+            setCurrent(at);
+        }
+        Q_EMIT pagesChanged();
+    }
+    while (m_future.size() > 10) {
+        m_future.removeFirst();
     }
     m_measureTimer.start();
+}
+
+void Scanner::redo()
+{
+    if (m_future.isEmpty()) {
+        return;
+    }
+    const Undo step = m_future.takeLast();
+    const int at = indexOfPage(step.page.id);
+    if (at < 0) {
+        Q_EMIT pagesChanged();
+        return;
+    }
+    m_redoing = true;
+    if (step.kind == QLatin1String("remove")) {
+        takeOut(at);
+    } else if (step.kind == QLatin1String("move")) {
+        const int to = std::clamp(step.to, 0, int(m_pages.size()) - 1);
+        if (at == to) {
+            // Nothing to move, but there is one fewer step to redo.
+            Q_EMIT pagesChanged();
+        } else {
+            movePage(at, to);
+        }
+    } else {
+        changed(at, step.image, step.kind);
+        setCurrent(at);
+    }
+    m_redoing = false;
 }
 
 QString Scanner::pageFile()
@@ -879,6 +959,7 @@ void Scanner::forget()
     }
     m_pages.clear();
     m_history.clear();
+    m_future.clear();
     m_current = -1;
     Q_EMIT pagesChanged();
     Q_EMIT currentChanged();

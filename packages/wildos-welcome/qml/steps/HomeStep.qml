@@ -16,8 +16,8 @@ StepPage {
     // The first step of an account's own welcome has nothing before it.
     property bool canGoBack: true
 
-    title: "Make it feel like home"
-    subtitle: "Coming from Windows? Pick the layout you're used to."
+    title: qsTr("Make it feel like home")
+    subtitle: qsTr("Coming from Windows? Pick the layout you're used to.")
     gap: 24
     Component.onCompleted: focusQuietly(continueButton)
 
@@ -26,7 +26,7 @@ StepPage {
         spacing: 10
 
         UI.Label {
-            text: "Taskbar"
+            text: qsTr("Taskbar")
             size: 14
             font.weight: UI.Style.weightSemiBold
             Accessible.role: Accessible.Heading
@@ -36,12 +36,12 @@ StepPage {
             Layout.fillWidth: true
             spacing: 12
             Accessible.role: Accessible.Grouping
-            Accessible.name: "Taskbar layout"
+            Accessible.name: qsTr("Taskbar layout")
 
             Repeater {
                 model: [
-                    { layout: 0, name: "Centred", hint: "Like Windows 11" },
-                    { layout: 1, name: "Left-aligned", hint: "Like Windows 10" }
+                    { layout: 0, name: qsTr("Centred"), hint: qsTr("Like Windows 11") },
+                    { layout: 1, name: qsTr("Left-aligned"), hint: qsTr("Like Windows 10") }
                 ]
 
                 UI.ChoiceCard {
@@ -74,7 +74,7 @@ StepPage {
         UI.Label {
             Layout.fillWidth: true
             visible: !Setup.taskbarLayoutKnown
-            text: "Wild OS couldn't reach the taskbar, so its layout can't be changed right now. You can change it later in Settings > Personalisation > Taskbar."
+            text: qsTr("Wild OS couldn't reach the taskbar, so its layout can't be changed right now. You can change it later in Settings > Personalisation > Taskbar.")
             size: 12
             color: UI.Style.inkMuted
             wrapMode: Text.WordWrap
@@ -87,7 +87,7 @@ StepPage {
         spacing: 10
 
         UI.Label {
-            text: "Appearance"
+            text: qsTr("Appearance")
             size: 14
             font.weight: UI.Style.weightSemiBold
             Accessible.role: Accessible.Heading
@@ -97,7 +97,7 @@ StepPage {
             Layout.fillWidth: true
             spacing: 12
             Accessible.role: Accessible.Grouping
-            Accessible.name: "Appearance"
+            Accessible.name: qsTr("Appearance")
 
             // Light and Automatic need the light colour scheme installed;
             // without it they are held back with the reason on hover, as
@@ -107,9 +107,9 @@ StepPage {
                 model: [
                     // Each theme's page ground, as WildOS.UI draws it: a
                     // preview of the scheme itself.
-                    { name: "Dark", scheme: "WildOS", swatch: ["#16181c"] },
-                    { name: "Light", scheme: "WildOSLight", swatch: ["#eef1f7"] },
-                    { name: "Automatic", scheme: "", swatch: ["#eef1f7", "#16181c"] }
+                    { name: qsTr("Dark"), scheme: "WildOS", swatch: ["#16181c"] },
+                    { name: qsTr("Light"), scheme: "WildOSLight", swatch: ["#eef1f7"] },
+                    { name: qsTr("Automatic"), scheme: "", swatch: ["#eef1f7", "#16181c"] }
                 ]
 
                 Item {
@@ -118,7 +118,7 @@ StepPage {
                     required property var modelData
                     readonly property bool automatic: modelData.scheme.length === 0
                     readonly property bool available: Setup.hasColourScheme(automatic ? "WildOSLight" : modelData.scheme)
-                    readonly property string reason: "The light theme is not installed on this computer"
+                    readonly property string reason: qsTr("The light theme is not installed on this computer")
 
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
@@ -185,7 +185,7 @@ StepPage {
         spacing: 10
 
         UI.Label {
-            text: "Accent colour"
+            text: qsTr("Accent colour")
             size: 14
             font.weight: UI.Style.weightSemiBold
             Accessible.role: Accessible.Heading
@@ -194,7 +194,7 @@ StepPage {
         Row {
             spacing: 12
             Accessible.role: Accessible.Grouping
-            Accessible.name: "Accent colour"
+            Accessible.name: qsTr("Accent colour")
 
             Repeater {
                 model: UI.Style.accents
@@ -262,13 +262,13 @@ StepPage {
 
     buttons: [
         UI.Button {
-            text: "Back"
+            text: qsTr("Back")
             visible: page.canGoBack
             onClicked: page.back()
         },
         UI.Button {
             id: continueButton
-            text: "Continue"
+            text: qsTr("Continue")
             kind: "primary"
             onClicked: page.next()
         }

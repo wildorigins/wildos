@@ -91,6 +91,10 @@ public:
     Q_INVOKABLE QString createNotebook(const QString &name);
     Q_INVOKABLE QString renameNotebook(const QString &from, const QString &to);
     Q_INVOKABLE bool trashNotebook(const QString &name);
+    // Brings back the note or notebook last moved to the bin from here, for
+    // Undo. Returns where it is again, or an empty string (lastError says
+    // why).
+    Q_INVOKABLE QString restoreTrashed();
     Q_INVOKABLE int notebookCount(const QString &name) const;
     Q_INVOKABLE int indexOfPath(const QString &path) const;
     Q_INVOKABLE QString pathAt(int row) const;
@@ -129,6 +133,16 @@ private:
     void saveCreatedSoon();
     void saveCreatedNow();
     bool matches(const Note &note) const;
+    void rememberTrashed(const QString &from, const QString &inBin);
+
+    struct Trashed {
+        QString from;
+        QString inBin;
+        // When its notes were first seen, which a rescan forgets once the
+        // files are gone.
+        QHash<QString, qint64> created;
+    };
+    Trashed m_trashed;
 
     QString m_root;
     QList<Note> m_all;

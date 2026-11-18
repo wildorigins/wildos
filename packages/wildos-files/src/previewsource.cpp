@@ -29,6 +29,14 @@ bool looksLikeText(const QByteArray &head)
     return !head.isEmpty() && !head.contains('\0');
 }
 
+// A picture shown still: animated formats play in their own view.
+bool stillPicture(const QString &mime)
+{
+    static const QList<QByteArray> images = QImageReader::supportedMimeTypes();
+    return mime.startsWith(QLatin1String("image/")) && mime != QLatin1String("image/gif") && mime != QLatin1String("image/webp")
+        && images.contains(mime.toLatin1());
+}
+
 Result inspect(const QString &path)
 {
     Result r;
@@ -41,7 +49,6 @@ Result inspect(const QString &path)
     const QString name = mime.name();
     r.mimeType = name;
 
-    static const QList<QByteArray> images = QImageReader::supportedMimeTypes();
     if (name == QLatin1String("application/pdf")) {
         r.kind = QStringLiteral("pdf");
         return r;
@@ -50,7 +57,7 @@ Result inspect(const QString &path)
         r.kind = QStringLiteral("animated");
         return r;
     }
-    if (name.startsWith(QLatin1String("image/")) && images.contains(name.toLatin1())) {
+    if (stillPicture(name)) {
         r.kind = QStringLiteral("image");
         return r;
     }
@@ -103,6 +110,11 @@ Result inspect(const QString &path)
 PreviewSource::PreviewSource(QObject *parent)
     : QObject(parent)
 {
+}
+
+bool PreviewSource::showsAsPicture(const QString &mimeType) const
+{
+    return stillPicture(mimeType);
 }
 
 void PreviewSource::setUrl(const QUrl &url)

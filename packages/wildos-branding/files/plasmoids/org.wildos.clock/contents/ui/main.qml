@@ -64,10 +64,16 @@ PlasmoidItem {
 
     // Settings ships with Wild OS, but if it has gone the click still says
     // something rather than doing nothing.
+    // A translated message can hold an apostrophe, which would end the
+    // shell's single quotes.
+    function shellQuote(text: string): string {
+        return "'" + text.replace(/'/g, "'\\''") + "'";
+    }
+
     function openSettings(page: string): void {
         shell.connectSource("if command -v wildos-settings >/dev/null; then setsid -f wildos-settings --page " + page + " >/dev/null 2>&1; "
-            + "else notify-send -a 'Wild OS' -i preferences-system 'Settings is missing' "
-            + "'Reinstall it from the Store to change this.'; fi");
+            + "else notify-send -a 'Wild OS' -i preferences-system " + shellQuote(qsTr("Settings is missing")) + " "
+            + shellQuote(qsTr("Reinstall it from the Store to change this.")) + "; fi");
         clock.expanded = false;
     }
 
@@ -84,6 +90,13 @@ PlasmoidItem {
         urgencies: NotificationManager.Notifications.CriticalUrgency
             | NotificationManager.Notifications.NormalUrgency
             | (settings.lowPriorityHistory ? NotificationManager.Notifications.LowUrgency : 0)
+    }
+
+    // No pop-ups, list entries or badges from this app: the switch Settings >
+    // Notifications from apps shows for it, where it can be turned back on.
+    function turnOffApp(desktopEntry: string): void {
+        settings.setApplicationBehavior(desktopEntry, 0);
+        settings.save();
     }
 
     readonly property bool showPopups: Plasmoid.configuration.showPopups
@@ -174,16 +187,16 @@ PlasmoidItem {
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "preferences-system-time"
-    Plasmoid.title: "Date, time and notifications"
+    Plasmoid.title: qsTr("Date, time and notifications")
     toolTipMainText: Formats.longDate(now)
     toolTipSubText: {
         const unread = history.unreadNotificationsCount;
         const lines = [];
         if (unread > 0) {
-            lines.push(unread === 1 ? "1 new notification" : unread + " new notifications");
+            lines.push(unread === 1 ? qsTr("1 new notification") : qsTr("%1 new notifications").arg(unread));
         }
         if (doNotDisturb) {
-            lines.push("Do not disturb is on");
+            lines.push(qsTr("Do not disturb is on"));
         }
         return lines.join("\n");
     }

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Whether Kicksecure's live-mode-apparmor.service has anything to do (its
+# ExecCondition, see live-mode-apparmor.service.d/wildos-live-only.conf).
+# It turns a line in the AppArmor home folder settings on in live mode and
+# off otherwise. On an installed system that line is already off, and the
+# check alone held AppArmor, and with it the sign-in screen, up by a tenth
+# of a second. Exit 0 lets it run, 1 skips it.
+
+# The line is on: whatever the mode, let the service decide.
+grep -qs '^@{HOMEDIRS}+=/rw/home/' /etc/apparmor.d/tunables/home.d/live-mode && exit 0
+
+# A root on a writable disk file system is not live mode, so the line
+# stays off. Anything else (the live USB's overlay, Kicksecure's live
+# boot) goes to the service.
+awk '$2 == "/" { root = $3 " " $4 } END { exit !(root ~ /^(btrfs|ext4|xfs) rw(,|$)/) }' /proc/self/mounts && exit 1
+exit 0

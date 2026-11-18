@@ -14,8 +14,9 @@ namespace
 {
 void usage()
 {
-    QTextStream(stdout) << "Usage: wildos-terminal [--workdir DIR] [-e COMMAND [ARGS...]]\n"
+    QTextStream(stdout) << "Usage: wildos-terminal [--workdir DIR] [--settings] [-e COMMAND [ARGS...]]\n"
                            "  -d, --workdir DIR   Start in this folder\n"
+                           "  --settings          Open with Terminal's settings in front\n"
                            "  -e COMMAND          Run COMMAND instead of the shell; the rest of the line is its arguments\n"
                            "  --version           Show the version\n";
 }
@@ -37,6 +38,7 @@ int main(int argc, char *argv[])
     // Konsole), so the arguments are read by hand.
     QString directory;
     QStringList command;
+    bool settings = false;
     const QStringList args = app.arguments();
     for (int i = 1; i < args.size(); ++i) {
         const QString &a = args[i];
@@ -47,6 +49,9 @@ int main(int argc, char *argv[])
             directory = args[++i];
         } else if (a.startsWith(QLatin1String("--workdir=")) || a.startsWith(QLatin1String("--working-directory="))) {
             directory = a.section(QLatin1Char('='), 1);
+        } else if (a == QLatin1String("--settings")) {
+            // How Remote, whose terminal follows these settings, opens them.
+            settings = true;
         } else if (a == QLatin1String("--version") || a == QLatin1String("-v")) {
             QTextStream(stdout) << "wildos-terminal " << WILDOS_TERMINAL_VERSION << "\n";
             return 0;
@@ -80,6 +85,9 @@ int main(int argc, char *argv[])
         window->showMaximized();
     } else {
         window->show();
+    }
+    if (settings) {
+        window->openSettings();
     }
     return app.exec();
 }

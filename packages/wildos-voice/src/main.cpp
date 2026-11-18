@@ -7,6 +7,7 @@
 //
 // One instance: a second start hands its arguments to the running one.
 
+#include "mpris.h"
 #include "player.h"
 #include "recorder.h"
 #include "recordings.h"
@@ -110,6 +111,9 @@ int main(int argc, char *argv[])
     Transcripts *transcripts = Transcripts::instance();
     VoiceApp *voice = VoiceApp::instance();
     Q_UNUSED(recordings)
+
+    Mpris mpris(&app);
+    QObject::connect(&mpris, &Mpris::raiseRequested, voice, &VoiceApp::showMain);
 
     QObject::connect(recorder, &Recorder::started, transcripts, &Transcripts::recordingStarted);
     QObject::connect(recorder, &Recorder::speech, transcripts, &Transcripts::speech);

@@ -95,25 +95,25 @@ PageScroll {
         const fromApt = parseInt(Protection.status.updates_checked || "0");
         const when = Format.isValid(Updates.lastChecked) ? Format.ago(Updates.lastChecked)
             : fromApt > 0 ? Format.ago(new Date(fromApt * 1000)) : "";
-        return when.length > 0 ? "Last checked " + when + "." : "";
+        return when.length > 0 ? qsTr("Last checked %1.").arg(when) : "";
     }
 
     // Updates are shown by what they are to a person, never by package:
     // apps by their own names, everything else by the part of the system it
     // belongs to, as Windows Update words its entries.
     readonly property var groupNames: ({
-        "wildos": "Wild OS", "core": "Core system", "browser": "Web browser", "desktop": "Desktop and graphics",
-        "library": "System libraries", "other": "System tools"
+        "wildos": "Wild OS", "core": qsTr("Core system"), "browser": qsTr("Web browser"), "desktop": qsTr("Desktop and graphics"),
+        "library": qsTr("System libraries"), "other": qsTr("System tools")
     })
 
     function groupTitle(group, security) {
         switch (group) {
-        case "wildos": return "Wild OS update";
-        case "core": return security ? "Core system security fixes" : "Core system updates";
-        case "browser": return security ? "Security fixes for the browser" : "Browser update";
-        case "desktop": return security ? "Desktop security fixes" : "Desktop updates";
-        case "library": return security ? "Security fixes for system libraries" : "System library updates";
-        default: return security ? "Security fixes for system tools" : "System tool updates";
+        case "wildos": return qsTr("Wild OS update");
+        case "core": return security ? qsTr("Core system security fixes") : qsTr("Core system updates");
+        case "browser": return security ? qsTr("Security fixes for the browser") : qsTr("Browser update");
+        case "desktop": return security ? qsTr("Desktop security fixes") : qsTr("Desktop updates");
+        case "library": return security ? qsTr("Security fixes for system libraries") : qsTr("System library updates");
+        default: return security ? qsTr("Security fixes for system tools") : qsTr("System tool updates");
         }
     }
 
@@ -146,7 +146,7 @@ PageScroll {
         }
         const shown = names.slice(0, 3);
         const more = names.length - shown.length;
-        return more > 0 ? shown.join(", ") + " and " + more + " more" : shown.slice(0, -1).join(", ") + " and " + shown[shown.length - 1];
+        return more > 0 ? qsTr("%1 and %2 more").arg(shown.join(", ")).arg(more) : qsTr("%1 and %2").arg(shown.slice(0, -1).join(", ")).arg(shown[shown.length - 1]);
     }
 
     readonly property var pending: gather(Updates.updates.map(u => u.name), Updates.updates.map(u => u.security))
@@ -156,30 +156,32 @@ PageScroll {
         const apps = groups.filter(g => g.group === "app").map(g => g.app);
         if (entry.kind === "update") {
             if (!entry.succeeded) {
-                return "Updates that did not finish";
+                return qsTr("Updates that did not finish");
             }
             if (groups.some(g => g.group === "wildos")) {
-                return "Wild OS update";
+                return qsTr("Wild OS update");
             }
             if (groups.length === 1) {
-                return groups[0].group === "app" ? "Update to " + groups[0].app : groupTitle(groups[0].group, false);
+                return groups[0].group === "app" ? qsTr("Update to %1").arg(groups[0].app) : groupTitle(groups[0].group, false);
             }
-            return Format.plural(entry.packages.length, "update", "updates");
+            return entry.packages.length === 1 ? qsTr("1 update") : qsTr("%1 updates").arg(entry.packages.length);
         }
-        const verb = entry.kind === "install" ? "Installed " : "Removed ";
         if (!entry.succeeded) {
-            return entry.kind === "install" ? "An install that did not finish" : "A removal that did not finish";
+            return entry.kind === "install" ? qsTr("An install that did not finish") : qsTr("A removal that did not finish");
         }
-        return verb + (apps.length > 0 ? listOf(apps) : Format.plural(entry.packages.length, "system part", "system parts"));
+        const what = apps.length > 0 ? listOf(apps)
+            : entry.packages.length === 1 ? qsTr("1 system part") : qsTr("%1 system parts").arg(entry.packages.length);
+        return entry.kind === "install" ? qsTr("Installed %1").arg(what) : qsTr("Removed %1").arg(what);
     }
 
     function historyDetail(entry) {
         page.now;
-        const when = Format.day(entry.when);
-        const verb = entry.kind === "remove" ? "Removed " : "Installed ";
-        const prefix = when.length > 0 ? verb + when : verb.trim();
+        const when = Format.dayText(entry.when);
+        const removed = entry.kind === "remove";
+        const prefix = when.length > 0 ? (removed ? qsTr("Removed %1").arg(when) : qsTr("Installed %1").arg(when))
+            : (removed ? qsTr("Removed") : qsTr("Installed"));
         const groups = gather(entry.packages);
-        return groups.length > 1 ? prefix + ": " + listOf(groups.map(label)) : prefix;
+        return groups.length > 1 ? qsTr("%1: %2").arg(prefix).arg(listOf(groups.map(label))) : prefix;
     }
 
     // What the waiting Wild OS build brings, from the update site's notes:
@@ -219,60 +221,60 @@ PageScroll {
                 : "update"
         title: {
             switch (Updates.state) {
-            case "checking": return "Checking for updates";
-            case "installing": return "Installing updates";
+            case "checking": return qsTr("Checking for updates");
+            case "installing": return qsTr("Installing updates");
             case "available":
                 return Updates.securityCount > 0
-                    ? Format.plural(Updates.securityCount, "security fix is", "security fixes are") + " ready to install"
-                    : Format.plural(Updates.updates.length, "update is", "updates are") + " ready to install";
-            case "installed": return Updates.restartNeeded ? "Restart to finish updating" : "Updates installed";
-            case "uptodate": return unchecked ? "Not checked for updates yet" : "You're up to date";
-            case "error": return Updates.updates.length > 0 && !Updates.checkFailed ? "The updates were not installed" : "Wild OS could not check for updates";
-            default: return Updates.available ? "Updates" : "Updates are not available";
+                    ? (Updates.securityCount === 1 ? qsTr("1 security fix is ready to install") : qsTr("%1 security fixes are ready to install").arg(Updates.securityCount))
+                    : (Updates.updates.length === 1 ? qsTr("1 update is ready to install") : qsTr("%1 updates are ready to install").arg(Updates.updates.length));
+            case "installed": return Updates.restartNeeded ? qsTr("Restart to finish updating") : qsTr("Updates installed");
+            case "uptodate": return unchecked ? qsTr("Not checked for updates yet") : qsTr("You're up to date");
+            case "error": return Updates.updates.length > 0 && !Updates.checkFailed ? qsTr("The updates were not installed") : qsTr("Wild OS could not check for updates");
+            default: return Updates.available ? qsTr("Updates") : qsTr("Updates are not available");
             }
         }
         description: {
             switch (Updates.state) {
             case "checking":
                 if (Updates.clockWaiting)
-                    return (Updates.clockBehind.length > 0 ? "The clock on this computer is at least " + Updates.clockBehind + " behind. " : "")
-                        + "Wild OS is setting it through Tor, which can take a few minutes after start-up, and checks again as soon as it has.";
-                return Updates.waiting ? "Waiting for another install to finish first, such as the automatic security updates."
-                                       : "This can take a minute on a slow connection.";
+                    return (Updates.clockBehind.length > 0 ? qsTr("The clock on this computer is at least %1 behind.").arg(Updates.clockBehind) + " " : "")
+                        + qsTr("Wild OS is setting it through Tor, which can take a few minutes after start-up, and checks again as soon as it has.");
+                return Updates.waiting ? qsTr("Waiting for another install to finish first, such as the automatic security updates.")
+                                       : qsTr("This can take a minute on a slow connection.");
             case "installing":
                 if (Updates.waiting)
-                    return "Waiting for another install to finish first, such as the automatic security updates. Your updates start straight after.";
-                return (Updates.progress > 0 ? Updates.progress + "% done." : "Getting ready.")
-                    + (Updates.detail.length > 0 ? " Now: " + Updates.detail + "." : "");
+                    return qsTr("Waiting for another install to finish first, such as the automatic security updates. Your updates start straight after.");
+                return (Updates.progress > 0 ? qsTr("%1% done.").arg(Updates.progress) : qsTr("Getting ready."))
+                    + (Updates.detail.length > 0 ? " " + qsTr("Now: %1.").arg(Updates.detail) : "");
             case "available":
-                return (Updates.securityCount > 0 ? "Install them now to stay protected. " : "") + page.lastChecked;
+                return (Updates.securityCount > 0 ? qsTr("Install them now to stay protected.") + " " : "") + page.lastChecked;
             case "installed":
                 return Updates.restartNeeded
-                    ? (page.restartAt.length > 0 ? "Wild OS will restart " + page.restartAt.charAt(0).toLowerCase() + page.restartAt.slice(1) + ", as you chose." : "Some updates only take effect after a restart.")
+                    ? (page.restartAt.length > 0 ? qsTr("Wild OS will restart %1, as you chose.").arg(page.restartAt.charAt(0).toLowerCase() + page.restartAt.slice(1)) : qsTr("Some updates only take effect after a restart."))
                     : page.version + " " + page.lastChecked;
             case "error": return Updates.error;
-            case "uptodate": return unchecked ? page.version + " Check now to see what's new." : page.version + " " + page.lastChecked;
+            case "uptodate": return unchecked ? page.version + " " + qsTr("Check now to see what's new.") : page.version + " " + page.lastChecked;
             default:
-                return Updates.available ? page.version + " " + page.lastChecked : "The update service is not installed on this computer.";
+                return Updates.available ? page.version + " " + page.lastChecked : qsTr("The update service is not installed on this computer.");
             }
         }
 
         UI.Button {
             visible: Updates.restartNeeded && !page.busy
-            text: "Restart now"
+            text: qsTr("Restart now")
             kind: "primary"
             onClicked: Updates.restart()
         }
 
         UI.Button {
             visible: Updates.restartNeeded && !page.busy && System.hasProgram(page.restartPrompt)
-            text: page.restartAt.length > 0 ? "Change time" : "Schedule restart"
+            text: page.restartAt.length > 0 ? qsTr("Change time") : qsTr("Schedule restart")
             onClicked: System.launch(page.restartPrompt, ["restart"])
         }
 
         UI.Button {
             visible: Updates.state === "available"
-            text: "Install now"
+            text: qsTr("Install now")
             kind: !Updates.restartNeeded ? "primary" : "secondary"
             onClicked: Updates.install()
         }
@@ -280,14 +282,14 @@ PageScroll {
         UI.Button {
             visible: Updates.state !== "available" && Updates.state !== "installing"
             enabled: Updates.available && !page.busy
-            text: Updates.state === "checking" ? (Updates.clockWaiting ? "Waiting for the clock" : "Checking")
-                : Updates.state === "error" && Updates.checkFailed ? "Try again" : "Check now"
+            text: Updates.state === "checking" ? (Updates.clockWaiting ? qsTr("Waiting for the clock") : qsTr("Checking"))
+                : Updates.state === "error" && Updates.checkFailed ? qsTr("Try again") : qsTr("Check now")
             onClicked: Updates.check()
         }
 
         UI.Button {
             visible: Updates.state === "error" && Updates.clockProblem && Pages.exists("datetime")
-            text: "Date and time"
+            text: qsTr("Date and time")
             onClicked: Navigator.open("datetime")
         }
     }
@@ -300,7 +302,7 @@ PageScroll {
         Layout.leftMargin: -4
         Layout.topMargin: -8
         visible: Updates.state === "error" && Updates.errorDetails.length > 0
-        text: copied ? "Technical details copied" : "Copy technical details"
+        text: copied ? qsTr("Technical details copied") : qsTr("Copy technical details")
         onVisibleChanged: copied = false
         onClicked: {
             detailsClipboard.text = Updates.errorDetails;
@@ -327,7 +329,7 @@ PageScroll {
         visible: Updates.skippedSources.length > 0 && Updates.state !== "checking" && Updates.state !== "error"
         iconName: "warning"
         warning: true
-        title: "Not every software source could be checked"
+        title: qsTr("Not every software source could be checked")
         description: Updates.skippedSources
     }
 
@@ -337,7 +339,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Ready to install"
+            text: qsTr("Ready to install")
         }
 
         UI.Card {
@@ -353,11 +355,11 @@ PageScroll {
                         id: pendingRow
                         required property var modelData
                         readonly property bool wildos: modelData.group === "wildos"
-                        title: wildos && Updates.pendingBuild > 0 ? "Wild OS build " + Updates.pendingBuild
+                        title: wildos && Updates.pendingBuild > 0 ? qsTr("Wild OS build %1").arg(Updates.pendingBuild)
                             : modelData.group === "app" ? modelData.app : page.groupTitle(modelData.group, modelData.security)
                         description: wildos && page.pendingSummary.length > 0 ? page.sentence(page.pendingSummary)
-                            : modelData.group === "app" ? "App update" : Format.plural(modelData.count, "update", "updates")
-                        status: modelData.security ? "Security fix" : ""
+                            : modelData.group === "app" ? qsTr("App update") : (modelData.count === 1 ? qsTr("1 update") : qsTr("%1 updates").arg(modelData.count))
+                        status: modelData.security ? qsTr("Security fix") : ""
                         below: BuildNotes {
                             width: parent ? parent.width : 0
                             visible: pendingRow.wildos && page.pendingNotes.length > 0
@@ -369,7 +371,7 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: !page.showAll && page.pending.length > 6
-                    title: "Show all " + page.pending.length + " groups of updates"
+                    title: qsTr("Show all %1 groups of updates").arg(page.pending.length)
                     chevron: true
                     onClicked: page.showAll = true
                 }
@@ -384,33 +386,33 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
-                title: "Install security updates automatically"
+                title: qsTr("Install security updates automatically")
                 description: page.policyError.length > 0 ? page.policyError
-                    : page.policy.available === false ? "The automatic updates service is not installed on this computer."
-                    : "Small fixes install quietly in the background."
+                    : page.policy.available === false ? qsTr("The automatic updates service is not installed on this computer.")
+                    : qsTr("Small fixes install quietly in the background.")
                 enabled: page.policy.available === true
-                status: (page.policy.auto === true) ? "On" : "Off"
+                status: (page.policy.auto === true) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     id: autoToggle
                     anchors.verticalCenter: parent.verticalCenter
                     checked: page.policy.auto === true
-                    Accessible.name: "Install security updates automatically"
+                    Accessible.name: qsTr("Install security updates automatically")
                     onToggled: System.setUpdatePolicy("auto", checked ? "on" : "off")
                 }
             }
 
             UI.SettingRow {
-                title: "When a restart is needed"
-                description: "Wild OS will never restart in the middle of your work"
+                title: qsTr("When a restart is needed")
+                description: qsTr("Wild OS will never restart in the middle of your work")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "When a restart is needed"
+                    Accessible.name: qsTr("When a restart is needed")
                     enabled: page.policy.available === true
                     model: [
-                        { value: "ask", text: "Ask me first" },
-                        { value: "idle", text: "Restart when no one is signed in" }
+                        { value: "ask", text: qsTr("Ask me first") },
+                        { value: "idle", text: qsTr("Restart when no one is signed in") }
                     ]
                     readonly property var choice: page.policy.restart || "ask"
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -421,16 +423,16 @@ PageScroll {
             // Beta gets each new build as soon as it is made, before it is
             // promoted to Stable.
             UI.SettingRow {
-                title: "Update channel"
-                description: "Stable gets tested releases. Recommended for most people."
+                title: qsTr("Update channel")
+                description: qsTr("Stable gets tested releases. Recommended for most people.")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Update channel"
+                    Accessible.name: qsTr("Update channel")
                     enabled: page.policy.channelAvailable === true
                     model: [
-                        { value: "stable", text: "Stable" },
-                        { value: "beta", text: "Beta" }
+                        { value: "stable", text: qsTr("Stable") },
+                        { value: "beta", text: qsTr("Beta") }
                     ]
                     readonly property var choice: page.policy.channel || "stable"
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -445,7 +447,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Recently installed"
+            text: qsTr("Recently installed")
         }
 
         UI.Card {
@@ -468,14 +470,14 @@ PageScroll {
                         UI.LinkButton {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: index === page.newestRelease && page.goBackPoint >= 0
-                            text: "Go back"
+                            text: qsTr("Go back")
                             onClicked: goBackDialog.openFor(page.goBackPoint)
                         }
 
                         UI.LinkButton {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: index === page.newestRelease && page.installedNotes.length > 0
-                            text: "What's new"
+                            text: qsTr("What's new")
                             onClicked: notesDialog.open()
                         }
                     }
@@ -483,16 +485,16 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.installedNotes.length > 0
-                    title: "What's new in Wild OS"
-                    description: page.installedNotes.length > 0 ? "You have build " + Updates.installedBuild + ". See what recent builds changed." : ""
+                    title: qsTr("What's new in Wild OS")
+                    description: page.installedNotes.length > 0 ? qsTr("You have build %1. See what recent builds changed.").arg(Updates.installedBuild) : ""
                     chevron: true
                     onClicked: notesDialog.open()
                 }
 
                 UI.SettingRow {
                     visible: Updates.history.length === 0
-                    title: "Nothing installed yet"
-                    description: "Updates appear here once they are installed."
+                    title: qsTr("Nothing installed yet")
+                    description: qsTr("Updates appear here once they are installed.")
                 }
             }
         }
@@ -506,11 +508,11 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
-                title: "App updates"
+                title: qsTr("App updates")
                 description: System.appUpdates > 0
-                    ? Format.plural(System.appUpdates, "app has an update", "apps have updates") + " waiting in the Store"
-                    : System.appUpdates === 0 ? "Apps from the Store are up to date"
-                    : "Apps you installed from the Store update there"
+                    ? (System.appUpdates === 1 ? qsTr("1 app has an update waiting in the Store") : qsTr("%1 apps have updates waiting in the Store").arg(System.appUpdates))
+                    : System.appUpdates === 0 ? qsTr("Apps from the Store are up to date")
+                    : qsTr("Apps you installed from the Store update there")
                 chevron: true
                 onClicked: System.openStore("updates")
             }
@@ -525,8 +527,8 @@ PageScroll {
 
     UI.Dialog {
         id: notesDialog
-        title: "What's new in Wild OS"
-        text: "You have build " + Updates.installedBuild + ". Newest first."
+        title: qsTr("What's new in Wild OS")
+        text: qsTr("You have build %1. Newest first.").arg(Updates.installedBuild)
 
         Flickable {
             id: notesScroll
@@ -553,8 +555,9 @@ PageScroll {
 
                         UI.Label {
                             Layout.fillWidth: true
-                            text: "Build " + buildNotes.modelData.build
-                                + (Format.isValid(buildNotes.modelData.date) ? ", " + Format.day(buildNotes.modelData.date) : "")
+                            text: Format.isValid(buildNotes.modelData.date)
+                                ? qsTr("Build %1, %2").arg(buildNotes.modelData.build).arg(Format.dayText(buildNotes.modelData.date))
+                                : qsTr("Build %1").arg(buildNotes.modelData.build)
                             size: 15
                             font.weight: UI.Style.weightSemiBold
                             Accessible.role: Accessible.Heading
@@ -570,7 +573,7 @@ PageScroll {
                         UI.Label {
                             Layout.fillWidth: true
                             visible: buildNotes.modelData.items.length === 0
-                            text: "Small changes under the surface."
+                            text: qsTr("Small changes under the surface.")
                             size: 13
                             color: UI.Style.inkStatus
                         }
@@ -581,7 +584,7 @@ PageScroll {
 
         buttons: [
             UI.Button {
-                text: "Close"
+                text: qsTr("Close")
                 kind: "primary"
                 onClicked: notesDialog.close()
             }

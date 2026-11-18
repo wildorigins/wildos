@@ -193,12 +193,12 @@ void History::load()
     const bool collectorMissing = !QFileInfo::exists(dir) && !QFileInfo::exists(socketPath);
     if (collectorMissing || (!systemReadable && QFileInfo::exists(dir + QStringLiteral("/system.jsonl")))) {
         problem = QStringLiteral("unreadable");
-        detail = collectorMissing ? QStringLiteral("The part of Wild OS that keeps the history isn't installed.") : QStringLiteral("The history files can't be opened.");
+        detail = collectorMissing ? tr("The part of Wild OS that keeps the history isn't installed.") : tr("The history files can't be opened.");
     } else if (!ownReadable) {
         // What everyone on this PC sees is still there; this account's own
         // sign-ins and app crashes are not.
         problem = QStringLiteral("stale");
-        detail = QStringLiteral("Your own sign-ins and apps couldn't be read just now.");
+        detail = tr("Your own sign-ins and apps couldn't be read just now.");
     } else if (!status.isEmpty() && !status.value(QStringLiteral("ok")).toBool(true)) {
         // settings-history names what it could not read, in words.
         problem = QStringLiteral("stale");
@@ -206,14 +206,14 @@ void History::load()
         for (const QJsonValue &v : status.value(QStringLiteral("problems")).toArray()) {
             why << v.toString();
         }
-        QString list = why.size() > 1 ? why.mid(0, why.size() - 1).join(QStringLiteral(", ")) + QStringLiteral(" and ") + why.last() : why.value(0);
+        QString list = why.size() > 1 ? tr("%1 and %2").arg(why.mid(0, why.size() - 1).join(QStringLiteral(", ")), why.last()) : why.value(0);
         if (!list.isEmpty()) {
             list[0] = list.at(0).toUpper();
         }
-        detail = list.isEmpty() ? QString() : list + QStringLiteral(" couldn't be read just now.");
+        detail = list.isEmpty() ? QString() : tr("%1 couldn't be read just now.").arg(list);
     } else if (m_reply.startsWith(QLatin1String("error"))) {
         problem = QStringLiteral("stale");
-        detail = QStringLiteral("The part of Wild OS that keeps this list didn't answer.");
+        detail = tr("The part of Wild OS that keeps this list didn't answer.");
     }
 
     m_events = list;
@@ -247,7 +247,7 @@ bool History::saveTo(const QUrl &file, const QString &text)
 QUrl History::defaultSaveFile() const
 {
     const QString folder = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    return QUrl::fromLocalFile(folder + QStringLiteral("/History %1.txt").arg(QDate::currentDate().toString(QStringLiteral("d MMMM yyyy"))));
+    return QUrl::fromLocalFile(folder + QLatin1Char('/') + tr("History %1.txt").arg(QDate::currentDate().toString(QStringLiteral("d MMMM yyyy"))));
 }
 
 bool History::openReport() const

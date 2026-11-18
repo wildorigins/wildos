@@ -14,7 +14,7 @@ Row {
 
     spacing: 12
     Accessible.role: Accessible.Grouping
-    Accessible.name: "Accent colour"
+    Accessible.name: qsTr("Accent colour")
 
     Repeater {
         model: UI.Style.accents

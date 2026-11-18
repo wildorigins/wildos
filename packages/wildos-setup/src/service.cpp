@@ -488,8 +488,10 @@ QString SetupService::CreateAccount(const QString &realName, const QString &pass
         refuse(QStringLiteral("InvalidHostname"), QStringLiteral("Use letters, numbers and hyphens only, up to 63, not starting or ending with a hyphen."));
         return {};
     }
-    if (password.size() < 8 || password.size() > 4096 || password.contains(QLatin1Char('\n')) || password.contains(QLatin1Char('\r'))) {
-        refuse(QStringLiteral("InvalidPassword"), QStringLiteral("The password must be at least 8 characters."));
+    // Any length: the setup screen says when a password is weak and leaves
+    // the choice to the person.
+    if (password.isEmpty() || password.size() > 4096 || password.contains(QLatin1Char('\n')) || password.contains(QLatin1Char('\r'))) {
+        refuse(QStringLiteral("InvalidPassword"), QStringLiteral("The password can't be empty or contain a line break."));
         return {};
     }
     if (hint.size() > 200 || hint.contains(QLatin1Char('\n')) || (!hint.isEmpty() && hint.contains(password))) {

@@ -70,6 +70,28 @@ FocusScope {
     }
 
     Keys.onPressed: event => {
+        if (notifications.menuKey(event.key)) {
+            event.accepted = true;
+            return;
+        }
+        // The Menu key, on a notification or one of its buttons.
+        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            let target = Nav.keyboard ? Nav.current : null;
+            while (target && !target.requestMenu) {
+                target = target.parent;
+            }
+            if (target) {
+                target.requestMenu();
+            }
+            event.accepted = true;
+            return;
+        }
+        // On the calendar's grid the arrows move from day to day; Tab leaves.
+        if (Nav.current === calendar.cells && calendar.handleKey(event.key)) {
+            Nav.keyboard = true;
+            event.accepted = true;
+            return;
+        }
         switch (event.key) {
         case Qt.Key_Tab:
         case Qt.Key_Down:
@@ -96,7 +118,12 @@ FocusScope {
             calendar.goToToday();
             break;
         case Qt.Key_Escape:
-            flyout.clock.expanded = false;
+            // First back from the months or years to the month.
+            if (calendar.mode !== "days") {
+                calendar.mode = "days";
+            } else {
+                flyout.clock.expanded = false;
+            }
             break;
         default:
             return;
@@ -164,6 +191,11 @@ FocusScope {
         flags: Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
         location: PlasmaCore.Types.Floating
         hideOnWindowDeactivate: false
+        // The card belongs to the popup: the taskbar closes a pop-up on a
+        // press in any window that is not the pop-up's own or one of its
+        // children, and a press on this card would otherwise close the
+        // flyout before the click arrived.
+        transientParent: flyout.popup
         visible: flyout.popupShown
         onHeightChanged: flyout.placeCard()
         onVisibleChanged: {

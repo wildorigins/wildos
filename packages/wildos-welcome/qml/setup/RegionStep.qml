@@ -20,9 +20,9 @@ StepPage {
     readonly property bool canLookUp: FirstBoot.wifi.online && FirstBoot.zoneSource !== "internet"
 
     gap: 18
-    title: "Region and language"
-    subtitle: "We picked these from the installer. Check they look right; you can change them later in Settings."
-    note: applyError.length > 0 ? applyError : "Takes about 5 minutes. You can change everything later."
+    title: qsTr("Region and language")
+    subtitle: qsTr("We picked these from the installer. Check they look right; you can change them later in Settings.")
+    note: applyError.length > 0 ? applyError : qsTr("Takes about 5 minutes. You can change everything later.")
     noteColor: applyError.length > 0 ? UI.Style.warning : UI.Style.inkMuted
     Component.onCompleted: focusQuietly(continueButton)
 
@@ -58,7 +58,7 @@ StepPage {
             spacing: 6
 
             UI.Label {
-                text: "Display language"
+                text: qsTr("Display language")
                 font.weight: UI.Style.weightMedium
             }
 
@@ -67,13 +67,13 @@ StepPage {
                 look: "field"
                 model: FirstBoot.languages
                 currentIndex: count > 0 ? indexOfValue(FirstBoot.language) : -1
-                Accessible.name: "Display language"
+                Accessible.name: qsTr("Display language")
                 onActivated: FirstBoot.language = currentValue
             }
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Used for local content, like the Store and weather"
+                text: qsTr("Used for local content, like the Store and weather")
                 size: 12
                 color: UI.Style.inkMuted
                 wrapMode: Text.WordWrap
@@ -88,7 +88,7 @@ StepPage {
             spacing: 6
 
             UI.Label {
-                text: "Time zone"
+                text: qsTr("Time zone")
                 font.weight: UI.Style.weightMedium
             }
 
@@ -97,7 +97,7 @@ StepPage {
                 look: "field"
                 model: FirstBoot.zones
                 currentIndex: count > 0 ? indexOfValue(FirstBoot.timeZone) : -1
-                Accessible.name: "Time zone"
+                Accessible.name: qsTr("Time zone")
                 onActivated: FirstBoot.timeZone = currentValue
             }
 
@@ -108,9 +108,9 @@ StepPage {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: FirstBoot.lookupState === "failed" ? "The online service didn't answer. Pick your time zone above."
-                        : FirstBoot.zoneSource === "internet" ? "Found from your internet address."
-                        : "Sends your internet address to an online service."
+                    text: FirstBoot.lookupState === "failed" ? qsTr("The online service didn't answer. Pick your time zone above.")
+                        : FirstBoot.zoneSource === "internet" ? qsTr("Found from your internet address.")
+                        : qsTr("Sends your internet address to an online service.")
                     size: 12
                     color: FirstBoot.lookupState === "failed" ? UI.Style.danger : UI.Style.inkMuted
                     wrapMode: Text.WordWrap
@@ -120,7 +120,7 @@ StepPage {
                 UI.LinkButton {
                     visible: page.canLookUp
                     enabled: FirstBoot.lookupState !== "busy"
-                    text: FirstBoot.lookupState === "busy" ? "Looking it up" : "Find it for me"
+                    text: FirstBoot.lookupState === "busy" ? qsTr("Looking it up") : qsTr("Find it for me")
                     size: 12
                     onClicked: FirstBoot.findTimeZone()
                 }
@@ -146,7 +146,7 @@ StepPage {
             spacing: 10
 
             UI.Label {
-                text: "How things will look"
+                text: qsTr("How things will look")
                 font.weight: UI.Style.weightSemiBold
             }
 
@@ -158,11 +158,11 @@ StepPage {
 
                 Repeater {
                     model: [
-                        { label: "Date", key: "date" },
-                        { label: "Time", key: "time" },
-                        { label: "Numbers", key: "numbers" },
-                        { label: "Currency", key: "currency" },
-                        { label: "Measurements", key: "measurements" }
+                        { label: qsTr("Date"), key: "date" },
+                        { label: qsTr("Time"), key: "time" },
+                        { label: qsTr("Numbers"), key: "numbers" },
+                        { label: qsTr("Currency"), key: "currency" },
+                        { label: qsTr("Measurements"), key: "measurements" }
                     ]
 
                     delegate: Item {
@@ -198,7 +198,7 @@ StepPage {
             UI.LinkButton {
                 visible: !page.changingFormats
                 Layout.leftMargin: -4
-                text: "Change formats"
+                text: qsTr("Change formats")
                 onClicked: page.changingFormats = true
             }
 
@@ -209,7 +209,7 @@ StepPage {
 
                 UI.Label {
                     Layout.preferredWidth: 140
-                    text: "Formats"
+                    text: qsTr("Formats")
                     color: UI.Style.inkAlpha(0.70, 0.64)
                 }
 
@@ -217,7 +217,7 @@ StepPage {
                     Layout.preferredWidth: 300
                     model: FirstBoot.languages
                     currentIndex: count > 0 ? indexOfValue(FirstBoot.formats) : -1
-                    Accessible.name: "Formats"
+                    Accessible.name: qsTr("Formats")
                     onActivated: FirstBoot.formats = currentValue
                 }
             }
@@ -228,7 +228,7 @@ StepPage {
         UI.Button {
             id: continueButton
             // A setting that could not be saved is not worth stopping for.
-            text: page.applyError.length > 0 ? "Continue anyway" : "Continue"
+            text: page.applyError.length > 0 ? qsTr("Continue anyway") : qsTr("Continue")
             kind: "primary"
             busy: page.applying
             onClicked: {

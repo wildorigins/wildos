@@ -39,6 +39,8 @@ class FolderModel : public QAbstractListModel
     Q_PROPERTY(QStringList columnTitles READ columnTitles NOTIFY columnsChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(QString errorText READ errorText NOTIFY errorChanged)
+    // What the system reported, when errorText is only a general sentence.
+    Q_PROPERTY(QString errorDetail READ errorDetail NOTIFY errorChanged)
     Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY historyChanged)
     Q_PROPERTY(bool canGoForward READ canGoForward NOTIFY historyChanged)
     Q_PROPERTY(bool canGoUp READ canGoUp NOTIFY urlChanged)
@@ -99,6 +101,7 @@ public:
     QStringList columnTitles() const;
     bool loading() const { return m_loading; }
     QString errorText() const { return m_error; }
+    QString errorDetail() const { return m_errorDetail; }
     bool canGoBack() const { return !m_back.isEmpty(); }
     bool canGoForward() const { return !m_forward.isEmpty(); }
     bool canGoUp() const;
@@ -123,6 +126,9 @@ public:
     // Address bar input: a path, ~, a place name or a URL. False when
     // nothing by that name exists.
     Q_INVOKABLE bool openText(const QString &text);
+    // The folders a half-typed address could be going to, written the way
+    // it is being typed, for the list under the address bar.
+    Q_INVOKABLE QStringList completions(const QString &text) const;
     Q_INVOKABLE void back();
     Q_INVOKABLE void forward();
     Q_INVOKABLE void up();
@@ -149,6 +155,7 @@ public:
     Q_INVOKABLE QString udiAt(int row) const;
     Q_INVOKABLE bool isRemovableAt(int row) const;
     Q_INVOKABLE QString iconAt(int row) const;
+    Q_INVOKABLE QString mimeAt(int row) const;
     Q_INVOKABLE int rowForUrl(const QUrl &url) const;
     Q_INVOKABLE int findPrefix(const QString &prefix, int from) const;
     // Selects these as soon as they appear in the listing; with rename set,
@@ -214,7 +221,7 @@ private:
     void startSearch();
     void stopSearch();
     void setLoading(bool on);
-    void setError(const QString &text);
+    void setError(const QString &text, const QString &detail = QString());
 
     void onNewItems(const KFileItemList &items);
     void onItemsDeleted(const KFileItemList &items);
@@ -238,6 +245,7 @@ private:
     bool m_loading = false;
     bool m_listed = false;
     QString m_error;
+    QString m_errorDetail;
     QString m_searchText;
     QPointer<KIO::ListJob> m_searchJob;
     QTimer m_searchDelay;

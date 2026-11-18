@@ -1,3 +1,10 @@
+wildos-launch (0.2.2) trixie; urgency=medium
+
+  * The app launcher service uses less memory: it never draws, so it no
+    longer sets up 3D graphics, about 15 MB less on a laptop.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 15:33:52 +0000
+
 wildos-launch (0.2.1) trixie; urgency=medium
 
   * A launch ends when a window opens from the process it started, even

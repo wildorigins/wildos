@@ -34,9 +34,9 @@ QtObject {
     readonly property color ringTrack: UI.Style.tone(0.16)
     readonly property color navSelected: UI.Style.fillSelected(0.16, 0.13)
     readonly property color danger: UI.Style.dark ? "#ff9a8a" : UI.Style.danger
-    readonly property color success: UI.Style.dark ? "#5fd39a" : UI.Style.success
+    readonly property color success: UI.Style.success
     readonly property color iconTile: UI.Style.surfaceControl
-    readonly property color dialog: UI.Style.dark ? "#25272b" : UI.Style.windowOpaque
+    readonly property color dialog: UI.Style.glassDialog
 
     // Hero cards are photographs or, without one, a deep grey card in
     // either scheme, so their words stay white.

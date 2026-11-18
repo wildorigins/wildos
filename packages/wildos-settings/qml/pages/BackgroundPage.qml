@@ -26,14 +26,14 @@ PageScroll {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Your background"
+                text: qsTr("Your background")
                 size: 15
                 font.weight: UI.Style.weightSemiBold
             }
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Pictures look best when they are darker at the bottom, so the taskbar sits comfortably."
+                text: qsTr("Pictures look best when they are darker at the bottom, so the taskbar sits comfortably.")
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
                 elide: Text.ElideNone
@@ -41,7 +41,7 @@ PageScroll {
 
             UI.Button {
                 Layout.topMargin: 6
-                text: "Choose a photo"
+                text: qsTr("Choose a photo")
                 iconName: "image"
                 onClicked: photoDialog.open()
             }
@@ -53,7 +53,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Pictures"
+            text: qsTr("Pictures")
         }
 
         WallpaperGrid {
@@ -64,8 +64,8 @@ PageScroll {
 
     FileDialog {
         id: photoDialog
-        title: "Choose a photo"
-        nameFilters: ["Pictures (*.jpg *.jpeg *.png *.webp)"]
+        title: qsTr("Choose a photo")
+        nameFilters: [qsTr("Pictures (*.jpg *.jpeg *.png *.webp)")]
         currentFolder: StandardPaths.writableLocation(StandardPaths.PicturesLocation)
         onAccepted: System.setWallpaper(selectedFile.toString())
     }

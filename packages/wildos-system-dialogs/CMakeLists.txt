@@ -55,13 +55,25 @@ target_compile_options(pam_wildos_fingerprint PRIVATE -Wall -Wextra)
 target_link_libraries(pam_wildos_fingerprint PRIVATE pam)
 install(TARGETS pam_wildos_fingerprint LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/security)
 
+# The lock screen takes a PIN in the password box (/etc/pam.d/kde).
+add_library(pam_wildos_pin MODULE src/pam_wildos_pin.c)
+set_target_properties(pam_wildos_pin PROPERTIES PREFIX "")
+target_compile_options(pam_wildos_pin PRIVATE -Wall -Wextra)
+target_link_libraries(pam_wildos_pin PRIVATE pam)
+install(TARGETS pam_wildos_pin LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/security)
+
+# The root service that keeps and checks the PIN.
+add_executable(wildos-pin src/wildos-pin.c)
+target_compile_options(wildos-pin PRIVATE -Wall -Wextra)
+target_link_libraries(wildos-pin PRIVATE crypt)
+
 # Advanced protection's fingerprint rule: notes each password sign-in.
 add_executable(fingerprint-stamp src/fingerprint-stamp.c)
 target_compile_options(fingerprint-stamp PRIVATE -Wall -Wextra)
 
 set(LIBEXEC ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
-install(TARGETS wildos-dialogs 32bit-blocked fingerprint-stamp RUNTIME DESTINATION ${LIBEXEC})
-install(FILES data/fingerprint-stamp.socket data/fingerprint-stamp@.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
+install(TARGETS wildos-dialogs 32bit-blocked fingerprint-stamp wildos-pin RUNTIME DESTINATION ${LIBEXEC})
+install(FILES data/fingerprint-stamp.socket data/fingerprint-stamp@.service data/wildos-pin.socket data/wildos-pin@.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
 install(PROGRAMS data/32bit-prompt-setup DESTINATION ${LIBEXEC})
 install(FILES data/wildos-32bit-prompt.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
 install(PROGRAMS data/record-package-sources DESTINATION ${LIBEXEC})
@@ -71,3 +83,20 @@ install(FILES data/wildos-dialogs.service DESTINATION ${CMAKE_INSTALL_PREFIX}/li
 install(FILES data/plasma-polkit-agent-wildos.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/user/plasma-polkit-agent.service.d RENAME wildos.conf)
 install(FILES data/powerdevil.notifyrc DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg)
 install(FILES data/wildos-updates.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+
+# Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
+# WildOS.UI for the language chosen in Settings.
+find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/i18n/*.ts)
+set(QM_FILES)
+foreach(ts ${TS_FILES})
+    get_filename_component(name ${ts} NAME_WE)
+    set(qm ${CMAKE_CURRENT_BINARY_DIR}/i18n/${name}.qm)
+    add_custom_command(OUTPUT ${qm}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/i18n
+        COMMAND Qt6::lrelease -silent ${ts} -qm ${qm}
+        DEPENDS ${ts} VERBATIM)
+    list(APPEND QM_FILES ${qm})
+endforeach()
+add_custom_target(translations ALL DEPENDS ${QM_FILES})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/translations)

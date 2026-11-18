@@ -16,9 +16,9 @@ PromptCard {
     signal wait()
 
     width: 440
-    title: appName + " isn't responding"
-    text: canEnd ? "You can wait for it to respond, or close it. If you close it, unsaved work may be lost."
-                 : "It's running on another computer, so Wild OS can only wait for it to respond."
+    title: qsTr("%1 isn't responding").arg(appName)
+    text: canEnd ? qsTr("You can wait for it to respond, or close it. If you close it, unsaved work may be lost.")
+                 : qsTr("It's running on another computer, so Wild OS can only wait for it to respond.")
 
     picture: AppPicture {
         iconName: card.iconName
@@ -28,13 +28,13 @@ PromptCard {
     buttons: [
         UI.Button {
             visible: card.canEnd
-            text: "Close the app"
+            text: qsTr("Close the app")
             onClicked: card.endTask()
         },
         UI.Button {
             id: waitButton
             kind: "primary"
-            text: "Wait"
+            text: qsTr("Wait")
             onClicked: card.wait()
         }
     ]

@@ -17,7 +17,7 @@ Rectangle {
     signal closeRequested()
     signal addAccount()
 
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRest
     border.width: 1
     border.color: UI.Style.borderSubtle
@@ -81,7 +81,7 @@ Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
                     implicitHeight: 34
-                    radius: 6
+                    radius: UI.Style.radiusXs
                     color: page.section === modelData.id ? UI.Style.surfaceSelected : navMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
                     MouseArea {
                         id: navMouse
@@ -221,7 +221,7 @@ Rectangle {
                                         readonly property bool on: days.indexOf(day) >= 0
                                         width: 32
                                         height: 30
-                                        radius: 6
+                                        radius: UI.Style.radiusXs
                                         color: on ? UI.Style.accentSoft : dayMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceControl
                                         border.width: on ? 1.5 : 1
                                         border.color: on ? UI.Style.accent : UI.Style.borderSubtle

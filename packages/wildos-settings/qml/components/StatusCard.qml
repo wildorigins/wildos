@@ -26,7 +26,7 @@ Rectangle {
     property real descriptionLineHeight: 0
     default property alias actions: actionRow.data
 
-    readonly property color tint: flat && tone === "success" ? (UI.Style.dark ? "#5fd38d" : "#1d7a4c")
+    readonly property color tint: flat && tone === "success" ? UI.Style.success
         : (flat ? tone === "warning" : warning) ? UI.Style.warning : UI.Style.accent
 
     Layout.fillWidth: true

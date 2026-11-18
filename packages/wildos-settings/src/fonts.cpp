@@ -166,19 +166,19 @@ void Fonts::install(const QList<QUrl> &files)
     installed.removeDuplicates();
 
     if (installed.isEmpty()) {
-        Q_EMIT finished(QStringLiteral("No fonts were installed"),
-                        (refused.size() == 1 ? QStringLiteral("%1 is not a font file this computer can use.")
-                                             : QStringLiteral("%1 are not font files this computer can use."))
+        Q_EMIT finished(tr("No fonts were installed"),
+                        (refused.size() == 1 ? tr("%1 is not a font file this computer can use.")
+                                             : tr("%1 are not font files this computer can use."))
                             .arg(refused.join(QStringLiteral(", "))),
                         true);
         return;
     }
-    QString message = installed.size() == 1 ? QStringLiteral("%1 is ready in apps you open from now on.").arg(installed.constFirst())
-                                            : QStringLiteral("%1 are ready in apps you open from now on.").arg(installed.join(QStringLiteral(", ")));
+    QString message = installed.size() == 1 ? tr("%1 is ready in apps you open from now on.").arg(installed.constFirst())
+                                            : tr("%1 are ready in apps you open from now on.").arg(installed.join(QStringLiteral(", ")));
     if (!refused.isEmpty()) {
-        message += QStringLiteral(" %1 could not be installed.").arg(refused.join(QStringLiteral(", ")));
+        message = tr("%1 %2 could not be installed.").arg(message, refused.join(QStringLiteral(", ")));
     }
-    refreshCache(installed.size() == 1 ? QStringLiteral("Font installed") : QStringLiteral("Fonts installed"), message, false);
+    refreshCache(installed.size() == 1 ? tr("Font installed") : tr("Fonts installed"), message, false);
 }
 
 void Fonts::remove(const QString &family)
@@ -194,9 +194,9 @@ void Fonts::remove(const QString &family)
         }
     }
     if (!ok) {
-        Q_EMIT finished(QStringLiteral("The font was not removed"), QStringLiteral("Some of %1's files could not be deleted.").arg(family), true);
+        Q_EMIT finished(tr("The font was not removed"), tr("Some of %1's files could not be deleted.").arg(family), true);
         reload();
         return;
     }
-    refreshCache(QStringLiteral("Font removed"), QStringLiteral("%1 is gone from apps you open from now on.").arg(family), false);
+    refreshCache(tr("Font removed"), tr("%1 is gone from apps you open from now on.").arg(family), false);
 }

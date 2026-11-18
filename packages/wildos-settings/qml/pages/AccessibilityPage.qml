@@ -19,13 +19,13 @@ PageScroll {
     readonly property bool wide: width >= 760
 
     function onOff(on) {
-        return on ? "On" : "Off";
+        return on ? qsTr("On") : qsTr("Off");
     }
 
-    readonly property var blurSteps: ["Lightest", "Light", "Medium", "Strong", "Strongest"]
+    readonly property var blurSteps: [qsTr("Lightest"), qsTr("Light"), qsTr("Medium"), qsTr("Strong"), qsTr("Strongest")]
     readonly property string windowEffectsReason: Accessibility.windowEffectsInstalled
-        ? "This needs graphics acceleration, which this computer isn't using"
-        : "The window effects aren't installed on this computer"
+        ? qsTr("This needs graphics acceleration, which this computer isn't using")
+        : qsTr("The window effects aren't installed on this computer")
 
     Component.onCompleted: {
         Accessibility.refresh();
@@ -44,7 +44,7 @@ PageScroll {
     UI.Label {
         Layout.fillWidth: true
         Layout.topMargin: -6
-        text: "Every shortcut here also works on the sign-in and unlock screens, so help is there before you've signed in."
+        text: qsTr("Every shortcut here also works on the sign-in and unlock screens, so help is there before you've signed in.")
         size: 13
         color: UI.Style.inkStatus
         wrapMode: Text.Wrap
@@ -66,7 +66,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Seeing"
+                text: qsTr("Seeing")
             }
 
             UI.Card {
@@ -76,8 +76,8 @@ PageScroll {
                     width: parent.width
 
                     UI.SettingRow {
-                        title: "Text size"
-                        description: "Larger text everywhere, without changing scale"
+                        title: qsTr("Text size")
+                        description: qsTr("Larger text everywhere, without changing scale")
 
                         TextSizeBox {
                             anchors.verticalCenter: parent.verticalCenter
@@ -99,8 +99,8 @@ PageScroll {
                             return best;
                         }
 
-                        title: "Pointer"
-                        description: "Size and colour"
+                        title: qsTr("Pointer")
+                        description: qsTr("Size and colour")
 
                         Row {
                             anchors.verticalCenter: parent.verticalCenter
@@ -116,10 +116,9 @@ PageScroll {
                                 to: Math.max(1, pointerRow.sizes.length - 1)
                                 stepSize: 1
                                 snapMode: T.Slider.SnapAlways
-                                wheelEnabled: false
                                 value: pointerRow.nearest(Accessibility.pointerSize)
-                                accessibleName: "Pointer size"
-                                Accessible.description: pointerRow.sizes[Math.round(value)] + " pixels"
+                                accessibleName: qsTr("Pointer size")
+                                Accessible.description: qsTr("%1 pixels").arg(pointerRow.sizes[Math.round(value)])
                                 // Applied once the slider settles, so dragging
                                 // across it does not reload the pointer at
                                 // every step.
@@ -143,7 +142,7 @@ PageScroll {
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 8
                                 Accessible.role: Accessible.Grouping
-                                Accessible.name: "Pointer colour"
+                                Accessible.name: qsTr("Pointer colour")
 
                                 Repeater {
                                     model: Accessibility.pointerColours
@@ -162,7 +161,7 @@ PageScroll {
                                 // then its picture.
                                 UI.Swatch {
                                     colour: UI.Style.surfaceSunken
-                                    name: "Your own"
+                                    name: qsTr("Your own")
                                     selected: Accessibility.pointerColour === "custom"
                                     enabled: !Accessibility.pointerBusy
                                     onClicked: Accessibility.customPointer ? ownPointerDialog.open() : pointerFile.open()
@@ -193,8 +192,8 @@ PageScroll {
                     }
 
                     UI.SettingRow {
-                        title: "Magnifier"
-                        description: "Zoom into any part of the screen"
+                        title: qsTr("Magnifier")
+                        description: qsTr("Zoom into any part of the screen")
                         status: page.onOff(Accessibility.magnifier)
                         below: UI.ShortcutKeys {
                             keys: ["Super", "+"]
@@ -203,14 +202,14 @@ PageScroll {
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: Accessibility.magnifier
-                            Accessible.name: "Magnifier"
+                            Accessible.name: qsTr("Magnifier")
                             onToggled: Accessibility.setMagnifier(checked)
                         }
                     }
 
                     UI.SettingRow {
-                        title: "Screen reader"
-                        description: "Reads out what's on screen"
+                        title: qsTr("Screen reader")
+                        description: qsTr("Reads out what's on screen")
                         status: page.onOff(Accessibility.screenReader)
                         below: UI.ShortcutKeys {
                             keys: ["Super", "Alt", "S"]
@@ -220,15 +219,15 @@ PageScroll {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: Accessibility.screenReader
                             locked: !Accessibility.screenReaderInstalled
-                            lockedReason: "The screen reader isn't installed on this computer"
-                            Accessible.name: "Screen reader"
+                            lockedReason: qsTr("The screen reader isn't installed on this computer")
+                            Accessible.name: qsTr("Screen reader")
                             onToggled: Accessibility.setScreenReader(checked)
                         }
                     }
 
                     UI.SettingRow {
-                        title: "High contrast"
-                        description: "Strong colours and clear edges"
+                        title: qsTr("High contrast")
+                        description: qsTr("Strong colours and clear edges")
                         status: page.onOff(Accessibility.highContrast)
                         below: UI.ShortcutKeys {
                             keys: ["Super", "Alt", "H"]
@@ -239,15 +238,15 @@ PageScroll {
                             checked: Accessibility.highContrast
                             enabled: !Accessibility.highContrastBusy
                             locked: !Accessibility.highContrastInstalled
-                            lockedReason: "The high contrast theme isn't installed on this computer"
-                            Accessible.name: "High contrast"
+                            lockedReason: qsTr("The high contrast theme isn't installed on this computer")
+                            Accessible.name: qsTr("High contrast")
                             onToggled: Accessibility.setHighContrast(checked)
                         }
                     }
 
                     UI.SettingRow {
-                        title: "Outline windows"
-                        description: "A clear edge round every window, and a thick one round the window you're using"
+                        title: qsTr("Outline windows")
+                        description: qsTr("A clear edge round every window, and a thick one round the window you're using")
                         status: page.onOff(Accessibility.outlineWindows)
 
                         UI.Toggle {
@@ -255,41 +254,41 @@ PageScroll {
                             checked: Accessibility.outlineWindows
                             locked: !Accessibility.windowEffectsSupported
                             lockedReason: page.windowEffectsReason
-                            Accessible.name: "Outline windows"
+                            Accessible.name: qsTr("Outline windows")
                             onToggled: Accessibility.setOutlineWindows(checked)
                         }
                     }
 
                     UI.SettingRow {
                         visible: Accessibility.outlineWindows && Accessibility.windowEffectsSupported
-                        title: "Outline maximised windows"
-                        description: "Off leaves windows that fill the screen without an edge"
+                        title: qsTr("Outline maximised windows")
+                        description: qsTr("Off leaves windows that fill the screen without an edge")
                         status: page.onOff(Accessibility.outlineFillingScreen)
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: Accessibility.outlineFillingScreen
-                            Accessible.name: "Outline maximised windows"
+                            Accessible.name: qsTr("Outline maximised windows")
                             onToggled: Accessibility.setOutlineFillingScreen(checked)
                         }
                     }
 
                     UI.SettingRow {
-                        title: "Stronger text on glass"
-                        description: "Solid backing and brighter text on the taskbar, Start, flyouts and Wild OS apps"
+                        title: qsTr("Stronger text on glass")
+                        description: qsTr("Solid backing and brighter text on the taskbar, Start, flyouts and Wild OS apps")
                         status: page.onOff(Accessibility.strongerText)
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: Accessibility.strongerText
-                            Accessible.name: "Stronger text on glass"
+                            Accessible.name: qsTr("Stronger text on glass")
                             onToggled: Accessibility.setStrongerText(checked)
                         }
                     }
 
                     UI.SettingRow {
-                        title: "Blur windows in the background"
-                        description: "Every window but the one you're using goes soft and a little darker"
+                        title: qsTr("Blur windows in the background")
+                        description: qsTr("Every window but the one you're using goes soft and a little darker")
                         status: page.onOff(Accessibility.blurBackground)
 
                         UI.Toggle {
@@ -297,14 +296,14 @@ PageScroll {
                             checked: Accessibility.blurBackground
                             locked: !Accessibility.windowEffectsSupported
                             lockedReason: page.windowEffectsReason
-                            Accessible.name: "Blur windows in the background"
+                            Accessible.name: qsTr("Blur windows in the background")
                             onToggled: Accessibility.setBlurBackground(checked)
                         }
                     }
 
                     UI.SettingRow {
                         visible: Accessibility.blurBackground && Accessibility.windowEffectsSupported
-                        title: "Blur strength"
+                        title: qsTr("Blur strength")
                         status: page.blurSteps[Math.round(blurStrength.value) - 1]
 
                         UI.Slider {
@@ -317,9 +316,8 @@ PageScroll {
                             to: page.blurSteps.length
                             stepSize: 1
                             snapMode: T.Slider.SnapAlways
-                            wheelEnabled: false
                             value: Accessibility.blurStrength
-                            accessibleName: "Blur strength"
+                            accessibleName: qsTr("Blur strength")
                             Accessible.description: page.blurSteps[Math.round(value) - 1]
                             // KWin redraws the blur at each step, so dragging
                             // shows each strength as it is passed.
@@ -332,14 +330,14 @@ PageScroll {
 
                     UI.SettingRow {
                         visible: Accessibility.blurBackground && Accessibility.windowEffectsSupported
-                        title: "Blur the desktop too"
-                        description: "Whenever a window is in use"
+                        title: qsTr("Blur the desktop too")
+                        description: qsTr("Whenever a window is in use")
                         status: page.onOff(Accessibility.blurDesktop)
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: Accessibility.blurDesktop
-                            Accessible.name: "Blur the desktop too"
+                            Accessible.name: qsTr("Blur the desktop too")
                             onToggled: Accessibility.setBlurDesktop(checked)
                         }
                     }
@@ -359,7 +357,7 @@ PageScroll {
                 spacing: 10
 
                 SectionTitle {
-                    text: "Hearing"
+                    text: qsTr("Hearing")
                 }
 
                 UI.Card {
@@ -369,29 +367,29 @@ PageScroll {
                         width: parent.width
 
                         UI.SettingRow {
-                            title: "Flash the screen for alert sounds"
-                            description: "For when you can't hear them"
+                            title: qsTr("Flash the screen for alert sounds")
+                            description: qsTr("For when you can't hear them")
                             status: page.onOff(Accessibility.visibleBell)
 
                             UI.Toggle {
                                 anchors.verticalCenter: parent.verticalCenter
                                 checked: Accessibility.visibleBell
-                                Accessible.name: "Visual alerts"
+                                Accessible.name: qsTr("Visual alerts")
                                 onToggled: Accessibility.setVisibleBell(checked)
                             }
                         }
 
                         UI.SettingRow {
-                            title: "Mono audio"
-                            description: "Both ears get the same sound"
+                            title: qsTr("Mono audio")
+                            description: qsTr("Both ears get the same sound")
                             status: page.onOff(Accessibility.monoAudio)
 
                             UI.Toggle {
                                 anchors.verticalCenter: parent.verticalCenter
                                 checked: Accessibility.monoAudio
                                 locked: !Accessibility.monoAudioInstalled
-                                lockedReason: "Mono audio isn't available on this computer"
-                                Accessible.name: "Mono audio"
+                                lockedReason: qsTr("Mono audio isn't available on this computer")
+                                Accessible.name: qsTr("Mono audio")
                                 onToggled: Accessibility.setMonoAudio(checked)
                             }
                         }
@@ -404,7 +402,7 @@ PageScroll {
                 spacing: 10
 
                 SectionTitle {
-                    text: "Keyboard and touch"
+                    text: qsTr("Keyboard and touch")
                 }
 
                 UI.Card {
@@ -414,8 +412,8 @@ PageScroll {
                         width: parent.width
 
                         UI.SettingRow {
-                            title: "On-screen keyboard"
-                            description: "Type with a mouse, touch or switch"
+                            title: qsTr("On-screen keyboard")
+                            description: qsTr("Type with a mouse, touch or switch")
                             status: page.onOff(Accessibility.onScreenKeyboard)
                             below: UI.ShortcutKeys {
                                 keys: ["Super", "Ctrl", "O"]
@@ -425,24 +423,24 @@ PageScroll {
                                 anchors.verticalCenter: parent.verticalCenter
                                 checked: Accessibility.onScreenKeyboard
                                 locked: !Accessibility.onScreenKeyboardInstalled
-                                lockedReason: "No on-screen keyboard is installed on this computer"
-                                Accessible.name: "On-screen keyboard"
+                                lockedReason: qsTr("No on-screen keyboard is installed on this computer")
+                                Accessible.name: qsTr("On-screen keyboard")
                                 onToggled: Accessibility.setOnScreenKeyboard(checked)
                             }
                         }
 
                         UI.SettingRow {
-                            title: "Sticky keys"
-                            description: "Press shortcuts one at a time"
+                            title: qsTr("Sticky keys")
+                            description: qsTr("Press shortcuts one at a time")
                             status: page.onOff(Accessibility.stickyKeys)
                             below: UI.ShortcutKeys {
-                                keys: ["Shift ×5"]
+                                keys: [qsTr("Shift ×5")]
                             }
 
                             UI.Toggle {
                                 anchors.verticalCenter: parent.verticalCenter
                                 checked: Accessibility.stickyKeys
-                                Accessible.name: "Sticky keys"
+                                Accessible.name: qsTr("Sticky keys")
                                 onToggled: Accessibility.setStickyKeys(checked)
                             }
                         }
@@ -462,9 +460,9 @@ PageScroll {
 
     FileDialog {
         id: pointerFile
-        title: "Choose a pointer"
-        nameFilters: ["Pointers and pictures (*.cur *.ani *.zip *.inf *.png *.svg)", "Windows pointers (*.cur *.ani)",
-            "Windows pointer packs (*.zip *.inf)", "Pictures (*.png *.svg)"]
+        title: qsTr("Choose a pointer")
+        nameFilters: [qsTr("Pointers and pictures (*.cur *.ani *.zip *.inf *.png *.svg)"), qsTr("Windows pointers (*.cur *.ani)"),
+            qsTr("Windows pointer packs (*.zip *.inf)"), qsTr("Pictures (*.png *.svg)")]
         currentFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
         onAccepted: {
             if (/\.(png|svg)$/i.test(selectedFile.toString())) {
@@ -477,11 +475,13 @@ PageScroll {
 
     UI.Dialog {
         id: ownPointerDialog
-        title: "Your own pointer"
-        text: (Accessibility.customPointerSource.length > 0 ? "Made from " + Accessibility.customPointerSource + ". " : "")
-            + (Accessibility.pointerColour === "custom"
-                ? "Choose another file to replace it, or remove it to go back to the white pointer."
-                : "Use it again, choose another file to replace it, or remove it.")
+        title: qsTr("Your own pointer")
+        text: {
+            const next = Accessibility.pointerColour === "custom"
+                ? qsTr("Choose another file to replace it, or remove it to go back to the white pointer.")
+                : qsTr("Use it again, choose another file to replace it, or remove it.");
+            return Accessibility.customPointerSource.length > 0 ? qsTr("Made from %1. %2").arg(Accessibility.customPointerSource).arg(next) : next;
+        }
 
         Image {
             Layout.preferredWidth: 48
@@ -494,7 +494,7 @@ PageScroll {
 
         buttons: [
             UI.Button {
-                text: "Use it"
+                text: qsTr("Use it")
                 kind: "primary"
                 visible: Accessibility.pointerColour !== "custom"
                 onClicked: {
@@ -503,21 +503,21 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Choose another file"
+                text: qsTr("Choose another file")
                 onClicked: {
                     ownPointerDialog.close();
                     pointerFile.open();
                 }
             },
             UI.Button {
-                text: "Remove"
+                text: qsTr("Remove")
                 onClicked: {
                     ownPointerDialog.close();
                     Accessibility.removeCustomPointer();
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: ownPointerDialog.close()
             }
         ]
@@ -539,8 +539,8 @@ PageScroll {
             open();
         }
 
-        title: "Where does it point?"
-        text: "Click the spot on the picture that does the clicking."
+        title: qsTr("Where does it point?")
+        text: qsTr("Click the spot on the picture that does the clicking.")
 
         Item {
             Layout.alignment: Qt.AlignHCenter
@@ -589,7 +589,7 @@ PageScroll {
 
         buttons: [
             UI.Button {
-                text: "Use it"
+                text: qsTr("Use it")
                 kind: "primary"
                 onClicked: {
                     hotspotDialog.close();
@@ -597,7 +597,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: hotspotDialog.close()
             }
         ]
@@ -605,10 +605,10 @@ PageScroll {
 
     UI.Dialog {
         id: pointerError
-        title: "Couldn't use that file"
+        title: qsTr("Couldn't use that file")
         buttons: [
             UI.Button {
-                text: "OK"
+                text: qsTr("OK")
                 kind: "primary"
                 onClicked: pointerError.close()
             }

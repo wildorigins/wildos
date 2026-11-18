@@ -119,6 +119,37 @@ QString displayPath(const QString &path)
     return QStringLiteral("~") + path.mid(homePath().size());
 }
 
+// When a package was installed or last upgraded: dpkg writes the package's
+// list of files afresh each time.
+QDateTime packageChanged(const QString &package)
+{
+    const QDir info(QStringLiteral("/var/lib/dpkg/info"));
+    QFileInfo list(info.filePath(package + QStringLiteral(".list")));
+    if (!list.exists()) {
+        const QFileInfoList perArchitecture = info.entryInfoList({package + QStringLiteral(":*.list")}, QDir::Files);
+        if (perArchitecture.isEmpty()) {
+            return {};
+        }
+        list = perArchitecture.constFirst();
+    }
+    return list.lastModified();
+}
+
+// When a Store app was installed or last updated. Its launcher lives in the
+// folder flatpak made for the version in use, beside the "deploy" file
+// flatpak wrote as it put that version there. The launcher's own time says
+// nothing: flatpak stores every app file with no time at all.
+QDateTime flatpakChanged(const QString &launcher)
+{
+    const qsizetype at = launcher.indexOf(QLatin1String("/export/share/applications/"));
+    if (at < 0) {
+        return {};
+    }
+    const QString folder = launcher.left(at);
+    const QFileInfo deploy(folder + QStringLiteral("/deploy"));
+    return deploy.exists() ? deploy.lastModified() : QFileInfo(folder).lastModified();
+}
+
 // Packages that make up the desktop itself. Removing any of them would take
 // Wild OS apart, whatever the dependency tree allows.
 const QStringList coreMetapackages = {QStringLiteral("wildos-desktop"), QStringLiteral("wildos-base"), QStringLiteral("wildos-branding")};
@@ -256,6 +287,7 @@ void AppsModel::reload()
             app.homeApp = !app.files.isEmpty();
             app.protectedApp = !app.homeApp;
         }
+        app.changed = !app.flatpak.isEmpty() ? flatpakChanged(entry) : !app.package.isEmpty() ? packageChanged(app.package) : QFileInfo(entry).lastModified();
         apps << app;
     }
 
@@ -423,15 +455,38 @@ void AppsModel::setFilter(const QString &filter)
     applyFilter();
 }
 
+void AppsModel::setSort(const QString &sort)
+{
+    if (sort == m_sort) {
+        return;
+    }
+    m_sort = sort;
+    Q_EMIT sortChanged();
+    applyFilter();
+}
+
 void AppsModel::applyFilter()
 {
     beginResetModel();
     m_shown.clear();
     const QString needle = m_filter.trimmed();
+    // m_all is in name order.
     for (const App &app : std::as_const(m_all)) {
         if (needle.isEmpty() || app.name.contains(needle, Qt::CaseInsensitive)) {
             m_shown << app;
         }
+    }
+    if (m_sort == QLatin1String("name-desc")) {
+        std::reverse(m_shown.begin(), m_shown.end());
+    } else if (m_sort == QLatin1String("date")) {
+        // Apps with no date to go by come last, and apps that arrived
+        // together (everything Wild OS came with) stay in name order.
+        std::stable_sort(m_shown.begin(), m_shown.end(), [](const App &a, const App &b) {
+            if (a.changed.isValid() != b.changed.isValid()) {
+                return a.changed.isValid();
+            }
+            return a.changed.isValid() && a.changed > b.changed;
+        });
     }
     endResetModel();
     Q_EMIT countChanged();
@@ -461,6 +516,8 @@ QVariant AppsModel::data(const QModelIndex &index, int role) const
         return app.flatpak.isEmpty() ? app.package : app.flatpak;
     case CanUninstallRole:
         return !app.protectedApp;
+    case ChangedRole:
+        return app.changed;
     }
     return {};
 }
@@ -474,6 +531,7 @@ QHash<int, QByteArray> AppsModel::roleNames() const
         {SourceRole, "source"},
         {PackageRole, "packageName"},
         {CanUninstallRole, "canUninstall"},
+        {ChangedRole, "lastChanged"},
     };
 }
 
@@ -517,7 +575,7 @@ void AppsModel::uninstall(const QString &id, bool withData)
                 stuck << displayPath(path);
             }
         }
-        finishUninstall(app, stuck.isEmpty(), stuck.isEmpty() ? QString() : QStringLiteral("These could not be moved to the Recycle Bin: ") + stuck.join(QStringLiteral(", ")));
+        finishUninstall(app, stuck.isEmpty(), stuck.isEmpty() ? QString() : tr("These could not be moved to the Recycle Bin: %1").arg(stuck.join(QStringLiteral(", "))));
         return;
     }
 
@@ -549,8 +607,8 @@ void AppsModel::uninstall(const QString &id, bool withData)
         auto reason = std::make_shared<QString>();
         connect(remove, &Transaction::errorCode, this, [reason](Transaction::Error error, const QString &) {
             *reason = error == Transaction::ErrorDepResolutionFailed || error == Transaction::ErrorCannotRemoveSystemPackage
-                ? QStringLiteral("Other apps need it, so it was left in place.")
-                : error == Transaction::ErrorNotAuthorized ? QStringLiteral("It was not removed because the password was not given.") : QString();
+                ? tr("Other apps need it, so it was left in place.")
+                : error == Transaction::ErrorNotAuthorized ? tr("It was not removed because the password was not given.") : QString();
         });
         connect(remove, &Transaction::finished, this, [this, app, reason](Transaction::Exit status, uint) {
             finishUninstall(app, status == Transaction::ExitSuccess, *reason);
@@ -570,7 +628,7 @@ void AppsModel::uninstallWindowsApp(const App &app)
         watcher->deleteLater();
         const QDBusPendingReply<QString> reply = *watcher;
         if (reply.isError()) {
-            finishUninstall(app, false, QStringLiteral("Windows mode didn't answer. Restart the PC, then try again."));
+            finishUninstall(app, false, tr("Windows mode didn't answer. Restart the PC, then try again."));
             return;
         }
         const QJsonObject answer = QJsonDocument::fromJson(reply.value().toUtf8()).object();

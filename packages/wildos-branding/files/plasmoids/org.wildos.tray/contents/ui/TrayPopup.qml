@@ -52,7 +52,54 @@ FocusScope {
         if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
             Nav.keyboard = true;
         }
-        event.accepted = false;
+        event.accepted = popup.arrowPressed(event.key);
+    }
+
+    // What the arrow keys move between: the icons of the grid, or the
+    // drives of the list, in the order they are drawn.
+    function stops(): var {
+        const list = [];
+        const from = usb ? driveRows : iconCells;
+        for (let i = 0; i < from.count; i++) {
+            const item = from.itemAt(i);
+            if (item && item.visible) {
+                list.push(item);
+            }
+        }
+        return list;
+    }
+
+    // Arrows walk the grid as it is laid out, Home and End go to its ends,
+    // and nothing wraps, as in the Windows overflow.
+    function arrowPressed(key: int): bool {
+        if ([Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End].indexOf(key) < 0) {
+            return false;
+        }
+        const list = stops();
+        if (list.length === 0) {
+            return false;
+        }
+        const across = usb ? 1 : columns;
+        const at = list.findIndex(item => item.activeFocus);
+        let to = at;
+        if (at < 0 || key === Qt.Key_Home) {
+            to = 0;
+        } else if (key === Qt.Key_End) {
+            to = list.length - 1;
+        } else if (key === Qt.Key_Left && !usb) {
+            to = at - 1;
+        } else if (key === Qt.Key_Right && !usb) {
+            to = at + 1;
+        } else if (key === Qt.Key_Up) {
+            to = at - across;
+        } else if (key === Qt.Key_Down) {
+            to = at + across;
+        }
+        if (to >= 0 && to < list.length) {
+            Nav.keyboard = true;
+            list[to].forceActiveFocus(Qt.TabFocusReason);
+        }
+        return true;
     }
 
     HoverHandler {
@@ -79,6 +126,7 @@ FocusScope {
         rowSpacing: 2
 
         Repeater {
+            id: iconCells
             model: popup.tray.items
 
             TrayIcon {
@@ -100,6 +148,7 @@ FocusScope {
         spacing: 2
 
         Repeater {
+            id: driveRows
             model: popup.tray.mountedDrives
 
             MouseArea {
@@ -156,7 +205,7 @@ FocusScope {
                     y: 0
                     height: 40
                     width: parent.width - 52
-                    text: drive.busy ? "Ejecting " + drive.deviceDescription : "Eject " + drive.deviceDescription
+                    text: drive.busy ? qsTr("Ejecting %1").arg(drive.deviceDescription) : qsTr("Eject %1").arg(drive.deviceDescription)
                     color: drive.busy ? UI.Style.inkMuted : UI.Style.ink
                 }
 
@@ -167,7 +216,7 @@ FocusScope {
                     x: 40
                     y: 36
                     width: parent.width - 52
-                    text: "Something is still using this drive. Close any files on it, then try again."
+                    text: qsTr("Something is still using this drive. Close any files on it, then try again.")
                     color: UI.Style.inkMuted
                     size: 12
                     wrapMode: Text.WordWrap

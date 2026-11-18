@@ -107,7 +107,7 @@ Bridge::Bridge(QObject *parent)
         m_state = QStringLiteral("disabled");
     } else if (m_info.kind == PeInfo::NotWindows) {
         m_state = QStringLiteral("failed");
-        m_message = QStringLiteral("This file isn't a Windows program, or it's damaged. Check where it came from and download it again.");
+        m_message = tr("This file isn't a Windows program, or it's damaged. Check where it came from and download it again.");
     }
     checkSignature();
 }
@@ -118,16 +118,16 @@ QString Bridge::windowsModeReason() const
         return {};
     }
     if (m_action == QLatin1String("home")) {
-        return QStringLiteral("This PC has Windows 11 Home, which can't run Windows apps on Wild OS yet. "
-                              "Microsoft's upgrade to Windows 11 Pro uses this PC's licence, or use the Wild OS version or Office on the web.");
+        return tr("This PC has Windows 11 Home, which can't run Windows apps on Wild OS yet. "
+                  "Microsoft's upgrade to Windows 11 Pro uses this PC's licence, or use the Wild OS version or Office on the web.");
     }
     if (m_action == QLatin1String("cannot") && !m_compatReason.isEmpty()) {
         return m_compatReason;
     }
     if (QStandardPaths::findExecutable(QStringLiteral("wildos-winmode")).isEmpty()) {
-        return QStringLiteral("Windows mode isn't installed on this PC.");
+        return tr("Windows mode isn't installed on this PC.");
     }
-    return QStringLiteral("Set up Windows mode first, in Settings under Windows apps.");
+    return tr("Set up Windows mode first, in Settings under Windows apps.");
 }
 
 void Bridge::readDecision()
@@ -223,7 +223,7 @@ QString Bridge::installInWindowsMode()
         m_handingOver = false;
         const QDBusPendingReply<QString> reply = *watcher;
         if (reply.isError()) {
-            Q_EMIT windowsModeAnswered(QStringLiteral("Windows mode didn't answer. Restart the PC, then try again."));
+            Q_EMIT windowsModeAnswered(tr("Windows mode didn't answer. Restart the PC, then try again."));
             return;
         }
         if (reply.value().isEmpty()) {
@@ -244,15 +244,15 @@ QString Bridge::fromText() const
 {
     const QString dir = QFileInfo(m_path).absolutePath();
     const QList<std::pair<QStandardPaths::StandardLocation, QString>> places = {
-        {QStandardPaths::DownloadLocation, QStringLiteral("Downloads")}, {QStandardPaths::DesktopLocation, QStringLiteral("Desktop")},
-        {QStandardPaths::DocumentsLocation, QStringLiteral("Documents")}, {QStandardPaths::HomeLocation, QStringLiteral("Home")},
+        {QStandardPaths::DownloadLocation, tr("Downloads")}, {QStandardPaths::DesktopLocation, tr("Desktop")},
+        {QStandardPaths::DocumentsLocation, tr("Documents")}, {QStandardPaths::HomeLocation, tr("Home")},
     };
     for (const auto &[location, name] : places) {
         if (dir == QStandardPaths::writableLocation(location)) {
-            return QStringLiteral("%1, from your %2 folder").arg(fileName(), name);
+            return tr("%1, from your %2 folder").arg(fileName(), name);
         }
     }
-    return QStringLiteral("%1, from %2").arg(fileName(), QFileInfo(dir).fileName().isEmpty() ? dir : QFileInfo(dir).fileName());
+    return tr("%1, from %2").arg(fileName(), QFileInfo(dir).fileName().isEmpty() ? dir : QFileInfo(dir).fileName());
 }
 
 void Bridge::readCatalogue()
@@ -364,7 +364,7 @@ void Bridge::install()
         return;
     }
     setState(QStringLiteral("installing"));
-    setProgress(-1, QStringLiteral("Opening %1 in Windows mode").arg(m_appName));
+    setProgress(-1, tr("Opening %1 in Windows mode").arg(m_appName));
     const QString why = installInWindowsMode();
     if (!why.isEmpty()) {
         setState(QStringLiteral("failed"), why);

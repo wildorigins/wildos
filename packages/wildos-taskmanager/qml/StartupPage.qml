@@ -12,22 +12,48 @@ Item {
 
     property string search
     property string selectedFile: ""
+    property string sortColumn: Prefs.sortColumn("startup", "name")
+    property bool sortDescending: Prefs.sortDescending("startup")
     readonly property var apps: {
         const needle = search.trim().toLowerCase();
-        return StartupApps.apps.filter(a => needle.length === 0 || a.name.toLowerCase().includes(needle));
+        return heading.sorted(StartupApps.apps.filter(a => needle.length === 0 || a.name.toLowerCase().includes(needle)));
     }
     readonly property var selected: apps.find(a => a.file === selectedFile) || null
+
+    function sortBy(column) {
+        sortDescending = sortColumn === column ? !sortDescending : false;
+        sortColumn = column;
+        Prefs.setSort("startup", sortColumn, sortDescending);
+    }
+
+    function rowIndex() {
+        return apps.findIndex(a => a.file === selectedFile);
+    }
+
+    function selectRow(index) {
+        selectedFile = apps[index].file;
+    }
+
+    function rowName(index) {
+        return apps[index].name;
+    }
+
+    function toggleSelected() {
+        if (selected) {
+            StartupApps.setEnabled(selected.file, !selected.enabled);
+        }
+    }
 
     PageHeader {
         id: header
         width: parent.width
-        title: "Startup apps"
+        title: qsTr("Startup apps")
 
         HeaderButton {
-            text: page.selected && page.selected.enabled ? "Disable" : "Enable"
+            text: page.selected && page.selected.enabled ? qsTr("Disable") : qsTr("Enable")
             iconName: page.selected && page.selected.enabled ? "close" : "check"
             enabled: page.selected !== null
-            onClicked: StartupApps.setEnabled(page.selected.file, !page.selected.enabled)
+            onClicked: page.toggleSelected()
         }
     }
 
@@ -36,10 +62,13 @@ Item {
         y: header.height
         width: parent.width
         columns: [
-            { title: "Name", width: 0 },
-            { title: "Status", width: 120 },
+            { id: "name", title: qsTr("Name"), width: 0 },
+            { id: "enabled", title: qsTr("Status"), width: 120, value: app => app.enabled ? 0 : 1 },
             { title: "", width: 84 }
         ]
+        sortColumn: page.sortColumn
+        sortDescending: page.sortDescending
+        onSortRequested: column => page.sortBy(column)
     }
 
     ListView {
@@ -50,15 +79,28 @@ Item {
         clip: true
         model: page.apps
         boundsBehavior: Flickable.StopAtBounds
+        activeFocusOnTab: true
+        keyNavigationEnabled: false
+        Accessible.role: Accessible.List
+        Accessible.name: qsTr("Startup apps")
         T.ScrollBar.vertical: UI.ScrollBar {}
+
+        Keys.onPressed: event => listKeys.handle(event)
+        Keys.onSpacePressed: page.toggleSelected()
+        Keys.onReturnPressed: page.toggleSelected()
+        Keys.onEnterPressed: page.toggleSelected()
 
         delegate: TableRow {
             id: row
             required property var modelData
             width: list.width
             selected: modelData.file === page.selectedFile
-            Accessible.name: modelData.name + ", " + (modelData.enabled ? "Enabled" : "Disabled")
-            onClicked: page.selectedFile = modelData.file
+            focused: selected && listKeys.shown
+            Accessible.name: modelData.name + ", " + (modelData.enabled ? qsTr("Enabled") : qsTr("Disabled"))
+            onClicked: {
+                page.selectedFile = modelData.file;
+                listKeys.clicked();
+            }
 
             Item {
                 width: row.width - 120 - 84
@@ -96,7 +138,7 @@ Item {
                 width: 120
                 height: row.height
                 leftPadding: 12
-                text: row.modelData.enabled ? "Enabled" : "Disabled"
+                text: row.modelData.enabled ? qsTr("Enabled") : qsTr("Disabled")
                 size: 12
                 color: UI.Style.inkMuted
             }
@@ -110,7 +152,7 @@ Item {
                     anchors.right: parent.right
                     anchors.rightMargin: 16
                     checked: row.modelData.enabled
-                    Accessible.name: "Start " + row.modelData.name + " when you sign in"
+                    Accessible.name: qsTr("Start %1 when you sign in").arg(row.modelData.name)
                     onToggled: StartupApps.setEnabled(row.modelData.file, checked)
                 }
             }
@@ -123,7 +165,14 @@ Item {
         width: Math.min(420, list.width - 48)
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
-        text: page.search.length > 0 ? "No startup app matches “" + page.search + "”." : "No apps start when you sign in. Apps you set to start with Wild OS show here."
+        text: page.search.length > 0 ? qsTr("No startup app matches “%1”.").arg(page.search) : qsTr("No apps start when you sign in. Apps you set to start with Wild OS show here.")
         color: UI.Style.inkMuted
+    }
+
+    ListKeys {
+        id: listKeys
+        view: list
+        host: page
+        rowHeight: 44
     }
 }

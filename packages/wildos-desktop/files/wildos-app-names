@@ -85,7 +85,8 @@ else
     rename org.kde.konsole "Terminal" "Terminal"
 fi
 # Launchers that Wild OS packages ship whole, under the stock app's id so its
-# windows and file types still find them: Write and Tables for LibreOffice.
+# windows and file types still find them: Write, Tables and Slides for
+# LibreOffice.
 for f in /usr/share/wildos/launchers/*.desktop; do
     [ -f "$f" ] || continue
     id=$(basename "$f" .desktop)
@@ -93,17 +94,28 @@ for f in /usr/share/wildos/launchers/*.desktop; do
     cp "$f" "$DST/$id.desktop.new"
     mv "$DST/$id.desktop.new" "$DST/$id.desktop"
 done
-# With Write or Tables in place, LibreOffice's own start centre stays out of
-# menus. Impress and the rest show up as themselves if installed from the Store.
-if [ -f /usr/share/wildos/launchers/libreoffice-writer.desktop ] || [ -f /usr/share/wildos/launchers/libreoffice-calc.desktop ]; then
+# With Write, Tables or Slides in place, LibreOffice's own start centre stays
+# out of menus. Math and Base show up as themselves if installed.
+if [ -f /usr/share/wildos/launchers/libreoffice-writer.desktop ] || [ -f /usr/share/wildos/launchers/libreoffice-calc.desktop ] ||
+   [ -f /usr/share/wildos/launchers/libreoffice-impress.desktop ]; then
     hide libreoffice-startcenter
     hide libreoffice-xsltfilter
 fi
-# Write and Tables are removed one at a time. Until apt takes away the
+# Slides cannot be installed without LibreOffice Draw (Debian's Impress
+# depends on it), so Draw arrives with it unasked. It stays out of menus and
+# keeps only its own drawing formats: not PDFs or pictures, where it would
+# sit in "Open with" beside the apps meant for them.
+if [ -f /usr/share/wildos/launchers/libreoffice-impress.desktop ]; then
+    hide libreoffice-draw
+    if [ -f "$DST/libreoffice-draw.desktop" ]; then
+        sed -i -E '/^MimeType=/s#(application/pdf|image/[^;]*);##g' "$DST/libreoffice-draw.desktop"
+    fi
+fi
+# Write, Tables and Slides are removed one at a time. Until apt takes away the
 # LibreOffice part a removed one used, its stock launcher would show up in
 # Start as "LibreOffice Calc" in place of the app someone just removed.
 if [ -d /usr/lib/libreoffice/share/extensions/wildos-office ]; then
-    for id in libreoffice-writer libreoffice-calc; do
+    for id in libreoffice-writer libreoffice-calc libreoffice-impress; do
         [ -f "/usr/share/wildos/launchers/$id.desktop" ] || hide "$id"
     done
 fi

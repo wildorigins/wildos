@@ -453,10 +453,10 @@ QList<QPair<QString, bool>> failedSources(const QString &details)
 QString skippedText(const QList<QPair<QString, bool>> &failed)
 {
     const auto why = [](bool key) {
-        return key ? QStringLiteral("its signing key was not accepted") : QStringLiteral("it could not be reached");
+        return key ? QCoreApplication::translate("Updates", "its signing key was not accepted") : QCoreApplication::translate("Updates", "it could not be reached");
     };
     if (failed.size() == 1) {
-        return QStringLiteral("Everything else was checked, but not %1: %2. It was added by other software, so its updates wait until that is fixed or the source is removed.")
+        return QCoreApplication::translate("Updates", "Everything else was checked, but not %1: %2. It was added by other software, so its updates wait until that is fixed or the source is removed.")
             .arg(failed.first().first, why(failed.first().second));
     }
     QStringList parts;
@@ -464,7 +464,7 @@ QString skippedText(const QList<QPair<QString, bool>> &failed)
         parts << QStringLiteral("%1 (%2)").arg(entry.first, why(entry.second));
     }
     const QString last = parts.takeLast();
-    return QStringLiteral("Everything else was checked, but not %1 or %2. They were added by other software, so their updates wait until that is fixed or the sources are removed.")
+    return QCoreApplication::translate("Updates", "Everything else was checked, but not %1 or %2. They were added by other software, so their updates wait until that is fixed or the sources are removed.")
         .arg(parts.join(QStringLiteral(", ")), last);
 }
 }
@@ -789,8 +789,8 @@ void Updates::refreshForCheck()
             listUpdates();
             fetchNotes();
         } else if (status == Transaction::ExitCancelled) {
-            finishOwnCheck({QStringLiteral("The check was cancelled.")});
-            setState(QStringLiteral("error"), QStringLiteral("The check was cancelled."), true);
+            finishOwnCheck({tr("The check was cancelled.")});
+            setState(QStringLiteral("error"), tr("The check was cancelled."), true);
         } else {
             checkFailedWith(m_checkErrored ? m_checkError : Transaction::ErrorUnknown, m_checkErrored ? m_checkDetails : QString());
         }
@@ -916,25 +916,25 @@ QString Updates::whyCheckFailed(Transaction::Error error, const QString &details
         return errorText(error, false);
     case Transaction::ErrorCannotGetLock:
     case Transaction::ErrorLockRequired:
-        return QStringLiteral("Another install is still running, such as the automatic security updates. Try again when it has finished.");
+        return tr("Another install is still running, such as the automatic security updates. Try again when it has finished.");
     case Transaction::ErrorNoSpaceOnDevice:
-        return QStringLiteral("There is not enough free space to check for updates.");
+        return tr("There is not enough free space to check for updates.");
     default:
         break;
     }
     if (offline() || error == Transaction::ErrorNoNetwork) {
-        return QStringLiteral("This computer is not connected to the internet.");
+        return tr("This computer is not connected to the internet.");
     }
     static const QRegularExpression address(QStringLiteral("(?:tor\\+)?https?://([^/\\s'\"]+)"));
     // A clock far behind fails every source, so it is the one reason given.
     const qint64 behind = clockProblemIn(details) ? SecureTime::secondsBehind(details) : 0;
     if (behind >= 60) {
-        const QString clock = QStringLiteral("The clock on this computer is at least %1 behind, so the updates look as if they were signed in the future.")
+        const QString clock = tr("The clock on this computer is at least %1 behind, so the updates look as if they were signed in the future.")
                                   .arg(SecureTime::durationText(behind));
         return clock + QLatin1Char('\n')
             + (SecureTime::settingNow()
-                   ? QStringLiteral("Wild OS sets the clock through Tor after start-up and has not managed to yet. Set the date and time in Settings > Date and time, then try again.")
-                   : QStringLiteral("Set the date and time in Settings > Date and time, then try again."));
+                   ? tr("Wild OS sets the clock through Tor after start-up and has not managed to yet. Set the date and time in Settings > Date and time, then try again.")
+                   : tr("Set the date and time in Settings > Date and time, then try again."));
     }
     const QStringList wildos = wildosHosts();
     const QStringList own = ownHosts();
@@ -961,7 +961,7 @@ QString Updates::whyCheckFailed(Transaction::Error error, const QString &details
         }
     }
     if (unresolved.size() >= 2 && !failedOtherwise) {
-        return QStringLiteral("This computer is not connected to the internet.");
+        return tr("This computer is not connected to the internet.");
     }
     for (const QString &line : lines) {
         const auto match = address.match(line);
@@ -978,25 +978,25 @@ QString Updates::whyCheckFailed(Transaction::Error error, const QString &details
     }
     QStringList reasons;
     if (wildosDown) {
-        reasons << QStringLiteral("Wild OS's update server could not be reached.");
+        reasons << tr("Wild OS's update server could not be reached.");
     }
     if (torDown) {
         // Long after start-up, waiting for Tor is no longer the likely fix.
         const qint64 up = secondsSinceStart();
         reasons << (up >= 0 && up < 2 * settlingSeconds
-                        ? QStringLiteral("Debian's updates could not be reached through Tor. Tor can take a few minutes to connect after start-up.")
-                        : QStringLiteral("Debian's updates could not be reached through Tor."));
+                        ? tr("Debian's updates could not be reached through Tor. Tor can take a few minutes to connect after start-up.")
+                        : tr("Debian's updates could not be reached through Tor."));
     } else if (debianDown) {
-        reasons << QStringLiteral("Debian's update servers could not be reached.");
+        reasons << tr("Debian's update servers could not be reached.");
     }
     if (signing) {
-        reasons << QStringLiteral("The updates' signatures could not be checked. This happens when the date and time on this computer are wrong.");
+        reasons << tr("The updates' signatures could not be checked. This happens when the date and time on this computer are wrong.");
     }
     if (reasons.isEmpty()) {
         reasons << (error == Transaction::ErrorNoCache || error == Transaction::ErrorRepoNotAvailable || error == Transaction::ErrorCannotFetchSources
                             || error == Transaction::ErrorPackageDownloadFailed
-                        ? QStringLiteral("The update servers could not be reached. Check your internet connection.")
-                        : QStringLiteral("Something went wrong while checking. Try again in a few minutes."));
+                        ? tr("The update servers could not be reached. Check your internet connection.")
+                        : tr("Something went wrong while checking. Try again in a few minutes."));
     }
     return reasons.join(QLatin1Char('\n'));
 }
@@ -1042,7 +1042,7 @@ void Updates::readUpdates(bool quiet)
         if (status != Transaction::ExitSuccess) {
             m_installAfterList = false;
             if (m_state != QLatin1String("error")) {
-                setState(QStringLiteral("error"), QStringLiteral("Wild OS could not read the list of updates."));
+                setState(QStringLiteral("error"), tr("Wild OS could not read the list of updates."));
             }
             return;
         }
@@ -1166,8 +1166,8 @@ void Updates::startInstall()
             setState(QStringLiteral("installed"));
         } else {
             if (m_state != QLatin1String("error")) {
-                setState(QStringLiteral("error"), status == Transaction::ExitCancelled ? QStringLiteral("Installing was cancelled.")
-                                                                                        : QStringLiteral("The updates could not be installed."));
+                setState(QStringLiteral("error"), status == Transaction::ExitCancelled ? tr("Installing was cancelled.")
+                                                                                        : tr("The updates could not be installed."));
             }
             // Part of the list may have gone in before the failure; what
             // did should not still be listed as waiting.
@@ -1197,7 +1197,7 @@ void Updates::refreshThenInstall()
             m_installAfterList = true;
             listUpdates();
         } else if (m_state != QLatin1String("error")) {
-            setState(QStringLiteral("error"), QStringLiteral("The updates could not be installed."));
+            setState(QStringLiteral("error"), tr("The updates could not be installed."));
         }
     });
 }
@@ -1286,21 +1286,21 @@ QString Updates::errorText(Transaction::Error error, bool installing)
     case Transaction::ErrorNoCache:
     case Transaction::ErrorRepoNotAvailable:
     case Transaction::ErrorCannotFetchSources:
-        return QStringLiteral("Wild OS could not reach the update servers. Check your internet connection and try again.");
+        return tr("Wild OS could not reach the update servers. Check your internet connection and try again.");
     case Transaction::ErrorNotAuthorized:
-        return installing ? QStringLiteral("Installing needs the administrator password, and it was not given.")
-                          : QStringLiteral("Checking needs the administrator password, and it was not given.");
+        return installing ? tr("Installing needs the administrator password, and it was not given.")
+                          : tr("Checking needs the administrator password, and it was not given.");
     case Transaction::ErrorPackageDownloadFailed:
-        return QStringLiteral("Some updates could not be downloaded. Check your internet connection and try again.");
+        return tr("Some updates could not be downloaded. Check your internet connection and try again.");
     case Transaction::ErrorNoSpaceOnDevice:
-        return QStringLiteral("There is not enough free space to install the updates.");
+        return tr("There is not enough free space to install the updates.");
     case Transaction::ErrorLockRequired:
     case Transaction::ErrorCannotGetLock:
-        return QStringLiteral("Another app is installing software. Try again when it has finished.");
+        return tr("Another app is installing software. Try again when it has finished.");
     case Transaction::ErrorTransactionCancelled:
-        return QStringLiteral("The update was cancelled.");
+        return tr("The update was cancelled.");
     default:
-        return QStringLiteral("Something went wrong while updating. Try again in a few minutes.");
+        return tr("Something went wrong while updating. Try again in a few minutes.");
     }
 }
 
@@ -1490,22 +1490,19 @@ QString Updates::summary(int after, int upTo) const
             }
         }
     }
-    auto count = [](int n, const char *one, const char *many) {
-        return QString::number(n) + QLatin1Char(' ') + QString::fromLatin1(n == 1 ? one : many);
-    };
     QStringList parts;
     if (const int n = counts.value(QStringLiteral("new"))) {
-        parts << count(n, "new feature", "new features");
+        parts << (n == 1 ? tr("1 new feature") : tr("%1 new features").arg(n));
     }
     if (const int n = counts.value(QStringLiteral("fixed"))) {
-        parts << count(n, "fix", "fixes");
+        parts << (n == 1 ? tr("1 fix") : tr("%1 fixes").arg(n));
     }
     if (const int n = counts.value(QStringLiteral("improved"))) {
-        parts << count(n, "improvement", "improvements");
+        parts << (n == 1 ? tr("1 improvement") : tr("%1 improvements").arg(n));
     }
     if (parts.size() <= 1) {
         return parts.join(QString());
     }
     const QString last = parts.takeLast();
-    return parts.join(QStringLiteral(", ")) + QStringLiteral(" and ") + last;
+    return tr("%1 and %2").arg(parts.join(QStringLiteral(", ")), last);
 }

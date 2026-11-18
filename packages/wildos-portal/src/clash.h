@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QQmlEngine>
+#include <QUrl>
 #include <QVariantMap>
 
 class QQuickWindow;
@@ -62,7 +63,7 @@ Q_SIGNALS:
 
 private:
     QString m_name;
-    QString m_where;
+    QUrl m_whereUrl;
     QString m_icon;
     QString m_keepBothName;
     qint64 m_srcSize = -1;

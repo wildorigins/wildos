@@ -1,3 +1,16 @@
+wildos-pdf (0.1.7) trixie; urgency=medium
+
+  * The eye button on password boxes shows the password again.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 21:15:00 +0000
+
+wildos-pdf (0.1.6) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-pdf (0.1.5) trixie; urgency=medium
 
   * The page number box, text you type onto a page and form fields

@@ -18,8 +18,32 @@ Rectangle {
     implicitHeight: 84
     radius: UI.Style.radiusSm
     color: current ? VideosStyle.rowSelected : mouse.containsMouse ? VideosStyle.rowHover : "transparent"
+    activeFocusOnTab: true
     Accessible.role: Accessible.ListItem
     Accessible.name: title.text
+    Accessible.selected: current
+    Accessible.onPressAction: row.play()
+    Keys.onReturnPressed: row.play()
+    Keys.onEnterPressed: row.play()
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+            row.menuRequested(row.path, row, 24, 24);
+            event.accepted = true;
+        }
+    }
+
+    function play() {
+        if (!current) {
+            Player.open(path);
+        }
+    }
+
+    // Inside the row: the list clips, and the rows nearly touch.
+    UI.FocusRing {
+        anchors.margins: 0
+        targetRadius: row.radius - 4
+        visible: row.activeFocus
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -62,8 +86,8 @@ Rectangle {
         onClicked: event => {
             if (event.button === Qt.RightButton) {
                 row.menuRequested(row.path, row, event.x, event.y);
-            } else if (!row.current) {
-                Player.open(row.path);
+            } else {
+                row.play();
             }
         }
     }

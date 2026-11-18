@@ -53,7 +53,7 @@ Rectangle {
     }
 
     implicitHeight: content.implicitHeight + 20
-    radius: 8
+    radius: UI.Style.radiusSm
     color: current ? UI.Style.surfaceSelected : rowMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRaised
     border.width: 1
     border.color: UI.Style.borderSubtle

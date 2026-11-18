@@ -67,7 +67,7 @@ TextField {
         iconName: "close"
         iconSize: 12
         stroke: 2.2
-        tip: "Clear"
+        tip: qsTr("Clear")
         focusPolicy: Qt.NoFocus
         onClicked: {
             field.clear();

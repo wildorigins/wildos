@@ -20,6 +20,10 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     rmdir "$DISABLED" 2>/dev/null || true
     dpkg-divert --package wildos-desktop --remove --rename \
         --divert /usr/bin/brave-browser-stable.brave /usr/bin/brave-browser-stable >/dev/null || true
+    dpkg-divert --package wildos-desktop --remove --rename \
+        --divert /usr/share/wildos/diverted/plasma-xdg-desktop-portal-kde.service \
+        /usr/lib/systemd/user/plasma-xdg-desktop-portal-kde.service >/dev/null || true
+    rmdir /usr/share/wildos/diverted 2>/dev/null || true
     # Written by wildos-strings, so dpkg does not know about them.
     rm -rf /usr/share/wildos/locale
 fi

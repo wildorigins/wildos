@@ -80,8 +80,8 @@ PageFlick {
     })
 
     PageTitle {
-        title: "Categories"
-        subtitle: "Every app and game in the Store, by what it does."
+        title: qsTr("Categories")
+        subtitle: qsTr("Every app and game in the Store, by what it does.")
     }
 
     ColumnLayout {
@@ -89,7 +89,7 @@ PageFlick {
         spacing: 14
 
         SectionHeader {
-            title: "Apps"
+            title: qsTr("Apps")
         }
 
         TileGrid {
@@ -98,7 +98,7 @@ PageFlick {
             CategoryTile {
                 width: appGrid.cellWidth
                 iconName: "categories"
-                text: "All apps"
+                text: qsTr("All apps")
                 onClicked: page.store.open("apps", "")
             }
 
@@ -121,7 +121,7 @@ PageFlick {
         spacing: 14
 
         SectionHeader {
-            title: "Games"
+            title: qsTr("Games")
         }
 
         TileGrid {
@@ -130,7 +130,7 @@ PageFlick {
             CategoryTile {
                 width: gameGrid.cellWidth
                 iconName: "play"
-                text: "All games"
+                text: qsTr("All games")
                 onClicked: page.store.open("games", "")
             }
 

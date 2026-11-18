@@ -17,8 +17,18 @@ Rectangle {
     implicitHeight: column.implicitHeight + 16
     radius: UI.Style.radiusSm
     color: mouse.containsMouse ? VideosStyle.rowHover : "transparent"
+    activeFocusOnTab: true
     Accessible.role: Accessible.ListItem
     Accessible.name: tile.folder.name ?? ""
+    Accessible.onPressAction: tile.opened()
+    Keys.onReturnPressed: tile.opened()
+    Keys.onEnterPressed: tile.opened()
+    Keys.onSpacePressed: tile.opened()
+
+    UI.FocusRing {
+        visible: tile.activeFocus
+        targetRadius: tile.radius
+    }
 
     ColumnLayout {
         id: column

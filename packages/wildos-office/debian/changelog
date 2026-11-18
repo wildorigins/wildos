@@ -1,3 +1,31 @@
+wildos-office (0.1.7) trixie; urgency=medium
+
+  * In Write, Tables and Slides, a click of the mouse wheel starts
+    scrolling by moving the mouse, instead of pasting.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 09:30:00 +0000
+
+wildos-office (0.1.6) trixie; urgency=medium
+
+  * Slides, for presentations: LibreOffice Impress with the Wild OS window,
+    ribbon, start screen and splash. PowerPoint files open with it and save
+    back as .pptx. It is its own package, wildos-slides, and a PC that
+    already has Write and Tables gets it once.
+  * Ribbon buttons show their short Wild OS names (Picture, Shapes, Page
+    break) with British English installed too: LibreOffice's own language
+    pack was putting its names back.
+  * Removing one of the three apps can no longer stop the others starting:
+    each app's own LibreOffice settings now come with that app.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 16:00:00 +0000
+
+wildos-office (0.1.5) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-office (0.1.4) trixie; urgency=medium
 
   * Write and Tables are their own packages, wildos-write and

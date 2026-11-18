@@ -22,8 +22,10 @@ Flickable {
     property var tops: []
     property real widest: 0
     property bool fitted: false
-    // Quarter turns clockwise, from the touchpad's two-finger rotate. Only
-    // the view turns; the file is saved and printed as it was.
+    // Quarter turns clockwise, from Rotate in the More menu or the
+    // touchpad's two-finger rotate. Only the view turns, and the turn is
+    // remembered with the file's place; the file is saved and printed as
+    // it was.
     property int turns: 0
     // The rotation under the fingers, in degrees, before it settles on a
     // quarter turn.
@@ -100,6 +102,15 @@ Flickable {
         }
         contentY = Math.max(0, Math.min(tops[i] - topMargin / 2, contentHeight - height));
     }
+    // Where a link or the contents points: that far down a page, at the
+    // top of the view. A turned page is shown from its top.
+    function showSpot(page, top) {
+        if (page < 0 || page >= tops.length) {
+            return;
+        }
+        const along = turns === 0 ? top * pageHeight(page) : 0;
+        contentY = Math.max(0, Math.min(tops[page] + along - topMargin / 2, contentHeight - height));
+    }
     // A match or a signature on a page, brought into the middle of the view.
     function showArea(page, found) {
         if (page < 0 || page >= tops.length) {
@@ -135,6 +146,7 @@ Flickable {
         const along = h > 0 ? (contentY + height / 2 - tops[page]) / h : 0;
         const across = contentWidth > 0 ? (contentX + width / 2) / contentWidth : 0.5;
         zoom = next;
+        app.keepZoom(next);
         relayout();
         contentY = Math.max(0, Math.min(tops[page] + along * pageHeight(page) - height / 2, contentHeight - height));
         contentX = Math.max(0, Math.min(across * contentWidth - width / 2, contentWidth - width));
@@ -155,19 +167,35 @@ Flickable {
             goToPage(currentPage);
         }
     }
-    // A new document opens at its real size, or smaller if that would not
-    // fit across the window.
+    // A document seen before opens where it was left: its page, zoom and
+    // which way up. A new one opens at the zoom last chosen, or, if none
+    // ever was, at its real size or smaller if that would not fit across
+    // the window.
     function openingZoom() {
         let w = 0;
         for (let i = 0; i < sizes.length; ++i) {
             w = Math.max(w, sizes[i].width);
         }
-        fitted = width > 0;
-        turns = 0;
-        zoom = w > 0 && width > 0 ? Math.max(0.25, Math.min(1, (width - sideMargin * 2) / (w * 96 / 72))) : 1;
+        fitted = width > 0 && height > 0;
+        const place = History.place(PdfDocument.path);
+        const kept = place.zoom > 0 ? place.zoom : app.keptZoom;
+        turns = place.turns > 0 ? place.turns % 4 : 0;
+        zoom = kept > 0 ? Math.max(0.25, Math.min(4, kept))
+            : w > 0 && width > 0 ? Math.max(0.25, Math.min(1, (width - sideMargin * 2) / (w * 96 / 72))) : 1;
         relayout();
         contentX = 0;
         contentY = 0;
+        if (place.page >= 0 && place.page < tops.length) {
+            contentY = Math.max(0, Math.min(tops[place.page] + place.offset * pageHeight(place.page), contentHeight - height));
+        }
+    }
+    function rememberPlace() {
+        if (!fitted || !PdfDocument.loaded || tops.length === 0) {
+            return;
+        }
+        const page = pageAt(contentY + topMargin);
+        const h = pageHeight(page);
+        History.setPlace(PdfDocument.path, page, h > 0 ? (contentY - tops[page]) / h : 0, zoom, turns);
     }
 
     // A document saved and opened again keeps its zoom and place.
@@ -182,6 +210,18 @@ Flickable {
     }
     Component.onCompleted: openingZoom()
     onWidthChanged: if (!fitted && width > 0) openingZoom()
+    onHeightChanged: if (!fitted && height > 0) openingZoom()
+
+    // Written a moment after the view comes to rest, not on every step of
+    // a scroll.
+    onContentYChanged: placeTimer.restart()
+    onZoomChanged: placeTimer.restart()
+    onTurnsChanged: placeTimer.restart()
+    Timer {
+        id: placeTimer
+        interval: 800
+        onTriggered: view.rememberPlace()
+    }
 
     // Two fingers on a touchpad (or a touchscreen) pinch to zoom and turn
     // to rotate. The page follows the fingers and settles on the nearest

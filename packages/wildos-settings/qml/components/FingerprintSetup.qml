@@ -34,11 +34,9 @@ T.Popup {
     readonly property int edgesFrom: Math.ceil(Fingerprint.stages * 2 / 3)
     readonly property bool moreFingers: Fingerprint.fingers.length < 10
 
-    // The board's colours; the green has no token of its own.
-    readonly property color surface: UI.Style.dark ? "#23252d" : UI.Style.glassDialog
-    readonly property color edge: UI.Style.tone(0.12)
+    readonly property color surface: UI.Style.glassDialog
     readonly property color hairline: UI.Style.tone(0.07)
-    readonly property color ok: UI.Style.dark ? "#5fd38d" : "#1d7a4c"
+    readonly property color ok: UI.Style.success
     readonly property color shieldInk: Qt.rgba(UI.Style.accent.r + (1 - UI.Style.accent.r) * 0.55, UI.Style.accent.g + (1 - UI.Style.accent.g) * 0.55,
                                                 UI.Style.accent.b + (1 - UI.Style.accent.b) * 0.55, 1)
 
@@ -124,10 +122,10 @@ T.Popup {
     }
 
     background: Rectangle {
-        radius: 12
+        radius: UI.Style.radiusMd
         color: dialog.surface
         border.width: 1
-        border.color: dialog.edge
+        border.color: UI.Style.borderDialog
         layer.enabled: true
         layer.effect: MultiEffect {
             shadowEnabled: true
@@ -147,7 +145,7 @@ T.Popup {
             Layout.rightMargin: 24
             Layout.topMargin: 20
             Layout.bottomMargin: 4
-            text: "Set up fingerprint"
+            text: qsTr("Set up fingerprint")
             size: 15
             font.weight: 600
         }
@@ -312,10 +310,10 @@ T.Popup {
                 UI.Label {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: dialog.step === 1 ? "First, confirm it's you"
-                        : dialog.step === 2 ? (Fingerprint.scanType === "swipe" ? "Swipe your finger" : "Touch the sensor, then lift")
-                        : dialog.step === 3 ? "Now the edges"
-                        : "You're all set"
+                    text: dialog.step === 1 ? qsTr("First, confirm it's you")
+                        : dialog.step === 2 ? (Fingerprint.scanType === "swipe" ? qsTr("Swipe your finger") : qsTr("Touch the sensor, then lift"))
+                        : dialog.step === 3 ? qsTr("Now the edges")
+                        : qsTr("You're all set")
                     size: 18
                     font.weight: UI.Style.weightSemiBold
                 }
@@ -325,16 +323,16 @@ T.Popup {
                     Layout.preferredWidth: Math.min(360, parent.width)
                     horizontalAlignment: Text.AlignHCenter
                     text: dialog.step === 1
-                        ? "Enter the password for " + (Users.me.realName || Users.me.userName || "this account")
-                            + ". You'll still need it to unlock the disk at start-up and if the reader stops working."
+                        ? qsTr("Enter the password for %1. You'll still need it to unlock the disk at start-up and if the reader stops working.")
+                            .arg(Users.me.realName || Users.me.userName || qsTr("this account"))
                         : dialog.step === 4
-                            ? "Use your fingerprint to sign in, unlock and approve admin prompts. Add another finger in case this one's wet or cut."
+                            ? qsTr("Use your fingerprint to sign in, unlock and approve admin prompts. Add another finger in case this one's wet or cut.")
                         : dialog.failure.length > 0 ? dialog.failure
                         : Fingerprint.retry.length > 0 ? Fingerprint.retry
                         : dialog.step === 2
-                            ? (Fingerprint.scanType === "swipe" ? "Swipe the same finger across the reader, and repeat. Move it slightly each time."
-                                : "Rest the same finger on the reader, lift it, and repeat. Move it slightly each time.")
-                        : "Tilt your finger and touch with the sides and tip, so it works however you hold it."
+                            ? (Fingerprint.scanType === "swipe" ? qsTr("Swipe the same finger across the reader, and repeat. Move it slightly each time.")
+                                : qsTr("Rest the same finger on the reader, lift it, and repeat. Move it slightly each time."))
+                        : qsTr("Tilt your finger and touch with the sides and tip, so it works however you hold it.")
                     // Two lines' room whatever it says, so a one-line retry
                     // message doesn't make the dialog jump.
                     Layout.minimumHeight: Math.ceil(font.pixelSize * 1.5) * 2
@@ -353,7 +351,7 @@ T.Popup {
                 spacing: 6
 
                 UI.Label {
-                    text: "Password"
+                    text: qsTr("Password")
                     size: 12.5
                     color: UI.Style.inkMuted
                 }
@@ -396,7 +394,7 @@ T.Popup {
                         font.letterSpacing: UI.Style.px(15) * 0.25
                         clip: true
                         readOnly: dialog.checking
-                        Accessible.name: "Password"
+                        Accessible.name: qsTr("Password")
                         Accessible.passwordEdit: true
                         onTextChanged: dialog.error = ""
                         onAccepted: dialog.submit()
@@ -428,7 +426,7 @@ T.Popup {
                 Layout.alignment: Qt.AlignHCenter
                 spacing: 6
                 Accessible.role: Accessible.StaticText
-                Accessible.name: "Step " + dialog.step + " of 4"
+                Accessible.name: qsTr("Step %1 of 4").arg(dialog.step)
 
                 Repeater {
                     model: 4
@@ -468,32 +466,32 @@ T.Popup {
                 spacing: 8
 
                 DialogButton {
-                    text: "Cancel"
+                    text: qsTr("Cancel")
                     visible: dialog.step < 4
                     onClicked: dialog.close()
                 }
                 DialogButton {
-                    text: "Continue"
+                    text: qsTr("Continue")
                     primary: true
                     visible: dialog.step === 1
                     enabled: passwordInput.text.length > 0 && !dialog.checking
                     onClicked: dialog.submit()
                 }
                 DialogButton {
-                    text: "Try again"
+                    text: qsTr("Try again")
                     primary: true
                     visible: (dialog.step === 2 || dialog.step === 3) && dialog.failure.length > 0
                     enabled: Fingerprint.busy === ""
                     onClicked: dialog.anotherFinger()
                 }
                 DialogButton {
-                    text: "Add another finger"
+                    text: qsTr("Add another finger")
                     visible: dialog.step === 4 && dialog.moreFingers
                     enabled: Fingerprint.busy === ""
                     onClicked: dialog.anotherFinger()
                 }
                 DialogButton {
-                    text: "Done"
+                    text: qsTr("Done")
                     primary: true
                     visible: dialog.step === 4
                     onClicked: dialog.close()

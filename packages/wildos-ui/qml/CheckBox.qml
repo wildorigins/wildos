@@ -22,7 +22,7 @@ T.CheckBox {
     padding: 0
     focusPolicy: Qt.StrongFocus
     hoverEnabled: true
-    opacity: enabled ? 1 : 0.5
+    opacity: enabled ? 1 : Style.disabledOpacity
     Accessible.name: text
 
     indicator: Rectangle {

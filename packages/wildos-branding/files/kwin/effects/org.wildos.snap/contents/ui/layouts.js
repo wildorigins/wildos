@@ -6,24 +6,24 @@
 // zones in the order they are listed.
 var layouts = [
     {
-        name: "Left half and right half",
+        name: qsTr("Left half and right half"),
         zones: [[0, 0, 1 / 2, 1], [1 / 2, 0, 1 / 2, 1]],
-        labels: ["Left half", "Right half"]
+        labels: [qsTr("Left half"), qsTr("Right half")]
     },
     {
-        name: "Two thirds and one third",
+        name: qsTr("Two thirds and one third"),
         zones: [[0, 0, 2 / 3, 1], [2 / 3, 0, 1 / 3, 1]],
-        labels: ["Left two thirds", "Right third"]
+        labels: [qsTr("Left two thirds"), qsTr("Right third")]
     },
     {
-        name: "Three columns",
+        name: qsTr("Three columns"),
         zones: [[0, 0, 1 / 3, 1], [1 / 3, 0, 1 / 3, 1], [2 / 3, 0, 1 / 3, 1]],
-        labels: ["Left third", "Middle third", "Right third"]
+        labels: [qsTr("Left third"), qsTr("Middle third"), qsTr("Right third")]
     },
     {
-        name: "Four quarters",
+        name: qsTr("Four quarters"),
         zones: [[0, 0, 1 / 2, 1 / 2], [1 / 2, 0, 1 / 2, 1 / 2], [0, 1 / 2, 1 / 2, 1 / 2], [1 / 2, 1 / 2, 1 / 2, 1 / 2]],
-        labels: ["Top left quarter", "Top right quarter", "Bottom left quarter", "Bottom right quarter"]
+        labels: [qsTr("Top left quarter"), qsTr("Top right quarter"), qsTr("Bottom left quarter"), qsTr("Bottom right quarter")]
     }
 ];
 

@@ -13,7 +13,7 @@ struct mpv_event;
 // by VideoOutput through mpv's render API; everything else (the file, the
 // place in it, chapters, tracks, speed, volume) is read and set here.
 // Positions are remembered as it plays, so a video picks up where it was
-// left.
+// left; the volume, the speed and the picture shape are kept between runs.
 class Player : public QObject
 {
     Q_OBJECT
@@ -50,7 +50,10 @@ class Player : public QObject
     Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY mutedChanged)
     // "" for the file's own shape, or "16:9", "4:3", "21:9".
     Q_PROPERTY(QString aspect READ aspect WRITE setAspect NOTIFY aspectChanged)
+    // The videos beside the one playing: its folder's, or the ones opened
+    // together (`queued`), which play one after the other.
     Q_PROPERTY(QStringList folderVideos READ folderVideos NOTIFY folderVideosChanged)
+    Q_PROPERTY(bool queued READ queued NOTIFY folderVideosChanged)
     Q_PROPERTY(bool canNext READ canNext NOTIFY folderVideosChanged)
     Q_PROPERTY(bool canPrevious READ canPrevious NOTIFY folderVideosChanged)
 
@@ -93,14 +96,21 @@ public:
     QString aspect() const { return m_aspect; }
     void setAspect(const QString &aspect);
     QStringList folderVideos() const { return m_folderVideos; }
+    bool queued() const { return m_queued; }
     bool canNext() const;
     bool canPrevious() const;
 
     Q_INVOKABLE void open(const QString &pathOrUrl);
+    // Several files or folders at once: the first plays and the rest wait
+    // in the list.
+    Q_INVOKABLE void openFiles(const QStringList &pathsOrUrls);
     Q_INVOKABLE void play();
     Q_INVOKABLE void pause();
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void stop();
+    // Leaves the video for the library: its place is noted first, then
+    // there is no file at all.
+    Q_INVOKABLE void close();
     Q_INVOKABLE void seek(double seconds);
     Q_INVOKABLE void skip(double seconds);
     Q_INVOKABLE void next();
@@ -182,6 +192,8 @@ private:
     bool m_muted = false;
     QString m_aspect;
     QStringList m_folderVideos;
+    QStringList m_queue;
+    bool m_queued = false;
     double m_resumeAt = 0;
     bool m_renderReady = false;
     QElapsedTimer m_positionClock;

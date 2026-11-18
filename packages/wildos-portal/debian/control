@@ -7,6 +7,8 @@ Build-Depends:
  cmake,
  qt6-base-dev,
  qt6-declarative-dev,
+ qt6-tools-dev,
+ qt6-l10n-tools,
  libkf6kio-dev,
  libkf6config-dev,
  libkf6coreaddons-dev,
@@ -30,7 +32,7 @@ Depends:
  qml6-module-qtquick-layouts,
  qml6-module-qtquick-templates,
  qml6-module-qtquick-window,
- wildos-ui (>= 0.1.11),
+ wildos-ui (>= 0.1.16),
 Description: Wild OS Open and Save dialog and file clash dialog
  One Open and Save dialog for every app, laid out like the one on Windows:
  places on the left, a path bar, the file list with dates, types and sizes,

@@ -1,3 +1,45 @@
+wildos-files (0.1.20) trixie; urgency=medium
+
+  * New > Slides presentation makes a .pptx that opens in Slides.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 16:00:00 +0000
+
+wildos-files (0.1.19) trixie; urgency=medium
+
+  * On a PC with two graphics cards, the right-click menu of an app shortcut
+    or a program such as an AppImage has Dedicated graphics card.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 12:00:00 +0000
+
+wildos-files (0.1.18) trixie; urgency=medium
+
+  * The Qt developer packages that earlier updates brought in by mistake
+    are removed a few minutes after the next start-up. Any that were
+    installed on purpose, or that another program needs, stay.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 11:00:00 +0000
+
+wildos-files (0.1.17) trixie; urgency=medium
+
+  * Files no longer brings Qt's developer tools with it. They were listed
+    as needed to run it by mistake, and came down with updates.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 17 Nov 2026 10:20:00 +0000
+
+wildos-files (0.1.16) trixie; urgency=medium
+
+  * Network folders, such as a share on a NAS, can be pinned to the
+    sidebar, and a Windows network path like \\nas\share opens it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 14:28:43 +0000
+
+wildos-files (0.1.15) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
 wildos-files (0.1.14) trixie; urgency=medium
 
   * New in the right-click menu offers a Write document and a Tables

@@ -13,9 +13,9 @@ DeskDialog {
     readonly property var check: DeskOps.checkShortcut(locationBox.text)
     property bool tried: false
 
-    title: "Create a shortcut"
+    title: qsTr("Create a shortcut")
     defaultAction: () => dialog.create()
-    text: "A shortcut opens a file, a folder or a web page from here."
+    text: qsTr("A shortcut opens a file, a folder or a web page from here.")
 
     function show(target) {
         folder = target;
@@ -49,14 +49,14 @@ DeskDialog {
 
     UI.Label {
         Layout.fillWidth: true
-        text: "Location"
+        text: qsTr("Location")
         font.weight: UI.Style.weightMedium
     }
 
     Field {
         id: locationBox
-        label: "Location"
-        placeholderText: "~/Documents/Budget 2026.ods or www.example.com"
+        label: qsTr("Location")
+        placeholderText: qsTr("~/Documents/Budget 2026.ods or www.example.com")
         error: dialog.tried && !dialog.check.ok
     }
 
@@ -73,14 +73,14 @@ DeskDialog {
     UI.Label {
         Layout.fillWidth: true
         Layout.topMargin: 6
-        text: "Name"
+        text: qsTr("Name")
         font.weight: UI.Style.weightMedium
     }
 
     Field {
         id: nameBox
-        label: "Name"
-        placeholderText: "What to call the shortcut"
+        label: qsTr("Name")
+        placeholderText: qsTr("What to call the shortcut")
     }
 
     property alias locationInput: locationBox
@@ -96,12 +96,12 @@ DeskDialog {
     buttons: [
         UI.Button {
             kind: "primary"
-            text: "Create"
+            text: qsTr("Create")
             enabled: dialog.locationInput.text.trim().length > 0
             onClicked: dialog.create()
         },
         UI.Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: dialog.close()
         }
     ]

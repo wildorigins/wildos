@@ -323,7 +323,7 @@ void Keychain::generate(const QString &label, const QString &passphrase, bool sa
         const QString err = QString::fromUtf8(p->readAllStandardError()).trimmed();
         p->deleteLater();
         if (code != 0 || !QFileInfo::exists(path)) {
-            call(callback, {false, err.isEmpty() ? QStringLiteral("The key couldn't be made.") : err, QString()});
+            call(callback, {false, err.isEmpty() ? tr("The key couldn't be made.") : err, QString()});
             return;
         }
         QFile::setPermissions(path, ownerOnly);
@@ -342,7 +342,7 @@ void Keychain::generate(const QString &label, const QString &passphrase, bool sa
                 m_labels.insert(path, m);
                 writeLabels();
                 refresh();
-                call(callback, {true, ok ? QString() : QStringLiteral("The key is made, but the keyring didn't take its passphrase."), path});
+                call(callback, {true, ok ? QString() : tr("The key is made, but the keyring didn't take its passphrase."), path});
             });
             return;
         }
@@ -356,12 +356,12 @@ void Keychain::importKey(const QUrl &file, const QJSValue &callback)
 {
     const QString source = file.toLocalFile();
     if (!isPrivateKey(source)) {
-        call(callback, {false, QStringLiteral("That file isn't an SSH private key."), QString()});
+        call(callback, {false, tr("That file isn't an SSH private key."), QString()});
         return;
     }
     const QString path = uniquePath(Paths::ssh() + QLatin1Char('/') + QFileInfo(source).fileName());
     if (!QFile::copy(source, path)) {
-        call(callback, {false, QStringLiteral("The key couldn't be copied into your .ssh folder."), QString()});
+        call(callback, {false, tr("The key couldn't be copied into your .ssh folder."), QString()});
         return;
     }
     QFile::setPermissions(path, ownerOnly);
@@ -379,7 +379,7 @@ void Keychain::importKey(const QUrl &file, const QJSValue &callback)
     // Without its public half: ssh-keygen works it out, asking for the
     // passphrase if the key has one.
     auto *p = new QProcess(this);
-    const QString token = AskPass::instance()->newToken({}, QStringLiteral("Import %1").arg(QFileInfo(source).fileName()));
+    const QString token = AskPass::instance()->newToken({}, tr("Import %1").arg(QFileInfo(source).fileName()));
     p->setProcessEnvironment(AskPass::instance()->environment(token));
     p->setStandardInputFile(QProcess::nullDevice());
     p->setProgram(QStringLiteral("ssh-keygen"));
@@ -392,7 +392,7 @@ void Keychain::importKey(const QUrl &file, const QJSValue &callback)
             QFile::remove(path);
             m_labels.remove(path);
             writeLabels();
-            call(callback, {false, QStringLiteral("The key couldn't be opened. Check its passphrase."), QString()});
+            call(callback, {false, tr("The key couldn't be opened. Check its passphrase."), QString()});
             return;
         }
         QFile out(path + QStringLiteral(".pub"));
@@ -410,7 +410,7 @@ void Keychain::exportKey(const QString &path, const QUrl &folder, const QJSValue
     const QString dir = folder.toLocalFile();
     const QString target = uniquePath(dir + QLatin1Char('/') + QFileInfo(path).fileName());
     const bool ok = QFile::copy(path, target) && QFile::setPermissions(target, ownerOnly) && QFile::copy(path + QStringLiteral(".pub"), target + QStringLiteral(".pub"));
-    call(callback, {ok, ok ? target : QStringLiteral("The key couldn't be copied there."), target});
+    call(callback, {ok, ok ? target : tr("The key couldn't be copied there."), target});
 }
 
 bool Keychain::remove(const QString &path)
@@ -456,7 +456,7 @@ void Keychain::changePassphrase(const QString &path, const QString &newPassphras
             }
             return std::nullopt;
         },
-        QStringLiteral("Change the passphrase of %1").arg(label(path)));
+        tr("Change the passphrase of %1").arg(label(path)));
     p->setProcessEnvironment(AskPass::instance()->environment(token));
     p->setStandardInputFile(QProcess::nullDevice());
     p->setProgram(QStringLiteral("ssh-keygen"));
@@ -470,7 +470,7 @@ void Keychain::changePassphrase(const QString &path, const QString &newPassphras
             forgetPassphrase(path);
         }
         refresh();
-        call(callback, {code == 0, code == 0 ? QString() : QStringLiteral("The passphrase wasn't changed.")});
+        call(callback, {code == 0, code == 0 ? QString() : tr("The passphrase wasn't changed.")});
     });
     p->start();
 }
@@ -490,7 +490,7 @@ void Keychain::savePassphrase(const QString &path, const QString &passphrase, co
         AskPass::instance()->release(token);
         p->deleteLater();
         if (code != 0) {
-            call(callback, {false, QStringLiteral("That passphrase doesn't open this key.")});
+            call(callback, {false, tr("That passphrase doesn't open this key.")});
             return;
         }
         const QString fp = key(path).value(QStringLiteral("fingerprint")).toString();
@@ -500,7 +500,7 @@ void Keychain::savePassphrase(const QString &path, const QString &passphrase, co
             m_labels.insert(path, m);
             writeLabels();
             refresh();
-            call(callback, {ok, ok ? QString() : QStringLiteral("The keyring didn't take the passphrase.")});
+            call(callback, {ok, ok ? QString() : tr("The keyring didn't take the passphrase.")});
         });
     });
     p->start();
@@ -519,7 +519,7 @@ void Keychain::forgetPassphrase(const QString &path)
 void Keychain::addToAgent(const QString &path, const QJSValue &callback)
 {
     if (!agent()) {
-        call(callback, {false, QStringLiteral("No key agent is running in this session.")});
+        call(callback, {false, tr("No key agent is running in this session.")});
         return;
     }
     const QVariantMap k = key(path);
@@ -532,7 +532,7 @@ void Keychain::addToAgent(const QString &path, const QJSValue &callback)
                 }
                 return std::nullopt;
             },
-            QStringLiteral("Unlock %1").arg(label(path)));
+            tr("Unlock %1").arg(label(path)));
         p->setProcessEnvironment(AskPass::instance()->environment(token));
         p->setStandardInputFile(QProcess::nullDevice());
         p->setProgram(QStringLiteral("ssh-add"));
@@ -541,7 +541,7 @@ void Keychain::addToAgent(const QString &path, const QJSValue &callback)
             AskPass::instance()->release(token);
             p->deleteLater();
             refresh();
-            call(callback, {code == 0, code == 0 ? QString() : QStringLiteral("The key wasn't added to the agent.")});
+            call(callback, {code == 0, code == 0 ? QString() : tr("The key wasn't added to the agent.")});
         });
         p->start();
     };

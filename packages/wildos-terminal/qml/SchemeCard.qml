@@ -138,7 +138,7 @@ T.AbstractButton {
         UI.Label {
             anchors.verticalCenter: parent.verticalCenter
             visible: card.scheme.id === "Homebrew"
-            text: "Default"
+            text: qsTr("Default")
             size: 12
             color: UI.Style.inkMuted
         }

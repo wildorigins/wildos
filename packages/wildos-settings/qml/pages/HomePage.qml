@@ -16,8 +16,28 @@ PageScroll {
 
     // Network and Bluetooth come from their own desktop modules; if either is
     // missing the card says so instead of the whole page failing to load.
-    readonly property QtObject network: create("NetworkSummary")
-    readonly property QtObject bluetooth: create("BluetoothSummary")
+    // They are made once the first frame is up: loading NetworkManager's
+    // and BlueZ's modules first held Settings' window back by about 100 ms.
+    property QtObject network: null
+    property QtObject bluetooth: null
+    property bool summariesReady: false
+
+    Connections {
+        target: page.Window.window
+        enabled: !page.summariesReady
+        function onFrameSwapped() {
+            Qt.callLater(page.makeSummaries);
+        }
+    }
+
+    function makeSummaries() {
+        if (summariesReady) {
+            return;
+        }
+        network = create("NetworkSummary");
+        bluetooth = create("BluetoothSummary");
+        summariesReady = true;
+    }
     readonly property var volumes: System.volumes()
     readonly property var disk: volumes[0]
     readonly property var backgrounds: System.wallpapers().slice(0, 4)
@@ -29,9 +49,9 @@ PageScroll {
     property string windowsMessage
 
     readonly property var profileNames: ({
-        "power-saver": "Best battery life",
-        "balanced": "Balanced",
-        "performance": "Best performance"
+        "power-saver": qsTr("Best battery life"),
+        "balanced": qsTr("Balanced"),
+        "performance": qsTr("Best performance")
     })
 
     // The room under the PC strip, less the column's 4px start and the
@@ -55,7 +75,10 @@ PageScroll {
     function duration(msec) {
         const minutes = Math.round(msec / 60000);
         const h = Math.floor(minutes / 60);
-        return h > 0 ? "about " + Format.plural(h, "hour", "hours") : "about " + Format.plural(Math.max(1, minutes), "minute", "minutes");
+        if (h > 0) {
+            return h === 1 ? qsTr("about 1 hour") : qsTr("about %1 hours").arg(h);
+        }
+        return minutes <= 1 ? qsTr("about 1 minute") : qsTr("about %1 minutes").arg(minutes);
     }
 
     function sizeText(bytes) {
@@ -126,7 +149,7 @@ PageScroll {
                 text: {
                     const os = System.osName + (System.osVersion.length > 0 ? " " + System.osVersion : "");
                     const memory = System.memory.replace(" usable", "");
-                    return memory.length > 0 ? os + " · " + memory + " memory" : os;
+                    return memory.length > 0 ? qsTr("%1 · %2 memory").arg(os).arg(memory) : os;
                 }
                 color: UI.Style.inkMuted
             }
@@ -135,7 +158,7 @@ PageScroll {
                 Layout.leftMargin: -4
                 Layout.topMargin: -3
                 Layout.bottomMargin: -3
-                text: "Rename"
+                text: qsTr("Rename")
                 onClicked: Navigator.open("about")
             }
         }
@@ -145,8 +168,8 @@ PageScroll {
             Layout.maximumWidth: 210
             Layout.preferredWidth: 210
             iconName: page.network ? page.network.iconName : "globe"
-            title: page.network ? page.network.title : "Network and internet"
-            caption: page.network ? page.network.caption : "Not available"
+            title: page.network ? page.network.title : qsTr("Network and internet")
+            caption: page.network ? page.network.caption : page.summariesReady ? qsTr("Not available") : ""
             onClicked: Navigator.open("network")
         }
 
@@ -157,12 +180,12 @@ PageScroll {
             iconName: "update"
             iconColor: Updates.updates.length > 0 ? UI.Style.accent : UI.Style.iconInk
             title: Updates.updates.length > 0
-                ? Format.plural(Updates.updates.length, "update", "updates") + " ready"
-                : "Up to date"
+                ? (Updates.updates.length === 1 ? qsTr("1 update ready") : qsTr("%1 updates ready").arg(Updates.updates.length))
+                : qsTr("Up to date")
             caption: {
                 page.now;
                 const when = Format.ago(Updates.lastChecked);
-                return when.length > 0 ? "Last checked " + when : "Not checked yet";
+                return when.length > 0 ? qsTr("Last checked %1").arg(when) : qsTr("Not checked yet");
             }
             onClicked: Navigator.open("update")
         }
@@ -180,9 +203,9 @@ PageScroll {
             Layout.fillHeight: false
             Layout.preferredHeight: Math.round(page.rowUnit * 1.25)
             iconName: "palette"
-            title: "Personalise"
-            caption: "Background and accent colour"
-            linkText: "More backgrounds"
+            title: qsTr("Personalise")
+            caption: qsTr("Background and accent colour")
+            linkText: qsTr("More backgrounds")
             onLinkClicked: Navigator.open("background")
 
             footer: ColumnLayout {
@@ -206,7 +229,7 @@ PageScroll {
                             source: modelData.thumbnail
                             selected: modelData.path === System.wallpaper
                             showTick: false
-                            Accessible.name: "Use " + modelData.name + " as background"
+                            Accessible.name: qsTr("Use %1 as background").arg(modelData.name)
                             onClicked: System.setWallpaper(modelData.path)
                         }
                     }
@@ -231,17 +254,17 @@ PageScroll {
             Layout.fillHeight: false
             Layout.preferredHeight: page.rowUnit
             iconName: "drive"
-            title: "Storage"
+            title: qsTr("Storage")
             caption: {
                 if (!page.disk) {
                     return "";
                 }
                 const free = page.volumes.reduce((sum, v) => sum + v.free, 0);
                 return page.volumes.length === 1
-                    ? page.sizeText(page.disk.free) + " free of " + page.sizeText(page.disk.total)
-                    : page.volumes.length + " drives · " + page.sizeText(free) + " free in all";
+                    ? qsTr("%1 free of %2").arg(page.sizeText(page.disk.free)).arg(page.sizeText(page.disk.total))
+                    : qsTr("%1 drives · %2 free in all").arg(page.volumes.length).arg(page.sizeText(free));
             }
-            linkText: "Manage"
+            linkText: qsTr("Manage")
             onLinkClicked: Navigator.open("storage")
 
             ColumnLayout {
@@ -263,7 +286,7 @@ PageScroll {
                     spacing: 12
 
                     UI.Label {
-                        text: "System disk"
+                        text: qsTr("System disk")
                     }
 
                     UI.Label {
@@ -274,7 +297,7 @@ PageScroll {
                     }
 
                     UI.Label {
-                        text: page.disk ? page.sizeText(page.disk.free) + " free" : ""
+                        text: page.disk ? qsTr("%1 free").arg(page.sizeText(page.disk.free)) : ""
                         size: 12.5
                         color: UI.Style.inkMuted
                     }
@@ -296,7 +319,7 @@ PageScroll {
                 link: true
                 title: storageCard.others.length === 0 ? ""
                     : storageCard.others.length === 1 ? storageCard.others[0].name
-                    : storageCard.others[0].name + " and " + (storageCard.others.length - 1) + " more"
+                    : qsTr("%1 and %2 more").arg(storageCard.others[0].name).arg(storageCard.others.length - 1)
                 onClicked: Navigator.open("storage")
             }
         }
@@ -310,7 +333,7 @@ PageScroll {
             Layout.preferredHeight: page.rowUnit
             iconName: "bluetooth"
             title: "Bluetooth"
-            caption: bt ? bt.caption : "Bluetooth is not available"
+            caption: bt ? bt.caption : page.summariesReady ? qsTr("Bluetooth is not available") : ""
 
             trailing: UI.Toggle {
                 visible: bluetoothCard.bt !== null && bluetoothCard.bt.present
@@ -334,14 +357,14 @@ PageScroll {
 
             // Nothing to list: one line that says so and what to do.
             CardRow {
-                visible: bluetoothCard.bt === null || !bluetoothCard.ready || bluetoothCard.devices.length === 0
+                visible: page.summariesReady && (bluetoothCard.bt === null || !bluetoothCard.ready || bluetoothCard.devices.length === 0)
                 chevron: false
                 enabled: bluetoothCard.ready
-                title: bluetoothCard.bt === null || !bluetoothCard.bt.present ? "This computer has no Bluetooth"
-                    : !bluetoothCard.bt.on ? "Bluetooth is off. Turn it on to see your devices."
-                    : "No devices yet."
+                title: bluetoothCard.bt === null || !bluetoothCard.bt.present ? qsTr("This computer has no Bluetooth")
+                    : !bluetoothCard.bt.on ? qsTr("Bluetooth is off. Turn it on to see your devices.")
+                    : qsTr("No devices yet.")
                 titleColor: UI.Style.inkMuted
-                value: bluetoothCard.ready ? "Add a device" : ""
+                value: bluetoothCard.ready ? qsTr("Add a device") : ""
                 valueColor: UI.Style.accentText
                 onClicked: bluetoothCard.bt.addDevice()
             }
@@ -349,7 +372,7 @@ PageScroll {
             footer: CardRow {
                 visible: bluetoothCard.devices.length > 2
                 link: true
-                title: Format.plural(bluetoothCard.devices.length - 2, "more device", "more devices")
+                title: bluetoothCard.devices.length - 2 === 1 ? qsTr("1 more device") : qsTr("%1 more devices").arg(bluetoothCard.devices.length - 2)
                 onClicked: Navigator.open("bluetooth")
             }
         }
@@ -362,49 +385,49 @@ PageScroll {
             Layout.fillHeight: false
             Layout.preferredHeight: page.rowUnit
             iconName: "monitor"
-            title: "Windows mode"
+            title: qsTr("Windows mode")
             caption: {
                 if (!WindowsMode.installed) {
-                    return "Not installed";
+                    return qsTr("Not installed");
                 }
                 if (!ready) {
-                    return WindowsMode.state === "setup" ? "Setting up, " + (page.winStatus.percent || 0) + "% done"
-                        : WindowsMode.state === "failed" ? "Couldn't finish setting up" : "Not set up";
+                    return WindowsMode.state === "setup" ? qsTr("Setting up, %1% done").arg(page.winStatus.percent || 0)
+                        : WindowsMode.state === "failed" ? qsTr("Couldn't finish setting up") : qsTr("Not set up");
                 }
                 if (page.windowsMessage.length > 0) {
                     return page.windowsMessage;
                 }
                 switch (WindowsMode.powerAction) {
-                case "save": return "Saving to disk";
-                case "shutdown": return "Shutting down";
+                case "save": return qsTr("Saving to disk");
+                case "shutdown": return qsTr("Shutting down");
                 }
                 switch (page.vm) {
                 case "running": {
                     const open = (page.winStatus.apps || []).filter(a => a.open).length;
-                    return open > 0 ? "Running · " + Format.plural(open, "app", "apps") + " open" : "Running";
+                    return open === 1 ? qsTr("Running · 1 app open") : open > 0 ? qsTr("Running · %1 apps open").arg(open) : qsTr("Running");
                 }
-                case "paused": return "Paused · opens in about a second";
-                case "saved": return "Saved to disk · uses no memory";
-                default: return "Off · uses no memory";
+                case "paused": return qsTr("Paused · opens in about a second");
+                case "saved": return qsTr("Saved to disk · uses no memory");
+                default: return qsTr("Off · uses no memory");
                 }
             }
-            linkText: "Settings"
+            linkText: qsTr("Settings")
             onLinkClicked: Navigator.open("windowsmode")
 
             CardRow {
                 visible: windowsCard.ready
                 iconName: "app-window"
                 iconColor: UI.Style.iconInk
-                title: "Last used"
+                title: qsTr("Last used")
                 value: {
                     const app = windowsCard.lastApp;
                     if (!app) {
-                        return "Nothing yet";
+                        return qsTr("Nothing yet");
                     }
                     const launch = page.winStatus.lastLaunch;
                     if (launch && launch.app === app.id && launch.at) {
                         const at = new Date(launch.at);
-                        return app.name + ", " + Format.day(at) + " " + Format.time(at);
+                        return qsTr("%1, %2 %3").arg(app.name).arg(Format.dayText(at)).arg(Format.time(at));
                     }
                     return app.name;
                 }
@@ -415,11 +438,11 @@ PageScroll {
             CardRow {
                 visible: !windowsCard.ready
                 chevron: false
-                title: WindowsMode.installed ? "Run Windows apps in their own windows." : "Get Windows mode from the Store."
+                title: WindowsMode.installed ? qsTr("Run Windows apps in their own windows.") : qsTr("Get Windows mode from the Store.")
                 titleColor: UI.Style.inkMuted
-                value: !WindowsMode.installed ? (System.storeApp.length > 0 ? "Open the Store" : "")
-                    : WindowsMode.state === "setup" ? "Show progress"
-                    : WindowsMode.state === "failed" ? "Try again" : "Set up"
+                value: !WindowsMode.installed ? (System.storeApp.length > 0 ? qsTr("Open the Store") : "")
+                    : WindowsMode.state === "setup" ? qsTr("Show progress")
+                    : WindowsMode.state === "failed" ? qsTr("Try again") : qsTr("Set up")
                 valueColor: UI.Style.accentText
                 onClicked: WindowsMode.installed ? WindowsMode.openSetup() : Qt.openUrlExternally("appstream://org.wildos.winmode")
             }
@@ -434,7 +457,7 @@ PageScroll {
 
                 UI.Button {
                     implicitHeight: 32
-                    text: "Save to disk"
+                    text: qsTr("Save to disk")
                     enabled: windowsCard.live && WindowsMode.powerAction.length === 0
                     busy: WindowsMode.powerAction === "save"
                     onClicked: {
@@ -445,7 +468,7 @@ PageScroll {
 
                 UI.Button {
                     implicitHeight: 32
-                    text: "Shut down"
+                    text: qsTr("Shut down")
                     enabled: (windowsCard.live || page.vm === "saved") && WindowsMode.powerAction.length === 0
                     busy: WindowsMode.powerAction === "shutdown"
                     onClicked: {
@@ -470,24 +493,24 @@ PageScroll {
             Layout.fillHeight: false
             Layout.preferredHeight: page.rowUnit
             iconName: page.hasBattery ? (battery.pluggedIn ? "plug" : "battery") : "power"
-            title: page.hasBattery ? "Battery" : "Power"
+            title: page.hasBattery ? qsTr("Battery") : qsTr("Power")
             caption: {
                 if (!page.hasBattery) {
-                    return "Plugged in";
+                    return qsTr("Plugged in");
                 }
                 const pct = battery.percent + "%";
                 if (battery.state === BatteryControlModel.FullyCharged && battery.pluggedIn) {
-                    return pct + " · fully charged";
+                    return qsTr("%1 · fully charged").arg(pct);
                 }
                 if (battery.state === BatteryControlModel.Charging) {
-                    return page.remaining > 0 ? pct + " · " + page.duration(page.remaining) + " until full" : pct + " · charging";
+                    return page.remaining > 0 ? qsTr("%1 · %2 until full").arg(pct).arg(page.duration(page.remaining)) : qsTr("%1 · charging").arg(pct);
                 }
                 if (battery.pluggedIn) {
-                    return pct + " · plugged in";
+                    return qsTr("%1 · plugged in").arg(pct);
                 }
-                return page.remaining > 0 ? pct + " · " + page.duration(page.remaining) + " left" : pct;
+                return page.remaining > 0 ? qsTr("%1 · %2 left").arg(pct).arg(page.duration(page.remaining)) : pct;
             }
-            linkText: "Power options"
+            linkText: qsTr("Power options")
             onLinkClicked: Navigator.open("power")
 
             UsageBar {
@@ -504,8 +527,8 @@ PageScroll {
                 visible: page.hasBattery
                 iconName: "leaf"
                 iconColor: UI.Style.iconInk
-                title: "Battery saver"
-                value: powerCard.saverOn ? "Turns on at " + powerCard.lowLevel + "%" : "Off"
+                title: qsTr("Battery saver")
+                value: powerCard.saverOn ? qsTr("Turns on at %1%").arg(powerCard.lowLevel) : qsTr("Off")
                 onClicked: Navigator.open("power")
             }
 
@@ -513,13 +536,16 @@ PageScroll {
                 visible: !page.hasBattery
                 iconName: "moon"
                 iconColor: UI.Style.iconInk
-                title: "Sleep"
+                title: qsTr("Sleep")
                 value: {
                     if (System.config("powerdevilrc", "AC/SuspendAndShutdown", "AutoSuspendAction", 1) === 0) {
-                        return "Never";
+                        return qsTr("Never");
                     }
                     const minutes = Math.round(System.config("powerdevilrc", "AC/SuspendAndShutdown", "AutoSuspendIdleTimeoutSec", 900) / 60);
-                    return "After " + (minutes >= 60 && minutes % 60 === 0 ? Format.plural(minutes / 60, "hour", "hours") : Format.plural(minutes, "minute", "minutes"));
+                    if (minutes >= 60 && minutes % 60 === 0) {
+                        return minutes === 60 ? qsTr("After 1 hour") : qsTr("After %1 hours").arg(minutes / 60);
+                    }
+                    return minutes === 1 ? qsTr("After 1 minute") : qsTr("After %1 minutes").arg(minutes);
                 }
                 onClicked: Navigator.open("power")
             }
@@ -533,12 +559,12 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Power mode"
+                    text: qsTr("Power mode")
                 }
 
                 UI.ComboBox {
                     visible: System.powerProfiles.length > 0
-                    Accessible.name: "Power mode"
+                    Accessible.name: qsTr("Power mode")
                     model: System.powerProfiles.map(p => ({ value: p, text: page.profileNames[p] || p }))
                     readonly property var choice: System.powerProfile
                     currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -547,7 +573,7 @@ PageScroll {
 
                 UI.Label {
                     visible: System.powerProfiles.length === 0
-                    text: "Not available here"
+                    text: qsTr("Not available here")
                     size: 12.5
                     color: UI.Style.inkMuted
                 }

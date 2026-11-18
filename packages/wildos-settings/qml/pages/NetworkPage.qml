@@ -45,12 +45,12 @@ PageScroll {
     StatusCard {
         iconName: summary.iconName
         warning: summary.connected && !summary.online
-        title: summary.connected ? "Connected to " + summary.name : summary.title
+        title: summary.connected ? qsTr("Connected to %1").arg(summary.name) : summary.title
         description: summary.connected
-            ? (summary.online ? "You are online." : "This network is not giving internet access. You might need to sign in to it in your browser.")
-            : PlasmaNM.Configuration.airplaneModeEnabled ? "Flight mode is on, so wireless connections are off."
-            : summary.enabledConnections.wirelessEnabled ? "Pick a network below to connect."
-            : "Turn on Wi-Fi to see networks nearby."
+            ? (summary.online ? qsTr("You are online.") : qsTr("This network is not giving internet access. You might need to sign in to it in your browser."))
+            : PlasmaNM.Configuration.airplaneModeEnabled ? qsTr("Flight mode is on, so wireless connections are off.")
+            : summary.enabledConnections.wirelessEnabled ? qsTr("Pick a network below to connect.")
+            : qsTr("Turn on Wi-Fi to see networks nearby.")
     }
 
     UI.Card {
@@ -63,8 +63,8 @@ PageScroll {
                 visible: devices.wirelessDeviceAvailable
                 iconName: "wifi"
                 title: "Wi-Fi"
-                description: "Connect to wireless networks"
-                status: (summary.enabledConnections.wirelessEnabled) ? "On" : "Off"
+                description: qsTr("Connect to wireless networks")
+                status: (summary.enabledConnections.wirelessEnabled) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
@@ -76,14 +76,14 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "airplane"
-                title: "Flight mode"
-                description: "Turn off every wireless connection, including Bluetooth"
-                status: (PlasmaNM.Configuration.airplaneModeEnabled) ? "On" : "Off"
+                title: qsTr("Flight mode")
+                description: qsTr("Turn off every wireless connection, including Bluetooth")
+                status: (PlasmaNM.Configuration.airplaneModeEnabled) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: PlasmaNM.Configuration.airplaneModeEnabled
-                    Accessible.name: "Flight mode"
+                    Accessible.name: qsTr("Flight mode")
                     onToggled: {
                         handler.enableAirplaneMode(checked);
                         PlasmaNM.Configuration.airplaneModeEnabled = checked;
@@ -99,7 +99,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Wi-Fi networks"
+            text: qsTr("Wi-Fi networks")
         }
 
         UI.Card {
@@ -129,14 +129,14 @@ PageScroll {
                         implicitHeight: showPassword ? 62 + 56 : 62
                         iconName: model.Signal > 66 ? "wifi" : model.Signal > 33 ? "wifi-mid" : "wifi-low"
                         title: model.ItemUniqueName
-                        description: active ? (secured ? "Connected, secured" : "Connected")
-                            : activating ? "Connecting"
-                            : secured ? (model.Uuid.length > 0 ? "Secured, saved" : "Secured") : "Open network"
+                        description: active ? (secured ? qsTr("Connected, secured") : qsTr("Connected"))
+                            : activating ? qsTr("Connecting")
+                            : secured ? (model.Uuid.length > 0 ? qsTr("Secured, saved") : qsTr("Secured")) : qsTr("Open network")
                         bottomPadding: showPassword ? 56 : 0
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: net.active ? "Disconnect" : net.activating ? "Connecting" : "Connect"
+                            text: net.active ? qsTr("Disconnect") : net.activating ? qsTr("Connecting") : qsTr("Connect")
                             enabled: !net.activating
                             kind: !net.active && net.showPassword ? "primary" : "secondary"
                             visible: !net.showPassword
@@ -169,7 +169,7 @@ PageScroll {
                             UI.TextField {
                                 id: password
                                 Layout.fillWidth: true
-                                placeholderText: "Network password"
+                                placeholderText: qsTr("Network password")
                                 revealable: true
                                 UI.NoPaste {}
                                 onAccepted: connectButton.clicked()
@@ -178,7 +178,7 @@ PageScroll {
 
                             UI.Button {
                                 id: connectButton
-                                text: "Connect"
+                                text: qsTr("Connect")
                                 kind: "primary"
                                 enabled: password.text.length >= 8 || net.model.SecurityType === PlasmaNM.Enums.StaticWep
                                 onClicked: {
@@ -188,7 +188,7 @@ PageScroll {
                             }
 
                             UI.Button {
-                                text: "Cancel"
+                                text: qsTr("Cancel")
                                 onClicked: page.expanded = ""
                             }
                         }
@@ -208,15 +208,15 @@ PageScroll {
                 visible: devices.wiredDeviceAvailable
                 iconName: "ethernet"
                 title: "Ethernet"
-                description: summary.connected && !summary.wifi ? "Connected. Addresses and other details are in the advanced settings." : "Not connected. Plug in a network cable to use it."
+                description: summary.connected && !summary.wifi ? qsTr("Connected. Addresses and other details are in the advanced settings.") : qsTr("Not connected. Plug in a network cable to use it.")
                 chevron: true
                 onClicked: Navigator.open("networkadvanced")
             }
 
             UI.SettingRow {
                 iconName: "globe"
-                title: "Advanced network settings"
-                description: "VPN, proxy, IP addresses and saved networks"
+                title: qsTr("Advanced network settings")
+                description: qsTr("VPN, proxy, IP addresses and saved networks")
                 chevron: true
                 onClicked: Navigator.open("networkadvanced")
             }

@@ -41,7 +41,7 @@ private:
     void trim(int round, bool before);
     Restic *newRestic();
     void finish();
-    void fail(const QString &reason);
+    void fail(const QString &reason, const QString &detail = QString());
     void stop();
     void writeStatus(bool force = false);
     void notify();
@@ -66,6 +66,7 @@ private:
     QJsonObject m_summary;
     QString m_phase;
     QString m_reason;
+    QString m_detail;
     QString m_warning;
     QString m_windows;
     int m_errors = 0;

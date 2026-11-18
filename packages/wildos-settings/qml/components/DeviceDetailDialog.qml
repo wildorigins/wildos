@@ -18,14 +18,14 @@ RecoveryDialog {
                 out.push({ label: label, value: value });
             }
         };
-        add("Model", row.model);
-        add("Made by", row.maker);
-        add("Driver", row.driver ? row.driver : row.kind === "printer" ? "" : "None");
-        add("Connected", row.connection);
+        add(qsTr("Model"), row.model);
+        add(qsTr("Made by"), row.maker);
+        add(qsTr("Driver"), row.driver ? row.driver : row.kind === "printer" ? "" : qsTr("None"));
+        add(qsTr("Connected"), row.connection);
         for (const e of (row.extra || [])) {
             add(e.label, e.value);
         }
-        add("Hardware ID", row.hardwareId);
+        add(qsTr("Hardware ID"), row.hardwareId);
         return out;
     }
 
@@ -50,14 +50,14 @@ RecoveryDialog {
             name: dialog.needsYou ? "triangle-alert" : dialog.row.state === "off" ? "power-round" : "status-ok"
             size: 15
             strokeWidth: 2.2
-            color: dialog.needsYou ? (UI.Style.dark ? "#ffc46a" : UI.Style.warning)
+            color: dialog.needsYou ? UI.Style.warning
                 : dialog.row.state === "off" ? UI.Style.inkMuted
-                : (UI.Style.dark ? "#5fd38d" : "#1d7a4c")
+                : UI.Style.success
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: dialog.needsYou ? dialog.row.problem : (dialog.row.state === "off" ? "" : "Working. ") + dialog.row.line + "."
+            text: dialog.needsYou ? dialog.row.problem : dialog.row.state === "off" ? qsTr("%1.").arg(dialog.row.line) : qsTr("Working. %1.").arg(dialog.row.line)
             size: 13.5
             wrapMode: Text.Wrap
             elide: Text.ElideNone
@@ -117,7 +117,7 @@ RecoveryDialog {
         UI.Button {
             implicitHeight: 32
             kind: "primary"
-            text: "Close"
+            text: qsTr("Close")
             onClicked: dialog.close()
         }
     ]

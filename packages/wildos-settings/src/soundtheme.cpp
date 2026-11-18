@@ -13,6 +13,13 @@ KConfigGroup sounds()
     return KSharedConfig::openConfig(QStringLiteral("kdeglobals"))->group(QStringLiteral("Sounds"));
 }
 
+// The shutdown sound's own switch. Off unless turned on: shut down and
+// restart wait for the sound to finish, and Windows 11 plays none.
+KConfigGroup wildosSound()
+{
+    return KSharedConfig::openConfig(QStringLiteral("wildosrc"))->group(QStringLiteral("Sound"));
+}
+
 KConfigGroup sessionEvent(const QString &event)
 {
     return KSharedConfig::openConfig(QStringLiteral("plasma_workspace.notifyrc"))->group(QStringLiteral("Event/") + event);
@@ -38,6 +45,12 @@ bool SoundTheme::startupSound() const
     return sessionEvent(QStringLiteral("startkde")).readEntry("Action", QString()).contains(QLatin1String("Sound"));
 }
 
+bool SoundTheme::shutdownSound() const
+{
+    KSharedConfig::openConfig(QStringLiteral("wildosrc"))->reparseConfiguration();
+    return wildosSound().readEntry("ShutdownSound", false);
+}
+
 void SoundTheme::setScheme(const QString &scheme)
 {
     auto g = sounds();
@@ -55,13 +68,26 @@ void SoundTheme::setScheme(const QString &scheme)
     }
 }
 
-// One switch for both sounds. It is kept on Plasma's start-up event; the
-// shutdown sound (/usr/libexec/wildos/logout-sound) reads it there, since
-// Plasma's own logout event would hold the shutdown back until it finished.
+// Kept on Plasma's start-up event, which plays it.
 void SoundTheme::setStartupSound(bool on)
 {
     auto g = sessionEvent(QStringLiteral("startkde"));
     g.writeEntry("Action", on ? QStringLiteral("Sound") : QString(), KConfig::Notify);
+    g.sync();
+    Q_EMIT changed();
+}
+
+// Read by /usr/libexec/wildos/logout-sound, which plays the sound as the
+// session ends. Plasma's own logout event would hold the shutdown back
+// until it had finished.
+void SoundTheme::setShutdownSound(bool on)
+{
+    auto g = wildosSound();
+    if (on) {
+        g.writeEntry("ShutdownSound", true, KConfig::Notify);
+    } else {
+        g.revertToDefault("ShutdownSound", KConfig::Notify);
+    }
     g.sync();
     Q_EMIT changed();
 }

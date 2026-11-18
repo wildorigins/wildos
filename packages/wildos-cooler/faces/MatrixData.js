@@ -1,0 +1,37 @@
+// Taken from board 10.8 by faces_data.py; edit the board, not this file.
+.pragma library
+
+var columns = [
+    { x: 0.00, opacity: 1, duration: 3.27, delay: -1.80, trail: "4C123B1612DD2", head: "1" },
+    { x: 40.00, opacity: 1, duration: 3.00, delay: -0.35, trail: "71C17149D", head: "9" },
+    { x: 80.00, opacity: 1, duration: 4.82, delay: -3.37, trail: "536B3216FDAEEB97", head: "7" },
+    { x: 120.00, opacity: 1, duration: 4.72, delay: -0.72, trail: "9FAE923D5", head: "F" },
+    { x: 160.00, opacity: 1, duration: 4.41, delay: -4.38, trail: "12AABFE228F219", head: "E" },
+    { x: 200.00, opacity: 1, duration: 4.67, delay: -1.86, trail: "CB0EB53F1694", head: "F" },
+    { x: 240.00, opacity: 1, duration: 4.51, delay: -1.72, trail: "5EC84D8DB", head: "7" },
+    { x: 280.00, opacity: 1, duration: 2.61, delay: -1.09, trail: "254770F589", head: "B" },
+    { x: 320.00, opacity: 1, duration: 5.36, delay: -2.36, trail: "41ECCCC3FC162", head: "3" },
+    { x: 360.00, opacity: 1, duration: 4.29, delay: -2.03, trail: "13043B026C48B", head: "3" },
+    { x: 400.00, opacity: 1, duration: 4.53, delay: -4.14, trail: "EFF9243A8F506B4", head: "9" },
+    { x: 440.00, opacity: 1, duration: 4.89, delay: -3.62, trail: "8B5B7A767", head: "7" },
+    { x: 480.00, opacity: 1, duration: 5.27, delay: -1.92, trail: "FB008F86BEB", head: "7" },
+    { x: 520.00, opacity: 1, duration: 4.84, delay: -0.41, trail: "7F6A6F0FB", head: "3" },
+    { x: 560.00, opacity: 1, duration: 3.02, delay: -2.74, trail: "6F5DA2CEC25540", head: "4" },
+    { x: 600.00, opacity: 1, duration: 4.74, delay: -1.54, trail: "B440034D6608697", head: "D" },
+    { x: 19.84, opacity: 0.38, duration: 7.16, delay: -1.07, trail: "1BED440E50", head: "4" },
+    { x: 59.84, opacity: 0.38, duration: 5.27, delay: -5.13, trail: "31AF3176813E02E", head: "6" },
+    { x: 99.84, opacity: 0.38, duration: 4.20, delay: -1.01, trail: "EF786E4D3CEA", head: "2" },
+    { x: 139.84, opacity: 0.38, duration: 7.62, delay: -1.24, trail: "934B484E73C", head: "7" },
+    { x: 179.84, opacity: 0.38, duration: 5.32, delay: -2.44, trail: "DCAD6BA2B0", head: "0" },
+    { x: 219.84, opacity: 0.38, duration: 7.47, delay: -5.05, trail: "A923732881584D", head: "8" },
+    { x: 259.84, opacity: 0.38, duration: 6.45, delay: -1.44, trail: "4FA2815D280282", head: "8" },
+    { x: 299.84, opacity: 0.38, duration: 7.97, delay: -2.09, trail: "E0AD84173", head: "5" },
+    { x: 339.84, opacity: 0.38, duration: 3.96, delay: -2.91, trail: "9969E58B081", head: "6" },
+    { x: 379.84, opacity: 0.38, duration: 7.42, delay: -0.11, trail: "F7E3DFC967A64CB1", head: "8" },
+    { x: 419.84, opacity: 0.38, duration: 5.01, delay: -4.81, trail: "512C9791E558E0", head: "A" },
+    { x: 459.84, opacity: 0.38, duration: 6.01, delay: -1.21, trail: "196B50AC2F8", head: "0" },
+    { x: 499.84, opacity: 0.38, duration: 6.54, delay: -0.55, trail: "824C1C099", head: "4" },
+    { x: 539.84, opacity: 0.38, duration: 6.58, delay: -6.31, trail: "AF4941D4072014", head: "C" },
+    { x: 579.84, opacity: 0.38, duration: 6.96, delay: -1.43, trail: "107F80E222F8287", head: "E" },
+    { x: 619.84, opacity: 0.38, duration: 5.94, delay: -5.78, trail: "C2F91624A8940F1", head: "3" }
+]

@@ -91,6 +91,8 @@ ColumnLayout {
                 height: 33
                 // Six rows only when the month needs them.
                 visible: index < 35 || mini.dayAt(35).getMonth() === mini.month.getMonth()
+                Accessible.role: Accessible.Button
+                Accessible.name: Formats.longDate(day)
 
                 Rectangle {
                     visible: cell.inRange

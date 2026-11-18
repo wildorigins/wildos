@@ -24,4 +24,5 @@ execute_after_dh_fixperms:
 		debian/wildos-desktop/usr/libexec/wildos/wildos-strings \
 		debian/wildos-desktop/usr/libexec/wildos/update-checks \
 		debian/wildos-desktop/usr/libexec/wildos/fingerprint-turn \
-		debian/wildos-desktop/usr/bin/brave-browser-stable
+		debian/wildos-desktop/usr/bin/brave-browser-stable \
+		debian/wildos-desktop/usr/lib/systemd/user-environment-generators/60-wildos-kpipewire-encoder

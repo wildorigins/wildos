@@ -7,8 +7,9 @@ import WildOS.UI as UI
 
 // The Wild OS desktop (DesktopIcons.dc): icons in a Windows-style column
 // grid down the left, the desktop's right-click menu, and everything the
-// icons do (open, drag and drop, rename, delete to the Recycle Bin, select
-// with a rubber band, keyboard navigation). The containment hosts this
+// icons do (open, drag and drop, rename, delete to the Recycle Bin, undo the
+// last of those with Ctrl+Z, select with a rubber band, keyboard
+// navigation, Ctrl and the wheel for the icon size). The containment hosts this
 // over Plasma's wallpaper; `config` is its Plasmoid.configuration.
 FocusScope {
     id: view
@@ -23,6 +24,13 @@ FocusScope {
     // What the menus blur behind their glass: the containment, wallpaper
     // and icons included.
     property Item backdrop: null
+    // Plasma widgets on the desktop, allowed in Settings > Personalisation.
+    property bool widgetsAllowed: false
+    // Given by the containment: the widget (its Plasma applet) under a point
+    // of this view, or null, so a right-click on a widget can offer it.
+    property var widgetAt: null
+    property var menuWidget: null
+    signal addWidgetsRequested()
 
     readonly property alias model: desktopModel
     readonly property bool iconsShown: primary && conf("showIcons", true)
@@ -236,23 +244,23 @@ FocusScope {
     function viewEntries() {
         const shown = conf("showIcons", true);
         return [
-            { text: "Large icons", checked: sizeChoice === 2, run: () => view.setConf("iconSize", 2) },
-            { text: "Medium icons", checked: sizeChoice === 1, run: () => view.setConf("iconSize", 1) },
-            { text: "Small icons", checked: sizeChoice === 0, run: () => view.setConf("iconSize", 0) },
+            { text: qsTr("Large icons"), checked: sizeChoice === 2, run: () => view.setConf("iconSize", 2) },
+            { text: qsTr("Medium icons"), checked: sizeChoice === 1, run: () => view.setConf("iconSize", 1) },
+            { text: qsTr("Small icons"), checked: sizeChoice === 0, run: () => view.setConf("iconSize", 0) },
             { separator: true },
-            { text: "Auto arrange", checked: desktopModel.autoArrange, run: () => view.setConf("autoArrange", !desktopModel.autoArrange) },
-            { text: "Align to grid", checked: desktopModel.alignToGrid, run: () => view.setConf("alignToGrid", !desktopModel.alignToGrid) },
-            { text: "Show icons", checked: shown, run: () => view.setConf("showIcons", !shown) }
+            { text: qsTr("Auto arrange"), checked: desktopModel.autoArrange, run: () => view.setConf("autoArrange", !desktopModel.autoArrange) },
+            { text: qsTr("Align to grid"), checked: desktopModel.alignToGrid, run: () => view.setConf("alignToGrid", !desktopModel.alignToGrid) },
+            { text: qsTr("Show icons"), checked: shown, run: () => view.setConf("showIcons", !shown) }
         ];
     }
 
     function sortEntries() {
         const key = desktopModel.sortKey;
         return [
-            { text: "Name", radio: true, checked: key === "name", run: () => desktopModel.sortBy("name") },
-            { text: "Size", radio: true, checked: key === "size", run: () => desktopModel.sortBy("size") },
-            { text: "Item type", radio: true, checked: key === "type", run: () => desktopModel.sortBy("type") },
-            { text: "Date modified", radio: true, checked: key === "modified", run: () => desktopModel.sortBy("modified") }
+            { text: qsTr("Name"), radio: true, checked: key === "name", run: () => desktopModel.sortBy("name") },
+            { text: qsTr("Size"), radio: true, checked: key === "size", run: () => desktopModel.sortBy("size") },
+            { text: qsTr("Item type"), radio: true, checked: key === "type", run: () => desktopModel.sortBy("type") },
+            { text: qsTr("Date modified"), radio: true, checked: key === "modified", run: () => desktopModel.sortBy("modified") }
         ];
     }
 
@@ -260,8 +268,8 @@ FocusScope {
     function newEntries() {
         const folder = desktopModel.folder;
         const entries = [
-            { text: "Folder", icon: "new-folder", shortcut: "Ctrl+Shift+N", run: () => DeskOps.newFolder(folder) },
-            { text: "Shortcut", icon: "link", run: () => shortcutDialog.show(folder) },
+            { text: qsTr("Folder"), icon: "new-folder", shortcut: qsTr("Ctrl+Shift+N"), run: () => DeskOps.newFolder(folder) },
+            { text: qsTr("Shortcut"), icon: "link", run: () => shortcutDialog.show(folder) },
             { separator: true }
         ];
         for (const type of DeskOps.newFileTypes()) {
@@ -274,19 +282,47 @@ FocusScope {
     // MenusShell.dc "Desktop" (board 4.2's menu with the right-click menu
     // rules): View holds the icon options so the top level stays short.
     function desktopEntries() {
-        return [
-            { text: "View", icon: "desktop-view", submenu: viewEntries(), submenuWidth: 176 },
-            { text: "Sort by", icon: "menu-sort", submenu: sortEntries(), submenuWidth: 176 },
-            { text: "Refresh", icon: "menu-refresh", shortcut: "F5", run: () => desktopModel.refresh() },
+        const entries = [
+            { text: qsTr("View"), icon: "desktop-view", submenu: viewEntries(), submenuWidth: 176 },
+            { text: qsTr("Sort by"), icon: "menu-sort", submenu: sortEntries(), submenuWidth: 176 },
+            { text: qsTr("Refresh"), icon: "menu-refresh", shortcut: "F5", run: () => desktopModel.refresh() },
             { separator: true },
-            { text: "New", icon: "plus", submenu: newEntries(), submenuWidth: 250 },
-            { text: "Paste", icon: "menu-paste", shortcut: "Ctrl+V", enabled: DeskOps.canPaste, run: () => DeskOps.paste(desktopModel.folder) },
+            { text: qsTr("New"), icon: "plus", submenu: newEntries(), submenuWidth: 250 },
+            { text: qsTr("Paste"), icon: "menu-paste", shortcut: "Ctrl+V", enabled: DeskOps.canPaste, run: () => DeskOps.paste(desktopModel.folder) },
             { separator: true },
-            { text: "Display settings", icon: "menu-desktop", run: () => DeskOps.openSettings("display") },
-            { text: "Personalise", icon: "menu-personalise", run: () => DeskOps.openSettings("personalisation") },
+            { text: qsTr("Display settings"), icon: "menu-desktop", run: () => DeskOps.openSettings("display") },
+            { text: qsTr("Personalise"), icon: "menu-personalise", run: () => DeskOps.openSettings("personalisation") },
             { separator: true },
-            { text: "Open in Terminal", icon: "terminal", run: () => DeskOps.openTerminal(desktopModel.folder) }
+            { text: qsTr("Open in Terminal"), icon: "terminal", run: () => DeskOps.openTerminal(desktopModel.folder) }
         ];
+        if (widgetsAllowed) {
+            entries.splice(entries.length - 2, 0, { text: qsTr("Add widgets"), icon: "menu-apps", run: () => view.addWidgetsRequested() });
+        }
+        // A right-click on a widget leads with what can be done to it; press
+        // and hold still moves and resizes it, as in Plasma.
+        const widget = menuWidget;
+        if (widget) {
+            const configure = widget.internalAction("configure");
+            const remove = widget.internalAction("remove");
+            const top = [];
+            if (configure) {
+                top.push({ text: qsTr("Widget settings"), icon: "menu-settings", run: () => configure.trigger() });
+            }
+            if (remove) {
+                top.push({ text: qsTr("Remove widget"), icon: "menu-uninstall", danger: true, run: () => remove.trigger() });
+            }
+            if (top.length > 0) {
+                entries.unshift(...top, { separator: true });
+            }
+        }
+        // Under Paste, and only while there is something to take back, as
+        // on Windows.
+        const kind = DeskOps.undoKind;
+        if (kind.length > 0) {
+            const text = kind === "delete" ? qsTr("Undo delete") : kind === "move" ? qsTr("Undo move") : qsTr("Undo rename");
+            entries.splice(6, 0, { text: text, icon: "undo", shortcut: "Ctrl+Z", run: () => DeskOps.undo() });
+        }
+        return entries;
     }
 
     // The item menu is Files' (FilesView.qml openItemMenu) for the desktop:
@@ -301,56 +337,64 @@ FocusScope {
         const entries = [];
 
         if (kind === "computer") {
-            entries.push({ text: "Open", icon: "open", bold: true, shortcut: "Enter", run: () => view.openSelection() });
+            entries.push({ text: qsTr("Open"), icon: "open", bold: true, shortcut: qsTr("Enter"), run: () => view.openSelection() });
             entries.push({ separator: true });
-            entries.push({ text: "Properties", icon: "info", shortcut: "Alt+Enter", run: () => DeskOps.openSettings("about") });
+            entries.push({ text: qsTr("Properties"), icon: "info", shortcut: qsTr("Alt+Enter"), run: () => DeskOps.openSettings("about") });
             return entries;
         }
         // MenusShell.dc "Bin". Emptying always asks first (DeskOps.emptyBin).
         // The board's Properties row is left out: the Recycle Bin has no
         // settings of its own to show yet.
         if (kind === "bin") {
-            entries.push({ text: "Open", icon: "open", bold: true, shortcut: "Enter", run: () => view.openSelection() });
+            entries.push({ text: qsTr("Open"), icon: "open", bold: true, shortcut: qsTr("Enter"), run: () => view.openSelection() });
             entries.push({ separator: true });
-            entries.push({ text: "Empty Recycle Bin", icon: "menu-uninstall", danger: true, enabled: DeskOps.binCount > 0, run: () => DeskOps.emptyBin() });
+            entries.push({ text: qsTr("Empty Recycle Bin"), icon: "menu-uninstall", danger: true, enabled: DeskOps.binCount > 0, run: () => DeskOps.emptyBin() });
             return entries;
         }
         if (kind === "home") {
             const home = m.urlAt(row);
-            entries.push({ text: "Open", icon: "open", bold: true, shortcut: "Enter", run: () => view.openSelection() });
-            entries.push({ text: "Paste into folder", icon: "paste", enabled: DeskOps.canPaste, run: () => DeskOps.paste(home) });
-            entries.push({ text: "Copy path", icon: "link", run: () => DeskOps.copyPaths([home]) });
+            entries.push({ text: qsTr("Open"), icon: "open", bold: true, shortcut: qsTr("Enter"), run: () => view.openSelection() });
+            entries.push({ text: qsTr("Paste into folder"), icon: "paste", enabled: DeskOps.canPaste, run: () => DeskOps.paste(home) });
+            entries.push({ text: qsTr("Copy path"), icon: "link", run: () => DeskOps.copyPaths([home]) });
             entries.push({ separator: true });
-            entries.push({ text: "Open in Terminal", icon: "terminal", run: () => DeskOps.openTerminal(home) });
-            entries.push({ text: "Properties", icon: "info", shortcut: "Alt+Enter", run: () => view.properties() });
+            entries.push({ text: qsTr("Open in Terminal"), icon: "terminal", run: () => DeskOps.openTerminal(home) });
+            entries.push({ text: qsTr("Properties"), icon: "info", shortcut: qsTr("Alt+Enter"), run: () => view.properties() });
             return entries;
         }
 
         const isDir = one && m.isDirAt(row);
-        entries.push({ text: "Open", icon: "open", bold: true, shortcut: "Enter", run: () => view.openSelection() });
+        entries.push({ text: qsTr("Open"), icon: "open", bold: true, shortcut: qsTr("Enter"), run: () => view.openSelection() });
         if (one && !isDir) {
             const apps = DeskOps.appsFor(urls[0]).map(a => ({ text: a.name, themeIcon: a.icon + ",application-x-executable", run: () => DeskOps.openWith(urls, a.id, false) }));
             if (apps.length > 0) {
                 apps.push({ separator: true });
             }
-            apps.push({ text: "Choose another app", icon: "open-with", run: () => view.chooseApp(urls) });
-            entries.push({ text: "Open with", icon: "open-with", submenu: apps });
+            apps.push({ text: qsTr("Choose another app"), icon: "open-with", run: () => view.chooseApp(urls) });
+            entries.push({ text: qsTr("Open with"), icon: "open-with", submenu: apps });
+            // An app shortcut or a program such as an AppImage, on a PC with
+            // two graphics cards.
+            const target = urls[0].toString();
+            if (UI.System.twoGraphicsCards() && UI.System.canChooseGraphics(target)) {
+                const dedicated = UI.System.dedicatedGraphics(target);
+                entries.push({ text: qsTr("Dedicated graphics card"), checked: dedicated,
+                    run: () => UI.System.setDedicatedGraphics(target, !dedicated) });
+            }
         }
         entries.push({ separator: true });
-        entries.push({ text: "Cut", icon: "cut", shortcut: "Ctrl+X", enabled: urls.length > 0, run: () => DeskOps.cut(urls) });
-        entries.push({ text: "Copy", icon: "copy", shortcut: "Ctrl+C", enabled: urls.length > 0, run: () => DeskOps.copy(urls) });
+        entries.push({ text: qsTr("Cut"), icon: "cut", shortcut: "Ctrl+X", enabled: urls.length > 0, run: () => DeskOps.cut(urls) });
+        entries.push({ text: qsTr("Copy"), icon: "copy", shortcut: "Ctrl+C", enabled: urls.length > 0, run: () => DeskOps.copy(urls) });
         if (isDir) {
-            entries.push({ text: "Paste into folder", icon: "paste", enabled: DeskOps.canPaste, run: () => DeskOps.paste(urls[0]) });
+            entries.push({ text: qsTr("Paste into folder"), icon: "paste", enabled: DeskOps.canPaste, run: () => DeskOps.paste(urls[0]) });
         }
-        entries.push({ text: "Copy path", icon: "link", enabled: urls.length > 0, run: () => DeskOps.copyPaths(urls) });
+        entries.push({ text: qsTr("Copy path"), icon: "link", enabled: urls.length > 0, run: () => DeskOps.copyPaths(urls) });
         entries.push({ separator: true });
-        entries.push({ text: "Rename", icon: "rename", shortcut: "F2", enabled: one, run: () => view.rename() });
-        entries.push({ text: "Delete", icon: "delete", shortcut: "Delete", enabled: urls.length > 0, run: () => view.remove(false) });
+        entries.push({ text: qsTr("Rename"), icon: "rename", shortcut: "F2", enabled: one, run: () => view.rename() });
+        entries.push({ text: qsTr("Delete"), icon: "delete", shortcut: qsTranslate("Keys", "Delete"), enabled: urls.length > 0, run: () => view.remove(false) });
         entries.push({ separator: true });
         if (isDir) {
-            entries.push({ text: "Open in Terminal", icon: "terminal", run: () => DeskOps.openTerminal(urls[0]) });
+            entries.push({ text: qsTr("Open in Terminal"), icon: "terminal", run: () => DeskOps.openTerminal(urls[0]) });
         }
-        entries.push({ text: "Properties", icon: "info", shortcut: "Alt+Enter", enabled: urls.length > 0, run: () => view.properties() });
+        entries.push({ text: qsTr("Properties"), icon: "info", shortcut: qsTr("Alt+Enter"), enabled: urls.length > 0, run: () => view.properties() });
         return entries;
     }
 
@@ -375,6 +419,7 @@ FocusScope {
         desktopModel.clearSelection();
         const p = inGrid(x, y);
         desktopModel.setPlaceHint(p.x, p.y);
+        menuWidget = widgetsAllowed && widgetAt ? widgetAt(x, y) : null;
         showMenu(desktopEntries(), x, y, 250);
     }
 
@@ -504,6 +549,13 @@ FocusScope {
                 return;
             }
             break;
+        case Qt.Key_Z:
+            if (ctrl && !shift) {
+                DeskOps.undo();
+                event.accepted = true;
+                return;
+            }
+            break;
         }
         if (!ctrl && !alt && iconsShown && event.text.length === 1 && event.text.trim().length === 1) {
             keyboardUsed = true;
@@ -545,6 +597,7 @@ FocusScope {
         case Qt.Key_X:
         case Qt.Key_V:
         case Qt.Key_N:
+        case Qt.Key_Z:
             return ctrl;
         }
         return false;
@@ -602,6 +655,21 @@ FocusScope {
         property point start
         property bool banding: false
         property rect band
+        // A touchpad sends many small steps; one notch of a wheel is 120.
+        property real wheelTravel: 0
+
+        onWheel: wheel => {
+            if (!(wheel.modifiers & Qt.ControlModifier) || !view.iconsShown) {
+                wheel.accepted = false;
+                return;
+            }
+            const delta = wheel.angleDelta.y;
+            wheelTravel = (delta > 0) === (wheelTravel > 0) ? wheelTravel + delta : delta;
+            if (Math.abs(wheelTravel) >= 120) {
+                view.setConf("iconSize", Math.max(0, Math.min(2, view.sizeChoice + (wheelTravel > 0 ? 1 : -1))));
+                wheelTravel = 0;
+            }
+        }
 
         onPressed: mouse => {
             view.takeFocus();

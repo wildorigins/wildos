@@ -174,9 +174,9 @@ void Accessibility::addPointer(const QUrl &file, qreal hotX, qreal hotY)
                 setPointerColour(QStringLiteral("custom"));
             }
         } else if (status == QProcess::NormalExit && code == 1) {
-            Q_EMIT pointerFailed(QStringLiteral("Wild OS couldn't save the pointer. Check there's space left on the disk."));
+            Q_EMIT pointerFailed(tr("Wild OS couldn't save the pointer. Check there's space left on the disk."));
         } else {
-            Q_EMIT pointerFailed(QStringLiteral("That file isn't a pointer Wild OS can use."));
+            Q_EMIT pointerFailed(tr("That file isn't a pointer Wild OS can use."));
         }
     });
     connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
@@ -184,7 +184,7 @@ void Accessibility::addPointer(const QUrl &file, qreal hotX, qreal hotY)
             process->deleteLater();
             m_pointerBusy = false;
             Q_EMIT customPointerChanged();
-            Q_EMIT pointerFailed(QStringLiteral("That file isn't a pointer Wild OS can use."));
+            Q_EMIT pointerFailed(tr("That file isn't a pointer Wild OS can use."));
         }
     });
     process->start(QStringLiteral("/usr/libexec/wildos/pointer-import"),

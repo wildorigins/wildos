@@ -128,7 +128,7 @@ Item {
                         required property var modelData
                         Layout.fillWidth: true
                         implicitHeight: 54
-                        radius: 8
+                        radius: UI.Style.radiusSm
                         color: tileMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRaised
                         border.width: 1
                         border.color: UI.Style.borderSubtle
@@ -215,7 +215,6 @@ Item {
                     id: icloudPassword
                     Layout.fillWidth: true
                     placeholderText: qsTr("App-specific password")
-                    echoMode: TextInput.Password
                     revealable: true
                     onAccepted: icloudButton.clicked()
                 }
@@ -242,7 +241,6 @@ Item {
                     id: serverPassword
                     Layout.fillWidth: true
                     placeholderText: qsTr("Password or app password")
-                    echoMode: TextInput.Password
                     revealable: true
                 }
                 UI.TextField {
@@ -261,7 +259,7 @@ Item {
                 UI.TextField {
                     id: webAddress
                     Layout.fillWidth: true
-                    placeholderText: "webcal://… or https://….ics"
+                    placeholderText: qsTr("webcal://… or https://….ics")
                     inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoAutoUppercase
                 }
                 UI.TextField {

@@ -2,6 +2,7 @@
 
 #include <KService>
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
@@ -71,14 +72,14 @@ QString prettyProcess(const QString &process)
                                                {QStringLiteral("syncthing"), QStringLiteral("Syncthing")},
                                                {QStringLiteral("kdeconnectd"), QStringLiteral("KDE Connect")},
                                                {QStringLiteral("plexmediaserver"), QStringLiteral("Plex Media Server")},
-                                               {QStringLiteral("java"), QStringLiteral("A Java program")},
-                                               {QStringLiteral("python3"), QStringLiteral("A Python program")},
-                                               {QStringLiteral("node"), QStringLiteral("A Node.js program")}};
+                                               {QStringLiteral("java"), QCoreApplication::translate("Firewall", "A Java program")},
+                                               {QStringLiteral("python3"), QCoreApplication::translate("Firewall", "A Python program")},
+                                               {QStringLiteral("node"), QCoreApplication::translate("Firewall", "A Node.js program")}};
     if (known.contains(process)) {
         return known.value(process);
     }
     if (process.isEmpty()) {
-        return QStringLiteral("A system program");
+        return QCoreApplication::translate("Firewall", "A system program");
     }
     return process.at(0).toUpper() + process.mid(1);
 }
@@ -257,45 +258,45 @@ QString Firewall::serviceName(int port, const QString &proto) const
     const bool udp = proto == QLatin1String("udp");
     switch (port) {
     case 21:
-        return udp ? QString() : QStringLiteral("File transfer (FTP)");
+        return udp ? QString() : tr("File transfer (FTP)");
     case 22:
         return udp ? QString() : QStringLiteral("SSH");
     case 23:
         return udp ? QString() : QStringLiteral("Telnet");
     case 25:
-        return udp ? QString() : QStringLiteral("Mail server");
+        return udp ? QString() : tr("Mail server");
     case 53:
-        return QStringLiteral("Name lookups (DNS)");
+        return tr("Name lookups (DNS)");
     case 80:
     case 443:
     case 8080:
-        return QStringLiteral("Web server");
+        return tr("Web server");
     case 137:
     case 138:
     case 139:
     case 445:
-        return QStringLiteral("File sharing");
+        return tr("File sharing");
     case 548:
-        return udp ? QString() : QStringLiteral("File sharing (Mac)");
+        return udp ? QString() : tr("File sharing (Mac)");
     case 631:
-        return QStringLiteral("Printing");
+        return tr("Printing");
     case 1194:
         return QStringLiteral("OpenVPN");
     case 1900:
     case 3702:
     case 5353:
     case 5357:
-        return QStringLiteral("Device discovery");
+        return tr("Device discovery");
     case 3389:
-        return QStringLiteral("Remote Desktop");
+        return tr("Remote Desktop");
     case 5900:
-        return udp ? QString() : QStringLiteral("Screen sharing (VNC)");
+        return udp ? QString() : tr("Screen sharing (VNC)");
     case 8096:
-        return QStringLiteral("Media server");
+        return tr("Media server");
     case 22000:
-        return QStringLiteral("File sync");
+        return tr("File sync");
     case 25565:
-        return QStringLiteral("Game server");
+        return tr("Game server");
     case 51820:
         return udp ? QStringLiteral("WireGuard") : QString();
     default:
@@ -307,14 +308,14 @@ QString Firewall::checkAddress(const QString &address) const
 {
     const QString text = address.trimmed();
     if (text.isEmpty()) {
-        return QStringLiteral("Give the device's address.");
+        return tr("Give the device's address.");
     }
     const QHostAddress a(text);
     if (a.isNull()) {
-        return QStringLiteral("That isn't an address. It looks like 192.168.1.24.");
+        return tr("That isn't an address. It looks like 192.168.1.24.");
     }
     if (a.isLoopback() || a.isMulticast() || a == QHostAddress(QHostAddress::AnyIPv4) || a == QHostAddress(QHostAddress::AnyIPv6)) {
-        return QStringLiteral("That address can't be another device.");
+        return tr("That address can't be another device.");
     }
     return {};
 }
@@ -370,7 +371,7 @@ void Firewall::run(const QStringList &args, const QString &what, const QString &
         } else if (status != QProcess::NormalExit || (code != 126 && code != 127)) {
             // 126 and 127: the password prompt was dismissed, which needs no
             // message.
-            Q_EMIT failed(last.isEmpty() ? QStringLiteral("Something went wrong. Nothing was changed.") : last);
+            Q_EMIT failed(last.isEmpty() ? tr("Something went wrong. Nothing was changed.") : last);
         }
     });
     Q_EMIT busyChanged();
@@ -429,7 +430,7 @@ void Firewall::clearBlocked()
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher *w) {
         w->deleteLater();
         if (w->isError()) {
-            Q_EMIT failed(QStringLiteral("The list could not be cleared. ") + w->error().message());
+            Q_EMIT failed(tr("The list could not be cleared. %1").arg(w->error().message()));
         }
         readBlocked();
     });

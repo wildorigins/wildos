@@ -5,6 +5,7 @@
 #include "protection.h"
 #include "safeboxplan.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -99,17 +100,17 @@ void FileOps::removeDetails(const QList<QUrl> &urls)
             // One file: its sentence alone. Several: each one named.
             Q_EMIT failed(problems.size() == 1 && copies == 0 ? problems.first().section(QStringLiteral(": "), 1) : problems.join(QLatin1Char('\n')));
         } else if (copies == 0) {
-            Q_EMIT failed(QStringLiteral("The personal details couldn't be removed."));
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "The personal details couldn't be removed."));
         }
         if (copies > 0) {
-            Q_EMIT notice(copies == 1 ? QStringLiteral("Saved a copy without personal details")
-                                      : QStringLiteral("Saved %1 copies without personal details").arg(copies));
+            Q_EMIT notice(copies == 1 ? QCoreApplication::translate("FileOps", "Saved a copy without personal details")
+                                      : QCoreApplication::translate("FileOps", "Saved %1 copies without personal details").arg(copies));
         }
     });
     connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
         if (error == QProcess::FailedToStart) {
             process->deleteLater();
-            Q_EMIT failed(QStringLiteral("The personal details couldn't be removed."));
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "The personal details couldn't be removed."));
         }
     });
     process->start(removeDetailsTool, args);
@@ -142,7 +143,7 @@ void FileOps::openInSafeBox(const QUrl &url)
     const QString path = url.toLocalFile();
     const auto launch = [this, path] {
         if (!QProcess::startDetached(safeBoxTool, {path}, QFileInfo(path).absolutePath())) {
-            Q_EMIT failed(QStringLiteral("The safe box couldn't open."));
+            Q_EMIT failed(QCoreApplication::translate("FileOps", "The safe box couldn't open."));
         }
     };
     Protection *protection = Protection::instance();
@@ -153,16 +154,16 @@ void FileOps::openInSafeBox(const QUrl &url)
     // The first time, what the box does and does not do, in plain words.
     const QString name = url.fileName();
     const QString lead = plan.value(QStringLiteral("program")).toBool()
-        ? QStringLiteral("%1 runs").arg(name)
-        : QStringLiteral("%1 opens in %2,").arg(name, plan.value(QStringLiteral("app")).toString());
+        ? QCoreApplication::translate("FileOps", "%1 runs").arg(name)
+        : QCoreApplication::translate("FileOps", "%1 opens in %2,").arg(name, plan.value(QStringLiteral("app")).toString());
     QVariantMap prompt;
     prompt[QStringLiteral("kind")] = QStringLiteral("confirm");
-    prompt[QStringLiteral("title")] = QStringLiteral("Open in safe box?");
-    prompt[QStringLiteral("text")] = QStringLiteral("%1 sealed off from your files and the network, with no sound or camera. "
-                                                    "Anything it saves is gone when it closes. This stops most harm, but a program "
-                                                    "made to attack Wild OS itself could still break out.")
+    prompt[QStringLiteral("title")] = QCoreApplication::translate("FileOps", "Open in safe box?");
+    prompt[QStringLiteral("text")] = QCoreApplication::translate("FileOps", "%1 sealed off from your files and the network, with no sound or camera. "
+                                                                            "Anything it saves is gone when it closes. This stops most harm, but a program "
+                                                                            "made to attack Wild OS itself could still break out.")
                                          .arg(lead);
-    prompt[QStringLiteral("primary")] = QStringLiteral("Open in safe box");
+    prompt[QStringLiteral("primary")] = QCoreApplication::translate("FileOps", "Open in safe box");
     ask(prompt, [protection, launch](const QString &choice, bool) {
         if (choice == QLatin1String("primary")) {
             protection->setSafeBoxExplained(true);

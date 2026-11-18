@@ -24,7 +24,7 @@ UI.AppWindow {
     title: qsTr("Remote")
 
     function addressOf(h) {
-        return h.user ? h.user + " on " + h.address : h.address;
+        return h.user ? qsTr("%1 on %2").arg(h.user).arg(h.address) : h.address;
     }
 
     // What happens once an SSH host checks out: a terminal tab, unless
@@ -116,6 +116,12 @@ UI.AppWindow {
             window.raise();
             window.requestActivate();
         }
+        function onSettingsRequested() {
+            window.show();
+            window.raise();
+            window.requestActivate();
+            window.page = "settings";
+        }
     }
     Connections {
         target: AskPass
@@ -135,6 +141,10 @@ UI.AppWindow {
     Shortcut {
         sequence: "Ctrl+L"
         onActivated: search.forceActiveFocus()
+    }
+    Shortcut {
+        sequence: "Ctrl+,"
+        onActivated: window.page = "settings"
     }
     Shortcut {
         sequence: "Ctrl+N"
@@ -278,7 +288,7 @@ UI.AppWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 currentIndex: window.page === "keychain" ? 1 : window.page === "snippets" ? 2 : window.page === "forwarding" ? 3
-                    : window.page === "knownhosts" ? 4 : 0
+                    : window.page === "knownhosts" ? 4 : window.page === "settings" ? 5 : 0
 
                 HostsPage {
                     view: window.page
@@ -308,6 +318,7 @@ UI.AppWindow {
                 KnownHostsPage {
                     onNotice: text => toast.show(text)
                 }
+                SettingsPage {}
             }
         }
     }

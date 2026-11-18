@@ -13,6 +13,7 @@ import org.kde.plasma.plasmoid 2.0
 import org.kde.kquickcontrolsaddons 2.0
 import org.kde.kirigami 2.20 as Kirigami
 import org.wildos.shell as WildOS
+import WildOS.UI as UI
 
 PlasmaCore.ToolTipArea {
     id: root
@@ -24,7 +25,31 @@ PlasmaCore.ToolTipArea {
     location: Plasmoid.location
     active: plasmoidItem ? !plasmoidItem.expanded : false
     textFormat: plasmoidItem ? plasmoidItem.toolTipTextFormat : 0
-    mainItem: plasmoidItem && plasmoidItem.toolTipItem ? plasmoidItem.toolTipItem : null
+    // Wild OS: every taskbar item's hover label is the same plain 12 px
+    // text, as the app icons in the corner show, in place of Plasma's bold
+    // heading over a second line. An item with nothing to say gets no label.
+    mainItem: plasmoidItem && plasmoidItem.toolTipItem ? plasmoidItem.toolTipItem
+        : mainText.length > 0 || subText.length > 0 ? tipItem : null
+
+    property Item tipItem: Item {
+        implicitWidth: tipLabel.width
+        implicitHeight: tipLabel.height
+
+        UI.Label {
+            id: tipLabel
+            width: Math.min(implicitWidth, 360)
+            leftPadding: 8
+            rightPadding: 8
+            topPadding: 6
+            bottomPadding: 6
+            size: 12
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+            textFormat: root.textFormat === Text.AutoText ? Text.PlainText : root.textFormat
+            text: root.mainText.length > 0 && root.subText.length > 0 ? root.mainText + "\n" + root.subText
+                : root.mainText + root.subText
+        }
+    }
 
     readonly property bool vertical: location === PlasmaCore.Types.RightEdge || location === PlasmaCore.Types.LeftEdge
 
@@ -249,6 +274,27 @@ PlasmaCore.ToolTipArea {
     Connections {
         target: root.Plasmoid
         function onContextualActionsAboutToShow() { root.hideImmediately() }
+    }
+
+    // Wild OS: Plasma leaves a pop-up open while any menu has the keyboard,
+    // and it never hears about the keyboard leaving again once that menu
+    // closes, so a right click on the taskbar left Start open until its
+    // button was clicked. As on Windows, a press anywhere outside the pop-up
+    // closes it, before the press opens a menu: only its own menus and its
+    // own button, which opens and closes it by itself, leave it be.
+    Connections {
+        target: WildOS.Session
+        enabled: dialog.visible && !dialog.warmShown && root.plasmoidItem && root.plasmoidItem.expanded
+            && root.plasmoidItem.hideOnWindowDeactivate
+        function onPressed(window, x, y) {
+            if (WildOS.Session.windowWithin(window, dialog)) {
+                return;
+            }
+            if (window === root.Window.window && root.contains(root.mapFromItem(null, x, y))) {
+                return;
+            }
+            root.plasmoidItem.expanded = false;
+        }
     }
 
     PlasmaCore.AppletPopup {

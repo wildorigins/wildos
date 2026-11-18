@@ -4,7 +4,7 @@ import WildOS.Settings
 import WildOS.UI as UI
 
 // Sign-in options (SignInOptions.dc): the ways to sign in (fingerprint,
-// password, security key), where a fingerprint is used, then signing in
+// password, PIN, security key), where a fingerprint is used, then signing in
 // automatically when the computer starts, restarting apps after signing
 // in, and the way to the screen lock. Turning automatic sign-in on asks for
 // your own password, so the system can keep the key that opens your saved
@@ -40,14 +40,14 @@ PageScroll {
             if (what === "password") {
                 if (message.length > 0) {
                     passwordDialog.close();
-                    notice.show("Password changed", message, false);
+                    notice.show(qsTr("Password changed"), message, false);
                 }
             } else if (what === "autologin") {
                 autoDialog.close();
-                notice.show("Automatic sign-in", message, false);
+                notice.show(qsTr("Automatic sign-in"), message, false);
             } else if (what === "wallet") {
                 walletDialog.close();
-                notice.show("Saved passwords", message, false);
+                notice.show(qsTr("Saved passwords"), message, false);
             }
         }
         function onFailed(what, reason) {
@@ -61,7 +61,7 @@ PageScroll {
                 if (autoDialog.visible) {
                     autoDialog.error = reason;
                 } else {
-                    notice.show("Automatic sign-in was not changed", reason, true);
+                    notice.show(qsTr("Automatic sign-in was not changed"), reason, true);
                 }
             }
         }
@@ -72,43 +72,63 @@ PageScroll {
     }
 
     Connections {
+        target: Pin
+        function onDone(what) {
+            pinDialog.close();
+            if (what === "set") {
+                notice.show(qsTr("PIN saved"), qsTr("Type it in the password box to sign in or unlock."), false);
+            } else {
+                notice.show(qsTr("PIN removed"), qsTr("Signing in and unlocking take your password."), false);
+            }
+        }
+        function onFailed(reason) {
+            if (pinDialog.visible) {
+                pinDialog.error = reason;
+            } else {
+                notice.show(qsTr("The PIN was not changed"), reason, true);
+            }
+        }
+    }
+
+    Connections {
         target: Fingerprint
         function onFailed(what, reason) {
             if (what === "remove") {
-                notice.show("The fingerprint wasn't removed", reason, true);
+                notice.show(qsTr("The fingerprint wasn't removed"), reason, true);
             } else if (what === "use") {
-                notice.show("Fingerprint use wasn't changed", reason, true);
+                notice.show(qsTr("Fingerprint use wasn't changed"), reason, true);
             } else if (!setupDialog.visible && what !== "password") {
-                notice.show("The fingerprint wasn't saved", reason, true);
+                notice.show(qsTr("The fingerprint wasn't saved"), reason, true);
             }
         }
     }
 
     function changedText(iso) {
         if (!iso) {
-            return "Sign in with your account's password";
+            return qsTr("Sign in with your account's password");
         }
         const parts = iso.split("-");
         const changed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         if (changed.getTime() === today.getTime()) {
-            return "Last changed today";
+            return qsTr("Last changed today");
         }
-        const month = Qt.locale("en_GB").monthName(changed.getMonth(), Locale.LongFormat);
-        return changed.getFullYear() === now.getFullYear() ? "Last changed in " + month : "Last changed in " + month + " " + changed.getFullYear();
+        //: The locale whose month names this line uses: the code for your language, such as fr_FR
+        const month = Qt.locale(qsTr("en_GB")).monthName(changed.getMonth(), Locale.LongFormat);
+        return changed.getFullYear() === now.getFullYear() ? qsTr("Last changed in %1").arg(month) : qsTr("Last changed in %1 %2").arg(month).arg(changed.getFullYear());
     }
 
     function fingerprintText() {
         if (!Fingerprint.available) {
-            return "This PC's fingerprint reader doesn't work with Wild OS yet";
+            return qsTr("This PC's fingerprint reader doesn't work with Wild OS yet");
         }
         if (Fingerprint.windowsKey) {
-            return "This reader still holds a key from Windows Hello, so Wild OS can't use it";
+            return qsTr("This reader still holds a key from Windows Hello, so Wild OS can't use it");
         }
         const count = Fingerprint.fingers.length;
-        return "Reader found" + (Fingerprint.place.length > 0 ? ": " + Fingerprint.place : "") + ". "
-            + (count === 0 ? "No fingers added yet." : count === 1 ? "1 finger added." : count + " fingers added.");
+        return (Fingerprint.place.length > 0 ? qsTr("Reader found: %1.").arg(Fingerprint.place) : qsTr("Reader found.")) + " "
+            + (count === 0 ? qsTr("No fingers added yet.") : count === 1 ? qsTr("1 finger added.") : qsTr("%1 fingers added.").arg(count));
     }
 
     // The saved passwords notification (wildos-setup-wallet) opens this
@@ -139,7 +159,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Ways to sign in"
+            text: qsTr("Ways to sign in")
         }
 
         UI.Card {
@@ -156,13 +176,13 @@ PageScroll {
                         name: "fingerprint"
                         size: 20
                     }
-                    title: "Fingerprint"
+                    title: qsTr("Fingerprint")
                     description: page.fingerprintText()
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: Fingerprint.available && !Fingerprint.windowsKey
-                        text: Fingerprint.fingers.length === 0 ? "Set up" : "Manage"
+                        text: Fingerprint.fingers.length === 0 ? qsTr("Set up") : qsTr("Manage")
                         enabled: Fingerprint.busy === ""
                         onClicked: Fingerprint.fingers.length === 0 ? setupDialog.open() : manageDialog.open()
                     }
@@ -173,13 +193,42 @@ PageScroll {
                         name: "key-round"
                         size: 20
                     }
-                    title: "Password"
+                    title: qsTr("Password")
                     description: page.changedText(Users.me.passwordChanged)
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Change"
+                        text: qsTr("Change")
                         onClicked: passwordDialog.open()
+                    }
+                }
+
+                UI.SettingRow {
+                    visible: Pin.available
+                    leading: PathIcon {
+                        name: "pin-pad"
+                        size: 20
+                    }
+                    title: qsTr("PIN")
+                    description: Pin.isSet ? qsTr("Signs you in and unlocks the lock screen. Your password still works.")
+                        : qsTr("A short number that signs you in and unlocks the lock screen instead of your password")
+
+                    Row {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+
+                        UI.Button {
+                            visible: Pin.isSet
+                            text: qsTr("Remove")
+                            enabled: !Pin.busy
+                            onClicked: Pin.remove()
+                        }
+
+                        UI.Button {
+                            text: Pin.isSet ? qsTr("Change") : qsTr("Set up")
+                            enabled: !Pin.busy
+                            onClicked: pinDialog.open()
+                        }
                     }
                 }
 
@@ -188,12 +237,12 @@ PageScroll {
                         name: "security-key"
                         size: 20
                     }
-                    title: "Security key"
-                    description: "Sign in with a USB or NFC key, like a YubiKey"
+                    title: qsTr("Security key")
+                    description: qsTr("Sign in with a USB or NFC key, like a YubiKey")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Add"
+                        text: qsTr("Add")
                         onClicked: keyDialog.open()
                     }
                 }
@@ -207,7 +256,7 @@ PageScroll {
         visible: Fingerprint.available && !Fingerprint.windowsKey
 
         SectionTitle {
-            text: "Use your fingerprint for"
+            text: qsTr("Use your fingerprint for")
         }
 
         UI.Card {
@@ -221,14 +270,14 @@ PageScroll {
                         name: "log-in"
                         size: 20
                     }
-                    title: "Sign in and unlock"
-                    description: "At the sign-in screen and when the screen is locked"
+                    title: qsTr("Sign in and unlock")
+                    description: qsTr("At the sign-in screen and when the screen is locked")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Fingerprint.signIn
                         enabled: Fingerprint.switching === ""
-                        Accessible.name: "Use your fingerprint to sign in and unlock"
+                        Accessible.name: qsTr("Use your fingerprint to sign in and unlock")
                         onToggled: {
                             Fingerprint.setUse("signin", checked);
                             checked = Qt.binding(() => Fingerprint.signIn);
@@ -241,14 +290,14 @@ PageScroll {
                         name: "shield-round"
                         size: 20
                     }
-                    title: "Admin prompts"
-                    description: "When an app asks to change system settings"
+                    title: qsTr("Admin prompts")
+                    description: qsTr("When an app asks to change system settings")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Fingerprint.admin
                         enabled: Fingerprint.switching === ""
-                        Accessible.name: "Use your fingerprint for admin prompts"
+                        Accessible.name: qsTr("Use your fingerprint for admin prompts")
                         onToggled: {
                             Fingerprint.setUse("admin", checked);
                             checked = Qt.binding(() => Fingerprint.admin);
@@ -261,9 +310,9 @@ PageScroll {
                         name: "hard-drive"
                         size: 20
                     }
-                    title: "Disk unlock at start-up"
-                    description: "Always needs your password, so the disk stays encrypted until you type it"
-                    status: "Password only"
+                    title: qsTr("Disk unlock at start-up")
+                    description: qsTr("Always needs your password, so the disk stays encrypted until you type it")
+                    status: qsTr("Password only")
                 }
             }
         }
@@ -283,7 +332,7 @@ PageScroll {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Your fingerprint is stored as a pattern on this PC (or on the reader itself), never as a picture, and never leaves it."
+            text: qsTr("Your fingerprint is stored as a pattern on this PC (or on the reader itself), never as a picture, and never leaves it.")
             size: 12.5
             color: UI.Style.inkMuted
         }
@@ -294,7 +343,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Additional settings"
+            text: qsTr("Additional settings")
         }
 
         UI.Card {
@@ -306,17 +355,17 @@ PageScroll {
                 UI.SettingRow {
                     iconName: "power"
                     minHeight: 72
-                    title: "Sign in automatically when this computer starts"
-                    description: page.autoOther ? "Set up for " + Users.autoLogin + ". Turning it on here moves it to you."
-                        : "Anyone who turns the computer on gets straight to your files and saved passwords, so only use it on a computer that stays at home."
-                    status: page.autoOn ? "On" : "Off"
+                    title: qsTr("Sign in automatically when this computer starts")
+                    description: page.autoOther ? qsTr("Set up for %1. Turning it on here moves it to you.").arg(Users.autoLogin)
+                        : qsTr("Anyone who turns the computer on gets straight to your files and saved passwords, so only use it on a computer that stays at home.")
+                    status: page.autoOn ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         id: autoToggle
                         anchors.verticalCenter: parent.verticalCenter
                         checked: page.autoOn
                         enabled: Users.busy !== "autologin"
-                        Accessible.name: "Sign in automatically when this computer starts"
+                        Accessible.name: qsTr("Sign in automatically when this computer starts")
                         onToggled: {
                             if (checked) {
                                 checked = Qt.binding(() => page.autoOn);
@@ -331,22 +380,22 @@ PageScroll {
                 UI.SettingRow {
                     iconName: "restart"
                     minHeight: 72
-                    title: "Restart my apps when I sign back in"
-                    description: "Apps that were open when you signed out or restarted open again, where the app supports it"
-                    status: page.restoreApps ? "On" : "Off"
+                    title: qsTr("Restart my apps when I sign back in")
+                    description: qsTr("Apps that were open when you signed out or restarted open again, where the app supports it")
+                    status: page.restoreApps ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: page.restoreApps
-                        Accessible.name: "Restart my apps when I sign back in"
+                        Accessible.name: qsTr("Restart my apps when I sign back in")
                         onToggled: page.setRestoreApps(checked)
                     }
                 }
 
                 UI.SettingRow {
                     iconName: "clock"
-                    title: "Screen lock"
-                    description: "Lock after a while and ask for your password on wake"
+                    title: qsTr("Screen lock")
+                    description: qsTr("Lock after a while and ask for your password on wake")
                     chevron: true
                     onClicked: Navigator.open("screenlock")
                 }
@@ -363,8 +412,8 @@ PageScroll {
     UI.Dialog {
         id: manageDialog
 
-        title: "Your fingerprints"
-        text: "Each one signs you in on its own. Remove any you no longer use; your password always works."
+        title: qsTr("Your fingerprints")
+        text: qsTr("Each one signs you in on its own. Remove any you no longer use; your password always works.")
         onAboutToShow: Fingerprint.reload()
 
         Repeater {
@@ -384,15 +433,15 @@ PageScroll {
 
                 UI.Label {
                     Layout.fillWidth: true
-                    text: "Fingerprint " + (index + 1)
+                    text: qsTr("Fingerprint %1").arg(index + 1)
                     size: 14
                 }
 
                 UI.Button {
-                    text: "Remove"
+                    text: qsTr("Remove")
                     busy: Fingerprint.busy === modelData
                     enabled: Fingerprint.busy === ""
-                    Accessible.name: "Remove fingerprint " + (index + 1)
+                    Accessible.name: qsTr("Remove fingerprint %1").arg(index + 1)
                     onClicked: Fingerprint.remove(modelData)
                 }
             }
@@ -409,7 +458,7 @@ PageScroll {
 
         buttons: [
             UI.Button {
-                text: "Add another finger"
+                text: qsTr("Add another finger")
                 visible: Fingerprint.fingers.length < 10
                 enabled: Fingerprint.busy === ""
                 onClicked: {
@@ -418,7 +467,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Close"
+                text: qsTr("Close")
                 kind: "primary"
                 onClicked: manageDialog.close()
             }
@@ -430,12 +479,12 @@ PageScroll {
     UI.Dialog {
         id: keyDialog
 
-        title: "Security keys aren't ready yet"
-        text: "Wild OS can't sign in with a USB or NFC security key yet. Your password, and your fingerprint if you set one up, keep working as they do now."
+        title: qsTr("Security keys aren't ready yet")
+        text: qsTr("Wild OS can't sign in with a USB or NFC security key yet. Your password, and your fingerprint if you set one up, keep working as they do now.")
 
         buttons: [
             UI.Button {
-                text: "OK"
+                text: qsTr("OK")
                 kind: "primary"
                 onClicked: keyDialog.close()
             }
@@ -448,12 +497,12 @@ PageScroll {
         property string error
         property bool needsOther: false
 
-        title: "Open your saved passwords"
+        title: qsTr("Open your saved passwords")
         text: needsOther
-            ? "Your saved passwords use a different password from your account. Type both, and Wild OS moves them to your account password so they open when you sign in."
+            ? qsTr("Your saved passwords use a different password from your account. Type both, and Wild OS moves them to your account password so they open when you sign in.")
             : page.autoOn
-                ? "This computer signs you in automatically, so your saved passwords need your password once. After this they open by themselves at every start."
-                : "Type your account password to open your saved passwords. They open by themselves whenever you sign in with your password."
+                ? qsTr("This computer signs you in automatically, so your saved passwords need your password once. After this they open by themselves at every start.")
+                : qsTr("Type your account password to open your saved passwords. They open by themselves whenever you sign in with your password.")
         onAboutToShow: {
             error = "";
             needsOther = false;
@@ -466,7 +515,7 @@ PageScroll {
             id: walletPasswordField
             UI.NoPaste {}
             Layout.fillWidth: true
-            placeholderText: "Your account password"
+            placeholderText: qsTr("Your account password")
             revealable: true
             onTextChanged: walletDialog.error = ""
             onAccepted: walletDialog.needsOther ? walletOtherField.forceActiveFocus() : walletButton.clicked()
@@ -477,7 +526,7 @@ PageScroll {
             UI.NoPaste {}
             Layout.fillWidth: true
             visible: walletDialog.needsOther
-            placeholderText: "The password your saved passwords use"
+            placeholderText: qsTr("The password your saved passwords use")
             revealable: true
             onTextChanged: walletDialog.error = ""
             onAccepted: walletButton.clicked()
@@ -496,7 +545,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: walletButton
-                text: "Continue"
+                text: qsTr("Continue")
                 kind: "primary"
                 busy: Users.busy === "wallet"
                 enabled: walletPasswordField.text.length > 0 && (!walletDialog.needsOther || walletOtherField.text.length > 0)
@@ -510,7 +559,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 enabled: Users.busy !== "wallet"
                 onClicked: walletDialog.close()
             }
@@ -522,11 +571,10 @@ PageScroll {
 
         property string error
 
-        title: "Sign in automatically"
-        text: (Protection.status.encryption === "on"
-            ? "Anyone who gets past the disk password when this computer starts will reach your files and your saved passwords, without your account password."
-            : "Anyone who turns this computer on will reach your files and your saved passwords, without a password.")
-            + " Type your password so Wild OS can open your saved passwords for you."
+        title: qsTr("Sign in automatically")
+        text: Protection.status.encryption === "on"
+            ? qsTr("Anyone who gets past the disk password when this computer starts will reach your files and your saved passwords, without your account password. Type your password so Wild OS can open your saved passwords for you.")
+            : qsTr("Anyone who turns this computer on will reach your files and your saved passwords, without a password. Type your password so Wild OS can open your saved passwords for you.")
         onAboutToShow: {
             error = "";
             autoPasswordField.text = "";
@@ -537,7 +585,7 @@ PageScroll {
             id: autoPasswordField
             UI.NoPaste {}
             Layout.fillWidth: true
-            placeholderText: "Your password"
+            placeholderText: qsTr("Your password")
             revealable: true
             onTextChanged: autoDialog.error = ""
             onAccepted: turnOnButton.clicked()
@@ -556,7 +604,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: turnOnButton
-                text: "Turn on"
+                text: qsTr("Turn on")
                 kind: "primary"
                 busy: Users.busy === "autologin"
                 enabled: autoPasswordField.text.length > 0 && Users.busy !== "autologin"
@@ -569,9 +617,107 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 enabled: Users.busy !== "autologin"
                 onClicked: autoDialog.close()
+            }
+        ]
+    }
+
+    UI.Dialog {
+        id: pinDialog
+
+        property string error
+        readonly property string problem: {
+            if (pinField.text.length > 0 && !Pin.valid(pinField.text)) {
+                return qsTr("A PIN is 4 to 12 digits.");
+            }
+            if (pinConfirmField.text.length > 0 && pinConfirmField.text !== pinField.text) {
+                return qsTr("The two PINs don't match.");
+            }
+            if (pinField.text.length > 0 && pinField.text === pinPasswordField.text) {
+                return qsTr("The PIN is the same as your password.");
+            }
+            return "";
+        }
+        readonly property bool ready: pinPasswordField.text.length > 0 && Pin.valid(pinField.text)
+            && pinConfirmField.text === pinField.text && problem.length === 0
+
+        title: Pin.isSet ? qsTr("Change your PIN") : qsTr("Set up a PIN")
+        text: qsTr("Type your password, then a PIN of 4 to 12 digits twice. The PIN signs you in and unlocks the lock screen. Administrator prompts and the encrypted disk still take your password.")
+        onAboutToShow: {
+            error = "";
+            pinPasswordField.text = "";
+            pinField.text = "";
+            pinConfirmField.text = "";
+            pinPasswordField.forceActiveFocus();
+        }
+
+        UI.TextField {
+            id: pinPasswordField
+            UI.NoPaste {}
+            Layout.fillWidth: true
+            placeholderText: qsTr("Your password")
+            revealable: true
+            onTextChanged: pinDialog.error = ""
+            onAccepted: pinField.forceActiveFocus()
+        }
+
+        UI.TextField {
+            id: pinField
+            UI.NoPaste {}
+            Layout.fillWidth: true
+            Layout.topMargin: 6
+            placeholderText: qsTr("New PIN")
+            revealable: true
+            inputMethodHints: Qt.ImhDigitsOnly
+            validator: RegularExpressionValidator { regularExpression: /[0-9]{0,12}/ }
+            error: text.length > 0 && !Pin.valid(text)
+            onTextChanged: pinDialog.error = ""
+            onAccepted: pinConfirmField.forceActiveFocus()
+        }
+
+        UI.TextField {
+            id: pinConfirmField
+            UI.NoPaste {}
+            Layout.fillWidth: true
+            placeholderText: qsTr("Confirm the PIN")
+            revealable: true
+            inputMethodHints: Qt.ImhDigitsOnly
+            validator: RegularExpressionValidator { regularExpression: /[0-9]{0,12}/ }
+            error: text.length > 0 && text !== pinField.text
+            onAccepted: savePinButton.clicked()
+        }
+
+        UI.Label {
+            Layout.fillWidth: true
+            visible: text.length > 0
+            text: pinDialog.error.length > 0 ? pinDialog.error : pinDialog.problem
+            size: 12
+            color: UI.Style.danger
+            wrapMode: Text.Wrap
+            elide: Text.ElideNone
+        }
+
+        buttons: [
+            UI.Button {
+                id: savePinButton
+                text: qsTr("Save")
+                kind: "primary"
+                busy: Pin.busy
+                enabled: pinDialog.ready && !Pin.busy
+                onClicked: {
+                    if (!enabled) {
+                        return;
+                    }
+                    pinDialog.error = "";
+                    Pin.save(pinPasswordField.text, pinField.text);
+                }
+            },
+            UI.Button {
+                text: qsTr("Cancel")
+                enabled: !Pin.busy
+                onClicked: pinDialog.close()
             }
         ]
     }
@@ -581,24 +727,21 @@ PageScroll {
 
         property string error
         readonly property string problem: {
-            if (newField.text.length > 0 && newField.text.length < 8) {
-                return "Use at least 8 characters.";
-            }
             if (confirmField.text.length > 0 && confirmField.text !== newField.text) {
-                return "The two new passwords don't match.";
+                return qsTr("The two new passwords don't match.");
             }
             if (newField.text.length > 0 && newField.text === currentField.text) {
-                return "The new password is the same as the current one.";
+                return qsTr("The new password is the same as the current one.");
             }
             return "";
         }
-        readonly property bool ready: currentField.text.length > 0 && newField.text.length >= 8
+        readonly property bool ready: currentField.text.length > 0 && newField.text.length > 0
             && confirmField.text === newField.text && problem.length === 0
 
-        title: "Change your password"
+        title: qsTr("Change your password")
         text: Protection.status.encryption === "on"
-            ? "Type your current password, then the new one twice. The disk itself still unlocks with the password it was given when Wild OS was installed."
-            : "Type your current password, then the new one twice."
+            ? qsTr("Type your current password, then the new one twice. The disk itself still unlocks with the password it was given when Wild OS was installed.")
+            : qsTr("Type your current password, then the new one twice.")
         onAboutToShow: {
             error = "";
             currentField.text = "";
@@ -612,7 +755,7 @@ PageScroll {
             id: currentField
             UI.NoPaste {}
             Layout.fillWidth: true
-            placeholderText: "Current password"
+            placeholderText: qsTr("Current password")
             revealable: true
             onTextChanged: passwordDialog.error = ""
             onAccepted: newField.forceActiveFocus()
@@ -623,9 +766,8 @@ PageScroll {
             UI.NoPaste {}
             Layout.fillWidth: true
             Layout.topMargin: 6
-            placeholderText: "New password"
+            placeholderText: qsTr("New password")
             revealable: true
-            error: text.length > 0 && text.length < 8
             onTextChanged: passwordDialog.error = ""
             onAccepted: confirmField.forceActiveFocus()
         }
@@ -641,7 +783,7 @@ PageScroll {
             id: confirmField
             UI.NoPaste {}
             Layout.fillWidth: true
-            placeholderText: "Confirm the new password"
+            placeholderText: qsTr("Confirm the new password")
             revealable: true
             error: text.length > 0 && text !== newField.text
             onAccepted: hintField.forceActiveFocus()
@@ -651,7 +793,7 @@ PageScroll {
             id: hintField
             Layout.fillWidth: true
             Layout.topMargin: 6
-            placeholderText: "Password hint (optional)"
+            placeholderText: qsTr("Password hint (optional)")
             onAccepted: changeButton.clicked()
         }
 
@@ -668,7 +810,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: changeButton
-                text: "Change"
+                text: qsTr("Change")
                 kind: "primary"
                 busy: Users.busy === "password"
                 enabled: passwordDialog.ready && Users.busy !== "password"
@@ -681,7 +823,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 enabled: Users.busy !== "password"
                 onClicked: passwordDialog.close()
             }

@@ -28,7 +28,9 @@ UI.AppWindow {
 
     // From main.cpp: Calendar's own launcher, or a reminder's Open.
     function showCalendar(key, day) {
+        sectionFromOutside = true;
         section = "calendar";
+        sectionFromOutside = false;
         if (key && key.length > 0) {
             Qt.callLater(() => calendarLoader.item.showEvent(key, day));
         }
@@ -37,7 +39,9 @@ UI.AppWindow {
     // reminder.
     function showSection(name) {
         if (["mail", "calendar", "people", "tasks"].indexOf(name) >= 0) {
+            sectionFromOutside = true;
             section = name;
+            sectionFromOutside = false;
         }
     }
     // People's and Tasks' accounts are Calendar's.
@@ -59,6 +63,7 @@ UI.AppWindow {
 
     // A mailto: link, from main.cpp.
     function compose(data) {
+        section = "mail";
         showSettings = false;
         composing = true;
         composePane.start(data || {});
@@ -144,6 +149,18 @@ UI.AppWindow {
         id: prefs
         category: "Window"
         property string readingPane: "right"
+        // The tab the person left Mail on, opened again next time unless Mail
+        // is started for something else (Calendar's launcher, a mailto: link).
+        property string section: "mail"
+    }
+    // True while a launcher or a reminder picks the tab. That isn't the
+    // person leaving Mail there: opening Calendar from its own icon mustn't
+    // make Mail's icon open Calendar from then on.
+    property bool sectionFromOutside: false
+    onSectionChanged: {
+        if (!sectionFromOutside) {
+            prefs.section = section;
+        }
     }
 
     Connections {
@@ -187,6 +204,7 @@ UI.AppWindow {
         target: Notifier
         function onOpenRequested(key) {
             const parts = key.split("\x1f");
+            window.section = "mail";
             window.showSettings = false;
             window.composing = false;
             MailEngine.openFolder(parts[0], parts[1]);
@@ -234,6 +252,11 @@ UI.AppWindow {
         sequence: "Ctrl+U"
         enabled: window.section === "mail" && (!window.composing)
         onActivated: MailEngine.setReadKeys(MailEngine.selection, false)
+    }
+    Shortcut {
+        sequence: StandardKey.Print
+        enabled: window.section === "mail" && !window.composing && !window.showSettings && readingPane.hasMessage
+        onActivated: readingPane.print()
     }
     // Only from the message list, never while typing anywhere else.
     Shortcut {
@@ -535,7 +558,7 @@ UI.AppWindow {
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: 46
-                        radius: 10
+                        radius: UI.Style.radiusPanel
                         color: UI.Style.surfaceRest
                         border.width: 1
                         border.color: UI.Style.borderSubtle
@@ -805,12 +828,16 @@ UI.AppWindow {
                             settingsPage.section = "privacy";
                             window.showSettings = true;
                         }
-                        onFolderMenu: function (accountId, fullName, name, role) {
+                        onFolderMenu: function (accountId, fullName, name, role, from) {
                             folderMenu.accountId = accountId;
                             folderMenu.fullName = fullName;
                             folderMenu.name = name;
                             folderMenu.role = role;
-                            folderMenu.popup();
+                            if (from) {
+                                folderMenu.popup(from, 16, from.height);
+                            } else {
+                                folderMenu.popup();
+                            }
                         }
                         onCrossAccount: toast.show(qsTr("Messages can only be moved within the same account."))
                     }
@@ -847,6 +874,7 @@ UI.AppWindow {
                         onSaved: function (path) {
                             toast.show(qsTr("Saved to %1").arg(path));
                         }
+                        onPrintFailed: toast.show(qsTr("The printer couldn't be reached."))
                     }
 
                     ComposePane {
@@ -956,6 +984,8 @@ UI.AppWindow {
                 { text: qsTr("Archive"), run: () => MailEngine.archiveKeys([k]) },
                 { text: qsTr("Move to"), submenu: moveEntries() },
                 { text: MailEngine.folderRole === "junk" ? qsTr("Not junk") : qsTr("Report as junk"), run: () => MailEngine.folderRole === "junk" ? MailEngine.notJunk(k) : MailEngine.reportJunk(k) },
+                { separator: true },
+                { text: qsTr("Print"), icon: "printer", shortcut: "Ctrl+P", enabled: readingPane.hasMessage, run: () => readingPane.print() },
                 { separator: true },
                 { text: qsTr("Delete"), icon: "delete", danger: true, run: () => MailEngine.removeKeys([k]) }
             ];
@@ -1252,7 +1282,7 @@ UI.AppWindow {
     UI.Dialog {
         id: shortcutsDialog
         title: qsTr("Keyboard shortcuts")
-        text: qsTr("New mail: Ctrl+N\nReply: Ctrl+R\nReply all: Ctrl+Shift+R\nForward: Ctrl+Shift+F\nSend: Ctrl+Enter\nSearch: Ctrl+E\nMark as read: Ctrl+Q\nMark as unread: Ctrl+U\nArchive: Backspace\nDelete: Delete\nCheck for new mail: F5")
+        text: qsTr("New mail: Ctrl+N\nReply: Ctrl+R\nReply all: Ctrl+Shift+R\nForward: Ctrl+Shift+F\nSend: Ctrl+Enter\nSearch: Ctrl+E\nMark as read: Ctrl+Q\nMark as unread: Ctrl+U\nArchive: Backspace\nDelete: Delete\nCheck for new mail: F5\nPrint: Ctrl+P\nMove an account up or down: Alt+Up, Alt+Down")
         buttons: [
             UI.Button {
                 kind: "primary"
@@ -1272,8 +1302,9 @@ UI.AppWindow {
     }
 
     Component.onCompleted: {
+        showSection(prefs.section);
         if (MailEngine.hasAccounts) {
-            MailEngine.openFolder("", "inbox");
+            MailEngine.openLastFolder();
         }
     }
 }

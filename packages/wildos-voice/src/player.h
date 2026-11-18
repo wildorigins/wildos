@@ -29,6 +29,7 @@ public:
 
     // Loads a recording, paused at its start; an empty path unloads.
     Q_INVOKABLE void load(const QString &path);
+    Q_INVOKABLE void play();
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void pause();
     Q_INVOKABLE void seek(double ms);
@@ -39,6 +40,8 @@ Q_SIGNALS:
     void playingChanged();
     void positionChanged();
     void durationChanged();
+    // A jump in position, in milliseconds (MPRIS Seeked).
+    void seeked(double position);
     void failed(const QString &message);
 
 private:

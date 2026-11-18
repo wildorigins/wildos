@@ -17,7 +17,8 @@ Item {
     signal allowed(string camera, string microphone)
     signal denied()
 
-    readonly property string title: appName + " wants your " + (cameras.length > 0 && microphones.length > 0 ? "camera and microphone" : cameras.length > 0 ? "camera" : "microphone")
+    readonly property string title: cameras.length > 0 && microphones.length > 0 ? qsTr("%1 wants your camera and microphone").arg(appName)
+        : cameras.length > 0 ? qsTr("%1 wants your camera").arg(appName) : qsTr("%1 wants your microphone").arg(appName)
 
     width: 500
     implicitHeight: column.implicitHeight
@@ -84,7 +85,7 @@ Item {
                     }
 
                     UI.Label {
-                        text: "Running in Windows mode"
+                        text: qsTr("Running in Windows mode")
                         size: 12
                         color: UI.Style.inkMuted
                     }
@@ -93,7 +94,7 @@ Item {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Windows apps use the same camera, microphone and speakers as the rest of Wild OS. The light by your camera and the tray icon show when they're in use."
+                text: qsTr("Windows apps use the same camera, microphone and speakers as the rest of Wild OS. The light by your camera and the tray icon show when they're in use.")
                 size: 13
                 color: UI.Style.inkAlpha(0.82, 0.76)
                 wrapMode: Text.Wrap
@@ -111,13 +112,13 @@ Item {
                     UI.ListRow {
                         visible: card.cameras.length > 0
                         minHeight: 52
-                        title: "Camera"
+                        title: qsTr("Camera")
                         description: camera.currentText
 
                         UI.ComboBox {
                             id: camera
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "Camera"
+                            Accessible.name: qsTr("Camera")
                             model: card.cameras
                             currentIndex: 0
                         }
@@ -126,13 +127,13 @@ Item {
                     UI.ListRow {
                         visible: card.microphones.length > 0
                         minHeight: 52
-                        title: "Microphone"
+                        title: qsTr("Microphone")
                         description: microphone.currentText
 
                         UI.ComboBox {
                             id: microphone
                             anchors.verticalCenter: parent.verticalCenter
-                            Accessible.name: "Microphone"
+                            Accessible.name: qsTr("Microphone")
                             model: card.microphones
                             currentIndex: 0
                         }
@@ -143,7 +144,7 @@ Item {
             UI.Label {
                 Layout.fillWidth: true
                 visible: card.cameras.length === 0 && card.microphones.length === 0
-                text: "This PC has no camera or microphone connected, so there's nothing to pass through."
+                text: qsTr("This PC has no camera or microphone connected, so there's nothing to pass through.")
                 size: 13
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
@@ -172,14 +173,14 @@ Item {
                 spacing: 10
 
                 UI.Button {
-                    text: "Don't allow"
+                    text: qsTr("Don't allow")
                     onClicked: card.denied()
                 }
 
                 UI.Button {
                     id: allowButton
                     kind: "primary"
-                    text: "Allow while open"
+                    text: qsTr("Allow while open")
                     enabled: card.cameras.length > 0 || card.microphones.length > 0
                     onClicked: card.allowed(card.cameras.length > 0 ? camera.currentValue : "", card.microphones.length > 0 ? microphone.currentValue : "")
                 }

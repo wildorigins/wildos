@@ -6,7 +6,6 @@ import WildOS.UI as UI
 // How strong the password being chosen looks: three bars and a line of
 // text that says the same thing, so the colour is never the only signal.
 // Advice only. No button waits on it and a weak password can still be used.
-// It shows once the password is long enough to be accepted.
 RowLayout {
     id: line
 
@@ -14,7 +13,7 @@ RowLayout {
     property string oldPassword
     property var names: []
 
-    readonly property var result: password.length >= 8 ? PasswordCheck.check(password, oldPassword, names) : ({})
+    readonly property var result: password.length > 0 ? PasswordCheck.check(password, oldPassword, names) : ({})
     readonly property string level: result.level || ""
     readonly property int bars: level === "strong" ? 3 : level === "fair" ? 2 : 1
     readonly property color tone: level === "strong" ? UI.Style.success : level === "fair" ? UI.Style.warning : UI.Style.danger
@@ -42,9 +41,9 @@ RowLayout {
 
     UI.Label {
         Layout.fillWidth: true
-        text: line.level === "strong" ? "Strong password"
-            : line.level === "fair" ? "Fair password"
-            : "Weak password, " + line.result.reason + "."
+        text: line.level === "strong" ? qsTr("Strong password")
+            : line.level === "fair" ? qsTr("Fair password")
+            : qsTr("Weak password, %1.").arg(line.result.reason)
         size: 12
         color: UI.Style.inkMuted
         wrapMode: Text.Wrap

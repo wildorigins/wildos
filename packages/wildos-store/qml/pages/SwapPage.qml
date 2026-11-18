@@ -34,14 +34,14 @@ PageFlick {
     }
 
     PageTitle {
-        title: "Swap from Windows"
-        subtitle: "Free apps that do what your Windows apps did. Most open the same files, so nothing gets left behind."
+        title: qsTr("Swap from Windows")
+        subtitle: qsTr("Free apps that do what your Windows apps did. Most open the same files, so nothing gets left behind.")
 
         PillButton {
             big: true
             filled: true
             enabled: page.essentialsLeft > 0 && !page.essentialsBusy
-            text: page.essentialsBusy ? "Installing the essentials" : page.essentialsLeft === 0 && page.essentials.length > 0 ? "Essentials installed" : "Install the essentials"
+            text: page.essentialsBusy ? qsTr("Installing the essentials") : page.essentialsLeft === 0 && page.essentials.length > 0 ? qsTr("Essentials installed") : qsTr("Install the essentials")
             onClicked: Catalog.installEssentials()
         }
     }

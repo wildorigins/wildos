@@ -6,18 +6,23 @@ import QtQuick.Window
 import org.kde.taskmanager as TaskManager
 import WildOS.UI as UI
 import org.wildos.overlays
+import org.wildos.shell as WildOS
 import WildOS.Clipboard
 
-// The clipboard and emoji panel (ClipboardEmoji.dc): 380 wide, radius 16,
-// glass, 12px inside, with Emoji, Symbols and Clipboard as pill tabs. It
-// opens in the bottom right corner above the taskbar, where the flyouts
-// open, and closes on Escape, on the same shortcut again, or when another
-// window is clicked.
+// The clipboard and emoji panel (ClipboardEmoji.dc): 380 wide, the flyouts'
+// glass and 22px corners, 12px inside, with Emoji, Symbols and Clipboard as
+// pill tabs. It opens in the bottom right corner above the taskbar, where
+// the flyouts open, and closes on Escape, on the same shortcut again, or
+// when another window is clicked.
 Window {
     id: panel
 
     readonly property bool clipboardTab: PanelApp.tab === "clipboard"
     property bool wasActive: false
+    // The panel is out of the way for the moment an emoji takes to go into
+    // the app, or has just come back. KWin gives the keyboard to the app
+    // only once the panel is off the screen, whatever the panel asks for.
+    property bool stepping: false
 
     // The app in front, for "· Files" under what it copied and to paste
     // into terminals with Ctrl+Shift+V.
@@ -35,7 +40,7 @@ Window {
     height: clipboardTab ? 560 : 460
     color: "transparent"
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | (placement.wayland ? 0 : Qt.Tool)
-    title: "Clipboard and emoji"
+    title: qsTr("Clipboard and emoji")
     visible: false
 
     TaskManager.TasksModel {
@@ -48,17 +53,20 @@ Window {
         window: panel
         edges: OverlayPlacement.Bottom | OverlayPlacement.Right
         marginRight: 16
-        // 14px above the taskbar pills, as the flyouts sit.
-        marginBottom: 90
+        // 14px above the taskbar, as the flyouts sit: the docked bar is
+        // 52px tall, the floating pills 62px and 14px off the screen edge.
+        fromScreenEdge: true
+        marginBottom: (WildOS.TaskbarStyle.floating ? 76 : 52) + 14
         layer: OverlayPlacement.Overlay
         keyboard: OverlayPlacement.OnDemand
-        slideFrom: UI.Style.reducedMotion ? OverlayPlacement.NoEdge : OverlayPlacement.Bottom
+        // Coming back after an emoji went in, it is simply there again.
+        slideFrom: UI.Style.reducedMotion || panel.stepping ? OverlayPlacement.NoEdge : OverlayPlacement.Bottom
         scope: "wildos-clipboard"
     }
 
     UI.WindowFrame {
         window: panel
-        radius: 16
+        radius: UI.Style.radius2xl
         shadowColor: UI.Style.shadowFlyout
     }
 
@@ -84,10 +92,33 @@ Window {
         }
     }
 
+    Connections {
+        target: PanelApp
+        function onTypingChanged() {
+            if (PanelApp.typing) {
+                panel.stepping = true;
+                panel.visible = false;
+            } else if (PanelApp.shown) {
+                // Back where it was, search and place in the list included.
+                panel.wasActive = false;
+                panel.visible = true;
+                panel.requestActivate();
+                settled.restart();
+            } else {
+                panel.stepping = false;
+            }
+        }
+    }
+    Timer {
+        id: settled
+        interval: 400
+        onTriggered: panel.stepping = false
+    }
+
     Rectangle {
         anchors.fill: parent
-        radius: 16
-        color: UI.Style.glass(23, 25, 29, 0.84, 0.88)
+        radius: UI.Style.radius2xl
+        color: UI.Style.glassPanel
         border.width: 1
         border.color: UI.Style.borderGlass
     }
@@ -120,7 +151,7 @@ Window {
                 spacing: 4
 
                 UI.SegmentButton {
-                    text: "Emoji"
+                    text: qsTr("Emoji")
                     checked: PanelApp.tab === "emoji"
                     onClicked: {
                         PanelApp.tab = "emoji";
@@ -128,7 +159,7 @@ Window {
                     }
                 }
                 UI.SegmentButton {
-                    text: "Symbols"
+                    text: qsTr("Symbols")
                     checked: PanelApp.tab === "symbols"
                     onClicked: {
                         PanelApp.tab = "symbols";
@@ -136,7 +167,7 @@ Window {
                     }
                 }
                 UI.SegmentButton {
-                    text: "Clipboard"
+                    text: qsTr("Clipboard")
                     checked: PanelApp.tab === "clipboard"
                     onClicked: {
                         PanelApp.tab = "clipboard";
@@ -154,22 +185,39 @@ Window {
                 terminal: panel.activeIsTerminal
             }
 
-            GridPage {
+            // The emoji and symbol pages read the whole emoji list, so each
+            // is made the first time its tab opens and then kept. The
+            // clipboard page stays loaded: its history records all session.
+            Loader {
                 id: emojiPage
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 visible: PanelApp.tab === "emoji"
-                emoji: true
-                terminal: panel.activeIsTerminal
+                active: visible || status === Loader.Ready
+                sourceComponent: GridPage {
+                    emoji: true
+                    terminal: panel.activeIsTerminal
+                }
+                function focusSearch(): void {
+                    if (item)
+                        item.focusSearch();
+                }
             }
 
-            GridPage {
+            Loader {
                 id: symbolsPage
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 visible: PanelApp.tab === "symbols"
-                emoji: false
-                terminal: panel.activeIsTerminal
+                active: visible || status === Loader.Ready
+                sourceComponent: GridPage {
+                    emoji: false
+                    terminal: panel.activeIsTerminal
+                }
+                function focusSearch(): void {
+                    if (item)
+                        item.focusSearch();
+                }
             }
         }
     }

@@ -11,7 +11,7 @@
         </entry>
         <entry name="favorites" type="StringList">
             <label>Apps pinned the first time this Start menu runs. Afterwards the pins live in the activity manager, so changing this has no effect once favoritesPortedToKAstats is true. Apps that are not installed are skipped.</label>
-            <default>org.wildos.mail.desktop,org.wildos.files.desktop,org.wildos.calendar.desktop,libreoffice-writer.desktop,libreoffice-calc.desktop,brave-browser.desktop,mullvad-browser.desktop,org.wildos.store.desktop,org.wildos.settings.desktop,org.wildos.terminal.desktop,org.kde.kcalc.desktop,org.wildos.notes.desktop,org.wildos.music.desktop,org.wildos.videos.desktop,org.kde.okular.desktop,org.kde.gwenview.desktop,org.keepassxc.KeePassXC.desktop</default>
+            <default>org.wildos.mail.desktop,org.wildos.files.desktop,org.wildos.calendar.desktop,libreoffice-writer.desktop,libreoffice-calc.desktop,libreoffice-impress.desktop,brave-browser.desktop,mullvad-browser.desktop,org.wildos.store.desktop,org.wildos.settings.desktop,org.wildos.terminal.desktop,org.kde.kcalc.desktop,org.wildos.notes.desktop,org.wildos.music.desktop,org.wildos.videos.desktop,org.kde.okular.desktop,org.kde.gwenview.desktop,org.keepassxc.KeePassXC.desktop,org.wildos.report.desktop</default>
         </entry>
         <entry name="pinsOffered" type="StringList">
             <label>Default pins this account has already been given. A default added in an update is pinned once, at the end; one the user later unpins stays unpinned.</label>

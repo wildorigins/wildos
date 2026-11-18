@@ -152,10 +152,10 @@ FocusScope {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: flyout.security.level === "attention" ? "Action needed"
-                            : flyout.security.level === "checking" ? "Checking your protection"
+                        text: flyout.security.level === "attention" ? qsTr("Action needed")
+                            : flyout.security.level === "checking" ? qsTr("Checking your protection")
                             : flyout.security.level === "unchecked" ? flyout.security.uncheckedTitle
-                            : "Your computer is protected"
+                            : qsTr("Your computer is protected")
                         size: 18
                         font.weight: UI.Style.weightSemiBold
                         Accessible.role: Accessible.Heading
@@ -166,22 +166,22 @@ FocusScope {
                         text: {
                             const s = flyout.security;
                             if (s.level === "checking") {
-                                return "This only takes a moment.";
+                                return qsTr("This only takes a moment.");
                             }
                             // "Checked just now" would read as an update check
                             // that never happened.
                             if (s.level === "unchecked") {
-                                return "Check now to see whether any security updates are waiting.";
+                                return qsTr("Check now to see whether any security updates are waiting.");
                             }
                             const count = s.warnings.length;
                             // 32-bit apps on is a choice, not a problem, but
                             // the summary should not read as if it weren't there.
-                            const lead = count === 0 && s.status.compat32 === "on" ? "32-bit apps are on, by your choice."
-                                : count === 0 ? "Nothing needs your attention."
-                                : count === 1 ? "1 thing needs your attention."
-                                : count + " things need your attention.";
+                            const lead = count === 0 && s.status.compat32 === "on" ? qsTr("32-bit apps are on, by your choice.")
+                                : count === 0 ? qsTr("Nothing needs your attention.")
+                                : count === 1 ? qsTr("1 thing needs your attention.")
+                                : qsTr("%1 things need your attention.").arg(count);
                             // On its own line, so "just now" never wraps alone.
-                            return lead + "\n" + s.checkedText() + ".";
+                            return qsTr("%1\n%2.").arg(lead).arg(s.checkedText());
                         }
                         color: UI.Style.inkStatus
                         lineHeight: 1.3
@@ -226,7 +226,7 @@ FocusScope {
                                     visible: area.modelData.ignorable === true
                                     size: "small"
                                     kind: "text"
-                                    text: "Ignore"
+                                    text: qsTr("Ignore")
                                     focusPolicy: Qt.NoFocus
                                     onClicked: flyout.open("ignore:" + area.modelData.id)
                                 }
@@ -280,7 +280,7 @@ FocusScope {
             // The link's text lines up with the content edge above it.
             x: Metrics.pad - 4
             anchors.verticalCenter: parent.verticalCenter
-            text: "Open Privacy and security"
+            text: qsTr("Open Privacy and security")
             onClicked: flyout.security.openPrivacy()
         }
     }

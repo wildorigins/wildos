@@ -9,6 +9,7 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <QSettings>
 #include <QUrl>
 #include <QUrlQuery>
 
@@ -264,22 +265,22 @@ QObject *showSplash(QQmlApplicationEngine *engine, bool calendar)
     const QString icons = QStringLiteral("file:///usr/share/icons/hicolor/scalable/apps/");
     QVariantMap properties = calendar
         ? QVariantMap{
-              {QStringLiteral("appName"), QStringLiteral("Calendar")},
+              {QStringLiteral("appName"), QCoreApplication::translate("Splash", "Calendar")},
               {QStringLiteral("iconSource"), QUrl(icons + QStringLiteral("org.wildos.calendar.svg"))},
               {QStringLiteral("accent"), QColor(QStringLiteral("#ff8a6e"))},
               {QStringLiteral("accentDeep"), QColor(QStringLiteral("#d9362b"))},
-              {QStringLiteral("status"), QStringLiteral("Opening your calendar")},
-              {QStringLiteral("noteStart"), QStringLiteral("Google, iCloud and CalDAV calendars")},
-              {QStringLiteral("noteEnd"), QStringLiteral("Reminders from sign-in")},
+              {QStringLiteral("status"), QCoreApplication::translate("Splash", "Opening your calendar")},
+              {QStringLiteral("noteStart"), QCoreApplication::translate("Splash", "Google, iCloud and CalDAV calendars")},
+              {QStringLiteral("noteEnd"), QCoreApplication::translate("Splash", "Reminders from sign-in")},
           }
         : QVariantMap{
-              {QStringLiteral("appName"), QStringLiteral("Mail")},
+              {QStringLiteral("appName"), QCoreApplication::translate("Splash", "Mail")},
               {QStringLiteral("iconSource"), QUrl(icons + QStringLiteral("org.wildos.mail.svg"))},
               {QStringLiteral("accent"), QColor(QStringLiteral("#3fb6ff"))},
               {QStringLiteral("accentDeep"), QColor(QStringLiteral("#0a63d1"))},
-              {QStringLiteral("status"), QStringLiteral("Opening your inbox")},
-              {QStringLiteral("noteStart"), QStringLiteral("Gmail, iCloud and other IMAP accounts")},
-              {QStringLiteral("noteEnd"), QStringLiteral("Trackers blocked")},
+              {QStringLiteral("status"), QCoreApplication::translate("Splash", "Opening your inbox")},
+              {QStringLiteral("noteStart"), QCoreApplication::translate("Splash", "Gmail, iCloud and other IMAP accounts")},
+              {QStringLiteral("noteEnd"), QCoreApplication::translate("Splash", "Trackers blocked")},
           };
     properties.insert(QStringLiteral("showDelay"), 0);
     properties.insert(QStringLiteral("minimumTime"), 900);
@@ -382,7 +383,11 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
     // As Office apps do, Mail opens on its splash (board 12.5) and the window
     // follows: it is built hidden behind the splash and shown as it fades.
-    QObject *splash = showSplash(&engine, calendar);
+    // Mail opens on the tab it was closed on (Main.qml), so when nothing
+    // asks for another the splash is that tab's too.
+    const bool lastWasCalendar = section.isEmpty() && arg.isEmpty()
+        && QSettings().value(QStringLiteral("Window/section")).toString() == QLatin1String("calendar");
+    QObject *splash = showSplash(&engine, calendar || lastWasCalendar);
     if (splash) {
         engine.setInitialProperties({{QStringLiteral("visible"), false}});
     }

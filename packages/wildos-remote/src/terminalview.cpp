@@ -1,12 +1,14 @@
 #include "terminalview.h"
+#include "settings.h"
 #include "snippets.h"
+#include "termlinks.h"
 
 #include <QApplication>
+#include <algorithm>
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QMouseEvent>
 #include <QDir>
-#include <QFileInfo>
-#include <QFontDatabase>
 #include <QKeyEvent>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
@@ -21,24 +23,6 @@ const QString scrollBarStyle = QStringLiteral(
     "QScrollBar::handle:vertical:hover { background: rgba(255,255,255,0.40); margin: 0px 1px; }"
     "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; border: none; background: none; }"
     "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }");
-
-QString schemePath()
-{
-    const QString installed = QStringLiteral(WILDOS_REMOTE_DATADIR "/Remote.colorscheme");
-    return QFileInfo::exists(installed) ? installed : QStringLiteral(WILDOS_REMOTE_SOURCEDIR "/Remote.colorscheme");
-}
-
-QFont terminalFont()
-{
-    // The boards' JetBrains Mono, at the size Terminal opens with.
-    QFont font(QStringLiteral("JetBrains Mono"));
-    if (!QFontDatabase::families().contains(font.family())) {
-        font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    }
-    font.setPointSizeF(10.5);
-    font.setStyleHint(QFont::Monospace);
-    return font;
-}
 }
 
 TerminalView::TerminalView(const QString &program, const QStringList &args, const QString &historyKey, QProcessEnvironment env, QWidget *parent)
@@ -63,10 +47,6 @@ TerminalView::TerminalView(const QString &program, const QStringList &args, cons
     setMargin(8);
     // The output stays when ssh ends, so the reason can be read.
     setAutoClose(false);
-    setColorScheme(schemePath());
-    setTerminalFont(terminalFont());
-    setKeyboardCursorShape(KeyboardCursorShape::BlockCursor);
-    setHistorySize(10000);
     if (QScrollBar *bar = findChild<QScrollBar *>()) {
         bar->setAttribute(Qt::WA_TranslucentBackground);
         bar->setAutoFillBackground(false);
@@ -76,7 +56,18 @@ TerminalView::TerminalView(const QString &program, const QStringList &args, cons
     m_display = display();
     if (m_display) {
         m_display->installEventFilter(this);
+        m_links = new TermLinks(this, m_display);
+        connect(m_links, &TermLinks::activated, this, [](const QUrl &url) {
+            QDesktopServices::openUrl(url);
+        });
     }
+    // The look and the copy and paste habits are Terminal's settings, and
+    // follow them as they change.
+    applySettings();
+    connect(RemoteSettings::instance(), &RemoteSettings::terminalChanged, this, &TerminalView::applySettings);
+    connect(this, &QTermWidget::copyAvailable, this, [this](bool) {
+        m_copied = false;
+    });
     connect(this, &QTermWidget::termGetFocus, this, &TerminalView::focused);
     connect(this, &QTermWidget::receivedData, this, &TerminalView::received);
     connect(this, &QTermWidget::finished, this, [this] {
@@ -84,10 +75,39 @@ TerminalView::TerminalView(const QString &program, const QStringList &args, cons
         dismiss();
         Q_EMIT exitedChanged();
     });
-    connect(this, &QTermWidget::urlActivated, this, [](const QUrl &url, bool) {
-        QDesktopServices::openUrl(url);
+    // Right click opens Remote's menu (links, Copy, Paste, Clear), as in
+    // Terminal, or pastes when that is chosen there; Shift then still
+    // opens the menu.
+    setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this, &QWidget::customContextMenuRequested, this, [this](const QPoint &position) {
+        if (RemoteSettings::instance()->pasteOnRightClick() && !(QApplication::keyboardModifiers() & Qt::ShiftModifier)) {
+            paste();
+        } else {
+            Q_EMIT contextMenuWanted(position);
+        }
     });
     startShellProgram();
+}
+
+void TerminalView::applySettings()
+{
+    const RemoteSettings *settings = RemoteSettings::instance();
+    setColorScheme(settings->schemePath());
+    QFont font = settings->font();
+    if (m_zoom != 0) {
+        font.setPointSizeF(std::max(4.0, font.pointSizeF() + m_zoom));
+    }
+    setTerminalFont(font);
+    const QString shape = settings->cursorShape();
+    setKeyboardCursorShape(shape == QLatin1String("block") ? KeyboardCursorShape::BlockCursor
+                           : shape == QLatin1String("underline") ? KeyboardCursorShape::UnderlineCursor
+                                                                  : KeyboardCursorShape::IBeamCursor);
+    setBlinkingCursor(settings->cursorBlink());
+    setBoldIntense(settings->boldBright());
+    setHistorySize(settings->scrollback());
+    if (m_links) {
+        m_links->setColour(settings->foreground());
+    }
 }
 
 QWidget *TerminalView::display() const
@@ -98,6 +118,11 @@ QWidget *TerminalView::display() const
         }
     }
     return nullptr;
+}
+
+QUrl TerminalView::linkAt(const QPoint &position) const
+{
+    return m_links ? m_links->linkAt(position) : QUrl();
 }
 
 QRect TerminalView::cursorRect() const
@@ -209,12 +234,31 @@ void TerminalView::copy()
     }
 }
 
+void TerminalView::zoom(int step)
+{
+    m_zoom = step == 0 ? 0 : std::clamp(m_zoom + step, -6, 30);
+    applySettings();
+}
+
 void TerminalView::paste()
 {
-    QString text = QApplication::clipboard()->text();
+    const QString text = QApplication::clipboard()->text();
     if (text.isEmpty()) {
         return;
     }
+    QString body = text;
+    while (body.endsWith(QLatin1Char('\n')) || body.endsWith(QLatin1Char('\r'))) {
+        body.chop(1);
+    }
+    if (RemoteSettings::instance()->warnMultilinePaste() && (body.contains(QLatin1Char('\n')) || body.contains(QLatin1Char('\r')))) {
+        Q_EMIT pasteNeedsConfirming(text);
+        return;
+    }
+    sendPaste(text);
+}
+
+void TerminalView::sendPaste(QString text)
+{
     text.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
     text.replace(QLatin1Char('\n'), QLatin1Char('\r'));
     bracketText(text);
@@ -229,10 +273,29 @@ bool TerminalView::eventFilter(QObject *watched, QEvent *event)
     }
     if (event->type() == QEvent::ShortcutOverride) {
         auto *key = static_cast<QKeyEvent *>(event);
-        // The window's own shortcuts (Ctrl+Shift+...) win over the emulator.
-        if ((key->modifiers() & Qt::ControlModifier) && (key->modifiers() & Qt::ShiftModifier)) {
+        // The window's own shortcuts (Ctrl+Shift+..., and Ctrl+, for
+        // settings) win over the emulator.
+        const bool settingsKey = key->modifiers() == Qt::ControlModifier && key->key() == Qt::Key_Comma;
+        if (settingsKey || ((key->modifiers() & Qt::ControlModifier) && (key->modifiers() & Qt::ShiftModifier))) {
             event->ignore();
             return true;
+        }
+        return QTermWidget::eventFilter(watched, event);
+    }
+    if (event->type() == QEvent::MouseButtonRelease) {
+        // Selecting text copies it, as in PuTTY, unless that is switched off
+        // in Terminal's settings. The widget finishes the selection in its
+        // own release handler, which runs after this filter.
+        if (static_cast<QMouseEvent *>(event)->button() == Qt::LeftButton && RemoteSettings::instance()->copyOnSelect()) {
+            QTimer::singleShot(0, this, [this] {
+                if (hasSelection()) {
+                    copy();
+                    // Already copied, so Ctrl+C stops the running command
+                    // instead of copying the selection again.
+                    m_copiedText = selectedText(true);
+                    m_copied = true;
+                }
+            });
         }
         return QTermWidget::eventFilter(watched, event);
     }
@@ -261,6 +324,39 @@ bool TerminalView::eventFilter(QObject *watched, QEvent *event)
         }
     }
 
+    // Ctrl+V pastes. Ctrl+C stops the running command: selecting already
+    // copied, and a selection left on screen must never turn the way to stop
+    // something into Copy. With Terminal's "Ctrl+C copies and Ctrl+V pastes"
+    // set, Ctrl+C copies a selection that has not been copied yet, once, as
+    // it does there, and switched off, Ctrl+V goes to the program like any
+    // other key. Ctrl+= and Ctrl+- zoom, Ctrl+0 resets.
+    if (mods == Qt::ControlModifier && !(key->modifiers() & Qt::ShiftModifier)) {
+        if (key->key() == Qt::Key_C && RemoteSettings::instance()->ctrlCopies()) {
+            const QString text = selectedText(true);
+            if (!text.isEmpty() && !(m_copied && text == m_copiedText)) {
+                QApplication::clipboard()->setText(text);
+                m_copiedText = text;
+                m_copied = true;
+                return true;
+            }
+        }
+        if (key->key() == Qt::Key_V && RemoteSettings::instance()->ctrlPastes()) {
+            paste();
+            return true;
+        }
+        if (key->key() == Qt::Key_Equal || key->key() == Qt::Key_Plus) {
+            zoom(1);
+            return true;
+        }
+        if (key->key() == Qt::Key_Minus) {
+            zoom(-1);
+            return true;
+        }
+        if (key->key() == Qt::Key_0) {
+            zoom(0);
+            return true;
+        }
+    }
     if (mods == Qt::ControlModifier && key->modifiers() & Qt::ShiftModifier) {
         if (key->key() == Qt::Key_C) {
             copy();

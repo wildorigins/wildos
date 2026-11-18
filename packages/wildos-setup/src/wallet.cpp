@@ -11,7 +11,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QLocale>
 #include <QTimer>
+#include <QTranslator>
 
 #include <pwd.h>
 #include <unistd.h>
@@ -21,8 +23,8 @@
  * person when it could not (--notice, wildos-wallet-notice.service).
  *
  * pam_kwallet opens the wallet with a key it makes from the password typed
- * at sign-in. Two sign-ins type none, and without this the first app to ask
- * for a secret gets KWallet's own password prompt:
+ * at sign-in. Three sign-ins type none, and without this the first app to
+ * ask for a secret gets KWallet's own password prompt:
  *
  * - The first session after first boot setup, which signs the new account
  *   in once. Setup's helper made the key from the password the person chose
@@ -32,6 +34,8 @@
  * - Every start of the account that signs in automatically. The system
  *   keeps that account's key (wildos-wallet-keys) and hands it to the
  *   account once per boot.
+ * - A sign-in with the PIN. The system keeps the key of an account with a
+ *   PIN too, and hands it over once after each sign-in with the right PIN.
  *
  * A wallet already open (the password was typed after all) is left alone.
  *
@@ -40,7 +44,8 @@
  *
  * - An account that signs in automatically with no key kept: it turned
  *   automatic sign-in on before Wild OS kept keys, and nobody would guess
- *   that turning it off and on again fixes it.
+ *   that turning it off and on again fixes it. The same for a PIN saved
+ *   before the sign-in screen took PINs.
  * - A wallet still closed after the desktop started. Closed alone proves
  *   little, so the notice says why only when it knows:
  *   - kwalletd was started by pam_kwallet, so it was handed the key made
@@ -146,8 +151,9 @@ int openAtSignIn()
     const bool firstSession = QFileInfo::exists(dir + QStringLiteral("/kdewallet.salt")) && !QFileInfo::exists(dir + QStringLiteral("/kdewallet.kwl"));
     const struct passwd *pw = ::getpwuid(::getuid());
     const bool automatic = pw && WalletKey::autoLoginUser() == QString::fromUtf8(pw->pw_name);
+    const bool pin = pw && WalletKey::hasPin(pw->pw_name);
     QFile::remove(needsKeyMarker());
-    if (!firstSession && !automatic) {
+    if (!firstSession && !automatic && !pin) {
         return 0;
     }
     // Set only when a password was typed: pam_kwallet has started kwalletd
@@ -168,14 +174,22 @@ int openAtSignIn()
     if (firstSession) {
         key = systemKey(QStringLiteral("org.wildos.Setup1"), QStringLiteral("/org/wildos/Setup1"), QStringLiteral("TakeWalletKey"));
     }
-    if (key.isEmpty() && automatic) {
+    if (key.isEmpty() && (automatic || pin)) {
         QString error;
         key = systemKey(QStringLiteral("org.wildos.WalletKeys1"), QStringLiteral("/org/wildos/WalletKeys1"), QStringLiteral("Key"), &error);
         // No key kept is expected on a computer that turned automatic
-        // sign-in on before keys were kept; the notice offers the fix.
+        // sign-in on before keys were kept, or saved a PIN before the
+        // sign-in screen took PINs; the notice offers the fix.
         if (error == QLatin1String("org.wildos.WalletKeys1.Error.NoKey")) {
             QFile marker(needsKeyMarker());
-            marker.open(QIODevice::WriteOnly);
+            if (marker.open(QIODevice::WriteOnly)) {
+                marker.write(automatic ? "automatic\n" : "pin\n");
+            }
+            return 0;
+        }
+        // An account with a PIN that signed in some other way without its
+        // password (a fingerprint): the key stays where it is.
+        if (!automatic && error == QLatin1String("org.wildos.WalletKeys1.Error.NotAutoSignIn")) {
             return 0;
         }
     }
@@ -281,11 +295,17 @@ int notice()
         }
     }
 
-    enum class Reason { NeedsKey, NoPassword, OtherPassword, NoKey, Fingerprint };
+    enum class Reason { NeedsKey, NeedsKeyPin, NoPassword, OtherPassword, NoKey, Fingerprint, NoPasswordTyped };
     Reason reason = Reason::NeedsKey;
-    if (noPasswordTyped) {
-        reason = Reason::Fingerprint;
-    } else if (!needsKey) {
+    if (needsKey) {
+        QFile marker(needsKeyMarker());
+        if (marker.open(QIODevice::ReadOnly) && marker.readAll().trimmed() == "pin") {
+            reason = Reason::NeedsKeyPin;
+        }
+    } else if (noPasswordTyped) {
+        // With a PIN there is no telling which of the two signed in.
+        reason = pw && WalletKey::hasPin(pw->pw_name) ? Reason::NoPasswordTyped : Reason::Fingerprint;
+    } else {
         const QString wallet = walletName(session);
         reason = openWithoutPassword(session, wallet) ? Reason::NoPassword : startedByPam(session) ? Reason::OtherPassword : Reason::NoKey;
     }
@@ -296,36 +316,50 @@ int notice()
     const char *why = "";
     switch (reason) {
     case Reason::NeedsKey:
-        summary = QStringLiteral("Saved passwords need your password");
-        body = QStringLiteral("You sign in automatically, so your saved passwords can't open by themselves yet. Enter your password once and they will. "
+        summary = QCoreApplication::translate("Wallet", "Saved passwords need your password");
+        body = QCoreApplication::translate("Wallet", "You sign in automatically, so your saved passwords can't open by themselves yet. Enter your password once and they will. "
                               "Until then, apps may ask for it.");
-        button = QStringLiteral("Enter password");
+        button = QCoreApplication::translate("Wallet", "Enter password");
         why = "no key kept";
         break;
+    case Reason::NeedsKeyPin:
+        summary = QCoreApplication::translate("Wallet", "Saved passwords need your password");
+        body = QCoreApplication::translate("Wallet", "You signed in with your PIN, and your saved passwords can't open with it yet. Enter your password once and they will. "
+                              "Until then, apps may ask for it.");
+        button = QCoreApplication::translate("Wallet", "Enter password");
+        why = "no key kept for the PIN";
+        break;
+    case Reason::NoPasswordTyped:
+        summary = QCoreApplication::translate("Wallet", "Saved passwords are locked");
+        body = QCoreApplication::translate("Wallet", "They didn't open when you signed in. Enter your password once and they stay open until you sign out. "
+                              "Until then, apps may ask for it.");
+        button = QCoreApplication::translate("Wallet", "Enter password");
+        why = "signed in without a password";
+        break;
     case Reason::NoPassword:
-        summary = QStringLiteral("Saved passwords aren't protected");
-        body = QStringLiteral("They were set up without a password, so they don't open with your account. Protect them with your account password and "
+        summary = QCoreApplication::translate("Wallet", "Saved passwords aren't protected");
+        body = QCoreApplication::translate("Wallet", "They were set up without a password, so they don't open with your account. Protect them with your account password and "
                               "they open when you sign in.");
-        button = QStringLiteral("Protect them");
+        button = QCoreApplication::translate("Wallet", "Protect them");
         why = "wallet has no password";
         break;
     case Reason::OtherPassword:
-        summary = QStringLiteral("Saved passwords didn't open");
-        body = QStringLiteral("They use a different password from your account, so apps may ask for it. Move them to your account password to fix it.");
-        button = QStringLiteral("Fix it");
+        summary = QCoreApplication::translate("Wallet", "Saved passwords didn't open");
+        body = QCoreApplication::translate("Wallet", "They use a different password from your account, so apps may ask for it. Move them to your account password to fix it.");
+        button = QCoreApplication::translate("Wallet", "Fix it");
         why = "wallet password differs";
         break;
     case Reason::Fingerprint:
-        summary = QStringLiteral("Saved passwords are locked");
-        body = QStringLiteral("Signing in with your fingerprint doesn't open them. Enter your password once and they stay open until you sign out. "
+        summary = QCoreApplication::translate("Wallet", "Saved passwords are locked");
+        body = QCoreApplication::translate("Wallet", "Signing in with your fingerprint doesn't open them. Enter your password once and they stay open until you sign out. "
                               "Until then, apps may ask for it.");
-        button = QStringLiteral("Enter password");
+        button = QCoreApplication::translate("Wallet", "Enter password");
         why = "signed in without a password";
         break;
     case Reason::NoKey:
-        summary = QStringLiteral("Saved passwords didn't open");
-        body = QStringLiteral("They didn't open by themselves this time, so apps may ask for your password. Enter it once to open them.");
-        button = QStringLiteral("Enter password");
+        summary = QCoreApplication::translate("Wallet", "Saved passwords didn't open");
+        body = QCoreApplication::translate("Wallet", "They didn't open by themselves this time, so apps may ask for your password. Enter it once to open them.");
+        button = QCoreApplication::translate("Wallet", "Enter password");
         why = "kwalletd had no key";
         break;
     }
@@ -336,7 +370,7 @@ int notice()
     // popup, and the button would go with it. Once per boot at most.
     const QVariantMap hints = {{QStringLiteral("desktop-entry"), QStringLiteral("org.wildos.settings")},
                                {QStringLiteral("urgency"), QVariant::fromValue<uchar>(2)}};
-    notify << QStringLiteral("Settings") << uint(0) << QStringLiteral("dialog-password") << summary << body
+    notify << QCoreApplication::translate("Wallet", "Settings") << uint(0) << QStringLiteral("dialog-password") << summary << body
            << QStringList{QStringLiteral("password"), button} << hints << int(0);
 
     const auto pause = [](int seconds) {
@@ -419,6 +453,12 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("wildos-setup-wallet"));
+    // No QML here, so WildOS.UI never loads the translations; the notice
+    // loads its own, for the display language chosen in Settings.
+    QTranslator translator;
+    if (translator.load(QLocale(), QStringLiteral("wildos-setup"), QStringLiteral("_"), QStringLiteral("/usr/share/wildos/translations"))) {
+        app.installTranslator(&translator);
+    }
     if (liveSession()) {
         return 0;
     }

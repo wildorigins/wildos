@@ -41,7 +41,7 @@ Item {
         Text {
             id: dateLabel
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Qt.locale("en_GB").toString(clock.now, clock.dateFormat)
+            text: Qt.locale(qsTr("en_GB", "locale for day and month names")).toString(clock.now, clock.dateFormat)
             font.family: UI.Style.fontFamily
             font.letterSpacing: UI.Style.tracking(UI.Style.px(22))
             font.pixelSize: UI.Style.px(22)

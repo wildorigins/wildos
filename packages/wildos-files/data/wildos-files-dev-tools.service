@@ -1,0 +1,9 @@
+[Unit]
+Description=Remove the Qt developer packages an earlier Files update brought in
+ConditionPathExists=!/var/lib/wildos/files-dev-tools-removed
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wildos/files-drop-dev-tools
+Nice=10
+IOSchedulingClass=idle

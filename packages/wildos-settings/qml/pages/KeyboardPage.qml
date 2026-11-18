@@ -15,36 +15,36 @@ PageScroll {
     readonly property bool several: layouts.length > 1
 
     readonly property var switchChoices: [
-        { value: "grp:win_space_toggle", text: "Windows key + Space" },
-        { value: "grp:alt_shift_toggle", text: "Alt + Shift" },
-        { value: "grp:ctrl_shift_toggle", text: "Ctrl + Shift" },
-        { value: "grp:caps_toggle", text: "Caps Lock" },
-        { value: "", text: "No keys" }
+        { value: "grp:win_space_toggle", text: qsTr("Windows key + Space") },
+        { value: "grp:alt_shift_toggle", text: qsTr("Alt + Shift") },
+        { value: "grp:ctrl_shift_toggle", text: qsTr("Ctrl + Shift") },
+        { value: "grp:caps_toggle", text: qsTr("Caps Lock") },
+        { value: "", text: qsTr("No keys") }
     ]
 
     readonly property var capsChoices: [
-        { value: "", text: "Caps Lock" },
-        { value: "ctrl:nocaps", text: "Another Ctrl key" },
-        { value: "caps:escape", text: "Escape" },
-        { value: "caps:none", text: "Nothing" }
+        { value: "", text: qsTr("Caps Lock") },
+        { value: "ctrl:nocaps", text: qsTr("Another Ctrl key") },
+        { value: "caps:escape", text: qsTr("Escape") },
+        { value: "caps:none", text: qsTr("Nothing") }
     ]
 
     readonly property var numLockChoices: [
-        { value: 0, text: "On" },
-        { value: 1, text: "Off" },
-        { value: 2, text: "As it was" }
+        { value: 0, text: qsTr("On") },
+        { value: 1, text: qsTr("Off") },
+        { value: 2, text: qsTr("As it was") }
     ]
 
     function openMenu(button, index) {
         const entries = [];
         if (several) {
-            entries.push({ text: "Use now", icon: "check", enabled: index !== Keyboard.current, run: () => Keyboard.use(index) });
+            entries.push({ text: qsTr("Use now"), icon: "check", enabled: index !== Keyboard.current, run: () => Keyboard.use(index) });
             entries.push({ separator: true });
         }
-        entries.push({ text: "Move up", icon: "chevron-up", enabled: index > 0, run: () => Keyboard.move(index, index - 1) });
-        entries.push({ text: "Move down", icon: "chevron-down", enabled: index < layouts.length - 1, run: () => Keyboard.move(index, index + 1) });
+        entries.push({ text: qsTr("Move up"), icon: "chevron-up", enabled: index > 0, run: () => Keyboard.move(index, index - 1) });
+        entries.push({ text: qsTr("Move down"), icon: "chevron-down", enabled: index < layouts.length - 1, run: () => Keyboard.move(index, index + 1) });
         entries.push({ separator: true });
-        entries.push({ text: "Remove", icon: "delete", danger: true, enabled: several, run: () => Keyboard.remove(index) });
+        entries.push({ text: qsTr("Remove"), icon: "delete", danger: true, enabled: several, run: () => Keyboard.remove(index) });
         layoutMenu.entries = entries;
         layoutMenu.popup(button, 0, button.height + 4);
     }
@@ -59,11 +59,11 @@ PageScroll {
 
             SectionTitle {
                 Layout.fillWidth: true
-                text: "Keyboard layouts"
+                text: qsTr("Keyboard layouts")
             }
 
             UI.Button {
-                text: "Add a keyboard"
+                text: qsTr("Add a keyboard")
                 iconName: "plus"
                 onClicked: addDialog.open()
             }
@@ -84,15 +84,15 @@ PageScroll {
                         required property int index
                         iconName: "keyboard"
                         title: modelData.name
-                        description: index === 0 ? (page.several ? "Used first when you sign in" : "The only layout, used everywhere") : ""
-                        status: page.several && index === Keyboard.current ? "In use" : ""
+                        description: index === 0 ? (page.several ? qsTr("Used first when you sign in") : qsTr("The only layout, used everywhere")) : ""
+                        status: page.several && index === Keyboard.current ? qsTr("In use") : ""
                         statusColor: UI.Style.accentText
 
                         UI.IconButton {
                             id: moreButton
                             anchors.verticalCenter: parent.verticalCenter
                             iconName: "more"
-                            tip: "Options for " + layoutRow.modelData.name
+                            tip: qsTr("Options for %1").arg(layoutRow.modelData.name)
                             onClicked: page.openMenu(moreButton, layoutRow.index)
                         }
                     }
@@ -109,13 +109,13 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "swap"
-                title: "Switch layouts with"
-                description: page.several ? "Press these keys together to move to the next layout" : "Add a second keyboard to switch between them"
+                title: qsTr("Switch layouts with")
+                description: page.several ? qsTr("Press these keys together to move to the next layout") : qsTr("Add a second keyboard to switch between them")
                 enabled: page.several
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Switch layouts with"
+                    Accessible.name: qsTr("Switch layouts with")
                     model: page.switchChoices
                     readonly property string choice: Keyboard.switchKeys
                     currentIndex: Math.max(0, model.findIndex(o => o.value === choice))
@@ -130,7 +130,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Typing"
+            text: qsTr("Typing")
         }
 
         UI.Card {
@@ -140,27 +140,27 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Repeat a key while you hold it down"
-                    status: Keyboard.repeat ? "On" : "Off"
+                    title: qsTr("Repeat a key while you hold it down")
+                    status: Keyboard.repeat ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: Keyboard.repeat
-                        Accessible.name: "Repeat a key while you hold it down"
+                        Accessible.name: qsTr("Repeat a key while you hold it down")
                         onToggled: Keyboard.setRepeat(checked)
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Repeat delay"
-                    description: "How long to hold a key before it repeats"
+                    title: qsTr("Repeat delay")
+                    description: qsTr("How long to hold a key before it repeats")
                     enabled: Keyboard.repeat
-                    status: Keyboard.repeatDelay + " ms"
+                    status: qsTr("%1 ms").arg(Keyboard.repeatDelay)
 
                     UI.Slider {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 240
-                        accessibleName: "Repeat delay"
+                        accessibleName: qsTr("Repeat delay")
                         from: 150
                         to: 1000
                         stepSize: 50
@@ -170,15 +170,15 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Repeat rate"
-                    description: "How fast a held key repeats"
+                    title: qsTr("Repeat rate")
+                    description: qsTr("How fast a held key repeats")
                     enabled: Keyboard.repeat
-                    status: Keyboard.repeatRate + " a second"
+                    status: qsTr("%1 a second").arg(Keyboard.repeatRate)
 
                     UI.Slider {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 240
-                        accessibleName: "Repeat rate"
+                        accessibleName: qsTr("Repeat rate")
                         from: 5
                         to: 50
                         stepSize: 1
@@ -188,13 +188,13 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Try it here"
+                    title: qsTr("Try it here")
                     enabled: Keyboard.repeat
 
                     UI.TextField {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 240
-                        placeholderText: "Hold down a key in this box"
+                        placeholderText: qsTr("Hold down a key in this box")
                     }
                 }
             }
@@ -206,7 +206,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Keys"
+            text: qsTr("Keys")
         }
 
         UI.Card {
@@ -216,11 +216,11 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Caps Lock key works as"
+                    title: qsTr("Caps Lock key works as")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Caps Lock key works as"
+                        Accessible.name: qsTr("Caps Lock key works as")
                         model: page.capsChoices
                         readonly property string choice: Keyboard.capsLock
                         currentIndex: Math.max(0, model.findIndex(o => o.value === choice))
@@ -229,12 +229,12 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Num Lock when you sign in"
-                    description: "Takes effect the next time you sign in"
+                    title: qsTr("Num Lock when you sign in")
+                    description: qsTr("Takes effect the next time you sign in")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Num Lock when you sign in"
+                        Accessible.name: qsTr("Num Lock when you sign in")
                         model: page.numLockChoices
                         readonly property int choice: Keyboard.numLock
                         currentIndex: Math.max(0, model.findIndex(o => o.value === choice))
@@ -253,9 +253,17 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
+                iconName: "keyboard"
+                title: qsTr("Keyboard shortcuts")
+                description: qsTr("See and change shortcuts, and add your own")
+                chevron: true
+                onClicked: Navigator.open("shortcuts")
+            }
+
+            UI.SettingRow {
                 iconName: "cog"
-                title: "More keyboard options"
-                description: "Keyboard model, a compose key and other special keys"
+                title: qsTr("More keyboard options")
+                description: qsTr("Keyboard model, a compose key and other special keys")
                 chevron: true
                 onClicked: Navigator.open("keyboardadvanced")
             }
@@ -278,8 +286,8 @@ PageScroll {
                 && (query.length === 0 || l.name.toLowerCase().includes(query) || (l.keywords || "").includes(query)));
         }
 
-        title: "Add a keyboard"
-        text: "Choose the layout printed on your keyboard, or one you type in."
+        title: qsTr("Add a keyboard")
+        text: qsTr("Choose the layout printed on your keyboard, or one you type in.")
         onAboutToShow: {
             if (all.length === 0) {
                 all = Keyboard.available();
@@ -292,7 +300,7 @@ PageScroll {
         UI.SearchField {
             id: filter
             Layout.fillWidth: true
-            placeholderText: "Search by country, language or layout, for example Belgium"
+            placeholderText: qsTr("Search by country, language or layout, for example Belgium")
             onTextChanged: addDialog.chosen = -1
             onDownPressed: {
                 addDialog.chosen = Math.max(0, addDialog.chosen);
@@ -350,7 +358,7 @@ PageScroll {
                 UI.Label {
                     anchors.centerIn: parent
                     visible: list.count === 0
-                    text: "No layouts match"
+                    text: qsTr("No layouts match")
                     color: UI.Style.inkMuted
                 }
             }
@@ -359,7 +367,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: addButton
-                text: "Add"
+                text: qsTr("Add")
                 kind: "primary"
                 enabled: addDialog.chosen >= 0 && addDialog.chosen < addDialog.shown.length
                 onClicked: {
@@ -372,7 +380,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: addDialog.close()
             }
         ]

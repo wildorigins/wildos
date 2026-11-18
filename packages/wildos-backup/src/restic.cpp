@@ -35,8 +35,8 @@ Restic::Restic(const QString &repository, const QByteArray &password, QObject *p
     });
     connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         if (error == QProcess::FailedToStart) {
-            m_error = QStringLiteral("restic could not be started");
-            Q_EMIT finished(Fatal);
+            m_error.clear();
+            Q_EMIT finished(NotStarted);
         }
     });
 }
@@ -74,8 +74,7 @@ void Restic::start(const QStringList &arguments)
 
     int fds[2];
     if (::pipe2(fds, O_CLOEXEC) != 0) {
-        m_error = QStringLiteral("no pipe for the password");
-        QMetaObject::invokeMethod(this, [this] { Q_EMIT finished(Fatal); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [this] { Q_EMIT finished(NoPipe); }, Qt::QueuedConnection);
         return;
     }
     // A password is a few dozen bytes, far below a pipe's buffer, so this
@@ -168,16 +167,19 @@ void Restic::readOutput()
     }
 }
 
-QString Restic::explain(int code, const QString &error)
+namespace
+{
+// The problems Backup has a sentence of its own for; empty for the rest.
+QString knownProblem(int code, const QString &error)
 {
     const QString e = error.toLower();
-    if (code == WrongPassword || e.contains(QLatin1String("wrong password"))) {
+    if (code == Restic::WrongPassword || e.contains(QLatin1String("wrong password"))) {
         return QCoreApplication::translate("Restic", "The password doesn't open the backups on this drive.");
     }
-    if (code == NoRepository || e.contains(QLatin1String("repository does not exist")) || e.contains(QLatin1String("unable to open config file"))) {
+    if (code == Restic::NoRepository || e.contains(QLatin1String("repository does not exist")) || e.contains(QLatin1String("unable to open config file"))) {
         return QCoreApplication::translate("Restic", "The backups on this drive couldn't be found. Was the drive unplugged?");
     }
-    if (code == Locked || e.contains(QLatin1String("repository is already locked"))) {
+    if (code == Restic::Locked || e.contains(QLatin1String("repository is already locked"))) {
         return QCoreApplication::translate("Restic", "Another backup was using the drive. It will try again later.");
     }
     if (e.contains(QLatin1String("no space left"))) {
@@ -189,11 +191,22 @@ QString Restic::explain(int code, const QString &error)
     if (e.contains(QLatin1String("input/output error"))) {
         return QCoreApplication::translate("Restic", "The backup drive couldn't be read or written. It may have been unplugged, or it may be failing.");
     }
-    if (code == Interrupted) {
+    if (code == Restic::Interrupted) {
         return QCoreApplication::translate("Restic", "The backup was stopped.");
     }
-    // restic's own words for what went wrong, from the last line it wrote:
-    // with --json, errors come as {"message_type":"exit_error","message":...}.
+    if (code == Restic::NotStarted) {
+        return QCoreApplication::translate("Restic", "The backup tool that comes with Wild OS couldn't be started. Installing the latest updates may put it right.");
+    }
+    if (code == Restic::NoPipe) {
+        return QCoreApplication::translate("Restic", "Backup couldn't pass the password to its backup tool. Close a few apps and try again.");
+    }
+    return {};
+}
+
+// restic's own words for what went wrong, from the last line it wrote:
+// with --json, errors come as {"message_type":"exit_error","message":...}.
+QString lastLine(const QString &error)
+{
     QString last;
     const QStringList lines = error.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
     for (auto it = lines.crbegin(); it != lines.crend() && last.isEmpty(); ++it) {
@@ -213,11 +226,30 @@ QString Restic::explain(int code, const QString &error)
         last = last.mid(7);
     }
     if (last.isEmpty()) {
-        return QCoreApplication::translate("Restic", "restic stopped with error %1 and didn't say why.").arg(code);
+        return {};
     }
     last[0] = last.at(0).toUpper();
     if (!last.endsWith(QLatin1Char('.'))) {
         last += QLatin1Char('.');
     }
     return last;
+}
+}
+
+QString Restic::explain(int code, const QString &error)
+{
+    const QString known = knownProblem(code, error);
+    if (!known.isEmpty()) {
+        return known;
+    }
+    return QCoreApplication::translate("Restic", "Something went wrong with the backups on the drive. Try again. If it keeps happening, report a problem.");
+}
+
+QString Restic::detail(int code, const QString &error)
+{
+    if (!knownProblem(code, error).isEmpty()) {
+        return {};
+    }
+    const QString last = lastLine(error);
+    return last.isEmpty() ? QCoreApplication::translate("Restic", "restic stopped with error %1 and didn't say why.").arg(code) : last;
 }

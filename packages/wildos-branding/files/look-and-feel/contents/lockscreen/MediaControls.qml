@@ -63,7 +63,7 @@ Item {
                 UI.Label {
                     width: parent.width
                     text: player.model.track.length > 0 ? player.model.track
-                        : player.model.playbackStatus > Mpris.PlaybackStatus.Stopped ? "Untitled" : "Nothing playing"
+                        : player.model.playbackStatus > Mpris.PlaybackStatus.Stopped ? qsTr("Untitled") : qsTr("Nothing playing")
                     font.weight: UI.Style.weightSemiBold
                     color: UI.Style.inkOnWallpaper
                 }
@@ -86,19 +86,19 @@ Item {
                     visible: player.model.canGoPrevious || player.model.canGoNext
                     enabled: player.model.canGoPrevious
                     iconName: LayoutMirroring.enabled ? "media-skip-forward" : "media-skip-backward"
-                    label: "Previous track"
+                    label: qsTr("Previous track")
                     onClicked: player.model.container.Previous()
                 }
                 MediaButton {
                     iconName: player.model.playbackStatus === Mpris.PlaybackStatus.Playing ? "media-playback-pause" : "media-playback-start"
-                    label: player.model.playbackStatus === Mpris.PlaybackStatus.Playing ? "Pause" : "Play"
+                    label: player.model.playbackStatus === Mpris.PlaybackStatus.Playing ? qsTr("Pause") : qsTr("Play")
                     onClicked: player.model.container.PlayPause()
                 }
                 MediaButton {
                     visible: player.model.canGoPrevious || player.model.canGoNext
                     enabled: player.model.canGoNext
                     iconName: LayoutMirroring.enabled ? "media-skip-backward" : "media-skip-forward"
-                    label: "Next track"
+                    label: qsTr("Next track")
                     onClicked: player.model.container.Next()
                 }
             }

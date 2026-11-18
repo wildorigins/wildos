@@ -195,7 +195,7 @@ Item {
                 Layout.rightMargin: 12
                 Layout.topMargin: 8
                 implicitHeight: 44
-                radius: 8
+                radius: UI.Style.radiusSm
                 color: UI.Style.surfaceRaised
                 border.width: 1
                 border.color: UI.Style.borderSubtle
@@ -484,7 +484,7 @@ Item {
                 Rectangle {
                     Layout.preferredWidth: 340
                     Layout.fillHeight: true
-                    radius: 10
+                    radius: UI.Style.radiusPanel
                     color: UI.Style.surfaceRest
                     border.width: 1
                     border.color: UI.Style.borderSubtle
@@ -578,7 +578,7 @@ Item {
                                         anchors.topMargin: person.firstOfLetter ? 28 : 0
                                         anchors.leftMargin: 6
                                         anchors.rightMargin: 6
-                                        radius: 6
+                                        radius: UI.Style.radiusXs
                                         color: person.current ? UI.Style.surfaceSelected : personMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
                                     }
                                     RowLayout {
@@ -662,7 +662,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    radius: 10
+                    radius: UI.Style.radiusPanel
                     color: UI.Style.surfaceRest
                     border.width: 1
                     border.color: UI.Style.borderSubtle
@@ -798,7 +798,7 @@ Item {
                                     Layout.alignment: Qt.AlignTop
                                     Layout.preferredWidth: 1
                                     implicitHeight: detailColumn.implicitHeight + 24
-                                    radius: 10
+                                    radius: UI.Style.radiusPanel
                                     color: UI.Style.surfaceRest
                                     border.width: 1
                                     border.color: UI.Style.borderSubtle
@@ -894,7 +894,7 @@ Item {
                                     Rectangle {
                                         Layout.fillWidth: true
                                         implicitHeight: recentColumn.implicitHeight + 24
-                                        radius: 10
+                                        radius: UI.Style.radiusPanel
                                         color: UI.Style.surfaceRest
                                         border.width: 1
                                         border.color: UI.Style.borderSubtle
@@ -977,7 +977,7 @@ Item {
                                     Rectangle {
                                         Layout.fillWidth: true
                                         implicitHeight: upcomingColumn.implicitHeight + 24
-                                        radius: 10
+                                        radius: UI.Style.radiusPanel
                                         color: UI.Style.surfaceRest
                                         border.width: 1
                                         border.color: UI.Style.borderSubtle

@@ -35,7 +35,7 @@ Item {
     implicitHeight: rows * tileHeight + (rows - 1) * tileGap + padding * 2
 
     Accessible.role: Accessible.List
-    Accessible.name: "Snap layouts"
+    Accessible.name: qsTr("Snap layouts")
 
     function tileOrigin(index: int): point {
         return Qt.point(padding + (index % Layouts.columns) * (tileWidth + tileGap),

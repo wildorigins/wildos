@@ -9,7 +9,7 @@ UI.SettingRow {
     property bool value
     signal switched(bool value)
 
-    status: value ? "On" : "Off"
+    status: value ? qsTr("On") : qsTr("Off")
 
     UI.Toggle {
         anchors.verticalCenter: parent.verticalCenter

@@ -1,0 +1,51 @@
+#!/bin/sh
+# Decides whether programs load zlib-ng or the system's zlib, and tells the
+# loader. Runs when this package is set up and whenever zlib1g changes.
+#
+# zlib-ng stands in for one zlib version. A newer zlib1g may offer functions
+# this build does not have, and a program built against it would then fail to
+# start, so in that case the loader is pointed back at zlib1g until an update
+# of this package fits again. The same happens if the library fails to pack
+# and unpack a test buffer on this PC.
+set -u
+
+DIR=/usr/lib/x86_64-linux-gnu/wildos-zlib-ng
+CONF=/etc/ld.so.conf.d/00-wildos-zlib-ng.conf
+SHARE=/usr/share/wildos-zlib-ng
+
+use_system() {
+    if [ -e "$CONF" ]; then
+        rm -f "$CONF"
+        ldconfig
+    fi
+    logger -t wildos-zlib-ng "using the system's zlib: $1" 2>/dev/null || true
+    exit 0
+}
+
+ours=$(cat "$SHARE/stands-in-for" 2>/dev/null) || ours=
+[ -n "$ours" ] || use_system "no version recorded"
+
+# zlib1g names its library after its version: libz.so.1 -> libz.so.1.3.1.
+system=
+for lib in /usr/lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1; do
+    target=$(readlink -f "$lib" 2>/dev/null) || continue
+    case "${target##*/}" in
+        libz.so.[0-9]*) system=${target##*/libz.so.}; break ;;
+    esac
+done
+[ -n "$system" ] || use_system "the system's zlib was not found"
+
+if dpkg --compare-versions "$system" gt "$ours"; then
+    use_system "zlib1g is $system, this build stands in for $ours"
+fi
+
+if ! LD_LIBRARY_PATH=$DIR /usr/libexec/wildos/zlib-ng-selftest >/dev/null 2>&1; then
+    use_system "the self-test failed"
+fi
+
+if ! cmp -s "$SHARE/ld.so.conf" "$CONF" 2>/dev/null; then
+    cp "$SHARE/ld.so.conf" "$CONF.new"
+    mv -f "$CONF.new" "$CONF"
+    ldconfig
+fi
+exit 0

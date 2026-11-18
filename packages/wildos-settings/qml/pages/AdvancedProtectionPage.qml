@@ -63,7 +63,7 @@ PageScroll {
     Connections {
         target: Advanced
         function onFailed(key, message) {
-            notice.show("Nothing was changed", message, true);
+            notice.show(qsTr("Nothing was changed"), message, true);
         }
         function onDone(key) {
             notice.hide();
@@ -204,7 +204,7 @@ PageScroll {
                         name: "shield-round-check"
                         size: 24
                         strokeWidth: 2.1
-                        color: "#5fd38d"
+                        color: UI.Style.success
                     }
                 }
 
@@ -214,7 +214,7 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: page.onCount + " of " + page.shownCount + " switched on"
+                        text: qsTr("%1 of %2 switched on").arg(page.onCount).arg(page.shownCount)
                         size: 16.5
                         font.weight: UI.Style.weightSemiBold
                         wrapMode: Text.Wrap
@@ -222,7 +222,7 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: "Extra protection for people who want it. None of it is needed for everyday use."
+                        text: qsTr("Extra protection for people who want it. None of it is needed for everyday use.")
                         size: 13
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
@@ -231,7 +231,7 @@ PageScroll {
 
                 UI.Button {
                     implicitHeight: 32
-                    text: "Reset to defaults"
+                    text: qsTr("Reset to defaults")
                     enabled: page.ready
                     busy: Advanced.busyKey === "reset"
                     onClicked: resetDialog.open()
@@ -240,7 +240,7 @@ PageScroll {
         }
 
         Heading {
-            text: "When this PC is locked"
+            text: qsTr("When this PC is locked")
         }
 
         UI.Card {
@@ -255,8 +255,8 @@ PageScroll {
                 OptionRow {
                     visible: page.usbShown
                     glyph: "usb-round"
-                    title: "Ignore new USB devices while locked"
-                    description: "A stick or cable plugged into a locked PC does nothing until you sign in."
+                    title: qsTr("Ignore new USB devices while locked")
+                    description: qsTr("A stick or cable plugged into a locked PC does nothing until you sign in.")
                     on: page.usbOn
                     onSwitched: on => Advanced.set("usb_locked", on)
                 }
@@ -264,8 +264,8 @@ PageScroll {
                 OptionRow {
                     visible: page.installed.quiet_lock === true
                     glyph: "eye-off-round"
-                    title: "Quiet lock screen"
-                    description: "Notifications show that something arrived, never what it says."
+                    title: qsTr("Quiet lock screen")
+                    description: qsTr("Notifications show that something arrived, never what it says.")
                     on: page.values.quiet_lock === "on"
                     onSwitched: on => Advanced.set("quiet_lock", on)
                 }
@@ -274,8 +274,8 @@ PageScroll {
                 OptionRow {
                     id: fingerprintRow
                     glyph: "fingerprint"
-                    title: "Fingerprint needs your password sometimes"
-                    description: "Always after a restart, and again after this long."
+                    title: qsTr("Fingerprint needs your password sometimes")
+                    description: qsTr("Always after a restart, and again after this long.")
                     on: page.values.fingerprint_hours > 0
                     onSwitched: on => Advanced.set("fingerprint_hours", on ? fingerprintBox.currentValue : 0)
 
@@ -283,14 +283,14 @@ PageScroll {
                         id: fingerprintBox
                         width: 120
                         enabled: page.ready
-                        Accessible.name: "How long the fingerprint works before the password is needed"
+                        Accessible.name: qsTr("How long the fingerprint works before the password is needed")
                         model: [
-                            { value: 4, text: "4 hours" },
-                            { value: 8, text: "8 hours" },
-                            { value: 12, text: "12 hours" },
-                            { value: 24, text: "24 hours" },
-                            { value: 48, text: "48 hours" },
-                            { value: 72, text: "72 hours" }
+                            { value: 4, text: qsTr("4 hours") },
+                            { value: 8, text: qsTr("8 hours") },
+                            { value: 12, text: qsTr("12 hours") },
+                            { value: 24, text: qsTr("24 hours") },
+                            { value: 48, text: qsTr("48 hours") },
+                            { value: 72, text: qsTr("72 hours") }
                         ]
                         readonly property int stored: page.values.fingerprint_hours > 0 ? page.values.fingerprint_hours : 48
                         currentIndex: Math.max(0, model.findIndex(o => o.value === stored))
@@ -301,8 +301,8 @@ PageScroll {
                 // wildos-advanced-session, in the person's session.
                 OptionRow {
                     glyph: "power-round"
-                    title: "Restart when left locked"
-                    description: "Puts the disk back to fully encrypted."
+                    title: qsTr("Restart when left locked")
+                    description: qsTr("Puts the disk back to fully encrypted.")
                     on: page.values.restart_locked_hours > 0
                     onSwitched: on => Advanced.set("restart_locked_hours", on ? restartBox.currentValue : 0)
 
@@ -311,14 +311,14 @@ PageScroll {
                             id: restartBox
                             width: 150
                             enabled: page.ready
-                            Accessible.name: "Restart after"
+                            Accessible.name: qsTr("Restart after")
                             model: [
-                                { value: 4, text: "After 4 hours" },
-                                { value: 8, text: "After 8 hours" },
-                                { value: 12, text: "After 12 hours" },
-                                { value: 18, text: "After 18 hours" },
-                                { value: 24, text: "After 24 hours" },
-                                { value: 48, text: "After 48 hours" }
+                                { value: 4, text: qsTr("After 4 hours") },
+                                { value: 8, text: qsTr("After 8 hours") },
+                                { value: 12, text: qsTr("After 12 hours") },
+                                { value: 18, text: qsTr("After 18 hours") },
+                                { value: 24, text: qsTr("After 24 hours") },
+                                { value: 48, text: qsTr("After 48 hours") }
                             ]
                             readonly property int stored: page.values.restart_locked_hours > 0 ? page.values.restart_locked_hours : 18
                             currentIndex: Math.max(0, model.findIndex(o => o.value === stored))
@@ -330,10 +330,10 @@ PageScroll {
                             width: 160
                             visible: page.values.restart_locked_hours > 0
                             enabled: page.ready
-                            Accessible.name: "When apps are still open"
+                            Accessible.name: qsTr("When apps are still open")
                             model: [
-                                { value: "off", text: "Wait for open apps to close", short: "Wait for apps" },
-                                { value: "on", text: "Close open apps anyway (unsaved work may be lost)", short: "Close apps anyway" }
+                                { value: "off", text: qsTr("Wait for open apps to close"), short: qsTr("Wait for apps") },
+                                { value: "on", text: qsTr("Close open apps anyway (unsaved work may be lost)"), short: qsTr("Close apps anyway") }
                             ]
                             currentIndex: page.values.restart_locked_force === "on" ? 1 : 0
                             displayText: model[currentIndex].short
@@ -345,9 +345,9 @@ PageScroll {
         }
 
         Heading {
-            text: "Network"
+            text: qsTr("Network")
             trailing: UI.LinkButton {
-                text: "Firewall"
+                text: qsTr("Firewall")
                 visible: Firewall.available
                 onClicked: Navigator.open("firewall")
             }
@@ -362,8 +362,8 @@ PageScroll {
                 // wildos-radios-idle, which the hook starts and stops.
                 OptionRow {
                     glyph: "wifi-off-round"
-                    title: "Wi-Fi and Bluetooth switch themselves off"
-                    description: "When nothing has been connected for 30 minutes."
+                    title: qsTr("Wi-Fi and Bluetooth switch themselves off")
+                    description: qsTr("When nothing has been connected for 30 minutes.")
                     on: page.values.radios_idle_off === "on"
                     onSwitched: on => Advanced.set("radios_idle_off", on)
                 }
@@ -374,15 +374,15 @@ PageScroll {
                 // on its own servers, unencrypted.
                 OptionRow {
                     glyph: "globe-lock"
-                    title: "Encrypted DNS"
-                    description: "Your internet provider cannot see which sites you look up."
+                    title: qsTr("Encrypted DNS")
+                    description: qsTr("Your internet provider cannot see which sites you look up.")
                     on: page.values.dns !== "off"
                     onSwitched: on => Advanced.set("dns", on)
 
                     extra: UI.ComboBox {
                         width: 120
                         enabled: page.ready
-                        Accessible.name: "Encrypted DNS provider"
+                        Accessible.name: qsTr("Encrypted DNS provider")
                         model: [
                             { value: "quad9", text: "Quad9" },
                             { value: "mullvad", text: "Mullvad" },
@@ -396,22 +396,22 @@ PageScroll {
                 // The kill switch of Advanced network settings itself.
                 OptionRow {
                     glyph: "shield-off"
-                    title: "Block everything unless the VPN is on"
-                    description: NetworkSettings.killSwitchState === "blocking" ? "The VPN dropped, so the internet is blocked until it connects again or you turn this off."
-                        : NetworkSettings.killSwitchState === "mullvad" ? "The Mullvad app's own kill switch is guarding its connection."
-                        : "Nothing leaks if the VPN drops. Needs a VPN set up first."
+                    title: qsTr("Block everything unless the VPN is on")
+                    description: NetworkSettings.killSwitchState === "blocking" ? qsTr("The VPN dropped, so the internet is blocked until it connects again or you turn this off.")
+                        : NetworkSettings.killSwitchState === "mullvad" ? qsTr("The Mullvad app's own kill switch is guarding its connection.")
+                        : qsTr("Nothing leaks if the VPN drops. Needs a VPN set up first.")
                     descriptionColor: NetworkSettings.killSwitchState === "blocking" ? UI.Style.warning : UI.Style.inkMuted
                     on: NetworkSettings.killSwitch
                     switchEnabled: NetworkSettings.busy.length === 0 && (page.hasVpn || NetworkSettings.killSwitch)
                     locked: !page.hasVpn && !NetworkSettings.killSwitch
-                    lockedReason: "Add a VPN in Advanced network settings first"
+                    lockedReason: qsTr("Add a VPN in Advanced network settings first")
                     onSwitched: on => NetworkSettings.setKillSwitch(on)
                 }
             }
         }
 
         Heading {
-            text: "Your data"
+            text: qsTr("Your data")
         }
 
         UI.Card {
@@ -422,16 +422,16 @@ PageScroll {
 
                 NoteRow {
                     glyph: "video-round"
-                    title: "Camera and microphone lights"
-                    description: "An icon in the taskbar whenever either is in use, and which app is using it."
-                    note: "Always on"
+                    title: qsTr("Camera and microphone lights")
+                    description: qsTr("An icon in the taskbar whenever either is in use, and which app is using it.")
+                    note: qsTr("Always on")
                 }
 
                 // The clipboard panel (wildos-clipboard) wipes it.
                 OptionRow {
                     glyph: "clipboard-x"
-                    title: "Clipboard forgets passwords"
-                    description: "Anything copied from a password box is wiped after 60 seconds."
+                    title: qsTr("Clipboard forgets passwords")
+                    description: qsTr("Anything copied from a password box is wiped after 60 seconds.")
                     on: page.values.clipboard_forget === "on"
                     onSwitched: on => Advanced.set("clipboard_forget", on)
                 }
@@ -442,8 +442,8 @@ PageScroll {
                 // (wildos-advanced-session).
                 OptionRow {
                     glyph: "presentation"
-                    title: "Presenting mode"
-                    description: "Holds notifications back while you share or record the screen."
+                    title: qsTr("Presenting mode")
+                    description: qsTr("Holds notifications back while you share or record the screen.")
                     on: page.presentingOn
                     onSwitched: on => {
                         notifications.inhibitNotificationsWhenScreenSharing = on;
@@ -456,15 +456,15 @@ PageScroll {
                 OptionRow {
                     visible: page.installed.scrub_files === true
                     glyph: "image-off"
-                    title: "Remove personal details from files"
-                    description: "Location, device and author names. Right-click a file in Files to use it."
+                    title: qsTr("Remove personal details from files")
+                    description: qsTr("Location, device and author names. Right-click a file in Files to use it.")
                     on: page.values.scrub_files === "on"
                     onSwitched: on => Advanced.set("scrub_files", on)
 
                     // Files keeps which details go (wildos-files).
                     extra: UI.LinkButton {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Choose what is removed"
+                        text: qsTr("Choose what is removed")
                         enabled: page.values.scrub_files === "on"
                         onClicked: UI.System.run("wildos-files", ["--remove-details-choices"])
                     }
@@ -473,8 +473,8 @@ PageScroll {
                 // Files' format window offers encryption only while it is on.
                 OptionRow {
                     glyph: "lock-round"
-                    title: "Password-locked USB sticks"
-                    description: "Tick \"Encrypt this drive\" when you format a drive."
+                    title: qsTr("Password-locked USB sticks")
+                    description: qsTr("Tick \"Encrypt this drive\" when you format a drive.")
                     on: page.values.usb_encrypt === "on"
                     onSwitched: on => Advanced.set("usb_encrypt", on)
                 }
@@ -483,7 +483,7 @@ PageScroll {
 
         Heading {
             visible: lendingCard.visible
-            text: "Lending and testing"
+            text: qsTr("Lending and testing")
         }
 
         UI.Card {
@@ -497,8 +497,8 @@ PageScroll {
                 OptionRow {
                     visible: page.installed.guest === true
                     glyph: "user-round"
-                    title: "Guest session"
-                    description: "Lend this PC. A clean desktop, wiped when they sign out."
+                    title: qsTr("Guest session")
+                    description: qsTr("Lend this PC. A clean desktop, wiped when they sign out.")
                     on: page.values.guest === "on"
                     onSwitched: on => Advanced.set("guest", on)
                 }
@@ -506,8 +506,8 @@ PageScroll {
                 OptionRow {
                     visible: page.installed.safebox === true
                     glyph: "box"
-                    title: "Safe box"
-                    description: "Open an unknown program or attachment sealed off from your files and the network."
+                    title: qsTr("Safe box")
+                    description: qsTr("Open an unknown program or attachment sealed off from your files and the network.")
                     on: page.values.safebox === "on"
                     onSwitched: on => Advanced.set("safebox", on)
                 }
@@ -518,7 +518,7 @@ PageScroll {
         // for it rather than offer a Set up that does nothing.
         Heading {
             visible: emergencyCard.visible
-            text: "Emergencies"
+            text: qsTr("Emergencies")
         }
 
         UI.Card {
@@ -531,8 +531,8 @@ PageScroll {
 
                 OptionRow {
                     glyph: "siren"
-                    title: "Panic key"
-                    description: "Locks the screen, clears the clipboard and cuts the network in one press."
+                    title: qsTr("Panic key")
+                    description: qsTr("Locks the screen, clears the clipboard and cuts the network in one press.")
                     on: page.values.panic_key === "on"
                     onSwitched: on => Advanced.set("panic_key", on)
 
@@ -548,7 +548,7 @@ PageScroll {
                             anchors.left: parent.left
                             anchors.leftMargin: 10
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Ctrl + Alt + End"
+                            text: qsTr("Ctrl + Alt + End")
                             size: 13
                         }
                     }
@@ -569,7 +569,7 @@ PageScroll {
 
             UI.Label {
                 Layout.fillWidth: true
-                text: "Strict and Maximum protection switch some of these on for you. Anything you change here stays as you set it."
+                text: qsTr("Strict and Maximum protection switch some of these on for you. Anything you change here stays as you set it.")
                 size: 12.5
                 color: UI.Style.inkMuted
                 wrapMode: Text.Wrap
@@ -579,11 +579,11 @@ PageScroll {
 
     UI.Dialog {
         id: resetDialog
-        title: "Reset advanced protection?"
-        text: "Everything on this page goes back to how Wild OS comes, and what you changed here is forgotten. Strict and Maximum protection switch their options on again."
+        title: qsTr("Reset advanced protection?")
+        text: qsTr("Everything on this page goes back to how Wild OS comes, and what you changed here is forgotten. Strict and Maximum protection switch their options on again.")
         buttons: [
             UI.Button {
-                text: "Reset"
+                text: qsTr("Reset")
                 kind: "primary"
                 onClicked: {
                     resetDialog.close();
@@ -592,7 +592,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: resetDialog.close()
             }
         ]

@@ -7,6 +7,7 @@
 #include <QAudio>
 #include <QCoreApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -252,7 +253,19 @@ void Player::openFiles(const QStringList &paths)
     for (const QString &arg : paths) {
         const QString path = arg.startsWith(QLatin1String("file:")) ? QUrl(arg).toLocalFile() : QFileInfo(arg).absoluteFilePath();
         const QString suffix = QFileInfo(path).suffix().toLower();
-        if (suffix == QLatin1String("m3u8") || suffix == QLatin1String("m3u")) {
+        if (QFileInfo(path).isDir()) {
+            QStringList inside;
+            QDirIterator walk(path, QDir::Files | QDir::Readable, QDirIterator::Subdirectories);
+            while (walk.hasNext()) {
+                const QString file = walk.next();
+                if (Tags::isAudio(file)) {
+                    inside.append(file);
+                }
+            }
+            // By path, so each folder's songs stay together in name order.
+            inside.sort();
+            songs.append(inside);
+        } else if (suffix == QLatin1String("m3u8") || suffix == QLatin1String("m3u")) {
             songs.append(Playlists::read(path));
         } else if (Tags::isAudio(path)) {
             songs.append(path);
@@ -260,6 +273,8 @@ void Player::openFiles(const QStringList &paths)
     }
     if (!songs.isEmpty()) {
         playSongs(songs, 0, false);
+    } else if (!paths.isEmpty()) {
+        Q_EMIT failed(tr("Music found no songs it can play there."));
     }
 }
 
@@ -385,6 +400,23 @@ void Player::seek(qint64 position)
     Q_EMIT seeked(position);
 }
 
+void Player::skip(qint64 by)
+{
+    if (currentPath().isEmpty() || !seekable()) {
+        return;
+    }
+    const qint64 to = std::max<qint64>(0, position() + by);
+    seek(duration() > 0 ? std::min(to, duration()) : to);
+}
+
+void Player::stepVolume(int steps)
+{
+    if (m_muted && steps > 0) {
+        setMuted(false);
+    }
+    setVolume(m_volume + steps * 0.05);
+}
+
 void Player::jump(int index)
 {
     m_failures = 0;
@@ -435,6 +467,23 @@ void Player::removeFromQueue(int index)
     }
     if (index < m_index) {
         --m_index;
+    }
+    Q_EMIT queueChanged();
+    scheduleSave();
+}
+
+void Player::moveInQueue(int from, int to)
+{
+    if (from < 0 || from >= m_queue.size() || to < 0 || to >= m_queue.size() || from == to) {
+        return;
+    }
+    m_queue.move(from, to);
+    if (m_index == from) {
+        m_index = to;
+    } else if (from < m_index && to >= m_index) {
+        --m_index;
+    } else if (from > m_index && to <= m_index) {
+        ++m_index;
     }
     Q_EMIT queueChanged();
     scheduleSave();

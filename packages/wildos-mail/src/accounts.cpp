@@ -157,6 +157,26 @@ void AccountStore::remove(const QString &id)
     Q_EMIT changed();
 }
 
+void AccountStore::move(const QString &id, int to)
+{
+    int from = -1;
+    for (int i = 0; i < m_accounts.size(); ++i) {
+        if (m_accounts.at(i).id == id) {
+            from = i;
+        }
+    }
+    if (from < 0) {
+        return;
+    }
+    to = qBound(0, to, int(m_accounts.size()) - 1);
+    if (from == to) {
+        return;
+    }
+    m_accounts.move(from, to);
+    save();
+    Q_EMIT changed();
+}
+
 bool AccountStore::walletExists()
 {
     return QFile::exists(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/kwalletd/kdewallet.kwl"));

@@ -28,9 +28,9 @@ RecoveryDialog {
 
     Repeater {
         model: [
-            { heading: "What happened", text: dialog.words.happened || "" },
-            { heading: "What Wild OS did", text: dialog.words.did || "" },
-            { heading: "What you can do", text: dialog.words.todo || "" }
+            { heading: qsTr("What happened"), text: dialog.words.happened || "" },
+            { heading: qsTr("What Wild OS did"), text: dialog.words.did || "" },
+            { heading: qsTr("What you can do"), text: dialog.words.todo || "" }
         ]
 
         ColumnLayout {
@@ -66,7 +66,7 @@ RecoveryDialog {
 
         UI.Label {
             Layout.fillWidth: true
-            text: "TECHNICAL DETAIL"
+            text: qsTr("TECHNICAL DETAIL")
             size: 12.5
             font.weight: UI.Style.weightBold
             font.letterSpacing: 0.25
@@ -74,8 +74,8 @@ RecoveryDialog {
         }
 
         UI.LinkButton {
-            text: dialog.copied ? "Copied" : "Copy"
-            Accessible.name: "Copy the technical detail"
+            text: dialog.copied ? qsTr("Copied") : qsTr("Copy")
+            Accessible.name: qsTr("Copy the technical detail")
             onClicked: {
                 clipboard.text = dialog.event ? HistoryWords.fullText(dialog.event, History.events) : "";
                 clipboard.selectAll();
@@ -145,21 +145,21 @@ RecoveryDialog {
     buttons: [
         UI.Button {
             implicitHeight: 32
-            text: "Report a problem"
+            text: qsTr("Report a problem")
             onClicked: {
                 const e = dialog.event;
                 const sent = History.report({ id: e.id, kind: e.kind, when: e.when, data: e.data, title: dialog.words.title },
                                             HistoryWords.fullText(e, History.events));
                 dialog.close();
                 if (!sent) {
-                    dialog.failed("Report a problem isn't installed, or this event couldn't be handed to it.");
+                    dialog.failed(qsTr("Report a problem isn't installed, or this event couldn't be handed to it."));
                 }
             }
         },
         UI.Button {
             implicitHeight: 32
             kind: "primary"
-            text: "Close"
+            text: qsTr("Close")
             onClicked: dialog.close()
         }
     ]

@@ -6,7 +6,10 @@ import QtQuick.Templates as T
 // sheet joined to the bar below, others muted with a soft hover. A 16px
 // icon, the title in 13px (500 when current) and a 24px close button.
 // Middle click closes; holding a dragged file over a tab for half a second
-// switches to it. From wildos-files TitleBar.
+// switches to it. A title too long for the tab shows in full in a tooltip.
+// A right click or the Menu key emits contextMenuRequested, here with the
+// place in the tab and on a WildOS.UI TabBar with the tab's index. From
+// wildos-files TitleBar.
 T.TabButton {
     id: control
 
@@ -16,6 +19,18 @@ T.TabButton {
     property bool previewHover: false
 
     signal closeRequested()
+    signal contextMenuRequested(real x, real y)
+
+    function requestContextMenu(x: real, y: real): void {
+        contextMenuRequested(x, y);
+        const bar = T.TabBar.tabBar;
+        if (bar && typeof bar.contextMenuRequested === "function") {
+            const place = mapToItem(bar, x, y);
+            bar.contextMenuRequested(T.TabBar.index, place.x, place.y);
+        }
+    }
+
+    Keys.onMenuPressed: requestContextMenu(width / 2, height)
 
     readonly property bool lit: (hovered || previewHover) && !checked
 
@@ -76,6 +91,7 @@ T.TabButton {
         }
 
         Label {
+            id: title
             x: 37
             width: (close.visible ? close.x - 4 : parent.width - 8) - x
             anchors.verticalCenter: parent.verticalCenter
@@ -97,7 +113,7 @@ T.TabButton {
             iconName: "win-close"
             iconSize: 10
             stroke: 3
-            tip: "Close tab"
+            tip: qsTr("Close tab")
             focusPolicy: Qt.NoFocus
             onClicked: control.closeRequested()
         }
@@ -106,6 +122,16 @@ T.TabButton {
     TapHandler {
         acceptedButtons: Qt.MiddleButton
         onTapped: if (control.closable) control.closeRequested()
+    }
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: point => control.requestContextMenu(point.position.x, point.position.y)
+    }
+
+    Tooltip {
+        text: control.text
+        visible: control.hovered && title.truncated && !close.hovered && !control.down
     }
 
     DropArea {

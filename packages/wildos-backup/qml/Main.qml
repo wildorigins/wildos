@@ -54,10 +54,9 @@ UI.AppWindow {
 
         UI.TitleBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
+            tall: true
             frame: window.frame
             showTitle: false
-            buttons.buttonHeight: 44
 
             // The title bar puts its content 16px in; the board's icon is 14.
             Row {
@@ -174,7 +173,7 @@ UI.AppWindow {
                 window.say(qsTr("%1 is ready for backups").arg(Setup.driveName));
                 Setup.dismiss();
             } else if (Setup.state === "failed") {
-                errorDialog.show(qsTr("The drive couldn't be set up"), Setup.error);
+                errorDialog.show(qsTr("The drive couldn't be set up"), Setup.error, Setup.errorDetail);
                 Setup.dismiss();
             }
         }
@@ -182,12 +181,23 @@ UI.AppWindow {
 
     UI.Dialog {
         id: errorDialog
-        function show(heading, message) {
+        // The backup tool's own words, added under the sentence on Details.
+        property string detail
+        function show(heading, message, more) {
             title = heading;
             text = message;
+            detail = more ?? "";
             open();
         }
         buttons: [
+            UI.Button {
+                visible: errorDialog.detail.length > 0
+                text: qsTr("Details")
+                onClicked: {
+                    errorDialog.text = errorDialog.text + "\n\n" + errorDialog.detail;
+                    errorDialog.detail = "";
+                }
+            },
             UI.Button {
                 kind: "primary"
                 text: qsTr("OK")

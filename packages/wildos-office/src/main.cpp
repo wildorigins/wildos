@@ -18,7 +18,7 @@
 
 #include "office.h"
 
-// Opening Write or Tables again while its start screen is up brings that
+// Opening Write, Tables or Slides again while its start screen is up brings that
 // window forward instead of a second one.
 class Remote : public QObject
 {
@@ -51,7 +51,8 @@ private:
 };
 
 // Shows the start screen, at once or after the launch splash, and makes it
-// the window that "Write" or "Tables" from Start brings forward next time.
+// the window that "Write", "Tables" or "Slides" from Start brings forward
+// next time.
 class Launcher : public QObject
 {
     Q_OBJECT
@@ -89,24 +90,29 @@ private:
 
 int main(int argc, char *argv[])
 {
-    // One program under three names: wildos-write and wildos-tables are
-    // links to it, and --write or --tables pick the same from any name.
+    // One program under four names: wildos-write, wildos-tables and
+    // wildos-slides are links to it, and --write, --tables or --slides pick
+    // the same from any name.
     const std::string self = QFileInfo(QString::fromLocal8Bit(argv[0])).fileName().toStdString();
-    bool tables = self == "wildos-tables";
+    Office::App which = self == "wildos-tables" ? Office::Tables : self == "wildos-slides" ? Office::Slides : Office::Write;
     bool blank = false;
     std::vector<std::string> files;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--tables") == 0) {
-            tables = true;
+            which = Office::Tables;
+        } else if (std::strcmp(argv[i], "--slides") == 0) {
+            which = Office::Slides;
         } else if (std::strcmp(argv[i], "--write") == 0) {
-            tables = false;
+            which = Office::Write;
         } else if (std::strcmp(argv[i], "--new") == 0) {
             blank = true;
         } else if (std::strcmp(argv[i], "--") != 0 && argv[i][0] != '-') {
             files.emplace_back(argv[i]);
         }
     }
-    Office::setMode(tables);
+    Office::setApp(which);
+    const bool tables = which == Office::Tables;
+    const bool slides = which == Office::Slides;
 
     // Wild OS draws LibreOffice with its KDE look; a session can still
     // choose another.
@@ -119,7 +125,7 @@ int main(int argc, char *argv[])
     const bool opening = !files.empty() || blank;
     std::vector<std::string> sofficeArgs;
     if (opening) {
-        sofficeArgs.emplace_back(tables ? "--calc" : "--writer");
+        sofficeArgs.emplace_back(tables ? "--calc" : slides ? "--impress" : "--writer");
         sofficeArgs.emplace_back("--nologo");
         for (const auto &file : files) {
             sofficeArgs.push_back(file);
@@ -143,11 +149,11 @@ int main(int argc, char *argv[])
     app.setApplicationName(QStringLiteral("wildos-office"));
     app.setOrganizationDomain(QStringLiteral("wildos.io"));
     app.setApplicationVersion(QStringLiteral(WILDOS_OFFICE_VERSION));
-    // LibreOffice's own ids, which the Write and Tables launchers are
+    // LibreOffice's own ids, which the Write, Tables and Slides launchers are
     // installed under, so the start screen and the documents it opens share
     // one taskbar button.
-    app.setDesktopFileName(tables ? QStringLiteral("libreoffice-calc") : QStringLiteral("libreoffice-writer"));
-    app.setWindowIcon(QIcon::fromTheme(tables ? QStringLiteral("org.wildos.tables") : QStringLiteral("org.wildos.write")));
+    app.setDesktopFileName(tables ? QStringLiteral("libreoffice-calc") : slides ? QStringLiteral("libreoffice-impress") : QStringLiteral("libreoffice-writer"));
+    app.setWindowIcon(QIcon::fromTheme(tables ? QStringLiteral("org.wildos.tables") : slides ? QStringLiteral("org.wildos.slides") : QStringLiteral("org.wildos.write")));
     Office::followSpellingLanguage();
 
     if (opening) {
@@ -169,7 +175,7 @@ int main(int argc, char *argv[])
         return app.exec();
     }
 
-    const QString service = tables ? QStringLiteral("org.wildos.Tables") : QStringLiteral("org.wildos.Write");
+    const QString service = tables ? QStringLiteral("org.wildos.Tables") : slides ? QStringLiteral("org.wildos.Slides") : QStringLiteral("org.wildos.Write");
     const QString path = QStringLiteral("/Start");
     QDBusConnection bus = QDBusConnection::sessionBus();
     if (bus.isConnected() && bus.interface()->isServiceRegistered(service)) {

@@ -26,22 +26,22 @@ PageScroll {
     }
 
     readonly property var systemActions: [
-        { value: "taskview", text: "Task view" },
-        { value: "desktop", text: "Show desktop" },
-        { value: "appgrid", text: "App grid" },
-        { value: "notifications", text: "Notifications" },
-        { value: "nothing", text: "Nothing" },
+        { value: "taskview", text: qsTr("Task view") },
+        { value: "desktop", text: qsTr("Show desktop") },
+        { value: "appgrid", text: qsTr("App grid") },
+        { value: "notifications", text: qsTr("Notifications") },
+        { value: "nothing", text: qsTr("Nothing") },
     ]
     // Sideways swipes move between things, so they get the actions that
     // go somewhere and back.
     readonly property var sidewaysActions: [
-        { value: "desktops", text: "Switch desktops" },
-        { value: "history", text: "Back and forward" },
-        { value: "nothing", text: "Nothing" },
+        { value: "desktops", text: qsTr("Switch desktops") },
+        { value: "history", text: qsTr("Back and forward") },
+        { value: "nothing", text: qsTr("Nothing") },
     ]
     readonly property var pageActions: [
-        { value: "history", text: "Back and forward" },
-        { value: "nothing", text: "Nothing" },
+        { value: "history", text: qsTr("Back and forward") },
+        { value: "nothing", text: qsTr("Nothing") },
     ]
 
     component GestureRow: UI.SettingRow {
@@ -83,8 +83,8 @@ PageScroll {
         visible: page.pad === null
         iconName: "touchpad"
         warning: true
-        title: "No touchpad found"
-        description: "This computer has no touchpad, or it is switched off in the computer's own settings."
+        title: qsTr("No touchpad found")
+        description: qsTr("This computer has no touchpad, or it is switched off in the computer's own settings.")
     }
 
     ColumnLayout {
@@ -113,9 +113,9 @@ PageScroll {
 
                 Repeater {
                     model: [
-                        { count: 2, text: "Two fingers" },
-                        { count: 3, text: "Three fingers" },
-                        { count: 4, text: "Four fingers" },
+                        { count: 2, text: qsTr("Two fingers") },
+                        { count: 3, text: qsTr("Three fingers") },
+                        { count: 4, text: qsTr("Four fingers") },
                     ]
 
                     UI.SegmentButton {
@@ -138,34 +138,34 @@ PageScroll {
                 width: parent.width
 
                 GestureRow {
-                    title: "Swipe left or right"
-                    description: "In Files, Settings, the Store and Music"
+                    title: qsTr("Swipe left or right")
+                    description: qsTr("In Files, Settings, the Store and Music")
                     gesture: "PageSwipe"
                     kind: "page"
                     actions: page.pageActions
                 }
                 InfoRow {
-                    title: "Scroll"
+                    title: qsTr("Scroll")
                     kind: "scroll"
-                    status: "Always on"
+                    status: qsTr("Always on")
                 }
                 InfoRow {
-                    title: "Pinch to zoom"
-                    description: "In apps that zoom, such as PDF and browsers"
+                    title: qsTr("Pinch to zoom")
+                    description: qsTr("In apps that zoom, such as PDF and browsers")
                     kind: "zoom"
-                    status: "Always on"
+                    status: qsTr("Always on")
                 }
                 InfoRow {
-                    title: "Turn to rotate"
-                    description: "Pages in PDF"
+                    title: qsTr("Turn to rotate")
+                    description: qsTr("Pages in PDF")
                     kind: "rotate"
-                    status: "Always on"
+                    status: qsTr("Always on")
                 }
                 InfoRow {
-                    title: "Tap to right-click"
-                    description: "Works when tapping to click is on"
+                    title: qsTr("Tap to right-click")
+                    description: qsTr("Works when tapping to click is on")
                     kind: "tap"
-                    status: page.pad !== null && page.pad.tapToClick === true ? "On" : "Off"
+                    status: page.pad !== null && page.pad.tapToClick === true ? qsTr("On") : qsTr("Off")
                 }
             }
         }
@@ -186,19 +186,19 @@ PageScroll {
                     readonly property string prefix: page.fingers === 3 ? "Three" : "Four"
 
                     GestureRow {
-                        title: "Swipe up"
+                        title: qsTr("Swipe up")
                         gesture: parent.prefix + "Up"
                         kind: "swipe-up"
                         enabled: !parent.off
                     }
                     GestureRow {
-                        title: "Swipe down"
+                        title: qsTr("Swipe down")
                         gesture: parent.prefix + "Down"
                         kind: "swipe-down"
                         enabled: !parent.off
                     }
                     GestureRow {
-                        title: "Swipe left or right"
+                        title: qsTr("Swipe left or right")
                         gesture: parent.prefix + "Sideways"
                         kind: "swipe-sideways"
                         actions: page.sidewaysActions
@@ -210,7 +210,7 @@ PageScroll {
             UI.Label {
                 Layout.fillWidth: true
                 visible: page.fingers === 3 && Gestures.threeFingerDrag
-                text: "Three-finger drag is on, so three fingers drag instead of swiping."
+                text: qsTr("Three-finger drag is on, so three fingers drag instead of swiping.")
                 size: 12
                 color: UI.Style.inkMuted
             }
@@ -222,7 +222,7 @@ PageScroll {
             spacing: 10
 
             SectionTitle {
-                text: "Accessibility"
+                text: qsTr("Accessibility")
             }
 
             UI.Card {
@@ -232,9 +232,9 @@ PageScroll {
                     width: parent.width
 
                     UI.SettingRow {
-                        title: "Three-finger drag"
-                        description: "Move windows and select text with three fingers, without clicking"
-                        status: Gestures.threeFingerDrag ? "On" : "Off"
+                        title: qsTr("Three-finger drag")
+                        description: qsTr("Move windows and select text with three fingers, without clicking")
+                        status: Gestures.threeFingerDrag ? qsTr("On") : qsTr("Off")
                         leading: GesturePreview {
                             kind: "drag"
                             fingers: 3
@@ -243,7 +243,7 @@ PageScroll {
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             checked: page.revision >= 0 && Gestures.threeFingerDrag
-                            Accessible.name: "Three-finger drag"
+                            Accessible.name: qsTr("Three-finger drag")
                             onToggled: Gestures.threeFingerDrag = checked
                         }
                     }
@@ -256,8 +256,8 @@ PageScroll {
             spacing: 12
 
             UI.LinkButton {
-                text: "Learn more"
-                Accessible.name: "Learn more about touchpad gestures"
+                text: qsTr("Learn more")
+                Accessible.name: qsTr("Learn more about touchpad gestures")
                 onClicked: Qt.openUrlExternally("https://help.wildos.io/using/touchpad-gestures/")
             }
 
@@ -266,7 +266,7 @@ PageScroll {
             }
 
             UI.Button {
-                text: "Reset to defaults"
+                text: qsTr("Reset to defaults")
                 enabled: page.revision >= 0 && !Gestures.isDefault
                 onClicked: Gestures.reset()
             }

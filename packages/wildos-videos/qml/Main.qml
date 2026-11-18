@@ -22,6 +22,7 @@ UI.AppWindow {
     property string errorText
     readonly property bool panelShown: watching && settings.panelOpen && !fullscreen && !pip
 
+    rememberSize: !pip
     width: 1384
     height: 802
     minimumWidth: pip ? 200 : 720
@@ -66,6 +67,13 @@ UI.AppWindow {
         const size = aspect >= 1 ? Qt.size(400, Math.round(400 / aspect)) : Qt.size(Math.round(320 * aspect), 320);
         pip = true;
         VideosApp.enterPictureInPicture(size);
+    }
+    function closeVideo() {
+        if (!watching || fullscreen || pip) {
+            return;
+        }
+        toast.hide();
+        Player.close();
     }
     function say(message) {
         if (message.length > 0) {
@@ -167,14 +175,35 @@ UI.AppWindow {
         }
     }
     Shortcut {
-        sequence: "F"
+        sequences: ["F", "F11"]
         enabled: window.watching
         onActivated: window.toggleFullscreen()
     }
     Shortcut {
         sequence: "Escape"
-        enabled: window.fullscreen || window.pip
-        onActivated: window.fullscreen ? window.leaveFullscreen() : window.togglePip()
+        enabled: window.watching
+        onActivated: {
+            if (window.fullscreen) {
+                window.leaveFullscreen();
+            } else if (window.pip) {
+                window.togglePip();
+            } else {
+                window.closeVideo();
+            }
+        }
+    }
+    // Not StandardKey.Back beside "Alt+Left": that is the same key on
+    // Linux, and a key listed twice never fires.
+    Shortcut {
+        sequences: ["Alt+Left", "Back"]
+        enabled: !window.fullscreen && !window.pip
+        onActivated: {
+            if (window.watching) {
+                window.closeVideo();
+            } else if (!library.atTop) {
+                library.folder = Library.parentOf(library.folder);
+            }
+        }
     }
     Shortcut {
         sequence: "["
@@ -225,7 +254,11 @@ UI.AppWindow {
         keys: ["text/uri-list"]
         onDropped: drop => {
             if (drop.hasUrls && drop.urls.length > 0) {
-                Player.open(Library.pathFromUrl(drop.urls[0]));
+                const paths = [];
+                for (let i = 0; i < drop.urls.length; ++i) {
+                    paths.push(Library.pathFromUrl(drop.urls[i]));
+                }
+                Player.openFiles(paths);
                 drop.accept();
             }
         }
@@ -250,18 +283,25 @@ UI.AppWindow {
 
             UI.TitleBar {
                 anchors.fill: parent
+                tall: true
                 frame: window.frame
                 showTitle: false
-                buttons.buttonHeight: 44
 
                 // The title bar puts its content 16px in; the board's icon is 14.
                 Row {
                     anchors.left: parent.left
-                    anchors.leftMargin: -2
+                    anchors.leftMargin: window.watching ? -8 : -2
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 10
 
+                    PanelButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: window.watching
+                        iconName: "back"
+                        tip: qsTr("Back to your videos")
+                        onClicked: window.closeVideo()
+                    }
                     Image {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 20
@@ -272,7 +312,7 @@ UI.AppWindow {
                     }
                     UI.Label {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, parent.width - 120)
+                        width: Math.min(implicitWidth, parent.width - 170)
                         visible: window.watching
                         text: Player.fileName
                         font.weight: UI.Style.weightMedium
@@ -307,18 +347,31 @@ UI.AppWindow {
                     fullscreen: window.fullscreen
                     pip: window.pip
                     panelHidden: !settings.panelOpen
-                    menuOpen: pictureMenu.opened
+                    menuOpen: pictureMenu.opened || itemMenu.opened
                     errorText: window.errorText
                     onFullscreenRequested: window.toggleFullscreen()
                     onPipRequested: window.togglePip()
                     onPanelRequested: settings.panelOpen = true
                     onMoveRequested: window.startSystemMove()
-                    onSpeedMenuRequested: button => {
-                        const entries = [];
-                        for (const s of [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]) {
-                            entries.push({ text: s === 1 ? qsTr("Normal") : VideosStyle.speed(s), radio: true, checked: Math.abs(Player.speed - s) < 0.01, run: () => Player.speed = s });
-                        }
-                        pictureMenu.show(button, entries);
+                    onSpeedMenuRequested: button => pictureMenu.show(button, window.speedEntries())
+                    onVolumeStepRequested: steps => {
+                        Player.stepVolume(steps);
+                        window.flash(qsTr("Volume %1%").arg(Player.volume));
+                    }
+                    onMenuRequested: (x, y) => {
+                        itemMenu.entries = [
+                            { text: Player.playing ? qsTr("Pause") : qsTr("Play"), icon: Player.playing ? "media-pause" : "play", enabled: Player.loaded, run: () => Player.playPause() },
+                            { text: window.fullscreen ? qsTr("Leave full screen") : qsTr("Full screen"), icon: "fullscreen", shortcut: "F11", run: () => window.toggleFullscreen() },
+                            { text: qsTr("Picture in picture"), enabled: Player.loaded, run: () => window.togglePip() },
+                            { separator: true },
+                            { text: qsTr("Speed"), submenu: window.speedEntries() },
+                            { text: qsTr("Audio"), icon: "sound", submenu: window.audioEntries() },
+                            { text: qsTr("Subtitles"), icon: "list", submenu: window.subtitleEntries() },
+                            { text: qsTr("Shape of picture"), icon: "resolution", submenu: window.aspectEntries() },
+                            { separator: true },
+                            { text: qsTr("Show in Files"), icon: "open-folder", run: () => Library.showInFiles(Player.path) }
+                        ];
+                        itemMenu.popup(stage, x, y);
                     }
                     onSubtitlesMenuRequested: button => pictureMenu.show(button, window.subtitleEntries())
                     onSettingsMenuRequested: button => {
@@ -333,6 +386,7 @@ UI.AppWindow {
                 }
 
                 LibraryPage {
+                    id: library
                     anchors.fill: parent
                     visible: !window.watching
                     onOpenRequested: openDialog.open()
@@ -350,6 +404,13 @@ UI.AppWindow {
         }
     }
 
+    function speedEntries() {
+        const entries = [];
+        for (const s of [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]) {
+            entries.push({ text: s === 1 ? qsTr("Normal") : VideosStyle.speed(s), radio: true, checked: Math.abs(Player.speed - s) < 0.01, run: () => Player.speed = s });
+        }
+        return entries;
+    }
     function audioEntries() {
         if (Player.audioTracks.length === 0) {
             return [{ text: qsTr("No sound in this video"), enabled: false }];

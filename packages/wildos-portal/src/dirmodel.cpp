@@ -3,16 +3,22 @@
 #include "format.h"
 
 #include <QLocale>
+#include <KConfig>
 #include <KConfigGroup>
 #include <KCoreDirLister>
 #include <KIO/MkdirJob>
 #include <KIO/CopyJob>
 #include <KIO/PreviewJob>
 #include <KSharedConfig>
+#include <QClipboard>
+#include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QMimeDatabase>
 #include <QRegularExpression>
+#include <QSocketNotifier>
 #include <QStandardPaths>
 #include <QStorageInfo>
 
@@ -63,13 +69,22 @@ struct Volume {
     QString type;
     qint64 total = 0;
     qint64 free = 0;
+    bool usb = false;
 };
+
+// Whether a mounted device hangs off a USB port, from where the kernel
+// files it under /sys.
+bool onUsb(const QByteArray &device)
+{
+    const QString name = QFileInfo(QFileInfo(QString::fromLocal8Bit(device)).canonicalFilePath()).fileName();
+    return !name.isEmpty() && QFileInfo(QStringLiteral("/sys/class/block/") + name).canonicalFilePath().contains(QStringLiteral("/usb"));
+}
 
 QList<Volume> volumes()
 {
     QList<Volume> list;
     const QStorageInfo root(QStringLiteral("/"));
-    list.append({QStringLiteral("Wild OS"), QStringLiteral("/"), QStringLiteral("Local disk"), root.bytesTotal(), root.bytesAvailable()});
+    list.append({QStringLiteral("Wild OS"), QStringLiteral("/"), QCoreApplication::translate("DirModel", "Local disk"), root.bytesTotal(), root.bytesAvailable()});
     static const QStringList mountRoots = {QStringLiteral("/media/"), QStringLiteral("/run/media/"), QStringLiteral("/mnt/")};
     const auto mounted = QStorageInfo::mountedVolumes();
     for (const QStorageInfo &info : mounted) {
@@ -85,9 +100,9 @@ QList<Volume> volumes()
         const QString fs = QString::fromLatin1(info.fileSystemType());
         QString name = label;
         if (name.isEmpty()) {
-            name = fs == QStringLiteral("ntfs") || fs == QStringLiteral("ntfs3") ? QStringLiteral("Windows") : QStringLiteral("USB drive");
+            name = fs == QStringLiteral("ntfs") || fs == QStringLiteral("ntfs3") ? QStringLiteral("Windows") : QCoreApplication::translate("DirModel", "USB drive");
         }
-        list.append({name, path, QStringLiteral("Drive"), info.bytesTotal(), info.bytesAvailable()});
+        list.append({name, path, QCoreApplication::translate("DirModel", "Drive"), info.bytesTotal(), info.bytesAvailable(), onUsb(info.device())});
     }
     return list;
 }
@@ -97,7 +112,7 @@ QString friendlyRoot(const QString &path, QString *rootPath)
     const QString home = QDir::homePath();
     if (isUnder(path, home)) {
         *rootPath = home;
-        return QStringLiteral("Home");
+        return QCoreApplication::translate("DirModel", "Home");
     }
     QString best = QStringLiteral("/");
     QString name = QStringLiteral("Wild OS");
@@ -159,6 +174,24 @@ DirModel::DirModel(QObject *parent)
         setLoading(false);
         setError(job->errorString());
     });
+
+    // The kernel marks its mount table as changed each time something is
+    // mounted or unmounted, so a USB stick plugged in while the dialog is
+    // open shows up in the places column and in This computer.
+    auto mounts = new QFile(QStringLiteral("/proc/self/mounts"));
+    if (mounts->open(QIODevice::ReadOnly)) {
+        auto watcher = new QSocketNotifier(mounts->handle(), QSocketNotifier::Exception, this);
+        // The file stays open for as long as it is watched, and no longer.
+        mounts->setParent(watcher);
+        connect(watcher, &QSocketNotifier::activated, this, [this] {
+            Q_EMIT drivesChanged();
+            if (isComputer()) {
+                refresh();
+            }
+        });
+    } else {
+        delete mounts;
+    }
 }
 
 DirModel::~DirModel() = default;
@@ -172,6 +205,49 @@ bool DirModel::showExtensions()
 {
     const KConfigGroup view(KSharedConfig::openConfig(QStringLiteral("wildosfilesrc")), QStringLiteral("View"));
     return view.readEntry("ShowExtensions", false);
+}
+
+QVariantList DirModel::drives() const
+{
+    QVariantList list;
+    for (const Volume &v : volumes()) {
+        if (v.path == QStringLiteral("/")) {
+            continue;
+        }
+        list.append(QVariantMap{
+            {QStringLiteral("name"), v.name},
+            {QStringLiteral("icon"), v.usb ? QStringLiteral("usb") : QStringLiteral("drive")},
+            {QStringLiteral("url"), QUrl::fromLocalFile(v.path)},
+        });
+    }
+    return list;
+}
+
+QVariantList DirModel::pinned() const
+{
+    // Read afresh: the folders may have been pinned since this ran last.
+    // Only folders on this PC are offered: an app given a network address
+    // instead of a file path often can't open it.
+    const KConfig files(QStringLiteral("wildosfilesrc"));
+    const QStringList addresses = files.group(QStringLiteral("Sidebar")).readEntry("Pinned", QStringList());
+    QVariantList list;
+    for (const QString &address : addresses) {
+        const QUrl url(address);
+        if (!url.isLocalFile()) {
+            continue;
+        }
+        const QString path = QDir::cleanPath(url.toLocalFile());
+        if (!QFileInfo(path).isDir()) {
+            continue;
+        }
+        const QString name = QFileInfo(path).fileName();
+        list.append(QVariantMap{
+            {QStringLiteral("name"), name.isEmpty() ? path : name},
+            {QStringLiteral("icon"), QStringLiteral("folder")},
+            {QStringLiteral("url"), QUrl::fromLocalFile(path)},
+        });
+    }
+    return list;
 }
 
 int DirModel::rowCount(const QModelIndex &parent) const
@@ -236,7 +312,7 @@ QHash<int, QByteArray> DirModel::roleNames() const
 QString DirModel::title() const
 {
     if (isComputer()) {
-        return QStringLiteral("This computer");
+        return tr("This computer");
     }
     if (m_url.isLocalFile()) {
         const QString path = QDir::cleanPath(m_url.toLocalFile());
@@ -253,7 +329,7 @@ QString DirModel::title() const
 QString DirModel::pathText() const
 {
     if (isComputer()) {
-        return QStringLiteral("This computer");
+        return tr("This computer");
     }
     return m_url.isLocalFile() ? QDir::cleanPath(m_url.toLocalFile()) : m_url.toDisplayString();
 }
@@ -265,7 +341,7 @@ QVariantList DirModel::crumbs() const
         list.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("url"), url}});
     };
     if (isComputer()) {
-        add(QStringLiteral("This computer"), m_url);
+        add(tr("This computer"), m_url);
         return list;
     }
     if (!m_url.isLocalFile()) {
@@ -393,11 +469,12 @@ bool DirModel::openText(const QString &typed)
     if (text.isEmpty()) {
         return false;
     }
-    if (text.compare(QStringLiteral("This computer"), Qt::CaseInsensitive) == 0) {
+    // The English names work too, as typed from a help article.
+    if (text.compare(tr("This computer"), Qt::CaseInsensitive) == 0 || text.compare(QStringLiteral("This computer"), Qt::CaseInsensitive) == 0) {
         navigate(computerUrl(), true);
         return true;
     }
-    if (text.compare(QStringLiteral("Home"), Qt::CaseInsensitive) == 0 || text == QStringLiteral("~")) {
+    if (text.compare(tr("Home"), Qt::CaseInsensitive) == 0 || text.compare(QStringLiteral("Home"), Qt::CaseInsensitive) == 0 || text == QStringLiteral("~")) {
         navigate(QUrl::fromLocalFile(QDir::homePath()), true);
         return true;
     }
@@ -527,18 +604,18 @@ QList<DirModel::Entry> DirModel::driveEntries() const
         e.icon = v.path == QStringLiteral("/") ? QStringLiteral("drive-harddisk") : QStringLiteral("drive-removable-media");
         e.isDir = true;
         e.type = v.type;
-        e.size = Format::size(v.free) + QStringLiteral(" free");
+        e.size = tr("%1 free").arg(Format::size(v.free));
         e.sizeKey = v.free;
         list.append(e);
     }
     const QString home = QDir::homePath();
     Entry h;
     h.url = QUrl::fromLocalFile(home);
-    h.fileName = QStringLiteral("Home");
+    h.fileName = tr("Home");
     h.name = h.fileName;
     h.icon = QStringLiteral("user-home");
     h.isDir = true;
-    h.type = QStringLiteral("Folder");
+    h.type = tr("Folder");
     list.prepend(h);
     return list;
 }
@@ -628,9 +705,18 @@ void DirModel::rebuild()
         std::sort(m_rows.begin(), m_rows.end(), [this](const Entry &a, const Entry &b) { return lessThan(a, b); });
     }
     m_current = -1;
+    m_widestType.clear();
+    m_widestSize.clear();
     for (int i = 0; i < m_rows.size(); ++i) {
-        if (m_rows.at(i).url == currentUrl) {
+        const Entry &e = m_rows.at(i);
+        if (e.url == currentUrl) {
             m_current = i;
+        }
+        if (e.type.size() > m_widestType.size()) {
+            m_widestType = e.type;
+        }
+        if (e.size.size() > m_widestSize.size()) {
+            m_widestSize = e.size;
         }
     }
     endResetModel();
@@ -799,14 +885,14 @@ QString DirModel::uniqueName(const QString &base, const QString &suffix) const
 void DirModel::newFolder()
 {
     if (!writable()) {
-        Q_EMIT failed(QStringLiteral("You cannot make a folder here. Pick a folder you can save in."));
+        Q_EMIT failed(tr("You cannot make a folder here. Pick a folder you can save in."));
         return;
     }
-    const QString name = uniqueName(QStringLiteral("New folder"), QString());
+    const QString name = uniqueName(tr("New folder"), QString());
     auto job = KIO::mkdir(childUrl(name));
     connect(job, &KJob::result, this, [this, job, name] {
         if (job->error()) {
-            Q_EMIT failed(QStringLiteral("The folder could not be made: %1").arg(job->errorString()));
+            Q_EMIT failed(tr("The folder could not be made: %1").arg(job->errorString()));
             return;
         }
         m_madeFolder = name;
@@ -826,13 +912,13 @@ bool DirModel::renameItem(int row, const QString &typed)
         return true;
     }
     if (name.contains(QLatin1Char('/')) || name == QStringLiteral(".") || name == QStringLiteral("..")) {
-        Q_EMIT failed(QStringLiteral("A name cannot contain / or be just dots. Try a different name."));
+        Q_EMIT failed(tr("A name cannot contain / or be just dots. Try a different name."));
         return false;
     }
     const Entry &e = m_rows.at(row);
     const QString fileName = name + e.fileName.mid(e.name.size());
     if (rowForFileName(fileName) >= 0) {
-        Q_EMIT failed(QStringLiteral("There is already an item called \"%1\" here. Pick a different name.").arg(name));
+        Q_EMIT failed(tr("There is already an item called \"%1\" here. Pick a different name.").arg(name));
         return false;
     }
     auto job = KIO::moveAs(e.url, childUrl(fileName), KIO::HideProgressInfo);
@@ -842,4 +928,37 @@ bool DirModel::renameItem(int row, const QString &typed)
         }
     });
     return true;
+}
+
+void DirModel::trashSelected()
+{
+    const QList<QUrl> urls = selectedUrls();
+    if (urls.isEmpty() || isComputer()) {
+        return;
+    }
+    if (!std::all_of(urls.cbegin(), urls.cend(), [](const QUrl &url) { return url.isLocalFile(); })) {
+        Q_EMIT failed(tr("Items here cannot go to the Recycle Bin, so they were not deleted."));
+        return;
+    }
+    auto job = KIO::trash(urls, KIO::HideProgressInfo);
+    connect(job, &KJob::result, this, [this, job] {
+        if (job->error()) {
+            Q_EMIT failed(job->errorString());
+        }
+    });
+}
+
+void DirModel::copyPaths() const
+{
+    QList<QUrl> urls = selectedUrls();
+    if (urls.isEmpty() && !isComputer()) {
+        urls.append(m_url);
+    }
+    QStringList paths;
+    for (const QUrl &url : std::as_const(urls)) {
+        paths.append(QLatin1Char('"') + (url.isLocalFile() ? url.toLocalFile() : url.toDisplayString()) + QLatin1Char('"'));
+    }
+    if (!paths.isEmpty()) {
+        QGuiApplication::clipboard()->setText(paths.join(QLatin1Char('\n')));
+    }
 }

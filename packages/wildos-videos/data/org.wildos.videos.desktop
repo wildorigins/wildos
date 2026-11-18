@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Videos
+Name[fr]=Vidéos
 GenericName=Video player
+GenericName[fr]=Lecteur vidéo
 Comment=Watch the videos on your PC
+Comment[fr]=Regardez les vidéos de votre PC
 Exec=wildos-videos %U
 Icon=wildos-videos
 Terminal=false

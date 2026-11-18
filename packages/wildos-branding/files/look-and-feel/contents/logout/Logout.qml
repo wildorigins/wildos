@@ -64,19 +64,19 @@ Item {
         }
     }
 
-    function seconds(n: int): string {
-        return n === 1 ? "1 second" : n + " seconds";
-    }
-
     readonly property string countdownText: {
         const n = Math.max(0, Math.ceil(root.remainingTime));
         if (root.isReboot) {
-            return (root.updatesPending ? "Installing updates and restarting in " : "Restarting in ") + seconds(n);
+            if (root.updatesPending)
+                return n === 1 ? qsTr("Installing updates and restarting in 1 second") : qsTr("Installing updates and restarting in %1 seconds").arg(n);
+            return n === 1 ? qsTr("Restarting in 1 second") : qsTr("Restarting in %1 seconds").arg(n);
         }
         if (root.isHalt) {
-            return (root.updatesPending ? "Installing updates and shutting down in " : "Shutting down in ") + seconds(n);
+            if (root.updatesPending)
+                return n === 1 ? qsTr("Installing updates and shutting down in 1 second") : qsTr("Installing updates and shutting down in %1 seconds").arg(n);
+            return n === 1 ? qsTr("Shutting down in 1 second") : qsTr("Shutting down in %1 seconds").arg(n);
         }
-        return "Signing out in " + seconds(n);
+        return n === 1 ? qsTr("Signing out in 1 second") : qsTr("Signing out in %1 seconds").arg(n);
     }
 
     // Keyboard focus starts on the primary choice so Enter confirms it. If
@@ -236,7 +236,7 @@ Item {
 
             PowerButton {
                 id: lockButton
-                text: "Lock"
+                text: qsTr("Lock")
                 iconName: "lock"
                 visible: sessionManagement.canLock
                 onClicked: root.lockScreenRequested()
@@ -245,7 +245,7 @@ Item {
 
             PowerButton {
                 id: switchUserButton
-                text: "Switch user"
+                text: qsTr("Switch user")
                 iconName: "switch-user"
                 visible: sessionManagement.canSwitchUser
                 onClicked: {
@@ -257,7 +257,7 @@ Item {
 
             PowerButton {
                 id: signOutButton
-                text: "Sign out"
+                text: qsTr("Sign out")
                 iconName: "sign-out"
                 visible: canLogout
                 primary: root.isLogout
@@ -268,7 +268,7 @@ Item {
 
             PowerButton {
                 id: taskManagerButton
-                text: "Task Manager"
+                text: qsTr("Task Manager")
                 iconName: "task-manager"
                 visible: taskManagerEntry.status === FolderListModel.Ready && taskManagerEntry.count > 0
                 onClicked: root.openTaskManager()
@@ -293,7 +293,7 @@ Item {
 
             PowerButton {
                 id: sleepButton
-                text: "Sleep"
+                text: qsTr("Sleep")
                 iconName: "moon"
                 visible: spdMethods.SuspendState
                 onClicked: root.sleepRequested()
@@ -302,7 +302,7 @@ Item {
 
             PowerButton {
                 id: hibernateButton
-                text: "Hibernate"
+                text: qsTr("Hibernate")
                 iconName: "hibernate"
                 visible: spdMethods.HibernateState
                 onClicked: root.hibernateRequested()
@@ -311,7 +311,7 @@ Item {
 
             PowerButton {
                 id: restartButton
-                text: root.updatesPending ? "Update and restart" : "Restart"
+                text: root.updatesPending ? qsTr("Update and restart") : qsTr("Restart")
                 iconName: "restart"
                 visible: maysd
                 primary: root.isReboot
@@ -322,7 +322,7 @@ Item {
 
             PowerButton {
                 id: shutDownButton
-                text: root.updatesPending ? "Update and shut down" : "Shut down"
+                text: root.updatesPending ? qsTr("Update and shut down") : qsTr("Shut down")
                 iconName: "power"
                 visible: maysd
                 primary: root.isHalt || root.showAllOptions
@@ -346,20 +346,20 @@ Item {
                 id: otherUsers
                 visible: sessionsModel.count > 1 && (!root.isLogout || root.showAllOptions)
                 text: sessionsModel.count === 2
-                      ? "Someone else is signed in. If you shut down or restart, they could lose unsaved work."
-                      : (sessionsModel.count - 1) + " other people are signed in. If you shut down or restart, they could lose unsaved work."
+                      ? qsTr("Someone else is signed in. If you shut down or restart, they could lose unsaved work.")
+                      : qsTr("%1 other people are signed in. If you shut down or restart, they could lose unsaved work.").arg(sessionsModel.count - 1)
             }
 
             Note {
                 id: firmwareNote
                 visible: rebootToFirmwareSetup
-                text: "Your computer will open its firmware settings when it restarts."
+                text: qsTr("Your computer will open its firmware settings when it restarts.")
             }
 
             Note {
                 id: bootMenuNote
                 visible: rebootToBootLoaderMenu
-                text: "Your computer will show the boot menu when it restarts."
+                text: qsTr("Your computer will show the boot menu when it restarts.")
             }
         }
 
@@ -370,20 +370,20 @@ Item {
             spacing: 8
 
             SecondaryButton {
-                text: "Restart without updating"
+                text: qsTr("Restart without updating")
                 visible: root.updatesPending && maysd
                 onClicked: root.rebootRequested()
             }
 
             SecondaryButton {
-                text: "Shut down without updating"
+                text: qsTr("Shut down without updating")
                 visible: root.updatesPending && maysd
                 onClicked: root.haltRequested()
             }
 
             SecondaryButton {
                 id: cancelButton
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: root.cancelRequested()
             }
         }

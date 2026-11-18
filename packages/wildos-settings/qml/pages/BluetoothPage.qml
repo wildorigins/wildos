@@ -49,11 +49,11 @@ PageScroll {
             UI.SettingRow {
                 iconName: "bluetooth"
                 title: "Bluetooth"
-                description: !page.present ? "This computer has no Bluetooth"
-                    : page.on && page.adapter ? "Discoverable as “" + page.adapter.name + "”"
-                    : "Turn on to use headphones, a mouse or a keyboard"
+                description: !page.present ? qsTr("This computer has no Bluetooth")
+                    : page.on && page.adapter ? qsTr("Discoverable as “%1”").arg(page.adapter.name)
+                    : qsTr("Turn on to use headphones, a mouse or a keyboard")
                 enabled: page.present
-                status: (page.on) ? "On" : "Off"
+                status: (page.on) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
@@ -66,12 +66,12 @@ PageScroll {
             UI.SettingRow {
                 visible: page.on
                 iconName: "plus"
-                title: "Add a device"
-                description: "Put the device in pairing mode first"
+                title: qsTr("Add a device")
+                description: qsTr("Put the device in pairing mode first")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Add device"
+                    text: qsTr("Add device")
                     onClicked: PlasmaBt.LaunchApp.launchWizard()
                 }
             }
@@ -84,7 +84,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Devices"
+            text: qsTr("Devices")
         }
 
         UI.Card {
@@ -104,21 +104,21 @@ PageScroll {
                         title: model.Name
                         description: {
                             if (model.Connecting) {
-                                return model.Connected ? "Disconnecting" : "Connecting";
+                                return model.Connected ? qsTr("Disconnecting") : qsTr("Connecting");
                             }
                             if (model.Connected) {
-                                return model.Battery ? "Connected, battery " + model.Battery.percentage + "%" : "Connected";
+                                return model.Battery ? qsTr("Connected, battery %1%").arg(model.Battery.percentage) : qsTr("Connected");
                             }
                             if (model.ConnectionFailed) {
-                                return "Could not connect";
+                                return qsTr("Could not connect");
                             }
-                            return model.Paired ? "Paired" : "Not paired";
+                            return model.Paired ? qsTr("Paired") : qsTr("Not paired");
                         }
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
                             enabled: !deviceRow.model.Connecting
-                            text: deviceRow.model.Connected ? "Disconnect" : "Connect"
+                            text: deviceRow.model.Connected ? qsTr("Disconnect") : qsTr("Connect")
                             onClicked: {
                                 const device = deviceRow.model.Device;
                                 const call = deviceRow.model.Connected ? device.disconnectFromDevice() : device.connectToDevice();
@@ -128,7 +128,7 @@ PageScroll {
 
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Remove"
+                            text: qsTr("Remove")
                             onClicked: {
                                 const device = deviceRow.model.Device;
                                 if (device && device.adapter) {
@@ -141,8 +141,8 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: deviceList.count === 0
-                    title: "No devices yet"
-                    description: "Devices you pair appear here."
+                    title: qsTr("No devices yet")
+                    description: qsTr("Devices you pair appear here.")
                 }
             }
         }

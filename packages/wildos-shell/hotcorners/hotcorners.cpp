@@ -21,6 +21,7 @@
 #include <KConfigGroup>
 #include <KSharedConfig>
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
@@ -63,8 +64,8 @@ constexpr qreal leaveDistance = 8;
 constexpr int screenOffSettle = 500;
 
 const QString defaultActions[] = {
-    QStringLiteral("taskview"),
-    QStringLiteral("notifications"),
+    QStringLiteral("none"),
+    QStringLiteral("none"),
     QStringLiteral("none"),
     QStringLiteral("none"),
 };
@@ -500,7 +501,7 @@ void HotCorners::toggleKeepAwake(const Spot &spot)
     KSharedConfigPtr config = KSharedConfig::openConfig(QStringLiteral("wildosrc"));
     config->group(QStringLiteral("KeepAwake")).writeEntry("Active", on, KConfig::Notify);
     config->sync();
-    showToast(on ? QStringLiteral("Keep awake on") : QStringLiteral("Keep awake off"), spot);
+    showToast(on ? QT_TRANSLATE_NOOP("HotCorners", "Keep awake on") : QT_TRANSLATE_NOOP("HotCorners", "Keep awake off"), spot);
 }
 
 // Two blocks, as one does not cover everything: powerdevil's, for dimming,
@@ -591,10 +592,10 @@ void HotCorners::toggleDoNotDisturb(const Spot &spot)
         group.deleteEntry("Until", KConfig::Notify);
     }
     config->sync();
-    showToast(on ? QStringLiteral("Do not disturb on") : QStringLiteral("Do not disturb off"), spot);
+    showToast(on ? QT_TRANSLATE_NOOP("HotCorners", "Do not disturb on") : QT_TRANSLATE_NOOP("HotCorners", "Do not disturb off"), spot);
 }
 
-void HotCorners::showToast(const QString &text, const Spot &spot)
+void HotCorners::showToast(const char *text, const Spot &spot)
 {
     if (!spot.output) {
         return;
@@ -615,7 +616,7 @@ void HotCorners::showToast(const QString &text, const Spot &spot)
     // Inside the taskbar, so the bottom corners' message sits above it.
     const QRectF area = KWin::workspace()->clientArea(KWin::MaximizeArea, spot.output, KWin::VirtualDesktopManager::self()->currentDesktop());
     QMetaObject::invokeMethod(m_toast.get(), "showAt",
-                              Q_ARG(QVariant, text),
+                              Q_ARG(QVariant, QCoreApplication::translate("HotCorners", text)),
                               Q_ARG(QVariant, area),
                               Q_ARG(QVariant, int(spot.corner)));
 }

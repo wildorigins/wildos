@@ -11,35 +11,52 @@ PageScroll {
     id: page
 
     readonly property var groups: [
-        { title: "Tabs", keys: [
-            ["New tab", "Ctrl+Shift+T"],
-            ["New tab with profile 1 to 9", "Ctrl+Shift+1 to 9"],
-            ["Duplicate tab", "Ctrl+Shift+D"],
-            ["Close tab or pane", "Ctrl+Shift+W"],
-            ["Next tab", "Ctrl+Tab"],
-            ["Previous tab", "Ctrl+Shift+Tab"],
-            ["Go to tab 1 to 8, or the last tab", "Ctrl+Alt+1 to 9"],
-            ["Open the new tab menu", "Ctrl+Shift+Space"]
+        { title: qsTr("Tabs"), keys: [
+            [qsTr("New tab"), "Ctrl+Shift+T"],
+            [qsTr("New tab with profile 1 to 9"), "Ctrl+Shift+1 to 9"],
+            [qsTr("Duplicate tab"), "Ctrl+Shift+D"],
+            [qsTr("Close tab or pane"), "Ctrl+Shift+W"],
+            [qsTr("Next tab"), "Ctrl+Tab"],
+            [qsTr("Previous tab"), "Ctrl+Shift+Tab"],
+            [qsTr("Go to tab 1 to 8, or the last tab"), "Ctrl+Alt+1 to 9"],
+            [qsTr("Open the new tab menu"), "Ctrl+Shift+Space"]
         ] },
-        { title: "Panes", keys: [
-            ["Split right", "Alt+Shift+="],
-            ["Split down", "Alt+Shift+-"],
-            ["Move to the pane beside", "Alt+Arrows"]
+        { title: qsTr("Panes"), keys: [
+            [qsTr("Split right"), "Alt+Shift+="],
+            [qsTr("Split down"), "Alt+Shift+-"],
+            [qsTr("Move to the pane beside"), "Alt+Arrows"]
         ] },
-        { title: "Text", keys: [
-            ["Copy", Config.ctrlCopyPaste ? "Ctrl+Shift+C or Ctrl+C" : "Ctrl+Shift+C"],
-            ["Paste", Config.ctrlCopyPaste ? "Ctrl+Shift+V or Ctrl+V" : "Ctrl+Shift+V"],
-            ["Make text bigger", "Ctrl+="],
-            ["Make text smaller", "Ctrl+-"],
-            ["Reset text size", "Ctrl+0"],
-            ["Open a link", "Ctrl+click"]
+        { title: qsTr("Text"), keys: [
+            [qsTr("Copy"), Config.ctrlCopyPaste ? "Ctrl+Shift+C or Ctrl+C" : "Ctrl+Shift+C"],
+            [qsTr("Paste"), Config.ctrlCopyPaste ? "Ctrl+Shift+V or Ctrl+V" : "Ctrl+Shift+V"],
+            [qsTr("Make text bigger"), "Ctrl+="],
+            [qsTr("Make text smaller"), "Ctrl+-"],
+            [qsTr("Reset text size"), "Ctrl+0"],
+            [qsTr("Open a link"), "Ctrl+click"]
         ] },
-        { title: "Window", keys: [
-            ["New window", "Ctrl+Shift+N"],
-            ["Settings", "Ctrl+,"],
-            ["Full screen", "F11"]
+        { title: qsTr("Window"), keys: [
+            [qsTr("New window"), "Ctrl+Shift+N"],
+            [qsTr("Settings"), "Ctrl+,"],
+            [qsTr("Full screen"), "F11"]
         ] }
     ]
+
+    // The shortcuts above are split into keys, so only the shown key names
+    // are translated.
+    function keyName(key) {
+        switch (key) {
+        case "Shift":
+            return qsTr("Shift", "keyboard key");
+        case "Space":
+            return qsTr("Space", "keyboard key");
+        case "Arrows":
+            return qsTr("Arrows", "the arrow keys");
+        case "click":
+            return qsTr("click", "a mouse click");
+        default:
+            return key;
+        }
+    }
 
     Repeater {
         model: page.groups
@@ -87,7 +104,7 @@ PageScroll {
                                             id: joinText
                                             visible: word.joiner
                                             anchors.verticalCenter: parent.verticalCenter
-                                            text: word.modelData
+                                            text: word.modelData === "or" ? qsTr("or", "between two shortcuts") : qsTr("to", "a range of keys like 1 to 9")
                                             size: 12
                                             color: UI.Style.inkMuted
                                         }
@@ -114,7 +131,7 @@ PageScroll {
                                                     UI.Label {
                                                         id: capText
                                                         anchors.centerIn: parent
-                                                        text: cap.modelData
+                                                        text: page.keyName(cap.modelData)
                                                         size: 12
                                                         font.weight: UI.Style.weightMedium
                                                     }

@@ -67,48 +67,48 @@ PlasmoidItem {
     // How the connection is doing, in the words Windows uses.
     readonly property string connectionWords: {
         if (!network) {
-            return "Not connected";
+            return qsTr("Not connected");
         }
         if (network.connecting && !connected) {
-            return "Connecting";
+            return qsTr("Connecting");
         }
         if (!connected) {
-            return "Not connected";
+            return qsTr("Not connected");
         }
         if (network.portal) {
-            return "Sign-in needed";
+            return qsTr("Sign-in needed");
         }
         if (network.internetKnown && !network.internet) {
-            return "No internet";
+            return qsTr("No internet");
         }
-        return "Connected";
+        return qsTr("Connected");
     }
 
     readonly property string networkTooltip: {
         if (network && network.flightMode && !connected) {
-            return "Network: Flight mode is on";
+            return qsTr("Network: Flight mode is on");
         }
         if (!connected) {
-            return "Network: " + connectionWords;
+            return qsTr("Network: %1").arg(connectionWords);
         }
-        const where = network.wifiConnected ? network.activeWifiName : "Connected";
+        const where = network.wifiConnected ? network.activeWifiName : qsTr("Connected");
         if (network.portal) {
-            return "Network: " + where + ", sign-in needed";
+            return qsTr("Network: %1, sign-in needed").arg(where);
         }
         if (network.internetKnown) {
-            return "Network: " + where + (network.internet ? ", internet access" : ", no internet");
+            return network.internet ? qsTr("Network: %1, internet access").arg(where) : qsTr("Network: %1, no internet").arg(where);
         }
-        return "Network: " + where;
+        return qsTr("Network: %1").arg(where);
     }
 
     function duration(msec: real): string {
         const minutes = Math.round(msec / 60000);
         if (minutes < 60) {
             const shown = minutes < 10 ? Math.max(1, minutes) : Math.round(minutes / 5) * 5;
-            return shown === 1 ? "1 minute" : shown + " minutes";
+            return shown === 1 ? qsTr("1 minute") : qsTr("%1 minutes").arg(shown);
         }
         const hours = Math.round(minutes / 60);
-        return hours === 1 ? "1 hour" : hours + " hours";
+        return hours === 1 ? qsTr("1 hour") : qsTr("%1 hours").arg(hours);
     }
 
     readonly property string batteryDetail: {
@@ -116,15 +116,15 @@ PlasmoidItem {
             return "";
         }
         if (power.fullyCharged) {
-            return "Fully charged";
+            return qsTr("Fully charged");
         }
         if (power.notCharging) {
-            return "Plugged in, not charging";
+            return qsTr("Plugged in, not charging");
         }
         if (power.charging) {
-            return power.remainingMsec > 0 ? "About " + duration(power.remainingMsec) + " until full" : "Charging";
+            return power.remainingMsec > 0 ? qsTr("About %1 until full").arg(duration(power.remainingMsec)) : qsTr("Charging");
         }
-        return power.remainingMsec > 0 ? "About " + duration(power.remainingMsec) + " left" : "";
+        return power.remainingMsec > 0 ? qsTr("About %1 left").arg(duration(power.remainingMsec)) : "";
     }
 
     readonly property bool batteryLow: power !== null && power.hasBattery && !power.pluggedIn && power.percent <= 10
@@ -132,6 +132,13 @@ PlasmoidItem {
     // The design's "Edit quick settings": the tiles someone has taken away.
     readonly property var hiddenTiles: Plasmoid.configuration.hiddenTiles
     readonly property var addedTiles: Plasmoid.configuration.addedTiles
+
+    // The tiles in the order someone dragged them into, if they have.
+    readonly property var tileOrder: Plasmoid.configuration.tileOrder
+
+    function setTileOrder(order: var): void {
+        Plasmoid.configuration.tileOrder = order;
+    }
 
     function setTileShown(id: string, shown: bool): void {
         const hidden = hiddenTiles.filter(t => t !== id);
@@ -204,10 +211,10 @@ PlasmoidItem {
     // KWin's night light modes as it reports them (0 and 1 follow sunset
     // where you are, 2 a set time, 3 always on) and as kwinrc spells them.
     readonly property int nightLightAlwaysOn: 3
-    readonly property var nightLightModeNames: ["Automatic", "Location", "Timings", "Constant"]
+    readonly property var nightLightModeNames: ["Automatic", "Location", "Times", "Constant"]
 
     function setNightLightMode(mode: int): void {
-        run("kwriteconfig6 --file kwinrc --group NightColor --key Mode " + nightLightModeNames[mode] + "; " + reconfigureKWin);
+        run("kwriteconfig6 --notify --file kwinrc --group NightColor --key Mode " + nightLightModeNames[mode] + "; " + reconfigureKWin);
     }
 
     // KWin can only pause night light, not start it early, so the tile does
@@ -226,8 +233,8 @@ PlasmoidItem {
                 nightLightStart.restart();
             } else if (!power.nightLightEnabled) {
                 run("kreadconfig6 --file kwinrc --group NightColor --key Mode | grep -q . "
-                    + "|| kwriteconfig6 --file kwinrc --group NightColor --key Mode Constant; "
-                    + "kwriteconfig6 --file kwinrc --group NightColor --key Active --type bool true; "
+                    + "|| kwriteconfig6 --notify --file kwinrc --group NightColor --key Mode Constant; "
+                    + "kwriteconfig6 --notify --file kwinrc --group NightColor --key Active --type bool true; "
                     + reconfigureKWin);
             } else {
                 keepNightLightOn();
@@ -242,7 +249,7 @@ PlasmoidItem {
             setNightLightMode(schedule);
             nightLightSettle.restart();
         } else if (power.nightLightMode === nightLightAlwaysOn) {
-            run("kwriteconfig6 --file kwinrc --group NightColor --key Active --type bool false; " + reconfigureKWin);
+            run("kwriteconfig6 --notify --file kwinrc --group NightColor --key Active --type bool false; " + reconfigureKWin);
         } else if (!power.nightLightInhibitedHere) {
             power.toggleNightLightInhibition();
         }
@@ -271,6 +278,12 @@ PlasmoidItem {
         }
     }
 
+    // A translated message can hold an apostrophe, which would end the
+    // shell's single quotes.
+    function shellQuote(text: string): string {
+        return "'" + text.replace(/'/g, "'\\''") + "'";
+    }
+
     // Wild OS Settings takes KDE module names as page names too, so
     // "kcm_bluetooth" lands on Bluetooth. Only plain ids (letters, digits,
     // underscores and hyphens) are passed, so nothing reaches the shell.
@@ -279,26 +292,26 @@ PlasmoidItem {
         // Settings ships with Wild OS, but if it has gone the click still
         // says something rather than doing nothing.
         run("if command -v wildos-settings >/dev/null; then setsid -f wildos-settings" + page + " >/dev/null 2>&1; "
-            + "else notify-send -a 'Wild OS' -i preferences-system 'Settings is missing' "
-            + "'Reinstall it from the Store to change this.'; fi");
+            + "else notify-send -a 'Wild OS' -i preferences-system " + shellQuote(qsTr("Settings is missing")) + " "
+            + shellQuote(qsTr("Reinstall it from the Store to change this.")) + "; fi");
         quick.expanded = false;
     }
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     Plasmoid.icon: "preferences-system"
-    Plasmoid.title: "Quick settings"
+    Plasmoid.title: qsTr("Quick settings")
     // One plain line per part, as Windows shows over its tray button.
     readonly property var tooltipLines: {
         const lines = [networkTooltip];
         if (!audio || !audio.available) {
-            lines.push("Sound: No audio output");
+            lines.push(qsTr("Sound: No audio output"));
         } else {
-            lines.push(audio.muted ? "Speakers: Muted" : "Speakers: " + audio.percent + "%");
+            lines.push(audio.muted ? qsTr("Speakers: Muted") : qsTr("Speakers: %1%").arg(audio.percent));
         }
         if (power && power.hasBattery) {
-            lines.push(power.fullyCharged ? "Battery: Fully charged"
-                : power.charging ? "Battery: " + power.percent + "%, charging"
-                : "Battery: " + power.percent + "% remaining");
+            lines.push(power.fullyCharged ? qsTr("Battery: Fully charged")
+                : power.charging ? qsTr("Battery: %1%, charging").arg(power.percent)
+                : qsTr("Battery: %1% remaining").arg(power.percent));
         }
         return lines;
     }

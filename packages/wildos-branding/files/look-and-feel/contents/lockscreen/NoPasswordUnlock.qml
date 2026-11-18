@@ -49,7 +49,7 @@ FocusScope {
             kind: "primary"
             size: "large"
             focus: true
-            text: "Unlock"
+            text: qsTr("Unlock")
 
             onClicked: Qt.quit()
             Keys.onReturnPressed: clicked()

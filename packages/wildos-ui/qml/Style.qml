@@ -325,6 +325,9 @@ QtObject {
     readonly property color success: dark ? "#a8ecc8" : "#1d7a4c"
     readonly property color successSoft: dark ? Qt.rgba(110 / 255, 210 / 255, 160 / 255, 0.16) : Qt.rgba(29 / 255, 122 / 255, 76 / 255, 0.12)
 
+    // What a control that cannot be used fades to, with its label.
+    readonly property real disabledOpacity: 0.5
+
     readonly property int space1: 4
     readonly property int space2: 8
     readonly property int space3: 12
@@ -336,6 +339,8 @@ QtObject {
 
     readonly property int radiusXs: 6
     readonly property int radiusSm: 8
+    // The panels, list cards and large fields the app boards draw at 10.
+    readonly property int radiusPanel: 10
     readonly property int radiusMd: 12
     readonly property int radiusLg: 14
     readonly property int radiusDialog: 18
@@ -351,6 +356,9 @@ QtObject {
     readonly property int menuHeaderHeight: 28
     readonly property int radiusMenuRow: 7
     readonly property int titleBarHeight: 42
+    // The taller bar of the apps whose boards draw it at 44 (Music, Notes,
+    // Backup, Voice, Videos, Archive, Report): `tall: true` on TitleBar.
+    readonly property int titleBarHeightTall: 44
     readonly property int windowButtonWidth: 46
     readonly property int windowRadius: 14
 
@@ -386,11 +394,11 @@ QtObject {
     readonly property real scaleEnter: reducedMotion ? 1 : 0.96
 
     readonly property var accents: [
-        { name: "Glacier", colour: "#8fb4ff" },
-        { name: "Sea glass", colour: "#7fd6c8" },
-        { name: "Moss", colour: "#9fd38a" },
-        { name: "Sand", colour: "#f2c46b" },
-        { name: "Dusk", colour: "#f2a08a" },
-        { name: "Heather", colour: "#c4b2ff" }
+        { name: qsTr("Glacier"), colour: "#8fb4ff" },
+        { name: qsTr("Sea glass"), colour: "#7fd6c8" },
+        { name: qsTr("Moss"), colour: "#9fd38a" },
+        { name: qsTr("Sand"), colour: "#f2c46b" },
+        { name: qsTr("Dusk"), colour: "#f2a08a" },
+        { name: qsTr("Heather"), colour: "#c4b2ff" }
     ]
 }

@@ -19,13 +19,49 @@ Item {
     required property string kind
     required property bool checked
     required property string thumb
+    // Rows can be dragged out to Files or the desktop.
+    property bool draggable: true
 
+    // The drag has begun; the window answers with carry() once the files
+    // are there to be dragged.
+    signal dragRequested()
     signal pressed(int modifiers)
     signal opened()
     signal toggled()
     signal menuRequested(real x, real y)
 
     implicitHeight: 38
+
+    function carry(urls) {
+        if (!mouse.drag.active) {
+            return;
+        }
+        proxy.Drag.mimeData = { "text/uri-list": urls.join("\r\n") };
+        proxy.ready = true;
+    }
+
+    // The thing actually dragged, as in Files: Qt moves it with the
+    // pointer. The drag itself starts only once the files have been taken
+    // out of the archive, so whatever they are dropped on finds them.
+    Item {
+        id: proxy
+        property bool ready: false
+        width: 1
+        height: 1
+        Drag.dragType: Drag.Automatic
+        Drag.supportedActions: Qt.CopyAction | Qt.MoveAction
+        Drag.proposedAction: Qt.CopyAction
+        Drag.imageSource: ArchiveStyle.icon
+        Drag.imageSourceSize: Qt.size(48, 48)
+        Drag.hotSpot.x: 24
+        Drag.hotSpot.y: 24
+        Drag.active: mouse.drag.active && ready
+        Drag.onDragFinished: {
+            proxy.ready = false;
+            proxy.x = 0;
+            proxy.y = 0;
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -39,6 +75,21 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            // A drag here takes the row out, not the list along.
+            preventStealing: true
+            drag.target: row.draggable ? proxy : null
+            drag.threshold: 8
+            drag.onActiveChanged: {
+                if (drag.active) {
+                    if (pressedButtons & Qt.LeftButton) {
+                        row.dragRequested();
+                    }
+                } else {
+                    proxy.ready = false;
+                    proxy.x = 0;
+                    proxy.y = 0;
+                }
+            }
             onPressed: event => {
                 if (event.button === Qt.RightButton && !row.checked) {
                     row.pressed(0);

@@ -116,6 +116,11 @@ FocusScope {
         Accessible.role: Accessible.List
         Accessible.name: icons.folder ? icons.folder.title : ""
 
+        WheelHandler {
+            acceptedModifiers: Qt.ControlModifier
+            onWheel: event => icons.view.wheelLayout(event.angleDelta.y)
+        }
+
         Background {
             view: icons.view
             target: icons
@@ -143,15 +148,17 @@ FocusScope {
             // A delegate waiting in the reuse pool has index -1, which is
             // also "nothing being renamed".
             renaming: icons.renameRow >= 0 && icons.renameRow === index
+            corner: icons.vertical || icons.mode === "tiles" ? 8 : 6
+            nameLabel: icons.vertical ? tileName : icons.driveTiles && tile.isDrive ? driveName : rowName
             width: icons.tileWidth
             height: icons.tileHeight
 
             Rectangle {
                 anchors.fill: parent
-                radius: icons.vertical || icons.mode === "tiles" ? 8 : 6
+                radius: tile.corner
                 color: tile.selected ? UI.Style.accentSelected : tile.highlighted ? UI.Style.surfaceHover : "transparent"
-                border.width: 1
-                border.color: tile.selected ? UI.Style.accentBorderStrong : tile.isCurrentFocus ? Metrics.rule : "transparent"
+                border.width: tile.selected ? 1 : 0
+                border.color: UI.Style.accentBorderStrong
             }
 
             Column {
@@ -171,6 +178,7 @@ FocusScope {
                 }
 
                 UI.Label {
+                    id: tileName
                     visible: !tile.renaming
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
@@ -221,6 +229,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
 
                     UI.Label {
+                        id: rowName
                         visible: !tile.renaming
                         width: parent.width
                         text: tile.name
@@ -277,6 +286,7 @@ FocusScope {
                     spacing: 5
 
                     UI.Label {
+                        id: driveName
                         width: parent.width
                         text: tile.name
                         color: tile.selected ? UI.Style.inkStrong : UI.Style.ink

@@ -21,15 +21,15 @@ PageScroll {
             width: parent.width
 
             UI.SettingRow {
-                title: "Double-clicking a title bar will"
+                title: qsTr("Double-clicking a title bar will")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Double-clicking a title bar will"
+                    Accessible.name: qsTr("Double-clicking a title bar will")
                     model: [
-                        { value: "Maximize", text: "Maximise or restore" },
-                        { value: "Minimize", text: "Minimise" },
-                        { value: "Nothing", text: "Do nothing" }
+                        { value: "Maximize", text: qsTr("Maximise or restore") },
+                        { value: "Minimize", text: qsTr("Minimise") },
+                        { value: "Nothing", text: qsTr("Do nothing") }
                     ]
                     property string choice: System.config("kwinrc", "MouseBindings", "CommandTitlebarDblClick", "Maximize")
                     currentIndex: Math.max(0, model.findIndex(o => o.value === choice))
@@ -43,42 +43,42 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "multitasking"
-                title: "Snap windows"
-                description: "Drag a window to the side of the screen to fill half of it, or to the top to maximise it"
-                status: (System.snapEdges) ? "On" : "Off"
+                title: qsTr("Snap windows")
+                description: qsTr("Drag a window to the side of the screen to fill half of it, or to the top to maximise it")
+                status: (System.snapEdges) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: System.snapEdges
-                    Accessible.name: "Snap windows"
+                    Accessible.name: qsTr("Snap windows")
                     onToggled: System.snapEdges = checked
                 }
             }
 
             UI.SettingRow {
                 iconName: "apps"
-                title: "Show snap layouts"
-                description: "Hover over a window's maximise button, or press Windows key + Z, to pick a layout"
-                status: (System.snapLayouts) ? "On" : "Off"
+                title: qsTr("Show snap layouts")
+                description: qsTr("Hover over a window's maximise button, or press Windows key + Z, to pick a layout")
+                status: (System.snapLayouts) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: System.snapLayouts
-                    Accessible.name: "Show snap layouts"
+                    Accessible.name: qsTr("Show snap layouts")
                     onToggled: System.snapLayouts = checked
                 }
             }
 
             UI.SettingRow {
                 iconName: "split-right"
-                title: "Suggest windows to fill the rest"
-                description: "After you snap a window, pick other open windows to fill the empty spaces beside it"
-                status: (System.snapAssist) ? "On" : "Off"
+                title: qsTr("Suggest windows to fill the rest")
+                description: qsTr("After you snap a window, pick other open windows to fill the empty spaces beside it")
+                status: (System.snapAssist) ? qsTr("On") : qsTr("Off")
 
                 UI.Toggle {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: System.snapAssist
-                    Accessible.name: "Suggest windows to fill the rest"
+                    Accessible.name: qsTr("Suggest windows to fill the rest")
                     onToggled: System.snapAssist = checked
                 }
             }
@@ -94,11 +94,11 @@ PageScroll {
 
             SectionTitle {
                 Layout.fillWidth: true
-                text: "Hot corners"
+                text: qsTr("Hot corners")
             }
 
             UI.LinkButton {
-                text: "Learn more"
+                text: qsTr("Learn more")
                 onClicked: Qt.openUrlExternally("https://help.wildos.io/using/hot-corners/")
             }
         }
@@ -128,21 +128,21 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Don't trigger in full-screen apps and games"
-                    description: "Corners do nothing while the app in front fills the screen"
-                    status: (System.hotCorners.SkipFullScreen) ? "On" : "Off"
+                    title: qsTr("Don't trigger in full-screen apps and games")
+                    description: qsTr("Corners do nothing while the app in front fills the screen")
+                    status: (System.hotCorners.SkipFullScreen) ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: System.hotCorners.SkipFullScreen
-                        Accessible.name: "Don't trigger in full-screen apps and games"
+                        Accessible.name: qsTr("Don't trigger in full-screen apps and games")
                         onToggled: System.setHotCorner("SkipFullScreen", checked)
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Delay"
-                    description: "How long the pointer rests in a corner before it acts"
+                    title: qsTr("Delay")
+                    description: qsTr("How long the pointer rests in a corner before it acts")
 
                     Row {
                         anchors.verticalCenter: parent.verticalCenter
@@ -150,29 +150,29 @@ PageScroll {
 
                         Repeater {
                             model: [
-                                { value: 0, text: "Instant" },
-                                { value: 150, text: "Short" },
-                                { value: 400, text: "Long" }
+                                { value: 0, text: qsTr("Instant") },
+                                { value: 150, text: qsTr("Short") },
+                                { value: 400, text: qsTr("Long") }
                             ]
 
                             UI.SegmentButton {
                                 required property var modelData
                                 text: modelData.text
                                 checked: System.hotCorners.Delay === modelData.value
-                                onClicked: System.setHotCorner("Delay", modelData.value)
+                                onClicked: System.setHotCorner(qsTr("Delay"), modelData.value)
                             }
                         }
                     }
                 }
 
                 UI.SettingRow {
-                    title: "Reset to defaults"
-                    description: "Task view top left, notifications top right, nothing at the bottom"
+                    title: qsTr("Reset to defaults")
+                    description: qsTr("Task view top left, notifications top right, nothing at the bottom")
 
                     UI.Button {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Reset"
-                        Accessible.name: "Reset hot corners to defaults"
+                        text: qsTr("Reset")
+                        Accessible.name: qsTr("Reset hot corners to defaults")
                         onClicked: System.resetHotCorners()
                     }
                 }
@@ -185,7 +185,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Desktops"
+            text: qsTr("Desktops")
         }
 
         UI.Card {
@@ -195,14 +195,14 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "On the taskbar, show all open windows"
+                    title: qsTr("On the taskbar, show all open windows")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "On the taskbar, show all open windows"
+                        Accessible.name: qsTr("On the taskbar, show all open windows")
                         model: [
-                            { value: false, text: "Only on the desktop I'm using" },
-                            { value: true, text: "On all desktops" }
+                            { value: false, text: qsTr("Only on the desktop I'm using") },
+                            { value: true, text: qsTr("On all desktops") }
                         ]
                         readonly property bool choice: System.taskbarAllDesktops
                         currentIndex: model.findIndex(o => o.value === choice)
@@ -211,14 +211,14 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Show windows from all desktops in Alt+Tab"
-                    description: "When this is off, Alt+Tab only shows windows on the desktop you are using"
-                    status: (System.altTabAllDesktops) ? "On" : "Off"
+                    title: qsTr("Show windows from all desktops in Alt+Tab")
+                    description: qsTr("When this is off, Alt+Tab only shows windows on the desktop you are using")
+                    status: (System.altTabAllDesktops) ? qsTr("On") : qsTr("Off")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: System.altTabAllDesktops
-                        Accessible.name: "Show windows from all desktops in Alt+Tab"
+                        Accessible.name: qsTr("Show windows from all desktops in Alt+Tab")
                         onToggled: System.altTabAllDesktops = checked
                     }
                 }
@@ -226,8 +226,8 @@ PageScroll {
                 UI.SettingRow {
                     visible: Pages.exists("desktops")
                     iconName: "desktops"
-                    title: "Desktops"
-                    description: "Extra desktops for separate sets of windows"
+                    title: qsTr("Desktops")
+                    description: qsTr("Extra desktops for separate sets of windows")
                     chevron: true
                     onClicked: Navigator.open("desktops")
                 }
@@ -243,7 +243,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Related settings"
+            text: qsTr("Related settings")
         }
 
         UI.Card {
@@ -254,8 +254,8 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "touchpad"
-                    title: "Looking for gestures?"
-                    description: "Swipe on the touchpad for Task view, the desktop and other desktops"
+                    title: qsTr("Looking for gestures?")
+                    description: qsTr("Swipe on the touchpad for Task view, the desktop and other desktops")
                     chevron: true
                     onClicked: Navigator.open("touchpadgestures")
                 }

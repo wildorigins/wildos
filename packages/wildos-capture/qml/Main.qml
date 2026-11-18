@@ -12,8 +12,11 @@ QtObject {
         Instantiator {
             model: Qt.application.screens
             delegate: Overlay {
-                required property var modelData
-                screenInfo: modelData
+                required property int index
+                // The screen from the list itself: the model's copy of it is
+                // not taken as a window's screen, which put every overlay on
+                // the first screen.
+                screenInfo: Qt.application.screens[index]
             }
         },
         Countdown {},

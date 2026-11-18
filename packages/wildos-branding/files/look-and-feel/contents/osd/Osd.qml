@@ -2,10 +2,12 @@ import QtQuick
 import QtQuick.Window
 import WildOS.UI as UI
 import org.wildos.overlays
+import org.wildos.shell as WildOS
 
 // The on-screen display for the volume, brightness and other special keys
-// (Overlays.dc): a slim 300 by 52 pill, radius 26, centred 104px above the
-// bottom of the screen, just over the taskbar. A 20px glyph, the level as a
+// (Overlays.dc): a slim 300 by 52 pill, radius 26, centred 28px above the
+// taskbar (104px from the bottom of the screen over the floating taskbar the
+// board draws, 80px over the docked one). A 20px glyph, the level as a
 // 4px accent bar and the number at the right; switches such as Wi-Fi or a
 // keyboard layout show a short line of words instead. It fades 1.5 seconds
 // after the last key press and lets clicks through.
@@ -31,14 +33,15 @@ Window {
     color: "transparent"
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
         | (placement.wayland ? 0 : Qt.ToolTip)
-    title: words.visible ? words.text : "Level " + level
+    title: words.visible ? words.text : qsTr("Level %1").arg(level)
     visible: false
 
     OverlayPlacement {
         id: placement
         window: osd
         edges: OverlayPlacement.Bottom
-        marginBottom: 104
+        fromScreenEdge: true
+        marginBottom: (WildOS.TaskbarStyle.floating ? 76 : 52) + 28
         layer: OverlayPlacement.Overlay
         keyboard: OverlayPlacement.NoKeyboard
         // Rises from the bottom edge, as the Windows volume flyout does.
@@ -57,23 +60,23 @@ Window {
     // these are the Wild OS ones.
     function wordsFor(icon: string, text: string): string {
         const known = {
-            "audio-volume-muted": "Muted",
-            "microphone-sensitivity-muted": "Microphone muted",
-            "input-touchpad-on": "Touchpad on",
-            "input-touchpad-off": "Touchpad off",
-            "network-wireless-on": "Wi-Fi on",
-            "network-wireless-off": "Wi-Fi off",
-            "preferences-system-bluetooth": "Bluetooth on",
-            "preferences-system-bluetooth-inactive": "Bluetooth off",
-            "network-mobile-on": "Mobile data on",
-            "network-mobile-off": "Mobile data off",
-            "input-keyboard-virtual-on": "On-screen keyboard on",
-            "input-keyboard-virtual-off": "On-screen keyboard off",
-            "system-suspend-inhibited": "Sleep and locking paused",
-            "system-suspend-uninhibited": "Sleep and locking back on",
-            "battery-profile-powersave": "Power saver",
-            "speedometer": "Balanced",
-            "battery-profile-performance": "Best performance"
+            "audio-volume-muted": qsTr("Muted"),
+            "microphone-sensitivity-muted": qsTr("Microphone muted"),
+            "input-touchpad-on": qsTr("Touchpad on"),
+            "input-touchpad-off": qsTr("Touchpad off"),
+            "network-wireless-on": qsTr("Wi-Fi on"),
+            "network-wireless-off": qsTr("Wi-Fi off"),
+            "preferences-system-bluetooth": qsTr("Bluetooth on"),
+            "preferences-system-bluetooth-inactive": qsTr("Bluetooth off"),
+            "network-mobile-on": qsTr("Mobile data on"),
+            "network-mobile-off": qsTr("Mobile data off"),
+            "input-keyboard-virtual-on": qsTr("On-screen keyboard on"),
+            "input-keyboard-virtual-off": qsTr("On-screen keyboard off"),
+            "system-suspend-inhibited": qsTr("Sleep and locking paused"),
+            "system-suspend-uninhibited": qsTr("Sleep and locking back on"),
+            "battery-profile-powersave": qsTr("Power saver"),
+            "speedometer": qsTr("Balanced"),
+            "battery-profile-performance": qsTr("Best performance")
         };
         return known[icon] || String(text || "");
     }

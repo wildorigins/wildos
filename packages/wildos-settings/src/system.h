@@ -51,6 +51,9 @@ class System : public QObject
     // The taskbar shows windows from every desktop, not only the one in
     // use. Read on demand, as it costs a call to plasmashell.
     Q_PROPERTY(bool taskbarAllDesktops READ taskbarAllDesktops NOTIFY taskbarAllDesktopsChanged)
+    Q_PROPERTY(bool desktopWidgets READ desktopWidgets NOTIFY desktopWidgetsChanged)
+    Q_PROPERTY(bool taskbarWidgets READ taskbarWidgets NOTIFY taskbarWidgetsChanged)
+    Q_PROPERTY(QVariantList addedTaskbarWidgets READ addedTaskbarWidgets NOTIFY addedTaskbarWidgetsChanged)
     // Windows mode's status at the taskbar's left end (org.wildos.winmode),
     // which only shows once Windows mode is set up. Read on demand too.
     Q_PROPERTY(bool taskbarWinModeStatus READ taskbarWinModeStatus NOTIFY taskbarWinModeStatusChanged)
@@ -119,6 +122,9 @@ public:
     bool taskbarCentred() const { return m_taskbarCentred; }
     bool taskbarFloating() const { return m_taskbarFloating; }
     bool taskbarAllDesktops() const { return m_taskbarAllDesktops; }
+    bool desktopWidgets() const { return m_desktopWidgets; }
+    bool taskbarWidgets() const { return m_taskbarWidgets; }
+    QVariantList addedTaskbarWidgets() const { return m_addedTaskbarWidgets; }
     bool taskbarWinModeStatus() const { return m_taskbarWinModeStatus; }
     bool taskbarShowDesktop() const;
     void setTaskbarShowDesktop(bool on);
@@ -176,6 +182,13 @@ public:
     Q_INVOKABLE void setTaskbarFloating(bool floating);
     Q_INVOKABLE void readTaskbarDesktops();
     Q_INVOKABLE void setTaskbarAllDesktops(bool all);
+    Q_INVOKABLE void readDesktopWidgets();
+    Q_INVOKABLE void setDesktopWidgets(bool allowed);
+    Q_INVOKABLE void readTaskbarWidgets();
+    Q_INVOKABLE void setTaskbarWidgets(bool allowed);
+    Q_INVOKABLE void openWidgetExplorer();
+    Q_INVOKABLE void readAddedTaskbarWidgets();
+    Q_INVOKABLE void removeTaskbarWidget(int id);
     Q_INVOKABLE void readTaskbarWinModeStatus();
     Q_INVOKABLE void setTaskbarWinModeStatus(bool shown);
     Q_INVOKABLE void setSlideshow(bool on, const QString &folder = {});
@@ -216,6 +229,9 @@ Q_SIGNALS:
     void taskbarCentredChanged();
     void taskbarFloatingChanged();
     void taskbarAllDesktopsChanged();
+    void desktopWidgetsChanged();
+    void taskbarWidgetsChanged();
+    void addedTaskbarWidgetsChanged();
     void taskbarWinModeStatusChanged();
     void taskbarShowDesktopChanged();
     void transparencyChanged();
@@ -267,6 +283,9 @@ private:
     bool m_taskbarCentred = true;
     bool m_taskbarFloating = false;
     bool m_taskbarAllDesktops = false;
+    bool m_desktopWidgets = false;
+    bool m_taskbarWidgets = false;
+    QVariantList m_addedTaskbarWidgets;
     bool m_taskbarWinModeStatus = true;
     bool m_slideshow = false;
     QString m_slideshowFolder;

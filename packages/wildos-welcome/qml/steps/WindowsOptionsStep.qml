@@ -12,8 +12,8 @@ WinMode.OptionsPage {
 
     signal finished()
 
-    title: "Windows mode options"
-    mainText: "Finish"
+    title: qsTr("Windows mode options")
+    mainText: qsTr("Finish")
     busy: FirstBoot.state === "finishing" || FirstBoot.state === "signing-in"
     note: error
     onConfirmed: page.finished()

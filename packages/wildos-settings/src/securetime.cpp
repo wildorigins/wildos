@@ -1,5 +1,6 @@
 #include "securetime.h"
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
@@ -63,15 +64,14 @@ QString durationText(qint64 seconds)
 {
     // Rounded down: the signing times only show the clock is at least this
     // far behind.
-    auto count = [](qint64 n, const char *one, const char *many) {
-        return QStringLiteral("%1 %2").arg(n).arg(QLatin1String(n == 1 ? one : many));
-    };
     if (seconds >= 2 * 86400) {
-        return count(seconds / 86400, "day", "days");
+        return QCoreApplication::translate("SecureTime", "%1 days").arg(seconds / 86400);
     }
     if (seconds >= 3600) {
-        return count(seconds / 3600, "hour", "hours");
+        const qint64 hours = seconds / 3600;
+        return hours == 1 ? QCoreApplication::translate("SecureTime", "1 hour") : QCoreApplication::translate("SecureTime", "%1 hours").arg(hours);
     }
-    return count(std::max<qint64>(1, seconds / 60), "minute", "minutes");
+    const qint64 minutes = std::max<qint64>(1, seconds / 60);
+    return minutes == 1 ? QCoreApplication::translate("SecureTime", "1 minute") : QCoreApplication::translate("SecureTime", "%1 minutes").arg(minutes);
 }
 }

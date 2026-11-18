@@ -12,10 +12,10 @@ QtObject {
     readonly property bool connected: name.length > 0
     readonly property bool wifi: type === PlasmaNM.Enums.Wireless
     readonly property bool online: status.connectivity === 4
-    readonly property string title: connected ? name : connecting ? "Connecting" : "Not connected"
+    readonly property string title: connected ? name : connecting ? qsTr("Connecting") : qsTr("Not connected")
     readonly property string caption: connected
-        ? (online ? (wifi ? "Wi-Fi, connected" : "Connected") : "Connected, no internet")
-        : (enabledConnections.wirelessEnabled ? "No network in use" : "Wi-Fi is off")
+        ? (online ? (wifi ? qsTr("Wi-Fi, connected") : qsTr("Connected")) : qsTr("Connected, no internet"))
+        : (enabledConnections.wirelessEnabled ? qsTr("No network in use") : qsTr("Wi-Fi is off"))
     readonly property string iconName: connected ? (wifi ? "wifi" : "ethernet") : "wifi-off"
 
     property PlasmaNM.NetworkStatus status: PlasmaNM.NetworkStatus {}
@@ -60,7 +60,7 @@ QtObject {
         // never claims "Not connected" while it is.
         if (found.length === 0 && status.connectivity >= 2) {
             const active = (status.activeConnections || "").split("\n")[0].replace(/\s*\(.*\)\s*$/, "").replace(/:.*$/, "").trim();
-            found = active.length > 0 ? active : "Wired connection";
+            found = active.length > 0 ? active : qsTr("Wired connection");
             foundType = PlasmaNM.Enums.Wired;
         }
         name = found;

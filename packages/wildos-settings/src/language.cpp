@@ -301,13 +301,13 @@ QVariantMap Language::examples(const QString &format) const
     QString measurement;
     switch (locale.measurementSystem()) {
     case QLocale::ImperialUSSystem:
-        measurement = QStringLiteral("Imperial: inches, feet and pounds");
+        measurement = tr("Imperial: inches, feet and pounds");
         break;
     case QLocale::ImperialUKSystem:
-        measurement = QStringLiteral("Metric, with miles and pints");
+        measurement = tr("Metric, with miles and pints");
         break;
     default:
-        measurement = QStringLiteral("Metric: centimetres, metres and kilograms");
+        measurement = tr("Metric: centimetres, metres and kilograms");
         break;
     }
     return {
@@ -345,8 +345,8 @@ void Language::ensure(const QStringList &locales, const std::function<void()> &t
         if (status == QProcess::NormalExit && code == 0) {
             then();
         } else {
-            Q_EMIT failed(code == 126 || code == 127 ? QStringLiteral("An administrator's password is needed to add a language to this computer.")
-                                                     : error.isEmpty() ? QStringLiteral("The language could not be set up.") : error);
+            Q_EMIT failed(code == 126 || code == 127 ? tr("An administrator's password is needed to add a language to this computer.")
+                                                     : error.isEmpty() ? tr("The language could not be set up.") : error);
             Q_EMIT changed();
         }
     });
@@ -410,11 +410,11 @@ QString Language::example(const QString &category, const QString &format) const
     if (category == QLatin1String("LC_MEASUREMENT")) {
         switch (locale.measurementSystem()) {
         case QLocale::ImperialUSSystem:
-            return QStringLiteral("Inches, feet and pounds");
+            return tr("Inches, feet and pounds");
         case QLocale::ImperialUKSystem:
-            return QStringLiteral("Metric, with miles and pints");
+            return tr("Metric, with miles and pints");
         default:
-            return QStringLiteral("Centimetres, metres and kilograms");
+            return tr("Centimetres, metres and kilograms");
         }
     }
     if (category == QLatin1String("LC_PAPER")) {
@@ -427,7 +427,7 @@ QString Language::example(const QString &category, const QString &format) const
             QStringLiteral("ik_CA"), QStringLiteral("iu_CA"), QStringLiteral("miq_NI"), QStringLiteral("nhn_MX"), QStringLiteral("shs_CA"),
             QStringLiteral("tl_PH")};
         const bool isLetter = letter.contains(name) || locale.measurementSystem() == QLocale::ImperialUSSystem;
-        return isLetter ? QStringLiteral("Letter, 8.5 by 11 inches") : QStringLiteral("A4, 210 by 297 mm");
+        return isLetter ? tr("Letter, 8.5 by 11 inches") : tr("A4, 210 by 297 mm");
     }
     return {};
 }

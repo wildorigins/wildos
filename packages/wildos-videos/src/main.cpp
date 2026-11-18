@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
         }
         const QStringList files = VideosApp::filesFrom(parser.positionalArguments(), QDir::currentPath());
         if (!files.isEmpty()) {
-            player->open(files.first());
+            player->openFiles(files);
         }
     });
     bool started = false;

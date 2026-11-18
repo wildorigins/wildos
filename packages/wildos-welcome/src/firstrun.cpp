@@ -90,8 +90,8 @@ void startCopy(QJsonObject job)
         weMounted = reply.isValid();
     }
     if (root.isEmpty()) {
-        Background::notify(QStringLiteral("Your files weren't copied from Windows"),
-                           QStringLiteral("Wild OS couldn't open the Windows drive again. Copy them with Files instead; nothing was changed on Windows."));
+        Background::notify(QCoreApplication::translate("FirstRun", "Your files weren't copied from Windows"),
+                           QCoreApplication::translate("FirstRun", "Wild OS couldn't open the Windows drive again. Copy them with Files instead; nothing was changed on Windows."));
         return;
     }
 
@@ -198,12 +198,12 @@ void startWindowsMode(const QString &request)
     agent.setTimeout(120000);
     const QDBusReply<QString> reply = agent.call(QStringLiteral("StartSetup"), request);
     if (!reply.isValid() || !reply.value().isEmpty()) {
-        const QString why = reply.isValid() ? reply.value() : QStringLiteral("Windows mode's background service didn't answer.");
+        const QString why = reply.isValid() ? reply.value() : QCoreApplication::translate("FirstRun", "Windows mode's background service didn't answer.");
         qWarning("Windows mode didn't start setting up: %s", qPrintable(reply.isValid() ? reply.value() : reply.error().message()));
         // Said where it shows, since nothing else on screen would.
         QProcess::startDetached(QStringLiteral("notify-send"), {QStringLiteral("--app-name=Windows mode"), QStringLiteral("--icon=wildos-windows-app"),
-                                                               QStringLiteral("Windows mode didn't start setting up"),
-                                                               why + QStringLiteral(" Set it up any time in Settings, under Windows apps.")});
+                                                               QCoreApplication::translate("FirstRun", "Windows mode didn't start setting up"),
+                                                               QCoreApplication::translate("FirstRun", "%1 Set it up any time in Settings, under Windows apps.").arg(why)});
     }
 }
 
@@ -269,7 +269,7 @@ int runPrograms(const QString &jobFile)
     QObject::connect(job, &KJob::result, qApp, [job] {
         const QStringList failed = job->failed();
         if (!failed.isEmpty()) {
-            Background::notify(QStringLiteral("Some installers weren't downloaded"), failed.join(QLatin1Char(' ')));
+            Background::notify(QCoreApplication::translate("FirstRun", "Some installers weren't downloaded"), failed.join(QLatin1Char(' ')));
         }
         // One at a time: each opens the App Bridge's own install dialog.
         auto *queue = new QStringList(job->ready());
@@ -309,7 +309,7 @@ void DownloadJob::start()
     for (const QJsonValue &value : std::as_const(m_programs)) {
         names << value.toObject().value(QStringLiteral("name")).toString();
     }
-    Q_EMIT description(this, QStringLiteral("Downloading Windows installers"), {QStringLiteral("For"), names.join(QStringLiteral(", "))});
+    Q_EMIT description(this, QCoreApplication::translate("FirstRun", "Downloading Windows installers"), {QCoreApplication::translate("FirstRun", "For"), names.join(QStringLiteral(", "))});
     QTimer::singleShot(0, this, &DownloadJob::next);
 }
 
@@ -323,7 +323,7 @@ bool DownloadJob::doKill()
 
 void DownloadJob::fail(const QString &name, const QString &why)
 {
-    m_failed << QStringLiteral("%1: %2").arg(name, why);
+    m_failed << QCoreApplication::translate("FirstRun", "%1: %2").arg(name, why);
     next();
 }
 
@@ -340,7 +340,7 @@ void DownloadJob::next()
     const QString repo = program.value(QStringLiteral("github")).toString();
     static const QRegularExpression repoShape(QStringLiteral("^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$"));
     if (!repoShape.match(repo).hasMatch()) {
-        fail(name, QStringLiteral("Wild OS doesn't know where to get it."));
+        fail(name, QCoreApplication::translate("FirstRun", "Wild OS doesn't know where to get it."));
         return;
     }
     QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/%1/releases/latest").arg(repo)));
@@ -352,7 +352,7 @@ void DownloadJob::next()
         m_reply = nullptr;
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
-            fail(name, QStringLiteral("its download page didn't answer."));
+            fail(name, QCoreApplication::translate("FirstRun", "its download page didn't answer."));
             return;
         }
         const QRegularExpression wanted(program.value(QStringLiteral("asset")).toString());
@@ -364,18 +364,18 @@ void DownloadJob::next()
             }
             const QString digest = asset.value(QStringLiteral("digest")).toString();
             if (!digest.startsWith(QLatin1String("sha256:"))) {
-                fail(name, QStringLiteral("its installer has no checksum to check it against."));
+                fail(name, QCoreApplication::translate("FirstRun", "its installer has no checksum to check it against."));
                 return;
             }
             const QUrl url(asset.value(QStringLiteral("browser_download_url")).toString());
             if (url.scheme() != QLatin1String("https")) {
-                fail(name, QStringLiteral("its installer isn't offered securely."));
+                fail(name, QCoreApplication::translate("FirstRun", "its installer isn't offered securely."));
                 return;
             }
             fetch(name, url.toString(), asset.value(QStringLiteral("size")).toInteger(), QByteArray::fromHex(digest.mid(7).toLatin1()));
             return;
         }
-        fail(name, QStringLiteral("its latest release has no Windows installer."));
+        fail(name, QCoreApplication::translate("FirstRun", "its latest release has no Windows installer."));
     });
 }
 
@@ -387,11 +387,11 @@ void DownloadJob::fetch(const QString &name, const QString &url, qint64 size, co
     auto *out = new QSaveFile(target, this);
     if (!out->open(QIODevice::WriteOnly)) {
         out->deleteLater();
-        fail(name, QStringLiteral("there's no room for it in Downloads."));
+        fail(name, QCoreApplication::translate("FirstRun", "there's no room for it in Downloads."));
         return;
     }
     auto *hash = new QCryptographicHash(QCryptographicHash::Sha256);
-    Q_EMIT description(this, QStringLiteral("Downloading Windows installers"), {QStringLiteral("Program"), name});
+    Q_EMIT description(this, QCoreApplication::translate("FirstRun", "Downloading Windows installers"), {QCoreApplication::translate("FirstRun", "Program"), name});
     setTotalAmount(KJob::Bytes, size);
     setProcessedAmount(KJob::Bytes, 0);
     QNetworkRequest request{QUrl(url)};
@@ -418,8 +418,8 @@ void DownloadJob::fetch(const QString &name, const QString &url, qint64 size, co
         if (!good) {
             out->cancelWriting();
             out->deleteLater();
-            fail(name, reply->error() == QNetworkReply::NoError ? QStringLiteral("the download didn't match its checksum, so it was thrown away.")
-                                                                : QStringLiteral("the download stopped."));
+            fail(name, reply->error() == QNetworkReply::NoError ? QCoreApplication::translate("FirstRun", "the download didn't match its checksum, so it was thrown away.")
+                                                                : QCoreApplication::translate("FirstRun", "the download stopped."));
             return;
         }
         out->commit();

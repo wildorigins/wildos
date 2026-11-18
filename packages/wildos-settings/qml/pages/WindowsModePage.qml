@@ -33,27 +33,27 @@ PageScroll {
             width: parent.width
 
             UI.ListRow {
-                title: !WindowsMode.installed ? "Windows mode isn't installed"
-                     : WindowsMode.state === "setup" ? "Setting up Windows mode"
-                     : WindowsMode.state === "failed" ? "Windows mode couldn't finish setting up"
-                     : "Windows mode isn't set up"
-                description: !WindowsMode.installed ? "Get Windows mode from the Store to run Windows programs like Office and Photoshop in their own windows."
-                     : WindowsMode.state === "setup" ? (page.status.percent || 0) + "% done. " + (page.status.left || "")
-                     : WindowsMode.state === "failed" ? ((page.status.problem || {}).text || "Nothing was left half installed.")
-                     : "Run Windows programs like Office and Photoshop in their own windows, using the Windows licence built into this PC."
+                title: !WindowsMode.installed ? qsTr("Windows mode isn't installed")
+                     : WindowsMode.state === "setup" ? qsTr("Setting up Windows mode")
+                     : WindowsMode.state === "failed" ? qsTr("Windows mode couldn't finish setting up")
+                     : qsTr("Windows mode isn't set up")
+                description: !WindowsMode.installed ? qsTr("Get Windows mode from the Store to run Windows programs like Office and Photoshop in their own windows.")
+                     : WindowsMode.state === "setup" ? qsTr("%1% done.").arg(page.status.percent || 0) + " " + (page.status.left || "")
+                     : WindowsMode.state === "failed" ? ((page.status.problem || {}).text || qsTr("Nothing was left half installed."))
+                     : qsTr("Run Windows programs like Office and Photoshop in their own windows, using the Windows licence built into this PC.")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: WindowsMode.installed
                     kind: "primary"
-                    text: WindowsMode.state === "setup" ? "Show progress" : WindowsMode.state === "failed" ? "Try again" : "Set up"
+                    text: WindowsMode.state === "setup" ? qsTr("Show progress") : WindowsMode.state === "failed" ? qsTr("Try again") : qsTr("Set up")
                     onClicked: WindowsMode.openSetup()
                 }
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: !WindowsMode.installed && System.storeApp.length > 0
-                    text: "Open the Store"
+                    text: qsTr("Open the Store")
                     onClicked: Qt.openUrlExternally("appstream://org.wildos.winmode")
                 }
             }
@@ -68,21 +68,21 @@ PageScroll {
         Repeater {
             model: [
                 {
-                    label: "Status",
-                    value: page.vm === "running" ? "Running" : page.vm === "paused" ? "Paused" : page.vm === "saved" ? "Saved to disk" : "Off",
-                    detail: page.vm === "running" ? ((page.status.apps || []).filter(a => a.open).length + " Windows apps open")
-                          : page.vm === "paused" ? "Opens in about 1 second"
-                          : page.vm === "saved" ? "Opens in about 5 seconds" : "Opens in about 30 seconds"
+                    label: qsTr("Status"),
+                    value: page.vm === "running" ? qsTr("Running") : page.vm === "paused" ? qsTr("Paused") : page.vm === "saved" ? qsTr("Saved to disk") : qsTr("Off"),
+                    detail: page.vm === "running" ? qsTr("%1 Windows apps open").arg((page.status.apps || []).filter(a => a.open).length)
+                          : page.vm === "paused" ? qsTr("Opens in about 1 second")
+                          : page.vm === "saved" ? qsTr("Opens in about 5 seconds") : qsTr("Opens in about 30 seconds")
                 },
                 {
-                    label: "Memory",
-                    value: page.status.memoryHeld > 0 ? WindowsMode.size(page.status.memoryHeld) + " held" : "None held",
-                    detail: page.vm === "paused" ? "No CPU while paused" : page.vm === "running" ? "Handed back when unused" : "Nothing in use"
+                    label: qsTr("Memory"),
+                    value: page.status.memoryHeld > 0 ? qsTr("%1 held").arg(WindowsMode.size(page.status.memoryHeld)) : qsTr("None held"),
+                    detail: page.vm === "paused" ? qsTr("No CPU while paused") : page.vm === "running" ? qsTr("Handed back when unused") : qsTr("Nothing in use")
                 },
                 {
-                    label: "Space",
-                    value: WindowsMode.size(page.status.diskBytes) || "Unknown",
-                    detail: page.options.office ? "Windows and Microsoft 365" : "Windows"
+                    label: qsTr("Space"),
+                    value: WindowsMode.size(page.status.diskBytes) || qsTr("Unknown"),
+                    detail: page.options.office ? qsTr("Windows and Microsoft 365") : "Windows"
                 }
             ]
 
@@ -130,27 +130,27 @@ PageScroll {
 
             UI.ListRow {
                 minHeight: 54
-                title: "Licence"
+                title: qsTr("Licence")
                 description: {
                     const edition = page.licence.edition === "home" ? "Windows 11 Home" : page.licence.edition === "pro" ? "Windows 11 Pro" : "Windows 11";
                     if (page.licence.source === "none") {
-                        return edition + ", not activated";
+                        return qsTr("%1, not activated").arg(edition);
                     }
-                    const how = page.licence.source === "key" ? "your product key ending " + (page.licence.keyEnd || "")
-                              : page.licence.source === "account" ? "the licence on your Microsoft account"
-                              : "this PC's built-in licence";
-                    return edition + (page.licence.activated === true ? ", activated with " : ", to be activated with ") + how;
+                    const how = page.licence.source === "key" ? qsTr("your product key ending %1").arg(page.licence.keyEnd || "")
+                              : page.licence.source === "account" ? qsTr("the licence on your Microsoft account")
+                              : qsTr("this PC's built-in licence");
+                    return page.licence.activated === true ? qsTr("%1, activated with %2").arg(edition).arg(how) : qsTr("%1, to be activated with %2").arg(edition).arg(how);
                 }
 
                 UI.Chip {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: page.licence.activated === true ? "Activated" : "Not activated"
+                    text: page.licence.activated === true ? qsTr("Activated") : qsTr("Not activated")
                     tone: page.licence.activated === true ? "success" : "warning"
                 }
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: page.licence.source === "none" ? "Add a key" : "Change key"
+                    text: page.licence.source === "none" ? qsTr("Add a key") : qsTr("Change key")
                     onClicked: keyDialog.open()
                 }
             }
@@ -158,38 +158,38 @@ PageScroll {
             UI.ListRow {
                 minHeight: 54
                 visible: page.licence.activated !== true || page.activation.state !== ""
-                title: "Use a licence on my Microsoft account"
+                title: qsTr("Use a licence on my Microsoft account")
                 description: page.activation.state !== ""
-                    ? "Under way in the Activate Windows window."
-                    : "For Windows 11 Pro activated on another PC with your Microsoft account. Microsoft may let you move it here."
+                    ? qsTr("Under way in the Activate Windows window.")
+                    : qsTr("For Windows 11 Pro activated on another PC with your Microsoft account. Microsoft may let you move it here.")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: page.activation.state !== "" ? "Show steps" : "Start"
+                    text: page.activation.state !== "" ? qsTr("Show steps") : qsTr("Start")
                     onClicked: accountDialog.open()
                 }
             }
 
             UI.ListRow {
                 minHeight: 54
-                title: "When no Windows app is open"
+                title: qsTr("When no Windows app is open")
                 description: {
                     switch (page.options.whenIdle) {
-                    case "memory": return "Kept ready in memory, using no processor time";
-                    case "disk": return "Saved to disk after a minute, so its memory is free";
-                    case "shutdown": return "Windows shuts down after five minutes";
-                    default: return "Automatic: kept in memory for 15 minutes, then saved to disk, at once on battery";
+                    case "memory": return qsTr("Kept ready in memory, using no processor time");
+                    case "disk": return qsTr("Saved to disk after a minute, so its memory is free");
+                    case "shutdown": return qsTr("Windows shuts down after five minutes");
+                    default: return qsTr("Automatic: kept in memory for 15 minutes, then saved to disk, at once on battery");
                     }
                 }
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "When no Windows app is open"
+                    Accessible.name: qsTr("When no Windows app is open")
                     model: [
-                        { value: "automatic", text: "Automatic" },
-                        { value: "memory", text: "Keep ready in memory" },
-                        { value: "disk", text: "Save to disk" },
-                        { value: "shutdown", text: "Shut down Windows" }
+                        { value: "automatic", text: qsTr("Automatic") },
+                        { value: "memory", text: qsTr("Keep ready in memory") },
+                        { value: "disk", text: qsTr("Save to disk") },
+                        { value: "shutdown", text: qsTr("Shut down Windows") }
                     ]
                     currentIndex: model.findIndex(o => o.value === (page.options.whenIdle || "automatic"))
                     onActivated: index => page.show(WindowsMode.setOption("whenIdle", model[index].value))
@@ -198,16 +198,16 @@ PageScroll {
 
             UI.ListRow {
                 minHeight: 54
-                title: "Memory Windows mode can use"
+                title: qsTr("Memory Windows mode can use")
                 // Windows only takes a new limit when it starts from off, so
                 // until then the row says plainly that the change is waiting.
                 description: page.status.memoryPending
-                    ? "Windows gets " + (page.options.memoryGb || 4) + " GB when it next starts. Wild OS restarts it by itself once no Windows app is open."
-                    : "Unused memory is handed back to Wild OS. A change applies once no Windows app is open, when Windows restarts."
+                    ? qsTr("Windows gets %1 GB when it next starts. Wild OS restarts it by itself once no Windows app is open.").arg(page.options.memoryGb || 4)
+                    : qsTr("Unused memory is handed back to Wild OS. A change applies once no Windows app is open, when Windows restarts.")
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Memory limit"
+                    Accessible.name: qsTr("Memory limit")
                     model: WindowsMode.memoryChoices
                     currentIndex: model.findIndex(o => o.value === (page.options.memoryGb || 4))
                     onActivated: index => page.show(WindowsMode.setOption("memoryGb", String(model[index].value)))
@@ -219,55 +219,55 @@ PageScroll {
             UI.ListRow {
                 minHeight: 54
                 visible: Processor.threadsAvailable
-                title: "Use every processor thread"
+                title: qsTr("Use every processor thread")
                 description: Processor.everyThreadLocked
-                    ? "Off while extra processor protection is on."
-                    : "Faster Windows apps and games. Set in Power and battery."
-                status: Processor.everyThread && !Processor.everyThreadLocked ? "On" : "Off"
+                    ? qsTr("Off while extra processor protection is on.")
+                    : qsTr("Faster Windows apps and games. Set in Power and battery.")
+                status: Processor.everyThread && !Processor.everyThreadLocked ? qsTr("On") : qsTr("Off")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Change"
+                    text: qsTr("Change")
                     onClicked: Navigator.open("power")
                 }
             }
 
             UI.ListRow {
                 minHeight: 54
-                title: "Folders Windows apps can see"
+                title: qsTr("Folders Windows apps can see")
                 description: {
-                    const list = page.options.folders || [];
+                    const list = (page.options.folders || []).map(f => qsTr(f));
                     if (list.length === 0) {
-                        return "None. Windows apps can't open or save your files.";
+                        return qsTr("None. Windows apps can't open or save your files.");
                     }
-                    return list.length === 1 ? list[0] : list.slice(0, -1).join(", ") + " and " + list[list.length - 1];
+                    return list.length === 1 ? list[0] : qsTr("%1 and %2").arg(list.slice(0, -1).join(", ")).arg(list[list.length - 1]);
                 }
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Change"
+                    text: qsTr("Change")
                     onClicked: foldersDialog.open()
                 }
             }
 
             UI.ListRow {
                 minHeight: 54
-                title: "Camera and microphone"
+                title: qsTr("Camera and microphone")
                 description: {
                     switch (page.options.devices) {
-                    case "always": return "Call apps in Windows mode always get them";
-                    case "never": return "Windows apps never get them";
-                    default: return "Ask each time a Windows app wants them, like any other app";
+                    case "always": return qsTr("Call apps in Windows mode always get them");
+                    case "never": return qsTr("Windows apps never get them");
+                    default: return qsTr("Ask each time a Windows app wants them, like any other app");
                     }
                 }
 
                 UI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
-                    Accessible.name: "Camera and microphone"
+                    Accessible.name: qsTr("Camera and microphone")
                     model: [
-                        { value: "ask", text: "Ask each time" },
-                        { value: "always", text: "Always allow" },
-                        { value: "never", text: "Never allow" }
+                        { value: "ask", text: qsTr("Ask each time") },
+                        { value: "always", text: qsTr("Always allow") },
+                        { value: "never", text: qsTr("Never allow") }
                     ]
                     currentIndex: model.findIndex(o => o.value === (page.options.devices || "ask"))
                     onActivated: index => page.show(WindowsMode.setOption("devices", model[index].value))
@@ -276,8 +276,8 @@ PageScroll {
 
             UI.ListRow {
                 minHeight: 54
-                title: "Windows and Office updates"
-                description: "Monthly updates install a week after Microsoft releases them."
+                title: qsTr("Windows and Office updates")
+                description: qsTr("Monthly updates install a week after Microsoft releases them.")
                     + (page.status.officeVersion ? " Microsoft 365 " + page.status.officeVersion + "." : "")
 
             }
@@ -299,15 +299,15 @@ PageScroll {
 
         function kindName(kind) {
             switch (kind) {
-            case "printer": return "Printer";
-            case "audio": return "Sound device";
-            case "camera": return "Camera";
-            case "scanner": return "Scanner or camera";
-            case "storage": return "Drive";
-            case "smartcard": return "Card reader";
-            case "wireless": return "Wireless adapter";
-            case "network": return "Network adapter";
-            default: return "USB device";
+            case "printer": return qsTr("Printer");
+            case "audio": return qsTr("Sound device");
+            case "camera": return qsTr("Camera");
+            case "scanner": return qsTr("Scanner or camera");
+            case "storage": return qsTr("Drive");
+            case "smartcard": return qsTr("Card reader");
+            case "wireless": return qsTr("Wireless adapter");
+            case "network": return qsTr("Network adapter");
+            default: return qsTr("USB device");
             }
         }
 
@@ -327,20 +327,20 @@ PageScroll {
 
         function describe(device) {
             switch (device.state) {
-            case "windows": return "In use by Windows";
-            case "blocked": return WindowsUsb.canAllow ? "Blocked by USB protection until you allow it"
-                                                       : "Blocked by USB protection. Allow it from the shield on the taskbar.";
+            case "windows": return qsTr("In use by Windows");
+            case "blocked": return WindowsUsb.canAllow ? qsTr("Blocked by USB protection until you allow it")
+                                                       : qsTr("Blocked by USB protection. Allow it from the shield on the taskbar.");
             case "refused":
-                if (device.problem === "keyboard") return "You type into Wild OS with it, so it stays here";
-                if (device.problem === "pointer") return "You move the pointer in Wild OS with it, so it stays here";
-                return "Wild OS runs from this drive, so it stays here";
+                if (device.problem === "keyboard") return qsTr("You type into Wild OS with it, so it stays here");
+                if (device.problem === "pointer") return qsTr("You move the pointer in Wild OS with it, so it stays here");
+                return qsTr("Wild OS runs from this drive, so it stays here");
             case "waiting":
-                if (device.problem === "in-use") return "Goes to Windows once you eject it in Files";
-                if (device.problem === "full") return "Windows can't take any more devices. Switch one off first.";
-                if (device.problem === "failed") return "Windows couldn't take it. Unplug it and plug it back in.";
-                return WindowsUsb.running ? "Going to Windows" : "Goes to Windows when a Windows app opens";
+                if (device.problem === "in-use") return qsTr("Goes to Windows once you eject it in Files");
+                if (device.problem === "full") return qsTr("Windows can't take any more devices. Switch one off first.");
+                if (device.problem === "failed") return qsTr("Windows couldn't take it. Unplug it and plug it back in.");
+                return WindowsUsb.running ? qsTr("Going to Windows") : qsTr("Goes to Windows when a Windows app opens");
             default:
-                return device.problem === "in-use" ? "In use by Wild OS. Eject it in Files before Windows can have it." : "Used by Wild OS";
+                return device.problem === "in-use" ? qsTr("In use by Wild OS. Eject it in Files before Windows can have it.") : qsTr("Used by Wild OS");
             }
         }
 
@@ -352,12 +352,12 @@ PageScroll {
         }
 
         SectionTitle {
-            text: "USB devices"
+            text: qsTr("USB devices")
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: "For a device that only works with Windows, such as a licence dongle, label printer or scanner. Wild OS gets it back when you switch it off or Windows stops."
+            text: qsTr("For a device that only works with Windows, such as a licence dongle, label printer or scanner. Wild OS gets it back when you switch it off or Windows stops.")
             size: 12
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -388,22 +388,22 @@ PageScroll {
                         UI.Button {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: usbRow.modelData.state === "blocked" && WindowsUsb.canAllow
-                            text: "Allow once"
+                            text: qsTr("Allow once")
                             busy: WindowsUsb.busy === usbRow.modelData.port
                             enabled: WindowsUsb.busy.length === 0
-                            Accessible.name: "Allow " + usbRow.title + " once"
+                            Accessible.name: qsTr("Allow %1 once").arg(usbRow.title)
                             onClicked: WindowsUsb.allow(usbRow.modelData.port)
                         }
 
                         UI.Toggle {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: usbRow.modelData.state !== "blocked" || usbRow.modelData.use
-                            text: "Use in Windows"
+                            text: qsTr("Use in Windows")
                             checked: usbRow.modelData.use
                             locked: usbRow.modelData.state === "refused"
                             lockedReason: usbRow.description
                             enabled: WindowsUsb.busy.length === 0
-                            Accessible.name: "Use " + usbRow.title + " in Windows"
+                            Accessible.name: qsTr("Use %1 in Windows").arg(usbRow.title)
                             onToggled: WindowsUsb.setUse(usbRow.modelData.port, checked)
                         }
                     }
@@ -412,8 +412,8 @@ PageScroll {
                 UI.ListRow {
                     visible: WindowsUsb.loaded && usbList.count === 0
                     iconName: "usb"
-                    title: "No USB devices plugged in"
-                    description: "Plug in a device and it appears here."
+                    title: qsTr("No USB devices plugged in")
+                    description: qsTr("Plug in a device and it appears here.")
                 }
             }
         }
@@ -428,15 +428,15 @@ PageScroll {
 
             UI.ListRow {
                 minHeight: 54
-                title: "Troubleshooting"
-                description: "Open the whole Windows desktop in a window, for Windows' own settings or an installer that needs it. Your Windows apps join it until you close it."
+                title: qsTr("Troubleshooting")
+                description: qsTr("Open the whole Windows desktop in a window, for Windows' own settings or an installer that needs it. Your Windows apps join it until you close it.")
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
 
                     UI.Button {
-                        text: "Windows desktop"
+                        text: qsTr("Windows desktop")
                         onClicked: page.show(WindowsMode.openDesktop())
                     }
 
@@ -445,25 +445,25 @@ PageScroll {
 
             UI.ListRow {
                 minHeight: 54
-                title: "Windows password"
-                description: "Windows mode signs in for you with a password of its own. Windows asks for it now and then, for activation or an installer that needs an administrator."
+                title: qsTr("Windows password")
+                description: qsTr("Windows mode signs in for you with a password of its own. Windows asks for it now and then, for activation or an installer that needs an administrator.")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Show"
+                    text: qsTr("Show")
                     onClicked: passwordDialog.open()
                 }
             }
 
             UI.ListRow {
                 minHeight: 54
-                title: "Remove Windows mode"
-                description: WindowsMode.removing ? "Removing Windows. This can take a minute."
-                    : "Deletes Windows and the programs in it, to free the space or to set Windows mode up again from the start. Your documents stay in your folders."
+                title: qsTr("Remove Windows mode")
+                description: WindowsMode.removing ? qsTr("Removing Windows. This can take a minute.")
+                    : qsTr("Deletes Windows and the programs in it, to free the space or to set Windows mode up again from the start. Your documents stay in your folders.")
 
                 UI.Button {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Remove"
+                    text: qsTr("Remove")
                     busy: WindowsMode.removing
                     enabled: !WindowsMode.removing
                     onClicked: removeDialog.open()
@@ -486,8 +486,8 @@ PageScroll {
     // minutes when Windows has to start first, and says how it went.
     UI.Dialog {
         id: keyDialog
-        title: "Change the Windows product key"
-        text: "Windows checks the key with Microsoft and activates with it. The key from this PC's firmware stays where it is."
+        title: qsTr("Change the Windows product key")
+        text: qsTr("Windows checks the key with Microsoft and activates with it. The key from this PC's firmware stays where it is.")
         closePolicy: WindowsMode.activating ? T.Popup.NoAutoClose : T.Popup.CloseOnEscape
 
         property string keyProblem
@@ -518,7 +518,7 @@ PageScroll {
             // cuts it to 25 characters.
             maximumLength: 64
             error: text.length >= 25 && !WindowsMode.keyShapeValid(text)
-            Accessible.name: "Windows product key"
+            Accessible.name: qsTr("Windows product key")
 
             // The text after the last edit, to tell when an edit removed
             // nothing but a dash.
@@ -568,7 +568,7 @@ PageScroll {
         UI.Label {
             Layout.fillWidth: true
             visible: text.length > 0
-            text: WindowsMode.activating ? "Activating Windows. If Windows was asleep it starts first, which can take a few minutes."
+            text: WindowsMode.activating ? qsTr("Activating Windows. If Windows was asleep it starts first, which can take a few minutes.")
                                          : keyDialog.keyProblem
             size: 13
             color: WindowsMode.activating ? UI.Style.inkStatus : UI.Style.warning
@@ -579,12 +579,12 @@ PageScroll {
 
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 enabled: !WindowsMode.activating
                 onClicked: keyDialog.close()
             },
             UI.Button {
-                text: "Use this PC's licence"
+                text: qsTr("Use this PC's licence")
                 visible: page.licence.source !== "firmware"
                 enabled: !WindowsMode.activating
                 onClicked: {
@@ -594,7 +594,7 @@ PageScroll {
             },
             UI.Button {
                 kind: "primary"
-                text: WindowsMode.activating ? "Activating" : "Use this key"
+                text: WindowsMode.activating ? qsTr("Activating") : qsTr("Use this key")
                 enabled: !WindowsMode.activating && WindowsMode.keyShapeValid(keyField.text)
                 onClicked: {
                     keyDialog.keyProblem = "";
@@ -611,7 +611,7 @@ PageScroll {
     UI.Dialog {
         id: accountDialog
         size: "large"
-        title: "Use a licence on my Microsoft account"
+        title: qsTr("Use a licence on my Microsoft account")
         closePolicy: phase === "intro" || phase === "result" ? T.Popup.CloseOnEscape : T.Popup.NoAutoClose
 
         // Set once Start is pressed, so the result shows instead of the
@@ -628,24 +628,24 @@ PageScroll {
         text: {
             switch (phase) {
             case "starting":
-                return "Starting Windows and adding the account for activating. This can take a minute or two, and Windows takes a moment more to sign in to a new account the first time.";
+                return qsTr("Starting Windows and adding the account for activating. This can take a minute or two, and Windows takes a moment more to sign in to a new account the first time.");
             case "open":
-                return "The Activate Windows window is signed in to an account made just for this. In it:";
+                return qsTr("The Activate Windows window is signed in to an account made just for this. In it:");
             case "ending":
-                return "Signing out of the account for activating and removing it.";
+                return qsTr("Signing out of the account for activating and removing it.");
             case "result":
                 if (outcome.already) {
-                    return "Windows is already activated, so there's nothing to move.";
+                    return qsTr("Windows is already activated, so there's nothing to move.");
                 }
                 if (outcome.activated) {
-                    return "Windows is activated. The activation belongs to Windows mode's virtual PC, so it stays now the account for activating is removed."
+                    return qsTr("Windows is activated. The activation belongs to Windows mode's virtual PC, so it stays now the account for activating is removed.")
                         + (outcome.message ? " " + outcome.message : "");
                 }
-                return "Windows isn't activated. "
-                    + (outcome.message ? outcome.message : "The account for activating is removed.")
-                    + " You can try again, add a product key, or activate by phone: open the Windows desktop from Troubleshooting and run slui 4.";
+                return qsTr("Windows isn't activated.") + " "
+                    + (outcome.message ? outcome.message : qsTr("The account for activating is removed."))
+                    + " " + qsTr("You can try again, add a product key, or activate by phone: open the Windows desktop from Troubleshooting and run slui 4.");
             default:
-                return "Windows mode adds a second Windows account just for this and opens the Windows desktop signed in to it, where you sign in to your Microsoft account and use Microsoft's activation troubleshooter. Afterwards Windows mode removes the account. Your own Windows account isn't changed, and Windows apps you have open leave the screen until it's done.";
+                return qsTr("Windows mode adds a second Windows account just for this and opens the Windows desktop signed in to it, where you sign in to your Microsoft account and use Microsoft's activation troubleshooter. Afterwards Windows mode removes the account. Your own Windows account isn't changed, and Windows apps you have open leave the screen until it's done.");
             }
         }
 
@@ -667,7 +667,7 @@ PageScroll {
         UI.Label {
             Layout.fillWidth: true
             visible: accountDialog.phase === "intro"
-            text: "The activation belongs to this virtual PC, so it stays after the account is removed. Microsoft only moves some licences: one that came from a free upgrade of a PC's original Windows often won't move to different hardware. If yours doesn't, a product key or activating by phone are the other ways."
+            text: qsTr("The activation belongs to this virtual PC, so it stays after the account is removed. Microsoft only moves some licences: one that came from a free upgrade of a PC's original Windows often won't move to different hardware. If yours doesn't, a product key or activating by phone are the other ways.")
             size: 14
             color: UI.Style.inkStatus
             lineHeight: 1.55
@@ -677,9 +677,9 @@ PageScroll {
 
         Repeater {
             model: accountDialog.phase === "open" ? [
-                "1. Open Settings, then Accounts, then Your info, and choose Sign in with a Microsoft account instead. When Windows asks for this account's current password, paste this one:",
-                "2. Then in Settings, open System, then Activation. Choose Troubleshoot, and when it has finished, I recently changed hardware on this device.",
-                "3. Pick this device from the list and choose Activate. If Windows asks you to set up a PIN, it goes with the account."
+                qsTr("1. Open Settings, then Accounts, then Your info, and choose Sign in with a Microsoft account instead. When Windows asks for this account's current password, paste this one:"),
+                qsTr("2. Then in Settings, open System, then Activation. Choose Troubleshoot, and when it has finished, I recently changed hardware on this device."),
+                qsTr("3. Pick this device from the list and choose Activate. If Windows asks you to set up a PIN, it goes with the account.")
             ] : []
 
             ColumnLayout {
@@ -708,11 +708,11 @@ PageScroll {
                         readOnly: true
                         selectByMouse: true
                         font.family: "monospace"
-                        Accessible.name: "Password of the account for activating"
+                        Accessible.name: qsTr("Password of the account for activating")
                     }
 
                     UI.Button {
-                        text: "Copy"
+                        text: qsTr("Copy")
                         onClicked: WindowsMode.copySecret(accountDialog.secret)
                     }
                 }
@@ -722,7 +722,7 @@ PageScroll {
         UI.Label {
             Layout.fillWidth: true
             visible: accountDialog.phase === "open"
-            text: "Windows mode checks every few seconds and finishes by itself once Windows says it's activated. Done or Cancel removes the account straight away."
+            text: qsTr("Windows mode checks every few seconds and finishes by itself once Windows says it's activated. Done or Cancel removes the account straight away.")
             size: 13
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -743,13 +743,13 @@ PageScroll {
         buttons: [
             UI.Button {
                 visible: accountDialog.phase === "intro"
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: accountDialog.close()
             },
             UI.Button {
                 visible: accountDialog.phase === "intro"
                 kind: "primary"
-                text: "Open the Windows desktop"
+                text: qsTr("Open the Windows desktop")
                 onClicked: {
                     accountDialog.problem = "";
                     accountDialog.started = true;
@@ -758,26 +758,26 @@ PageScroll {
             },
             UI.Button {
                 visible: accountDialog.phase === "open"
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: WindowsMode.endAccountActivation()
             },
             UI.Button {
                 visible: accountDialog.phase === "open"
                 kind: "primary"
-                text: "Done"
+                text: qsTr("Done")
                 onClicked: WindowsMode.endAccountActivation()
             },
             UI.Button {
                 visible: accountDialog.phase === "starting" || accountDialog.phase === "ending"
                 kind: "primary"
-                text: accountDialog.phase === "starting" ? "Starting" : "Removing the account"
+                text: accountDialog.phase === "starting" ? qsTr("Starting") : qsTr("Removing the account")
                 busy: true
                 enabled: false
             },
             UI.Button {
                 visible: accountDialog.phase === "result"
                 kind: "primary"
-                text: "Close"
+                text: qsTr("Close")
                 onClicked: accountDialog.close()
             }
         ]
@@ -785,18 +785,18 @@ PageScroll {
 
     UI.Dialog {
         id: foldersDialog
-        title: "Folders Windows apps can see"
-        text: "Windows apps can open and save files in these folders. A change applies the next time Windows starts."
+        title: qsTr("Folders Windows apps can see")
+        text: qsTr("Windows apps can open and save files in these folders. A change applies the next time Windows starts.")
 
         property var chosen: []
         onOpened: chosen = (page.options.folders || []).slice()
 
         Repeater {
-            model: ["Documents", "Downloads", "Pictures", "Desktop", "Music", "Videos"]
+            model: [QT_TR_NOOP("Documents"), QT_TR_NOOP("Downloads"), QT_TR_NOOP("Pictures"), QT_TR_NOOP("Desktop"), QT_TR_NOOP("Music"), QT_TR_NOOP("Videos")]
 
             UI.CheckBox {
                 required property string modelData
-                text: modelData
+                text: qsTr(modelData)
                 checked: foldersDialog.chosen.indexOf(modelData) >= 0
                 onToggled: {
                     const list = foldersDialog.chosen.filter(f => f !== modelData);
@@ -810,12 +810,12 @@ PageScroll {
 
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: foldersDialog.close()
             },
             UI.Button {
                 kind: "primary"
-                text: "Save"
+                text: qsTr("Save")
                 onClicked: {
                     const order = ["Documents", "Downloads", "Pictures", "Desktop", "Music", "Videos"];
                     page.show(WindowsMode.setOption("folders", order.filter(f => foldersDialog.chosen.indexOf(f) >= 0).join(",")));
@@ -829,10 +829,10 @@ PageScroll {
     // isn't held in the page.
     UI.Dialog {
         id: passwordDialog
-        title: "Windows password"
+        title: qsTr("Windows password")
         text: secret.length > 0
-            ? "The account is " + account + ". Windows mode needs this password to sign in, so don't change it in Windows."
-            : "The password isn't in your saved passwords, so there's nothing to show. Windows mode sets a new one the next time it starts."
+            ? qsTr("The account is %1. Windows mode needs this password to sign in, so don't change it in Windows.").arg(account)
+            : qsTr("The password isn't in your saved passwords, so there's nothing to show. Windows mode sets a new one the next time it starts.")
 
         readonly property string account: page.status.account || "wild"
         property string secret
@@ -847,19 +847,19 @@ PageScroll {
             readOnly: true
             selectByMouse: true
             font.family: "monospace"
-            Accessible.name: "Windows password"
+            Accessible.name: qsTr("Windows password")
         }
 
         buttons: [
             UI.Button {
-                text: "Close"
+                text: qsTr("Close")
                 kind: passwordDialog.secret.length > 0 ? "secondary" : "primary"
                 onClicked: passwordDialog.close()
             },
             UI.Button {
                 visible: passwordDialog.secret.length > 0
                 kind: "primary"
-                text: "Copy"
+                text: qsTr("Copy")
                 onClicked: {
                     WindowsMode.copySecret(passwordDialog.secret);
                     passwordDialog.close();
@@ -870,16 +870,16 @@ PageScroll {
 
     UI.Dialog {
         id: repairDialog
-        title: "Repair Windows mode?"
-        text: "Windows goes back to how it was when setup finished. Programs and settings changed in Windows since then are lost; your documents stay in your folders."
+        title: qsTr("Repair Windows mode?")
+        text: qsTr("Windows goes back to how it was when setup finished. Programs and settings changed in Windows since then are lost; your documents stay in your folders.")
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: repairDialog.close()
             },
             UI.Button {
                 kind: "primary"
-                text: "Repair"
+                text: qsTr("Repair")
                 onClicked: {
                     repairDialog.close();
                     page.show(WindowsMode.repair());
@@ -890,17 +890,17 @@ PageScroll {
 
     UI.Dialog {
         id: removeDialog
-        title: "Remove Windows mode?"
-        text: "Windows, its programs and their Start entries are deleted, which frees " + (WindowsMode.size(page.status.diskBytes) || "the space they use") + ". Your documents stay in your folders."
+        title: qsTr("Remove Windows mode?")
+        text: qsTr("Windows, its programs and their Start entries are deleted, which frees %1. Your documents stay in your folders.").arg(WindowsMode.size(page.status.diskBytes) || qsTr("the space they use"))
         buttons: [
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: removeDialog.close()
             },
             UI.Button {
                 kind: "primary"
                 danger: true
-                text: "Remove"
+                text: qsTr("Remove")
                 onClicked: {
                     removeDialog.close();
                     page.show("");

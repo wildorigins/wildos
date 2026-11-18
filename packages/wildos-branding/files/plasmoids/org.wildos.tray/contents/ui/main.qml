@@ -80,25 +80,103 @@ PlasmoidItem {
         function onDataChanged() { tray.layoutRevision++; }
     }
 
-    // Active apps sit on the taskbar, up to maxInline of them; apps asking
-    // for attention always do. Everything else waits behind the arrow. The
-    // app's own status is used, not Plasma's tray settings, which this
-    // widget does not have.
+    // What Settings > Personalisation > Taskbar chose for each icon: its
+    // key to "bar" or "overflow". Icons never chosen are not in it.
+    readonly property var places: {
+        try {
+            const chosen = JSON.parse(Plasmoid.configuration.iconPlaces || "{}");
+            return chosen !== null && typeof chosen === "object" ? chosen : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    // Many apps share one id (every Electron app is chrome_status_icon_1),
+    // so an icon is known by its id and title together.
+    function keyAt(row: int): string {
+        return String(value(items, row, undefined, "itemId") || "") + ":" + String(value(items, row, undefined, "Title") || "");
+    }
+
+    // An icon the person placed stays where they put it. Of the rest,
+    // active apps sit on the taskbar, up to maxInline of them, and apps
+    // asking for attention always do; everything else waits behind the
+    // arrow. The app's own status is used, not Plasma's tray settings,
+    // which this widget does not have.
     readonly property var inlineRows: {
         if (revision < 0 || layoutRevision < 0) {
             return [];
         }
         const rows = [];
+        let unplaced = 0;
         for (let i = 0; i < items.count; i++) {
+            const place = places[keyAt(i)];
+            if (place === "bar") {
+                rows.push(i);
+                continue;
+            }
+            if (place === "overflow") {
+                continue;
+            }
             const status = value(items, i, undefined, "status");
             if (status === PlasmaCore.Types.NeedsAttentionStatus) {
                 rows.push(i);
-            } else if (status === PlasmaCore.Types.ActiveStatus && rows.length < maxInline) {
+                unplaced++;
+            } else if (status === PlasmaCore.Types.ActiveStatus && unplaced < maxInline) {
                 rows.push(i);
+                unplaced++;
             }
         }
         return rows;
     }
+
+    // The list Settings shows a switch for: every icon here now, and any
+    // the person placed whose app is not running, so its switch stays.
+    function publishIcons(): void {
+        const seen = [];
+        const here = {};
+        for (let i = 0; i < items.count; i++) {
+            const key = keyAt(i);
+            if (here[key] === true) {
+                continue;
+            }
+            here[key] = true;
+            seen.push({
+                key: key,
+                title: String(value(items, i, undefined, "Title") || value(items, i, undefined, "ToolTipTitle")
+                    || value(items, i, undefined, "itemId") || ""),
+                icon: String(value(items, i, undefined, "IconName") || ""),
+                bar: inlineRows.indexOf(i) >= 0
+            });
+        }
+        let before = [];
+        try {
+            before = JSON.parse(Plasmoid.configuration.seenIcons || "[]");
+        } catch (e) {
+            before = [];
+        }
+        if (Array.isArray(before)) {
+            before.forEach(icon => {
+                if (icon && here[icon.key] !== true && places[icon.key] !== undefined) {
+                    here[icon.key] = true;
+                    seen.push({ key: icon.key, title: icon.title, icon: icon.icon, bar: places[icon.key] === "bar" });
+                }
+            });
+        }
+        const list = JSON.stringify(seen);
+        if (list !== Plasmoid.configuration.seenIcons) {
+            Plasmoid.configuration.seenIcons = list;
+        }
+    }
+
+    // Not restarted while it runs: an app that redraws its icon all the
+    // time would otherwise hold the list back for good.
+    Timer {
+        id: publishTimer
+        interval: 1000
+        onTriggered: tray.publishIcons()
+    }
+    onInlineRowsChanged: publishTimer.start()
+    Component.onCompleted: publishTimer.start()
     readonly property int overflowCount: items.count - inlineRows.length
 
     // Removable drives that are mounted, for the "safely remove" icon.
@@ -133,7 +211,7 @@ PlasmoidItem {
     }
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
-    Plasmoid.title: "App icons"
+    Plasmoid.title: qsTr("App icons")
     // Hidden, not Passive, when there is nothing to show: the panel then
     // leaves the empty tray out, so it adds no gap between the divider and
     // Wi-Fi, volume and battery.

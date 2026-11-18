@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Slides" script:language="StarBasic">REM Home &gt; Reset in Slides: puts the current slide&apos;s title, text and other
+REM placeholders back where its layout has them. LibreOffice has no command
+REM for it; giving a slide the layout it already has does it.
+
+Sub Reset
+	On Error Resume Next
+	Dim oDoc As Object, oPage As Object
+	oDoc = StarDesktop.CurrentComponent
+	If IsNull(oDoc) Then Exit Sub
+	If Not oDoc.supportsService(&quot;com.sun.star.presentation.PresentationDocument&quot;) Then Exit Sub
+	oPage = oDoc.CurrentController.CurrentPage
+	If IsNull(oPage) Then Exit Sub
+	oPage.Layout = oPage.Layout
+End Sub
+</script:module>

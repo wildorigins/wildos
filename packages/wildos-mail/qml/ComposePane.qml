@@ -20,7 +20,7 @@ Rectangle {
     signal problem(string text)
     signal sentMessage()
 
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRest
     border.width: 1
     border.color: UI.Style.borderSubtle
@@ -46,6 +46,7 @@ Rectangle {
             editor.text = composer.bodyText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
         }
         filling = false;
+        spelling.reload();
         if (to.people.length === 0) {
             to.forceActiveFocus();
         } else {
@@ -71,6 +72,26 @@ Rectangle {
     function attach() {
         fileDialog.open();
     }
+    // Opens the spelling menu for a misspelt word at this place in the
+    // text, and says whether there was one. A click has to be on the word
+    // itself: the place nearest a click in empty space doesn't count.
+    function spellingMenu(position, x, y, clicked) {
+        const found = spelling.wordAt(position);
+        if (found.word === undefined) {
+            return false;
+        }
+        if (clicked) {
+            const from = editor.positionToRectangle(found.start);
+            const until = editor.positionToRectangle(found.end);
+            if (y < from.y || y > until.y + until.height || (from.y === until.y && (x < from.x - 2 || x > until.x + 2))) {
+                return false;
+            }
+        }
+        spellMenu.found = found;
+        editor.forceActiveFocus(Qt.PopupFocusReason);
+        spellMenu.popup(editor, x, y);
+        return true;
+    }
 
     Composer {
         id: composer
@@ -85,6 +106,41 @@ Rectangle {
         selectionStart: editor.selectionStart
         selectionEnd: editor.selectionEnd
         cursorPosition: editor.cursorPosition
+    }
+
+    // Follows Settings > Typing: on when "Check spelling" is, in the
+    // language chosen there.
+    SpellCheck {
+        id: spelling
+        document: editor.textDocument
+        cursorPosition: editor.cursorPosition
+        color: UI.Style.danger
+    }
+
+    UI.Menu {
+        id: spellMenu
+        property var found: ({})
+        entries: {
+            const f = spellMenu.found;
+            const list = (f.suggestions || []).map(s => ({ text: s, bold: true, run: () => spelling.replace(f.start, f.end, s) }));
+            if (list.length === 0) {
+                list.push({ text: qsTr("No suggestions"), enabled: false });
+            }
+            return list.concat([
+                { separator: true },
+                { text: qsTr("Add to dictionary"), icon: "plus", run: () => spelling.learn(f.word) },
+                { text: qsTr("Ignore"), run: () => spelling.ignore(f.word) }
+            ]);
+        }
+        // Typing carries on where it was, unless the click that closed the
+        // menu went to another field.
+        onClosed: {
+            const w = editor.Window.window;
+            const now = w ? w.activeFocusItem : null;
+            if (!editor.activeFocus && (!now || now === w.contentItem)) {
+                editor.forceActiveFocus(Qt.PopupFocusReason);
+            }
+        }
     }
 
     FileDialog {
@@ -298,7 +354,7 @@ Rectangle {
                     required property var modelData
                     width: 220
                     height: 44
-                    radius: 6
+                    radius: UI.Style.radiusXs
                     color: "transparent"
                     border.width: 1
                     border.color: UI.Style.borderSubtle
@@ -391,13 +447,28 @@ Rectangle {
                             formatter.toggleUnderline();
                             event.accepted = true;
                         } else if (editorMenu.isMenuKey(event)) {
-                            editorMenu.openAtCaret();
+                            const caret = editor.cursorRectangle;
+                            if (!pane.spellingMenu(editor.cursorPosition, caret.x, caret.y + caret.height, false)) {
+                                editorMenu.openAtCaret();
+                            }
                             event.accepted = true;
                         }
                     }
 
+                    // Opened by the handler under it, which shows the
+                    // spelling menu instead on a misspelt word.
                     UI.TextMenu {
                         id: editorMenu
+                        enabled: false
+                    }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: function (eventPoint) {
+                            const p = eventPoint.position;
+                            if (!pane.spellingMenu(editor.positionAt(p.x, p.y), p.x, p.y, true)) {
+                                editorMenu.open(p.x, p.y);
+                            }
+                        }
                     }
                 }
 
@@ -461,7 +532,7 @@ Rectangle {
             Layout.rightMargin: 14
             Layout.bottomMargin: 14
             implicitHeight: promise.implicitHeight + 20
-            radius: 8
+            radius: UI.Style.radiusSm
             color: UI.Style.successSoft
             border.width: 1
             border.color: Qt.alpha(UI.Style.success, 0.25)
@@ -483,6 +554,54 @@ Rectangle {
                     size: 12.5
                     wrapMode: Text.WordWrap
                 }
+            }
+        }
+    }
+
+    // Files dragged in from Files or the desktop are attached. Always as a
+    // copy: taking the drop as a move would let the other side delete them.
+    DropArea {
+        id: fileDrop
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        onDropped: function (drop) {
+            if (!drop.hasUrls) {
+                return;
+            }
+            for (const url of drop.urls) {
+                composer.addAttachment(url);
+            }
+            drop.accept(Qt.CopyAction);
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: pane.radius
+        color: UI.Style.windowOpaque
+        border.width: 2
+        border.color: UI.Style.accent
+        opacity: fileDrop.containsDrag ? 0.94 : 0
+        visible: opacity > 0
+        Behavior on opacity {
+            NumberAnimation { duration: UI.Style.hoverDuration }
+        }
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 10
+
+            MailIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                name: "paperclip"
+                size: 28
+                color: UI.Style.accent
+            }
+            UI.Label {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: qsTr("Drop files here to attach them")
+                size: 15
+                font.weight: UI.Style.weightSemiBold
             }
         }
     }

@@ -88,7 +88,9 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("icon"), new IconProvider);
+    engine.addImageProvider(QStringLiteral("dragicon"), new DragIconProvider);
     engine.addImageProvider(QStringLiteral("thumb"), new ThumbnailProvider);
+    engine.addImageProvider(QStringLiteral("picture"), new PictureProvider);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] {
         QCoreApplication::exit(1);
     }, Qt::QueuedConnection);

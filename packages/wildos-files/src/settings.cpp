@@ -2,8 +2,13 @@
 
 #include <KConfigGroup>
 #include <QDir>
+#include <QFileInfo>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QSize>
 #include <QStandardPaths>
+
+#include <algorithm>
 
 namespace
 {
@@ -35,6 +40,86 @@ Settings::Settings(QObject *parent)
     if (m_columnWeights.size() != designWeights.size()) {
         m_columnWeights = designWeights;
     }
+    m_sidebarWidth = std::clamp(group.readEntry("SidebarWidth", 196), 140, 420);
+    m_restoreTabs = group.readEntry("RestoreTabs", false);
+}
+
+void Settings::setRestoreTabs(bool on)
+{
+    if (on == m_restoreTabs) {
+        return;
+    }
+    m_restoreTabs = on;
+    write("RestoreTabs", on);
+    if (!on) {
+        // Nothing is kept about the last window once this is off.
+        m_config->deleteGroup(QStringLiteral("Session"));
+        m_config->sync();
+    }
+    Q_EMIT restoreTabsChanged();
+}
+
+QList<QUrl> Settings::takeSavedTabs()
+{
+    if (!m_restoreTabs || m_tabsTaken) {
+        return {};
+    }
+    m_tabsTaken = true;
+    const KConfigGroup group(m_config, QStringLiteral("Session"));
+    const QStringList saved = group.readEntry("Tabs", QStringList());
+    QList<QUrl> urls;
+    for (const QString &address : saved) {
+        const QUrl url(address);
+        // A folder deleted since would only open as an error.
+        if (url.isValid() && (!url.isLocalFile() || QFileInfo(url.toLocalFile()).isDir())) {
+            urls.append(url);
+        }
+    }
+    return urls;
+}
+
+int Settings::savedTab() const
+{
+    const KConfigGroup group(m_config, QStringLiteral("Session"));
+    return group.readEntry("CurrentTab", 0);
+}
+
+void Settings::saveTabs(const QList<QUrl> &urls, int current)
+{
+    if (!m_restoreTabs) {
+        return;
+    }
+    QStringList addresses;
+    for (const QUrl &url : urls) {
+        addresses.append(url.toString());
+    }
+    KConfigGroup group(m_config, QStringLiteral("Session"));
+    group.writeEntry("Tabs", addresses);
+    group.writeEntry("CurrentTab", current);
+    m_config->sync();
+}
+
+void Settings::setSidebarWidth(int width)
+{
+    width = std::clamp(width, 140, 420);
+    if (width != m_sidebarWidth) {
+        m_sidebarWidth = width;
+        write("SidebarWidth", width);
+        Q_EMIT sidebarWidthChanged();
+    }
+}
+
+QStringList Settings::pinnedPlaces() const
+{
+    const KConfigGroup group(m_config, QStringLiteral("Sidebar"));
+    return group.readEntry("Pinned", QStringList());
+}
+
+void Settings::setPinnedPlaces(const QStringList &places)
+{
+    KConfigGroup group(m_config, QStringLiteral("Sidebar"));
+    group.writeEntry("Pinned", places);
+    m_config->sync();
 }
 
 void Settings::write(const char *key, const QVariant &value)
@@ -105,10 +190,52 @@ QString Settings::viewFor(const QUrl &url) const
     return group.readEntry(url.toString(QUrl::StripTrailingSlash), fallback);
 }
 
+void Settings::sortFor(const QUrl &url, int *column, bool *descending) const
+{
+    *column = 0;
+    *descending = false;
+    const KConfigGroup group(m_config, QStringLiteral("FolderSorts"));
+    const QStringList saved = group.readEntry(url.toString(QUrl::StripTrailingSlash), QString()).split(QLatin1Char(','));
+    if (saved.size() == 2) {
+        *column = std::clamp(saved.at(0).toInt(), 0, 3);
+        *descending = saved.at(1) == QLatin1String("1");
+    }
+}
+
+void Settings::setSortFor(const QUrl &url, int column, bool descending)
+{
+    KConfigGroup group(m_config, QStringLiteral("FolderSorts"));
+    const QString key = url.toString(QUrl::StripTrailingSlash);
+    if (column == 0 && !descending) {
+        group.deleteEntry(key);
+    } else {
+        group.writeEntry(key, QStringLiteral("%1,%2").arg(column).arg(descending ? 1 : 0));
+    }
+    m_config->sync();
+}
+
 QSize Settings::windowSize() const
 {
     const KConfigGroup group(m_config, QStringLiteral("Window"));
-    return group.readEntry("Size", QSize(980, 620));
+    QSize size = group.readEntry("Size", QSize(980, 620));
+    // A size saved on a large monitor would hang off a laptop's screen.
+    if (const QScreen *screen = QGuiApplication::primaryScreen()) {
+        size = size.boundedTo(screen->availableSize());
+    }
+    return size;
+}
+
+bool Settings::windowMaximised() const
+{
+    const KConfigGroup group(m_config, QStringLiteral("Window"));
+    return group.readEntry("Maximised", false);
+}
+
+void Settings::setWindowMaximised(bool on)
+{
+    KConfigGroup group(m_config, QStringLiteral("Window"));
+    group.writeEntry("Maximised", on);
+    m_config->sync();
 }
 
 void Settings::setWindowSize(const QSize &size)

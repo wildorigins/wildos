@@ -41,6 +41,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import subprocess
 import sys
 import time
@@ -226,9 +227,12 @@ def active_networks():
     are left out: nobody on the far side of one is "on this network"."""
     # At start-up the firewall goes up before NetworkManager (or even D-Bus)
     # runs, and nmcli would wait for them; wildos-network applies the rules
-    # again once a network is up.
+    # again once a network is up. The bus socket is checked first: at
+    # start-up it is not there yet, which spares the sign-in a systemctl run.
+    if not os.path.exists("/run/dbus/system_bus_socket"):
+        return []
     nm = subprocess.run(["systemctl", "is-active", "--quiet", "NetworkManager.service"], capture_output=True)
-    if nm.returncode != 0 or not os.path.exists("/run/dbus/system_bus_socket"):
+    if nm.returncode != 0:
         return []
     p = run(["nmcli", "-t", "-f", "UUID,NAME,TYPE,DEVICE,STATE", "connection", "show", "--active"])
     if p is None or p.returncode != 0:
@@ -398,7 +402,7 @@ def apply():
     if not cfg["enabled"]:
         subprocess.run(["nft", "delete", "table", "inet", TABLE], capture_output=True)
         loaded = True
-    elif subprocess.run(["sh", "-c", "command -v nft"], capture_output=True).returncode != 0:
+    elif not shutil.which("nft"):
         loaded = False
     else:
         extras = extra_lines()

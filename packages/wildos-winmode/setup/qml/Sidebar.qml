@@ -10,7 +10,7 @@ Item {
     id: sidebar
 
     property int current: 1
-    readonly property var steps: ["Check this PC", "Choose options", "Set up", "Ready"]
+    readonly property var steps: [qsTr("Check this PC"), qsTr("Choose options"), qsTr("Set up"), qsTr("Ready")]
 
     implicitWidth: 260
 
@@ -60,7 +60,7 @@ Item {
 
             UI.Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Windows mode"
+                text: qsTr("Windows mode")
                 size: 17
                 font.weight: UI.Style.weightSemiBold
                 Accessible.role: Accessible.Heading
@@ -71,7 +71,7 @@ Item {
             Layout.fillWidth: true
             spacing: 4
             Accessible.role: Accessible.List
-            Accessible.name: "Steps"
+            Accessible.name: qsTr("Steps")
 
             Repeater {
                 model: sidebar.steps
@@ -90,7 +90,7 @@ Item {
                     radius: UI.Style.radiusSm
                     color: active ? UI.Style.surfaceHover : "transparent"
                     Accessible.role: Accessible.ListItem
-                    Accessible.name: modelData + (done ? ", done" : active ? ", current step" : "")
+                    Accessible.name: done ? qsTr("%1, done").arg(modelData) : active ? qsTr("%1, current step").arg(modelData) : modelData
 
                     Row {
                         anchors.left: parent.left

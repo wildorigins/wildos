@@ -25,65 +25,71 @@ PageScroll {
     // The rows can let anything in: the firewall is on and this network is
     // trusted.
     readonly property bool live: on && !isPublic && !undecided
-    readonly property string publicReason: "Off while you're on a public network"
-    readonly property string lockReason: undecided ? "Off until you choose Home for this network" : publicReason
+    readonly property string publicReason: qsTr("Off while you're on a public network")
+    readonly property string lockReason: undecided ? qsTr("Off until you choose Home for this network") : publicReason
 
     // "Today" moves on at midnight without anything new coming in.
     property date now: new Date()
     readonly property var today: Firewall.blocked.filter(b => b.when.toDateString() === page.now.toDateString())
 
     function whoPhrase(kind) {
-        return kind === "router" ? "your router"
-            : kind === "local" ? "another PC on this network"
-            : kind === "internet" ? "the internet"
-            : "another local network";
+        return kind === "router" ? qsTr("your router")
+            : kind === "local" ? qsTr("another PC on this network")
+            : kind === "internet" ? qsTr("the internet")
+            : qsTr("another local network");
     }
 
     function blockedLine() {
         const n = page.today.length;
         if (n === 0) {
-            return "Nothing has been turned away today.";
+            return qsTr("Nothing has been turned away today.");
         }
         const latest = page.today[0];
-        return "Turned away today: " + Format.plural(n, "connection", "connections") + ". "
-            + (n === 1 ? "It was" : "The latest was") + " at " + Format.time(latest.when) + ", from " + page.whoPhrase(latest.kind) + ".";
+        return n === 1 ? qsTr("Turned away today: 1 connection. It was at %1, from %2.").arg(Format.time(latest.when)).arg(page.whoPhrase(latest.kind))
+            : qsTr("Turned away today: %1 connections. The latest was at %2, from %3.").arg(n).arg(Format.time(latest.when)).arg(page.whoPhrase(latest.kind));
     }
 
-    readonly property var serviceNames: ({ files: "file sharing", remote: "Remote Desktop", ssh: "the SSH server" })
+    readonly property var serviceNames: ({ files: qsTr("file sharing"), remote: qsTr("Remote Desktop"), ssh: qsTr("the SSH server") })
 
     function serviceText(name, normal, whenOn) {
         if (Firewall.busyWhat === name) {
             const s = Firewall.services[name] || {};
-            if (Firewall.step === "Downloading" || Firewall.step === "Installing") {
-                return Firewall.step + " " + page.serviceNames[name] + (Firewall.progress >= 0 ? ", " + Firewall.progress + "%" : "");
+            // The step is the helper's English word: matched here and
+            // shown in the display language.
+            const what = page.serviceNames[name];
+            if (Firewall.step === "Downloading") {
+                return Firewall.progress >= 0 ? qsTr("Downloading %1, %2%").arg(what).arg(Firewall.progress) : qsTr("Downloading %1").arg(what);
+            }
+            if (Firewall.step === "Installing") {
+                return Firewall.progress >= 0 ? qsTr("Installing %1, %2%").arg(what).arg(Firewall.progress) : qsTr("Installing %1").arg(what);
             }
             if (Firewall.step.length > 0) {
                 return Firewall.step;
             }
-            return s.on ? "Turning it off…" : "Turning it on…";
+            return s.on ? qsTr("Turning it off…") : qsTr("Turning it on…");
         }
         const s = Firewall.services[name] || {};
         if (page.live && name === "remote" && s.on && s.running === false) {
-            return "Nobody can sign in yet. Add an account under Who can sign in.";
+            return qsTr("Nobody can sign in yet. Add an account under Who can sign in.");
         }
         return page.live && s.on && whenOn ? whenOn : normal;
     }
 
     function scopeText(rule) {
         if (rule.scope === "anyone") {
-            return "Anyone, including the internet";
+            return qsTr("Anyone, including the internet");
         }
         if (rule.scope === "device") {
-            return rule.address + " only";
+            return qsTr("%1 only").arg(rule.address);
         }
-        return "Devices on this network only";
+        return qsTr("Devices on this network only");
     }
 
     function ruleText(rule) {
-        const port = (rule.proto === "udp" ? "UDP port " : "Port ") + rule.port;
-        const when = rule.session ? "Until you restart"
-            : Format.isValid(rule.until) ? "Until " + Format.time(rule.until)
-            : "Added by you";
+        const port = rule.proto === "udp" ? qsTr("UDP port %1").arg(rule.port) : qsTr("Port %1").arg(rule.port);
+        const when = rule.session ? qsTr("Until you restart")
+            : Format.isValid(rule.until) ? qsTr("Until %1").arg(Format.time(rule.until))
+            : qsTr("Added by you");
         return port + " · " + page.scopeText(rule) + " · " + when;
     }
 
@@ -98,7 +104,7 @@ PageScroll {
     Connections {
         target: Firewall
         function onFailed(message) {
-            notice.show("Nothing was changed", message, true);
+            notice.show(qsTr("Nothing was changed"), message, true);
         }
         function onDone(what) {
             notice.hide();
@@ -140,7 +146,7 @@ PageScroll {
                         name: hero.good ? "shield-round-check" : "shield-round-alert"
                         size: 26
                         strokeWidth: 2.2
-                        color: hero.good ? "#5fd38d" : UI.Style.warning
+                        color: hero.good ? UI.Style.success : UI.Style.warning
                     }
                 }
 
@@ -150,9 +156,9 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: !Firewall.enabled ? "The firewall is off"
-                            : !Firewall.loaded ? "The firewall didn't load"
-                            : "The firewall is on"
+                        text: !Firewall.enabled ? qsTr("The firewall is off")
+                            : !Firewall.loaded ? qsTr("The firewall didn't load")
+                            : qsTr("The firewall is on")
                         size: 17
                         font.weight: UI.Style.weightBold
                         wrapMode: Text.Wrap
@@ -160,9 +166,9 @@ PageScroll {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: !Firewall.enabled ? "Other computers can reach any app on this PC that waits for connections. Windows mode is still kept to itself."
-                            : !Firewall.loaded ? "Other computers can reach any app on this PC that waits for connections. Turn the firewall off and on again to load it."
-                            : "Nothing can connect to this PC unless you allow it below. Your own apps go online as normal."
+                        text: !Firewall.enabled ? qsTr("Other computers can reach any app on this PC that waits for connections. Windows mode is still kept to itself.")
+                            : !Firewall.loaded ? qsTr("Other computers can reach any app on this PC that waits for connections. Turn the firewall off and on again to load it.")
+                            : qsTr("Nothing can connect to this PC unless you allow it below. Your own apps go online as normal.")
                         size: 13
                         color: UI.Style.inkMuted
                         wrapMode: Text.Wrap
@@ -172,7 +178,7 @@ PageScroll {
                 UI.Toggle {
                     checked: Firewall.enabled
                     enabled: Firewall.available && !Firewall.busy
-                    Accessible.name: "Firewall"
+                    Accessible.name: qsTr("Firewall")
                     onToggled: Firewall.setEnabled(checked)
                 }
             }
@@ -193,17 +199,17 @@ PageScroll {
                     strokeWidth: 1.8
                     color: UI.Style.ink
                 }
-                title: page.connected ? page.net.name : "Not connected"
-                description: !page.connected ? "Choose Home or Public for each network when you join it."
-                    : page.isPublic ? "A public network. Everything below is switched off until you leave."
-                    : page.undecided ? "Is this a network you trust? Choose Home to let in what you switch on below, or Public to keep it all out."
-                    : "A network you trust. On a public network, everything below is switched off until you leave."
+                title: page.connected ? page.net.name : qsTr("Not connected")
+                description: !page.connected ? qsTr("Choose Home or Public for each network when you join it.")
+                    : page.isPublic ? qsTr("A public network. Everything below is switched off until you leave.")
+                    : page.undecided ? qsTr("Is this a network you trust? Choose Home to let in what you switch on below, or Public to keep it all out.")
+                    : qsTr("A network you trust. On a public network, everything below is switched off until you leave.")
 
                 Segmented {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: page.connected
                     enabled: page.on && !Firewall.busy
-                    options: [{ value: "home", text: "Home" }, { value: "public", text: "Public" }]
+                    options: [{ value: "home", text: qsTr("Home") }, { value: "public", text: qsTr("Public") }]
                     value: page.isPublic ? "public" : page.isHome ? "home" : ""
                     onPicked: v => Firewall.setPublic(page.net.uuid, v === "public")
                 }
@@ -218,13 +224,13 @@ PageScroll {
 
             SectionTitle {
                 Layout.fillWidth: true
-                text: "What other computers can reach"
+                text: qsTr("What other computers can reach")
             }
 
             UI.Button {
                 implicitHeight: 32
                 iconName: "plus"
-                text: "Allow an app or port"
+                text: qsTr("Allow an app or port")
                 enabled: page.on && Firewall.available && !Firewall.busy
                 onClicked: allowDialog.openFor(null)
             }
@@ -246,29 +252,29 @@ PageScroll {
                         color: UI.Style.ink
                     }
                     enabled: page.on
-                    title: "Network discovery"
-                    description: page.maximum ? "Off at Maximum protection, which keeps this PC hidden on the network."
-                        : "Find printers, screens and speakers nearby, and let them find this PC."
+                    title: qsTr("Network discovery")
+                    description: page.maximum ? qsTr("Off at Maximum protection, which keeps this PC hidden on the network.")
+                        : qsTr("Find printers, screens and speakers nearby, and let them find this PC.")
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
                         checked: page.on && !page.isPublic && Firewall.discovery && !page.maximum
                         enabled: page.on && !Firewall.busy
                         locked: page.on && (page.isPublic || page.maximum)
-                        lockedReason: page.maximum ? "Maximum protection keeps this off" : page.publicReason
-                        Accessible.name: "Network discovery"
+                        lockedReason: page.maximum ? qsTr("Maximum protection keeps this off") : page.publicReason
+                        Accessible.name: qsTr("Network discovery")
                         onToggled: Firewall.setDiscovery(checked)
                     }
                 }
 
                 Repeater {
                     model: [
-                        { key: "files", icon: "folder-round", title: "File sharing", text: "Share folders with other PCs on this network.",
-                          on: "Share a folder from its Properties in Files, under Sharing." },
-                        { key: "remote", icon: "monitor-round", title: "Remote Desktop", text: "Let another PC see and control this one.",
-                          on: "Let another PC see and control this one, signing in with an account you add under Who can sign in." },
-                        { key: "ssh", icon: "terminal-round", title: "SSH", text: "Terminal access from another computer.",
-                          on: "Terminal access from another computer, signing in with an account on this PC." }
+                        { key: "files", icon: "folder-round", title: qsTr("File sharing"), text: qsTr("Share folders with other PCs on this network."),
+                          on: qsTr("Share a folder from its Properties in Files, under Sharing.") },
+                        { key: "remote", icon: "monitor-round", title: qsTr("Remote Desktop"), text: qsTr("Let another PC see and control this one."),
+                          on: qsTr("Let another PC see and control this one, signing in with an account you add under Who can sign in.") },
+                        { key: "ssh", icon: "terminal-round", title: "SSH", text: qsTr("Terminal access from another computer."),
+                          on: qsTr("Terminal access from another computer, signing in with an account on this PC.") }
                     ]
 
                     UI.SettingRow {
@@ -291,7 +297,7 @@ PageScroll {
                         UI.LinkButton {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: serviceRow.modelData.key === "remote" && serviceRow.svc.on === true && Firewall.busyWhat !== "remote"
-                            text: "Who can sign in"
+                            text: qsTr("Who can sign in")
                             enabled: page.on
                             onClicked: Navigator.open("remotedesktop")
                         }
@@ -329,9 +335,9 @@ PageScroll {
 
                         UI.LinkButton {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Remove"
+                            text: qsTr("Remove")
                             enabled: page.on && !Firewall.busy
-                            Accessible.name: "Remove " + ruleRow.modelData.name
+                            Accessible.name: qsTr("Remove %1").arg(ruleRow.modelData.name)
                             onClicked: Firewall.removeRule(ruleRow.modelData.id)
                         }
 
@@ -359,12 +365,12 @@ PageScroll {
                         strokeWidth: 1.8
                         color: UI.Style.ink
                     }
-                    title: "Windows mode"
-                    description: "Talks to this PC only and never to your network. Managed by Wild OS."
+                    title: qsTr("Windows mode")
+                    description: qsTr("Talks to this PC only and never to your network. Managed by Wild OS.")
 
                     UI.Label {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Always on"
+                        text: qsTr("Always on")
                         size: 12.5
                         color: UI.Style.inkMuted
                     }
@@ -397,7 +403,7 @@ PageScroll {
 
                         UI.LinkButton {
                             visible: Firewall.blocked.length > 0
-                            text: "See what was blocked"
+                            text: qsTr("See what was blocked")
                             onClicked: activityDialog.open()
                         }
                     }

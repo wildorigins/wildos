@@ -8,6 +8,7 @@
 #include <QSet>
 #include <QStringList>
 #include <QVariantList>
+#include <QVariantMap>
 
 #include <AppStreamQt/component.h>
 
@@ -42,6 +43,9 @@ struct Curated {
     QStringList aliases;
     QString cardNote;
     QString chip;
+    // One of ours that does not come with Wild OS: offered, never put on
+    // a PC by Reinstall all.
+    bool optional = false;
     QString swapTitle;
     QString swapText;
     QString description;
@@ -213,6 +217,7 @@ public:
     // The Wild OS section: the apps we make, in the curated file's order,
     // and putting back every one that was removed.
     Q_INVOKABLE QStringList wildosApps() const;
+    Q_INVOKABLE bool isOptional(const QString &key) const;
     Q_INVOKABLE void reinstallWildOS();
     // What a Wild OS package's app takes up, installed, or would take up
     // once put back; -1 until dpkg and apt have said.
@@ -220,6 +225,10 @@ public:
     Q_INVOKABLE void updateAll();
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void openSettings(const QString &page);
+    // An app on this PC that neither catalogue lists (installed from a
+    // package file, say), by launcher id or by name: its id and name, or
+    // nothing. Settings > Installed apps removes these.
+    Q_INVOKABLE QVariantMap installedOutside(const QString &text) const;
 
     // Used by LocalPackage, for files someone opened.
     FlatpakBackend *flatpakBackend() const { return m_flatpak; }
@@ -233,7 +242,8 @@ public:
     bool isInstalled(const QString &key) const;
     bool hasUpdate(const QString &key) const;
     QString installedVersion(const QString &key) const;
-    qint64 installedSize(const QString &key) const;
+    // In bytes, or -1 while it isn't known; the Library sorts by it.
+    Q_INVOKABLE qint64 installedSize(const QString &key) const;
     QString flatpakAppstreamDir() const;
     void install(const QString &key);
     void remove(const QString &key);
@@ -292,6 +302,7 @@ private:
     QString keyFor(const QString &id) const;
     Job *job(int id);
     QStringList wildosPackages() const;
+    void checkWaitingApps();
 
     static Catalog *s_instance;
 
@@ -312,6 +323,11 @@ private:
     int m_stateRevision = 0;
 
     QList<Curated> m_curated;
+    // Apps from a repository apt has not read yet; they join m_curated
+    // once a refresh makes their package known.
+    QList<Curated> m_curatedWaiting;
+    QList<Curated> m_curatedArrived;
+    bool m_checkingWaiting = false;
     QStringList m_homeSwaps;
     QStringList m_homeInstalled;
     QStringList m_essentials;

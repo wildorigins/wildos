@@ -18,17 +18,17 @@ PageFlick {
     readonly property bool sideBySide: width - 2 * Metrics.sidePadding > 760
 
     PageTitle {
-        title: "Updates"
+        title: qsTr("Updates")
         subtitle: {
             const n = page.keys.length;
             if (n > 0) {
-                const count = n === 1 ? "1 update" : n + " updates";
-                return Catalog.updatesBytes >= 0 ? count + ", " + Catalog.sizeText(Catalog.updatesBytes) + " in total" : count;
+                const count = n === 1 ? qsTr("1 update") : qsTr("%1 updates").arg(n);
+                return Catalog.updatesBytes >= 0 ? qsTr("%1, %2 in total").arg(count).arg(Catalog.sizeText(Catalog.updatesBytes)) : count;
             }
-            return Catalog.checking ? "Checking for updates."
-                : Catalog.checkResult === "failed" ? "Couldn't check every app for updates. Check you're online and try again."
-                : Catalog.checkResult === "ok" ? "Your apps are up to date. Checked at " + Catalog.checkedAt + "."
-                : "Your apps are up to date.";
+            return Catalog.checking ? qsTr("Checking for updates.")
+                : Catalog.checkResult === "failed" ? qsTr("Couldn't check every app for updates. Check you're online and try again.")
+                : Catalog.checkResult === "ok" ? qsTr("Your apps are up to date. Checked at %1.").arg(Catalog.checkedAt)
+                : qsTr("Your apps are up to date.");
         }
 
         Row {
@@ -38,7 +38,7 @@ PageFlick {
 
             UI.Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Updating"
+                text: qsTr("Updating")
                 size: 13
                 font.weight: UI.Style.weightSemiBold
             }
@@ -49,7 +49,7 @@ PageFlick {
                 mode: Catalog.updateAllProgress > 0 ? "progress" : "spin"
                 progress: Math.max(0, Catalog.updateAllProgress)
                 Accessible.role: Accessible.ProgressBar
-                Accessible.name: "Updating all apps, " + Math.max(0, Catalog.updateAllProgress) + "%"
+                Accessible.name: qsTr("Updating all apps, %1%").arg(Math.max(0, Catalog.updateAllProgress))
             }
         }
 
@@ -58,7 +58,7 @@ PageFlick {
             big: true
             filled: true
             enabled: !Catalog.busy
-            text: "Update all"
+            text: qsTr("Update all")
             onClicked: Catalog.updateAll()
         }
 
@@ -66,7 +66,7 @@ PageFlick {
             visible: !page.updatingAll && page.keys.length === 0
             big: true
             enabled: !Catalog.checking
-            text: Catalog.checking ? "Checking" : "Check for updates"
+            text: Catalog.checking ? qsTr("Checking") : qsTr("Check for updates")
             onClicked: Catalog.refresh()
         }
     }
@@ -88,7 +88,7 @@ PageFlick {
                 spacing: 0
 
                 SectionHeader {
-                    title: "Available"
+                    title: qsTr("Available")
                 }
 
                 Repeater {
@@ -151,7 +151,7 @@ PageFlick {
                                         }
                                         const parts = [];
                                         if (a.newVersion.length > 0) {
-                                            parts.push("Version " + a.newVersion);
+                                            parts.push(qsTr("Version %1").arg(a.newVersion));
                                         }
                                         if (a.updateSizeText.length > 0) {
                                             parts.push(a.updateSizeText);
@@ -182,7 +182,7 @@ PageFlick {
                                         return "";
                                     }
                                     const note = a.releaseNote.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                                    return note.length > 0 ? note + " <a href=\"more\">More</a>" : "";
+                                    return note.length > 0 ? note + " <a href=\"more\">" + qsTr("More") + "</a>" : "";
                                 }
                                 onLinkActivated: page.store.openApp(entry.modelData)
 
@@ -208,7 +208,7 @@ PageFlick {
                 spacing: 0
 
                 SectionHeader {
-                    title: "Updated recently"
+                    title: qsTr("Updated recently")
                 }
 
                 Repeater {
@@ -252,7 +252,7 @@ PageFlick {
                             id: autoTitle
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - autoToggle.width - 12
-                            text: "Update automatically"
+                            text: qsTr("Update automatically")
                             size: 15
                             font.weight: UI.Style.weightBold
                         }
@@ -262,14 +262,14 @@ PageFlick {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             checked: Catalog.autoUpdate
-                            Accessible.name: "Update automatically"
+                            Accessible.name: qsTr("Update automatically")
                             onToggled: Catalog.autoUpdate = checked
                         }
                     }
 
                     UI.Label {
                         width: parent.width
-                        text: "Apps update overnight while your PC is plugged in. An app that's open waits until you close it."
+                        text: qsTr("Apps update overnight while your PC is plugged in. An app that's open waits until you close it.")
                         size: 13
                         lineHeight: 1.5
                         color: Metrics.inkSecondary
@@ -306,7 +306,7 @@ PageFlick {
                         UI.Label {
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - 30
-                            text: "Wild OS updates"
+                            text: qsTr("Wild OS updates")
                             size: 15
                             font.weight: UI.Style.weightBold
                         }
@@ -314,7 +314,7 @@ PageFlick {
 
                     UI.Label {
                         width: parent.width
-                        text: "System updates live in Settings, so this list is only your apps."
+                        text: qsTr("System updates live in Settings, so this list is only your apps.")
                         size: 13
                         lineHeight: 1.5
                         color: Metrics.inkSecondary
@@ -325,7 +325,7 @@ PageFlick {
                     StoreLink {
                         x: -4
                         size: 13
-                        text: "Open Settings"
+                        text: qsTr("Open Settings")
                         onClicked: Catalog.openSettings("update")
                     }
                 }

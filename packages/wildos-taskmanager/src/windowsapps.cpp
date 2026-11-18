@@ -2,6 +2,7 @@
 #include "processes.h"
 #include "winmode.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QProcess>
 #include <QStandardPaths>
@@ -30,8 +31,7 @@ void WindowsApps::reload()
             {QStringLiteral("icon"), app.icon},
             {QStringLiteral("publisher"), QString()},
             {QStringLiteral("running"), on},
-            {QStringLiteral("canEnd"), false},
-            {QStringLiteral("status"), on ? QStringLiteral("Open") : QStringLiteral("Not open")},
+            {QStringLiteral("status"), on ? QCoreApplication::translate("WindowsApps", "Open") : QCoreApplication::translate("WindowsApps", "Not open")},
             {QStringLiteral("memory"), 0.0},
             {QStringLiteral("cpu"), 0.0},
         };

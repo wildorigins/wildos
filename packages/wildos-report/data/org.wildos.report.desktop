@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Report a problem
+Name[fr]=Signaler un problème
 GenericName=Problem reporter
+GenericName[fr]=Signalement de problèmes
 Comment=Tell us what went wrong, with personal details removed
+Comment[fr]=Dites-nous ce qui n'a pas marché, sans vos informations personnelles
 Exec=wildos-report %u
 Icon=wildos-report
 Terminal=false

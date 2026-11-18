@@ -3,6 +3,7 @@
 #include <QList>
 #include <QPointer>
 #include <QQmlEngine>
+#include <QUrl>
 #include <QVariantList>
 #include <QVariantMap>
 #include <QWidget>
@@ -74,10 +75,22 @@ public:
     Q_INVOKABLE void dismiss();
     Q_INVOKABLE void run(const QString &command);
     Q_INVOKABLE void focusTerminal();
+    // The right-click menu's actions, on the pane it was opened on.
+    Q_INVOKABLE void copy();
+    Q_INVOKABLE void paste();
+    Q_INVOKABLE void clear();
+    Q_INVOKABLE void openLink();
+    Q_INVOKABLE void copyLink();
+    // The answer to pasteConfirmationNeeded.
+    Q_INVOKABLE void answerPaste(bool paste);
 
 Q_SIGNALS:
     void changed();
     void suggestionsChanged();
+    // A right click in a terminal, in the page's coordinates (as cursor).
+    void contextMenuRequested(int x, int y, bool canCopy, bool hasLink);
+    // A paste of this many lines waits for answerPaste.
+    void pasteConfirmationNeeded(int lines);
     void endedChanged();
 
 private:
@@ -103,6 +116,10 @@ private:
     QSplitter *m_splitter = nullptr;
     QList<TerminalView *> m_views;
     QPointer<TerminalView> m_current;
+    // The link the right-click menu was opened on.
+    QUrl m_menuLink;
+    QPointer<TerminalView> m_pasteView;
+    QString m_pasteText;
     FileBrowser *m_files = nullptr;
 };
 
@@ -162,6 +179,8 @@ public:
     Q_INVOKABLE void startResize(int edges);
     Q_INVOKABLE void closeWindow();
     Q_INVOKABLE void showHome();
+    // Remote's settings, which are a page of the home window.
+    Q_INVOKABLE void showSettings();
     Q_INVOKABLE void editHost(const QString &hostId);
     // Runs a snippet in every terminal tab.
     Q_INVOKABLE void runEverywhere(const QString &command);

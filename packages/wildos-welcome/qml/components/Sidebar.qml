@@ -15,7 +15,7 @@ Item {
     // Wild OS asks once, but never traps anyone: this closes the welcome
     // without marking it done, so it comes back at the next sign-in.
     signal later()
-    property var steps: ["Welcome", "Make it feel like home", "Bring your files across", "Your privacy", "Apps to get started"]
+    property var steps: [qsTr("Welcome"), qsTr("Make it feel like home"), qsTr("Bring your files across"), qsTr("Your privacy"), qsTr("Apps to get started")]
 
     implicitWidth: Metrics.sidebarWidth
     implicitHeight: steps.implicitHeight + 32 + 26
@@ -68,7 +68,7 @@ Item {
             Layout.fillWidth: true
             spacing: 4
             Accessible.role: Accessible.List
-            Accessible.name: "Setup steps"
+            Accessible.name: qsTr("Setup steps")
 
             Repeater {
                 model: sidebar.steps
@@ -87,7 +87,7 @@ Item {
                     radius: UI.Style.radiusSm
                     color: active ? UI.Style.surfaceSelected : "transparent"
                     Accessible.role: Accessible.ListItem
-                    Accessible.name: modelData + (done ? ", done" : active ? ", current step" : "")
+                    Accessible.name: done ? qsTr("%1, done").arg(modelData) : active ? qsTr("%1, current step").arg(modelData) : modelData
 
                     Row {
                         anchors.left: parent.left
@@ -146,7 +146,7 @@ Item {
             Layout.fillWidth: true
             visible: sidebar.showNote
             // Accent and taskbar layout both live on that Settings page.
-            text: "You can change all of this later in Settings > Personalisation."
+            text: qsTr("You can change all of this later in Settings > Personalisation.")
             size: 12
             lineHeight: 18 * UI.Style.textScale
             lineHeightMode: Text.FixedHeight
@@ -158,9 +158,9 @@ Item {
         UI.LinkButton {
             visible: sidebar.canLeave
             Layout.leftMargin: -4
-            text: "Set up later"
+            text: qsTr("Set up later")
             size: 12
-            Accessible.description: "Closes the welcome. It opens again the next time you sign in."
+            Accessible.description: qsTr("Closes the welcome. It opens again the next time you sign in.")
             onClicked: sidebar.later()
         }
     }

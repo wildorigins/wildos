@@ -89,7 +89,9 @@ private:
     void toggleKeepAwake(const Spot &spot);
     void applyKeepAwake(bool on);
     void toggleDoNotDisturb(const Spot &spot);
-    void showToast(const QString &text, const Spot &spot);
+    // Takes the untranslated text: the translations come with WildOS.UI,
+    // which KWin loads only once the toast is first created.
+    void showToast(const char *text, const Spot &spot);
 
     KConfigWatcher::Ptr m_watcher;
     std::array<Setting, CornerCount> m_settings;

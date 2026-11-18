@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Mail
+Name[fr]=Courrier
 GenericName=Email
+GenericName[fr]=Messagerie
 Comment=Read and write email, with trackers blocked
+Comment[fr]=Lisez et écrivez vos e-mails, sans traqueurs
 Exec=wildos-mail %u
 Icon=org.wildos.mail
 Terminal=false

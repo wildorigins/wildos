@@ -15,10 +15,10 @@ PageScroll {
     function openMenu(button, desktop) {
         renameDialog.desktop = desktop;
         desktopMenu.entries = [
-            { text: "Switch to this desktop", icon: "check", enabled: desktop.id !== Desktops.current, run: () => Desktops.switchTo(desktop.id) },
+            { text: qsTr("Switch to this desktop"), icon: "check", enabled: desktop.id !== Desktops.current, run: () => Desktops.switchTo(desktop.id) },
             { separator: true },
-            { text: "Rename", icon: "rename", run: () => renameDialog.open() },
-            { text: "Remove", icon: "delete", danger: true, enabled: page.several, run: () => Desktops.remove(desktop.id) }
+            { text: qsTr("Rename"), icon: "rename", run: () => renameDialog.open() },
+            { text: qsTr("Remove"), icon: "delete", danger: true, enabled: page.several, run: () => Desktops.remove(desktop.id) }
         ];
         desktopMenu.popup(button, 0, button.height + 4);
     }
@@ -33,11 +33,11 @@ PageScroll {
 
             SectionTitle {
                 Layout.fillWidth: true
-                text: "Your desktops"
+                text: qsTr("Your desktops")
             }
 
             UI.Button {
-                text: "Add a desktop"
+                text: qsTr("Add a desktop")
                 iconName: "plus"
                 enabled: Desktops.available && Desktops.desktops.length < Desktops.maximum
                 onClicked: Desktops.add()
@@ -58,14 +58,14 @@ PageScroll {
                         required property var modelData
                         iconName: "desktops"
                         title: modelData.name
-                        status: modelData.id === Desktops.current ? "In use" : ""
+                        status: modelData.id === Desktops.current ? qsTr("In use") : ""
                         statusColor: UI.Style.accentText
 
                         UI.IconButton {
                             id: moreButton
                             anchors.verticalCenter: parent.verticalCenter
                             iconName: "more"
-                            tip: "Options for " + desktopRow.modelData.name
+                            tip: qsTr("Options for %1").arg(desktopRow.modelData.name)
                             onClicked: page.openMenu(moreButton, desktopRow.modelData)
                         }
                     }
@@ -74,15 +74,15 @@ PageScroll {
                 UI.SettingRow {
                     visible: !Desktops.available
                     iconName: "desktops"
-                    title: "Desktops aren't available right now"
-                    description: "The window manager isn't answering. Try again after signing out and back in."
+                    title: qsTr("Desktops aren't available right now")
+                    description: qsTr("The window manager isn't answering. Try again after signing out and back in.")
                 }
             }
         }
 
         UI.Label {
             Layout.fillWidth: true
-            text: "Removing a desktop moves its windows to the desktop next to it."
+            text: qsTr("Removing a desktop moves its windows to the desktop next to it.")
             color: UI.Style.inkMuted
             size: 12
             wrapMode: Text.Wrap
@@ -100,7 +100,7 @@ PageScroll {
         property var desktop: null
         readonly property string trimmed: nameField.text.trim()
 
-        title: "Rename desktop"
+        title: qsTr("Rename desktop")
         onAboutToShow: {
             nameField.text = desktop ? desktop.name : "";
             nameField.selectAll();
@@ -110,7 +110,7 @@ PageScroll {
         UI.TextField {
             id: nameField
             Layout.fillWidth: true
-            placeholderText: "Desktop name"
+            placeholderText: qsTr("Desktop name")
             maximumLength: 64
             onAccepted: renameButton.clicked()
         }
@@ -118,7 +118,7 @@ PageScroll {
         buttons: [
             UI.Button {
                 id: renameButton
-                text: "Rename"
+                text: qsTr("Rename")
                 kind: "primary"
                 enabled: renameDialog.desktop !== null && renameDialog.trimmed.length > 0 && renameDialog.trimmed !== renameDialog.desktop.name
                 onClicked: {
@@ -130,7 +130,7 @@ PageScroll {
                 }
             },
             UI.Button {
-                text: "Cancel"
+                text: qsTr("Cancel")
                 onClicked: renameDialog.close()
             }
         ]

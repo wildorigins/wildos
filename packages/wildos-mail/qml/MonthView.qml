@@ -18,6 +18,9 @@ Item {
     signal eventClicked(string key, Item block)
     signal dayClicked(date day)
     signal newAt(date start, bool allDay)
+    // `from` is the event when its menu was asked for with the keyboard.
+    signal eventMenu(string key, var from)
+    signal slotMenu(date start, bool allDay)
 
     readonly property date firstShown: {
         const first = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -92,7 +95,17 @@ Item {
                     id: cellMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    onDoubleClicked: view.newAt(cell.day, true)
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: function (mouse) {
+                        if (mouse.button === Qt.RightButton) {
+                            view.slotMenu(cell.day, true);
+                        }
+                    }
+                    onDoubleClicked: function (mouse) {
+                        if (mouse.button === Qt.LeftButton) {
+                            view.newAt(cell.day, true);
+                        }
+                    }
                 }
 
                 Rectangle {
@@ -137,6 +150,25 @@ Item {
                             color: bar ? Qt.rgba(Qt.color(modelData.color).r, Qt.color(modelData.color).g, Qt.color(modelData.color).b, 0.38)
                                  : lineMouse.containsMouse || view.openKey === modelData.key ? UI.Style.surfaceHover : "transparent"
                             opacity: cell.inMonth ? 1 : 0.6
+                            activeFocusOnTab: true
+                            Accessible.role: Accessible.Button
+                            Accessible.name: bar ? qsTr("%1, all day").arg(modelData.title) : qsTr("%1, %2").arg(modelData.title).arg(modelData.timeText)
+                            Keys.onPressed: function (event) {
+                                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                    view.eventClicked(modelData.key, line);
+                                } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                                    view.eventMenu(modelData.key, line);
+                                } else {
+                                    return;
+                                }
+                                event.accepted = true;
+                            }
+
+                            UI.FocusRing {
+                                visible: line.activeFocus
+                                anchors.margins: 0
+                                targetRadius: line.radius - 4
+                            }
 
                             Row {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -170,7 +202,14 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: view.eventClicked(line.modelData.key, line)
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: function (mouse) {
+                                    if (mouse.button === Qt.RightButton) {
+                                        view.eventMenu(line.modelData.key, null);
+                                    } else {
+                                        view.eventClicked(line.modelData.key, line);
+                                    }
+                                }
                             }
                         }
                     }

@@ -163,9 +163,6 @@ Window {
                 to: Math.max(1, Player.duration)
                 source: Player.position
                 knob: false
-                // The player bar's white fill vanishes on the pale glass
-                // of a light mini player, which has no darker band under it.
-                fill: UI.Style.dark ? MusicStyle.barFill : UI.Style.iconInk
                 enabled: mini.hasSong && Player.seekable
                 accessibleName: qsTr("Position in the song")
                 onCommitted: value => Player.seek(value)

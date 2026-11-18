@@ -13,6 +13,8 @@ T.ItemDelegate {
     property bool selected: false
     property bool recordingNow: false
     property double liveLength: 0
+    // The list has the keyboard and this is the row it is on.
+    property bool keyboardFocus: false
 
     signal menuRequested(real x, real y)
 
@@ -28,6 +30,13 @@ T.ItemDelegate {
         color: row.selected ? UI.Style.surfaceSelected : row.hovered ? UI.Style.surfaceHover : "transparent"
         Behavior on color {
             ColorAnimation { duration: UI.Style.hoverDuration }
+        }
+
+        // Inside the row: the list clips, and the rows touch.
+        UI.FocusRing {
+            anchors.margins: 0
+            targetRadius: UI.Style.radiusSm - 4
+            visible: row.keyboardFocus
         }
     }
 

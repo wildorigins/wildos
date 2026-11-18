@@ -20,7 +20,7 @@ Rectangle {
     readonly property bool working: Transcripts.workingPath.length > 0 && Transcripts.workingPath === path
     readonly property bool hasLines: Transcripts.lines.length > 0
 
-    radius: 10
+    radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRaised
     border.width: 1
     border.color: UI.Style.borderSubtle

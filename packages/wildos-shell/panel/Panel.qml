@@ -650,7 +650,7 @@ Item {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
         Accessible.role: Accessible.Button
-        Accessible.name: "Show the desktop"
+        Accessible.name: qsTr("Show the desktop")
 
         // The desktop is showing because of a peek, so leaving undoes it.
         property bool peeking: false
@@ -739,15 +739,15 @@ Item {
     function openTaskbarMenu(x: real): void {
         const entries = [];
         if (taskManagerEntry.count > 0) {
-            entries.push({ text: "Task Manager", icon: "menu-task-manager", shortcut: "Ctrl+Shift+Esc",
+            entries.push({ text: qsTr("Task Manager"), icon: "menu-task-manager", shortcut: qsTr("Ctrl+Shift+Esc"),
                 run: () => runner.connectSource("kstart --application org.wildos.taskmanager") });
             entries.push({ separator: true });
         }
         if (settingsEntry.count > 0) {
-            entries.push({ text: "Taskbar settings", icon: "menu-settings",
+            entries.push({ text: qsTr("Taskbar settings"), icon: "menu-settings",
                 run: () => runner.connectSource("kstart --desktopfile org.wildos.settings -- wildos-settings --page taskbar") });
         }
-        entries.push({ text: "Show the desktop", icon: "menu-desktop", shortcut: "Win+D",
+        entries.push({ text: qsTr("Show the desktop"), icon: "menu-desktop", shortcut: "Win+D",
             run: () => root.toggleDesktop() });
         taskbarMenu.entries = entries;
         taskbarMenu.x = Math.round(Math.max(8, Math.min(root.width - taskbarMenu.implicitWidth - 8, x)));

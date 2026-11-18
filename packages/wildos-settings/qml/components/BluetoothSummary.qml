@@ -55,15 +55,16 @@ QtObject {
 
     function stateOf(device) {
         if (!device.connected) {
-            return "Not connected";
+            return qsTr("Not connected");
         }
-        return device.battery ? "Connected · " + device.battery.percentage + "%" : "Connected";
+        return device.battery ? qsTr("Connected · %1%").arg(device.battery.percentage) : qsTr("Connected");
     }
 
-    readonly property string caption: !present ? "Not available"
-        : !on ? "Off"
-        : devices.length === 0 ? "On, no devices yet"
-        : (devices.length === 1 ? "1 device, " : devices.length + " devices, ") + connectedCount + " connected"
+    readonly property string caption: !present ? qsTr("Not available")
+        : !on ? qsTr("Off")
+        : devices.length === 0 ? qsTr("On, no devices yet")
+        : devices.length === 1 ? qsTr("1 device, %1 connected").arg(connectedCount)
+        : qsTr("%1 devices, %2 connected").arg(devices.length).arg(connectedCount)
 
     property Connections watch: Connections {
         target: summary.manager

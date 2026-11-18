@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QDateTime>
 #include <QFileSystemWatcher>
 #include <QTimer>
 #include <QQmlEngine>
@@ -16,6 +17,9 @@ class AppsModel : public QAbstractListModel
     QML_ELEMENT
 
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
+    // "name" (A to Z), "name-desc" (Z to A) or "date" (the app installed or
+    // updated last comes first).
+    Q_PROPERTY(QString sort READ sort WRITE setSort NOTIFY sortChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(QString busyId READ busyId NOTIFY busyChanged)
 
@@ -27,6 +31,7 @@ public:
         SourceRole,
         PackageRole,
         CanUninstallRole,
+        ChangedRole,
     };
 
     explicit AppsModel(QObject *parent = nullptr);
@@ -37,6 +42,8 @@ public:
 
     QString filter() const { return m_filter; }
     void setFilter(const QString &filter);
+    QString sort() const { return m_sort; }
+    void setSort(const QString &sort);
     QString busyId() const { return m_busyId; }
 
     Q_INVOKABLE void reload();
@@ -53,6 +60,7 @@ public:
 
 Q_SIGNALS:
     void filterChanged();
+    void sortChanged();
     void countChanged();
     void busyChanged();
     void uninstalled(const QString &name);
@@ -76,6 +84,8 @@ private:
         bool homeApp = false;
         // Runs in Windows mode: Windows itself uninstalls it.
         bool windowsApp = false;
+        // When it was installed or last updated, where that can be told.
+        QDateTime changed;
         QStringList files;
         QStringList data;
     };
@@ -91,6 +101,7 @@ private:
     QList<App> m_all;
     QList<App> m_shown;
     QString m_filter;
+    QString m_sort = QStringLiteral("name");
     QString m_busyId;
     // Windows mode writes and removes its apps' launchers there.
     QFileSystemWatcher m_launchers;

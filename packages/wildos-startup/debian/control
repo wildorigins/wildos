@@ -1,0 +1,41 @@
+Source: wildos-startup
+Section: admin
+Priority: optional
+Maintainer: Wild OS Developers <dev@wildos.io>
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake,
+ pkgconf,
+ libcairo2-dev,
+ libpango1.0-dev,
+ libblkid-dev,
+ libcrypt-dev,
+ librsvg2-bin,
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: wildos-startup
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ python3,
+ dracut,
+ grub-common,
+ pkexec,
+ util-linux,
+ wildos-fonts,
+ wildos-base (>= 0.1.16),
+Description: Wild OS start-up manager
+ Chooses what a PC with more than one system starts. Holding Space while the
+ PC starts shows a picture menu of Wild OS, Windows or another system on any
+ disk, a USB stick that can start, and restore points. It can also show at
+ every start with a countdown.
+ .
+ Other systems are looked for each time, on every disk, so one on a second
+ disk or added later is found whether or not the PC's firmware lists it.
+ Settings > System > Start-up disk sets what starts by default and restarts
+ straight into another system.
+ .
+ The manager runs from Wild OS's own start-up files. GRUB stays the first
+ thing the PC runs and is never seen.

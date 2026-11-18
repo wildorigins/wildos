@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    # Without the manager nothing reads these, and a default left pointing
+    # at another system would keep the PC out of Wild OS.
+    if [ -e /boot/grub/grubenv ] && command -v grub-editenv >/dev/null; then
+        for name in wsm_mode wsm_def_uuid wsm_def_path wsm_def_kind wsm_def_linux wsm_lock \
+            wsm_once_uuid wsm_once_path wsm_once_kind wsm_t0 wsm_k0; do
+            grub-editenv /boot/grub/grubenv unset "$name" || true
+        done
+    fi
+    rm -rf /boot/wildos-startup
+    if [ -e /boot/grub/grub.cfg ] && command -v update-grub >/dev/null; then
+        update-grub >/dev/null 2>&1 || true
+    fi
+fi
+
+#DEBHELPER#

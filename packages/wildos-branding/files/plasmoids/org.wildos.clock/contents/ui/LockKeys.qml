@@ -97,7 +97,8 @@ Item {
                     id: label
                     anchors.horizontalCenter: parent.horizontalCenter
                     size: 13
-                    text: (lockKeys.caps ? "Caps Lock" : "Num Lock") + (lockKeys.on ? " on" : " off")
+                    text: lockKeys.caps ? (lockKeys.on ? qsTr("Caps Lock on") : qsTr("Caps Lock off"))
+                        : (lockKeys.on ? qsTr("Num Lock on") : qsTr("Num Lock off"))
                 }
             }
         }

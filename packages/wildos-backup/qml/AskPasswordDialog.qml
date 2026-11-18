@@ -26,7 +26,6 @@ UI.Dialog {
     UI.TextField {
         id: field
         Layout.fillWidth: true
-        echoMode: TextInput.Password
         revealable: true
         UI.NoPaste {}
         placeholderText: qsTr("Backup password")

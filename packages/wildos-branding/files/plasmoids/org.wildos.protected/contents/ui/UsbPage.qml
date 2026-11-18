@@ -24,19 +24,19 @@ FocusScope {
     // a "memory stick" that types is the classic USB attack.
     function describe(kind: string): string {
         switch (kind) {
-        case "keyboard": return "Says it's a keyboard";
-        case "mouse": return "Mouse";
-        case "input": return "Input device";
-        case "storage": return "USB drive";
-        case "network": return "Network adapter";
-        case "wireless": return "Wireless adapter";
-        case "camera": return "Camera";
-        case "phone": return "Phone or camera";
-        case "audio": return "Audio device";
-        case "printer": return "Printer";
-        case "hub": return "USB hub";
+        case "keyboard": return qsTr("Says it's a keyboard");
+        case "mouse": return qsTr("Mouse");
+        case "input": return qsTr("Input device");
+        case "storage": return qsTr("USB drive");
+        case "network": return qsTr("Network adapter");
+        case "wireless": return qsTr("Wireless adapter");
+        case "camera": return qsTr("Camera");
+        case "phone": return qsTr("Phone or camera");
+        case "audio": return qsTr("Audio device");
+        case "printer": return qsTr("Printer");
+        case "hub": return qsTr("USB hub");
         }
-        return "USB device";
+        return qsTr("USB device");
     }
 
     ColumnLayout {
@@ -59,7 +59,7 @@ FocusScope {
                 iconName: "chevron-left"
                 iconSize: 14
                 stroke: 2.2
-                tip: "Back to security"
+                tip: qsTr("Back to security")
                 onClicked: page.back()
             }
 
@@ -68,7 +68,7 @@ FocusScope {
                 anchors.leftMargin: 3
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Blocked USB devices"
+                text: qsTr("Blocked USB devices")
                 size: 14
                 font.weight: UI.Style.weightSemiBold
                 Accessible.role: Accessible.Heading
@@ -78,7 +78,7 @@ FocusScope {
         UI.Label {
             Layout.fillWidth: true
             Layout.topMargin: -6
-            text: "Wild OS holds back new USB devices until you say they're OK. Only allow devices you recognise."
+            text: qsTr("Wild OS holds back new USB devices until you say they're OK. Only allow devices you recognise.")
             color: UI.Style.inkMuted
             size: 12
             lineHeight: 1.3
@@ -128,13 +128,13 @@ FocusScope {
 
                             UI.Label {
                                 Layout.fillWidth: true
-                                text: card.modelData.name.length > 0 ? card.modelData.name : "Unnamed USB device"
+                                text: card.modelData.name.length > 0 ? card.modelData.name : qsTr("Unnamed USB device")
                                 font.weight: UI.Style.weightSemiBold
                             }
 
                             UI.Label {
                                 Layout.fillWidth: true
-                                text: card.busy ? "Waiting for permission" : page.describe(card.modelData.kind)
+                                text: card.busy ? qsTr("Waiting for permission") : page.describe(card.modelData.kind)
                                 size: 12
                                 color: card.modelData.kind === "keyboard" && !card.busy ? UI.Style.warning : UI.Style.inkStatus
                             }
@@ -151,9 +151,9 @@ FocusScope {
                             Layout.fillWidth: true
                             Layout.preferredWidth: 1
                             size: "small"
-                            text: "Allow once"
+                            text: qsTr("Allow once")
                             enabled: !card.busy
-                            Accessible.name: "Allow " + (card.modelData.name || "this device") + " once"
+                            Accessible.name: card.modelData.name ? qsTr("Allow %1 once").arg(card.modelData.name) : qsTr("Allow this device once")
                             onClicked: page.security.allowDevice(card.modelData.port)
                         }
 
@@ -161,10 +161,10 @@ FocusScope {
                             Layout.fillWidth: true
                             Layout.preferredWidth: 1
                             size: "small"
-                            text: "Keep blocked"
+                            text: qsTr("Keep blocked")
                             kind: "primary"
                             enabled: !card.busy
-                            Accessible.name: "Keep " + (card.modelData.name || "this device") + " blocked"
+                            Accessible.name: card.modelData.name ? qsTr("Keep %1 blocked").arg(card.modelData.name) : qsTr("Keep this device blocked")
                             onClicked: page.security.keepBlocked(card.modelData.port)
                         }
                     }

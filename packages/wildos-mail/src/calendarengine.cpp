@@ -1692,7 +1692,7 @@ void CalendarEngine::addGoogleAccount(const QString &email, const QString &refre
         EOAuth2Service *service = e_oauth2_services_find(services, source);
         GError *err = nullptr;
         if (!service) {
-            *error = QStringLiteral("no Google sign-in in the calendar service");
+            *error = CalendarEngine::tr("no Google sign-in in the calendar service");
         } else if (!e_oauth2_service_refresh_and_store_token_sync(service, source, refreshToken.toUtf8().constData(), &refSource, registry, nullptr, &err)) {
             *error = str(err ? err->message : "");
         }
@@ -1740,7 +1740,7 @@ void CalendarEngine::addCalDavAccount(const QString &name, const QString &addres
     e_source_authentication_set_method(auth, "plain/password");
     const QString uid = str(e_source_get_uid(source));
     g_object_ref(source);
-    createSources({source}, [this, source, uid, password](bool ok, const QString &e) {
+    createSources({source}, [this, source, uid, user, password](bool ok, const QString &e) {
         if (!ok) {
             g_object_unref(source);
             Q_EMIT accountFailed(tr("The account wasn't added. %1").arg(e));
@@ -1755,12 +1755,27 @@ void CalendarEngine::addCalDavAccount(const QString &name, const QString &addres
                 *error = str(err ? err->message : "");
             }
             g_clear_error(&err);
-        }, [this, source, uid, error]() {
+        }, [this, source, uid, user, password, error]() {
             if (!error->isEmpty()) {
                 Q_EMIT accountFailed(tr("The password wasn't saved. %1").arg(*error));
             } else {
-                // Look for the calendars now the password is there.
-                e_source_invoke_authenticate(source, nullptr, nullptr, nullptr, nullptr);
+                // The registry tried the account once when it was created,
+                // before the password was stored, and now waits for a sign-in
+                // that only Evolution's own prompt would give. Hand it the
+                // credentials so it looks for the calendars now. This has to
+                // be the registry's copy of the source: the one built here
+                // has no D-Bus object behind it, so authenticating it does
+                // nothing.
+                if (ESource *live = m_registry ? e_source_registry_ref_source(m_registry, uid.toUtf8().constData()) : nullptr) {
+                    ENamedParameters *credentials = e_named_parameters_new();
+                    e_named_parameters_set(credentials, E_SOURCE_CREDENTIAL_USERNAME, user.toUtf8().constData());
+                    e_named_parameters_set(credentials, E_SOURCE_CREDENTIAL_PASSWORD, password.toUtf8().constData());
+                    e_source_invoke_authenticate(live, credentials, nullptr, nullptr, nullptr);
+                    e_named_parameters_free(credentials);
+                    g_object_unref(live);
+                } else {
+                    qCWarning(calendarLog) << "New calendar account not in the registry yet:" << uid;
+                }
                 Q_EMIT accountAdded(uid);
             }
             g_object_unref(source);

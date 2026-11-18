@@ -1,3 +1,18 @@
+wildos-terminal (0.1.4) trixie; urgency=medium
+
+  * Translatable, and in French: the display language chosen in
+    Settings > Time and language now applies to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 15 Nov 2026 00:15:00 +0000
+
+wildos-terminal (0.1.3) trixie; urgency=medium
+
+  * Selecting text copies it, so a long link or an error message can be
+    pasted straight away. It can be switched off in Settings >
+    Interaction. Ctrl+C after selecting still stops the running command.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 14 Nov 2026 20:35:00 +0000
+
 wildos-terminal (0.1.2) trixie; urgency=medium
 
   * Pasting into a setting's box from its right-click menu is no

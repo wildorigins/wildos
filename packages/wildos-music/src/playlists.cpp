@@ -315,12 +315,44 @@ bool Playlists::remove(const QString &name)
         return false;
     }
     const QString path = fileOf(name);
-    if (!QFile::moveToTrash(path) && !QFile::remove(path)) {
+    QString binned;
+    if (!QFile::moveToTrash(path, &binned) && !QFile::remove(path)) {
         m_error = tr("Couldn't delete %1.").arg(name);
         Q_EMIT changed();
         return false;
     }
+    m_removed = {name, path, QFileInfo::exists(path) ? QString() : binned, m_lists.value(name)};
     m_lists.remove(name);
+    touched();
+    return true;
+}
+
+bool Playlists::restore(const QString &name)
+{
+    if (name.isEmpty() || m_removed.name != name) {
+        m_error = tr("Couldn't bring %1 back.").arg(name);
+        Q_EMIT changed();
+        return false;
+    }
+    if (!validName(name)) {
+        Q_EMIT changed();
+        return false;
+    }
+    const Removed removed = m_removed;
+    m_removed = {};
+    bool back = false;
+    if (!removed.binned.isEmpty() && QFileInfo::exists(removed.binned) && !QFileInfo::exists(removed.file)) {
+        back = QFile::rename(removed.binned, removed.file);
+        if (back) {
+            // The bin keeps a note beside each file it holds.
+            const QFileInfo held(removed.binned);
+            QFile::remove(held.absoluteDir().absoluteFilePath(QStringLiteral("../info/") + held.fileName() + QStringLiteral(".trashinfo")));
+        }
+    }
+    if (!back && !write(name, removed.songs)) {
+        return false;
+    }
+    m_lists.insert(name, removed.songs);
     touched();
     return true;
 }
@@ -339,6 +371,25 @@ bool Playlists::add(const QString &name, const QStringList &paths)
         return false;
     }
     m_lists.insert(name, list);
+    touched();
+    return true;
+}
+
+bool Playlists::setSongs(const QString &name, const QStringList &paths)
+{
+    const bool liked = name == likedName();
+    if (!liked && !m_lists.contains(name)) {
+        return false;
+    }
+    if (!write(name, paths)) {
+        return false;
+    }
+    if (liked) {
+        m_liked = paths;
+        m_likedSet = QSet<QString>(paths.cbegin(), paths.cend());
+    } else {
+        m_lists.insert(name, paths);
+    }
     touched();
     return true;
 }

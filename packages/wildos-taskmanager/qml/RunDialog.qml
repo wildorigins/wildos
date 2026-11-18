@@ -17,8 +17,8 @@ UI.Dialog {
         dialog.close();
     }
 
-    title: "Create new task"
-    text: "Type the name of a program and Wild OS will open it for you."
+    title: qsTr("Create new task")
+    text: qsTr("Type the name of a program and Wild OS will open it for you.")
     onOpened: {
         field.text = "";
         errorLabel.text = "";
@@ -28,9 +28,9 @@ UI.Dialog {
     UI.TextField {
         id: field
         Layout.fillWidth: true
-        placeholderText: "For example, wildos-files"
+        placeholderText: qsTr("For example, wildos-files")
         error: errorLabel.text.length > 0
-        Accessible.name: "Open"
+        Accessible.name: qsTr("Open")
         onAccepted: dialog.run()
         onTextChanged: errorLabel.text = ""
     }
@@ -47,12 +47,12 @@ UI.Dialog {
     buttons: [
         UI.Button {
             kind: "primary"
-            text: "Open"
+            text: qsTr("Open")
             enabled: field.text.trim().length > 0
             onClicked: dialog.run()
         },
         UI.Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             onClicked: dialog.close()
         }
     ]

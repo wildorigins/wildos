@@ -26,7 +26,7 @@ PageScroll {
     Connections {
         target: Language
         function onFailed(reason) {
-            notice.show("The language was not changed", reason, true);
+            notice.show(qsTr("The language was not changed"), reason, true);
         }
     }
 
@@ -37,11 +37,11 @@ PageScroll {
     StatusCard {
         visible: Language.needsSignOut
         iconName: "sign-out"
-        title: "Sign out to finish"
-        description: "Apps switch to the new language and formats when you sign out and back in. Save your work first."
+        title: qsTr("Sign out to finish")
+        description: qsTr("Apps switch to the new language and formats when you sign out and back in. Save your work first.")
 
         UI.Button {
-            text: "Sign out now"
+            text: qsTr("Sign out now")
             onClicked: Language.signOut()
         }
     }
@@ -51,7 +51,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Language"
+            text: qsTr("Language")
         }
 
         UI.Card {
@@ -62,12 +62,12 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "language"
-                    title: "Display language"
-                    description: "Menus, dialogs and the apps that offer it. Wild OS's own apps are in English for now."
+                    title: qsTr("Display language")
+                    description: qsTr("Menus, dialogs and apps")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Display language"
+                        Accessible.name: qsTr("Display language")
                         model: page.languages
                         readonly property string choice: Language.language
                         currentIndex: model.findIndex(o => o.value === choice)
@@ -84,7 +84,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Region"
+            text: qsTr("Region")
         }
 
         UI.Card {
@@ -95,8 +95,8 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "globe"
-                    title: "Regional format"
-                    description: Language.busy ? "Getting the format ready on this computer" : "How dates, times, numbers and money are written"
+                    title: qsTr("Regional format")
+                    description: Language.busy ? qsTr("Getting the format ready on this computer") : qsTr("How dates, times, numbers and money are written")
 
                     UI.Spinner {
                         anchors.verticalCenter: parent.verticalCenter
@@ -105,7 +105,7 @@ PageScroll {
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Regional format"
+                        Accessible.name: qsTr("Regional format")
                         enabled: !Language.busy
                         model: page.formats
                         readonly property string choice: Language.format
@@ -120,13 +120,13 @@ PageScroll {
 
                 Repeater {
                     model: [
-                        ["Short date", page.example.shortDate],
-                        ["Long date", page.example.longDate],
-                        ["Time", page.example.time],
-                        ["Numbers", page.example.number],
-                        ["Money", page.example.currency],
-                        ["First day of the week", page.example.firstDay],
-                        ["Measurements", page.example.measurement]
+                        [qsTr("Short date"), page.example.shortDate],
+                        [qsTr("Long date"), page.example.longDate],
+                        [qsTr("Time"), page.example.time],
+                        [qsTr("Numbers"), page.example.number],
+                        [qsTr("Money"), page.example.currency],
+                        [qsTr("First day of the week"), page.example.firstDay],
+                        [qsTr("Measurements"), page.example.measurement]
                     ]
 
                     UI.SettingRow {
@@ -147,7 +147,7 @@ PageScroll {
         UI.Label {
             Layout.fillWidth: true
             visible: Language.detailed
-            text: "Some formats were chosen separately in More format options. Choosing a regional format here sets them all again."
+            text: qsTr("Some formats were chosen separately in More format options. Choosing a regional format here sets them all again.")
             size: 12
             color: UI.Style.inkMuted
             wrapMode: Text.Wrap
@@ -160,7 +160,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Related settings"
+            text: qsTr("Related settings")
         }
 
         UI.Card {
@@ -172,24 +172,24 @@ PageScroll {
                 UI.SettingRow {
                     visible: Pages.exists("formatsadvanced")
                     iconName: "cog"
-                    title: "More format options"
-                    description: "Choose numbers, time, money and measurements separately"
+                    title: qsTr("More format options")
+                    description: qsTr("Choose numbers, time, money and measurements separately")
                     chevron: true
                     onClicked: Navigator.open("formatsadvanced")
                 }
 
                 UI.SettingRow {
                     iconName: "clock"
-                    title: "Date and time"
-                    description: "Time zone and setting the clock"
+                    title: qsTr("Date and time")
+                    description: qsTr("Time zone and setting the clock")
                     chevron: true
                     onClicked: Navigator.open("datetime")
                 }
 
                 UI.SettingRow {
                     iconName: "keyboard"
-                    title: "Keyboard"
-                    description: "Layouts for the languages you type in"
+                    title: qsTr("Keyboard")
+                    description: qsTr("Layouts for the languages you type in")
                     chevron: true
                     onClicked: Navigator.open("keyboard")
                 }

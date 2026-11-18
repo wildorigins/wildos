@@ -240,7 +240,7 @@ void Runner::backUpFiles()
             m_stopping = true;
             finish();
         } else {
-            fail(Restic::explain(code, m_restic->errorText()));
+            fail(Restic::explain(code, m_restic->errorText()), Restic::detail(code, m_restic->errorText()));
         }
     });
     QStringList args{
@@ -428,10 +428,11 @@ Restic *Runner::newRestic()
     return m_restic;
 }
 
-void Runner::fail(const QString &reason)
+void Runner::fail(const QString &reason, const QString &detail)
 {
     m_failed = true;
     m_reason = reason;
+    m_detail = detail;
     m_exit = 1;
     finish();
 }
@@ -466,6 +467,9 @@ void Runner::finish()
     if (m_failed) {
         entry.insert(QStringLiteral("result"), QStringLiteral("failed"));
         entry.insert(QStringLiteral("reason"), m_reason);
+        if (!m_detail.isEmpty()) {
+            entry.insert(QStringLiteral("detail"), m_detail);
+        }
     } else if (m_stopping) {
         entry.insert(QStringLiteral("result"), QStringLiteral("stopped"));
     } else {

@@ -1,0 +1,1176 @@
+Description: Slides: the window and the presenter view of the Wild OS presentation app
+ Impress dressed as Slides, beside Write and Tables.
+ .
+ The status bar reads as on the Slides board: the slide and how many there
+ are, the name of the slide's layout (in place of its master's, which is
+ "Default" for nearly every slide; in English the short Wild OS names), the
+ language and the zoom.
+ .
+ At first start the sidebar is closed to its tab strip in Impress too, and
+ the notes under the slide are a short strip instead of most of the window.
+ .
+ The presenter's own screen during a show can be arranged as on the Slides
+ presenter board. It is switched on by configuration, by listing the
+ Presenter/TopBar view in the presenter layout, which wildos-slides.xcd in
+ the wildos-slides package does; without it LibreOffice's own arrangement is
+ untouched. With it: a top bar with the file name, "Slide 2 of 6", a timer
+ (04:12) and the clock (10:24); the slide on screen large on the left, the
+ next slide and the notes on the right, each under a small label; and along
+ the bottom pill buttons, the slide sorter as a one-row strip of thumbnails
+ that follows the show, and End show. New for it are tool bar entries drawn
+ as pills (Name starting with Pill), labels for the file name and slide
+ count, a right anchor for a bar, three more tool bar views (TopBar, TimeBar,
+ EndBar) and the UsePointer, UsePen and BlackScreen actions. The notes lose
+ their zoom buttons and Close, and previews their transition markers.
+Author: Wild OS Developers <dev@wildos.io>
+Forwarded: not-needed
+
+--- a/sd/inc/bitmaps.hlst
++++ b/sd/inc/bitmaps.hlst
+@@ -104,6 +104,13 @@
+ inline constexpr OUString BMP_PRESENTERSCREEN_BUTTON_HELP_NORMAL = u"sd/res/presenterscreen-ButtonHelpNormal.png"_ustr;
+ inline constexpr OUString BMP_PRESENTERSCREEN_BUTTON_EXIT_PRESENTER_NORMAL = u"sd/res/presenterscreen-ButtonExitPresenterNormal.png"_ustr;
+ inline constexpr OUString BMP_PRESENTERSCREEN_SEPARATOR = u"sd/res/presenterscreen-Separator.png"_ustr;
++// Wild OS: the presenter view's Back, Next, Pointer, Pen, Black screen and End show buttons.
++inline constexpr OUString BMP_PRESENTERSCREEN_WILDOS_BACK = u"sd/res/presenterscreen-WildOSBack.png"_ustr;
++inline constexpr OUString BMP_PRESENTERSCREEN_WILDOS_NEXT = u"sd/res/presenterscreen-WildOSNext.png"_ustr;
++inline constexpr OUString BMP_PRESENTERSCREEN_WILDOS_POINTER = u"sd/res/presenterscreen-WildOSPointer.png"_ustr;
++inline constexpr OUString BMP_PRESENTERSCREEN_WILDOS_PEN = u"sd/res/presenterscreen-WildOSPen.png"_ustr;
++inline constexpr OUString BMP_PRESENTERSCREEN_WILDOS_BLACK = u"sd/res/presenterscreen-WildOSBlack.png"_ustr;
++inline constexpr OUString BMP_PRESENTERSCREEN_WILDOS_END = u"sd/res/presenterscreen-WildOSEnd.png"_ustr;
+ inline constexpr OUString BMP_PRESENTERSCREEN_BORDER_ACTIVE_BOTTOM_CALLOUT = u"sd/res/presenterscreen-BorderActiveBottomCallout.png"_ustr;
+ inline constexpr OUString BMP_PRESENTERSCREEN_BORDER_TOOLBAR_LEFT = u"sd/res/presenterscreen-BorderToolbarLeft.png"_ustr;
+ inline constexpr OUString BMP_PRESENTERSCREEN_BUTTON_SLIDE_SORTER_NORMAL = u"sd/res/presenterscreen-ButtonSlideSorterNormal.png"_ustr;
+--- a/sd/source/console/PresenterController.cxx
++++ b/sd/source/console/PresenterController.cxx
+@@ -346,7 +346,11 @@
+     {
+         OSL_ASSERT(rxPane != nullptr);
+ 
++        // Wild OS: the Slides presenter view's panes keep their short labels
++        // (ON SCREEN NOW) when an assistive tool is running too; the top bar
++        // has the slide count the longer title carried.
+         OUString sTemplate (IsAccessibilityActive()
++                && !(GetWindowManager().is() && GetWindowManager()->IsWildOSLayout())
+             ? rxPane->msAccessibleTitleTemplate
+             : rxPane->msTitleTemplate);
+         if (sTemplate.isEmpty())
+@@ -656,17 +660,20 @@
+     const bool bIsNotesViewActive,
+     const bool bIsHelpViewActive)
+ {
++    // Wild OS: the Slides presenter view always shows the notes and, as its
++    // thumbnail strip, the slide sorter.
++    const bool bIsWildOS (GetWindowManager().is() && GetWindowManager()->IsWildOSLayout());
+     for (const auto& rxPane : mpPaneContainer->maPanes)
+     {
+         bool bActivate (true);
+         const OUString sViewURL (rxPane->msViewURL);
+         if (sViewURL == PresenterViewFactory::msNotesViewURL)
+         {
+-            bActivate = bIsNotesViewActive && !bIsSlideSorterActive && !bIsHelpViewActive;
++            bActivate = (bIsNotesViewActive || bIsWildOS) && !bIsSlideSorterActive && !bIsHelpViewActive;
+         }
+         else if (sViewURL == PresenterViewFactory::msSlideSorterURL)
+         {
+-            bActivate = bIsSlideSorterActive;
++            bActivate = bIsSlideSorterActive || (bIsWildOS && !bIsHelpViewActive);
+         }
+         else if (sViewURL == PresenterViewFactory::msCurrentSlidePreviewViewURL
+             || sViewURL == PresenterViewFactory::msNextSlidePreviewViewURL)
+--- a/sd/source/console/PresenterController.hxx
++++ b/sd/source/console/PresenterController.hxx
+@@ -106,6 +106,8 @@
+     const css::uno::Reference<css::presentation::XSlideShowController>&
+         GetSlideShowController() const;
+     const rtl::Reference<PresenterPaneContainer>& GetPaneContainer() const;
++    // Wild OS: for the presenter view's file name label.
++    const rtl::Reference<::sd::DrawController>& GetDrawController() const { return mxController; }
+     const ::rtl::Reference<PresenterPaneBorderPainter>& GetPaneBorderPainter() const;
+     const std::shared_ptr<PresenterCanvasHelper>& GetCanvasHelper() const;
+     const css::uno::Reference<css::drawing::XPresenterHelper>& GetPresenterHelper() const;
+--- a/sd/source/console/PresenterNotesView.cxx
++++ b/sd/source/console/PresenterNotesView.cxx
+@@ -25,6 +25,7 @@
+ #include "PresenterPaintManager.hxx"
+ #include "PresenterScrollBar.hxx"
+ #include "PresenterTextView.hxx"
++#include "PresenterWindowManager.hxx"
+ #include <DrawController.hxx>
+ #include <com/sun/star/accessibility/AccessibleTextType.hpp>
+ #include <com/sun/star/awt/Key.hpp>
+@@ -382,8 +383,20 @@
+         return;
+     awt::Rectangle aWindowBox (mxParentWindow->getPosSize());
+     geometry::RealRectangle2D aNewTextBoundingBox (0,0,aWindowBox.Width, aWindowBox.Height);
++    // Wild OS: in the Slides presenter view the notes are only the text, as on
++    // its board; the keys still make it larger and smaller.
++    const bool bIsWildOS (mpPresenterController.is() && mpPresenterController->GetWindowManager().is()
++        && mpPresenterController->GetWindowManager()->IsWildOSLayout());
++    if (bIsWildOS)
++    {
++        if (mxToolBarWindow.is())
++            mxToolBarWindow->setVisible(false);
++        if (mpCloseButton)
++            mpCloseButton->SetCenter(geometry::RealPoint2D(-1000, -1000));
++        mnSeparatorYLocation = aWindowBox.Height + 16;
++    }
+     // Size the tool bar and the horizontal separator above it.
+-    if (mxToolBarWindow.is())
++    if (mxToolBarWindow.is() && !bIsWildOS)
+     {
+             const geometry::RealSize2D aToolBarSize (mpToolBar->GetMinimalSize());
+             const sal_Int32 nToolBarHeight = sal_Int32(aToolBarSize.Height + 0.5);
+--- a/sd/source/console/PresenterProtocolHandler.cxx
++++ b/sd/source/console/PresenterProtocolHandler.cxx
+@@ -81,6 +81,33 @@
+         rtl::Reference<PresenterController> mpPresenterController;
+     };
+ 
++    // Wild OS: the Slides presenter view's Pointer and Pen buttons, a pair:
++    // the pen draws on the slide, the pointer is the plain arrow again.
++    class UsePenCommand : public Command
++    {
++    public:
++        UsePenCommand (
++            const bool bUsePen,
++            rtl::Reference<PresenterController> xPresenterController);
++        virtual void Execute() override;
++        virtual Any GetState() const override;
++    private:
++        const bool mbUsePen;
++        rtl::Reference<PresenterController> mpPresenterController;
++    };
++
++    // Wild OS: Black screen, which the B key already does: black while the
++    // room's attention is elsewhere, and the slide again on the next press.
++    class BlackScreenCommand : public Command
++    {
++    public:
++        explicit BlackScreenCommand (rtl::Reference<PresenterController> xPresenterController);
++        virtual void Execute() override;
++        virtual Any GetState() const override;
++    private:
++        rtl::Reference<PresenterController> mpPresenterController;
++    };
++
+     class SwitchMonitorCommand : public Command
+     {
+     public:
+@@ -386,6 +413,12 @@
+         return new GotoNextSlideCommand(rpPresenterController);
+     if (rsURLPath == u"PrevSlide")
+         return new GotoPreviousSlideCommand(rpPresenterController);
++    if (rsURLPath == u"UsePointer")
++        return new UsePenCommand(false, rpPresenterController);
++    if (rsURLPath == u"UsePen")
++        return new UsePenCommand(true, rpPresenterController);
++    if (rsURLPath == u"BlackScreen")
++        return new BlackScreenCommand(rpPresenterController);
+     if (rsURLPath == u"SwitchMonitor")
+         return new SwitchMonitorCommand(rpPresenterController);
+     if (rsURLPath == u"PauseResumeTimer")
+@@ -812,6 +845,70 @@
+ 
+ //===== ExitPresenterCommand ==================================================
+ 
++UsePenCommand::UsePenCommand (
++    const bool bUsePen,
++    rtl::Reference<PresenterController> xPresenterController)
++: mbUsePen(bUsePen),
++  mpPresenterController(std::move(xPresenterController))
++{
++}
++
++void UsePenCommand::Execute()
++{
++    if ( ! mpPresenterController.is())
++        return;
++
++    Reference<presentation::XSlideShowController> xController (
++        mpPresenterController->GetSlideShowController());
++    if (xController.is())
++        xController->setUsePen(mbUsePen);
++    if (mpPresenterController->GetWindowManager().is())
++        mpPresenterController->GetWindowManager()->NotifyStateChange();
++}
++
++Any UsePenCommand::GetState() const
++{
++    if ( ! mpPresenterController.is())
++        return Any(false);
++
++    Reference<presentation::XSlideShowController> xController (
++        mpPresenterController->GetSlideShowController());
++    return Any(xController.is() && bool(xController->getUsePen()) == mbUsePen);
++}
++
++BlackScreenCommand::BlackScreenCommand (rtl::Reference<PresenterController> xPresenterController)
++: mpPresenterController(std::move(xPresenterController))
++{
++}
++
++void BlackScreenCommand::Execute()
++{
++    if ( ! mpPresenterController.is())
++        return;
++
++    Reference<presentation::XSlideShowController> xController (
++        mpPresenterController->GetSlideShowController());
++    if (xController.is())
++    {
++        if (xController->isPaused())
++            xController->resume();
++        else
++            xController->blankScreen(0x00000000);
++    }
++    if (mpPresenterController->GetWindowManager().is())
++        mpPresenterController->GetWindowManager()->NotifyStateChange();
++}
++
++Any BlackScreenCommand::GetState() const
++{
++    if ( ! mpPresenterController.is())
++        return Any(false);
++
++    Reference<presentation::XSlideShowController> xController (
++        mpPresenterController->GetSlideShowController());
++    return Any(xController.is() && xController->isPaused());
++}
++
+ ExitPresenterCommand::ExitPresenterCommand (rtl::Reference<PresenterController> xPresenterController)
+ : mpPresenterController(std::move(xPresenterController))
+ {
+--- a/sd/source/console/PresenterSlidePreview.cxx
++++ b/sd/source/console/PresenterSlidePreview.cxx
+@@ -22,6 +22,8 @@
+ #include "PresenterGeometryHelper.hxx"
+ #include "PresenterPaintManager.hxx"
+ #include "PresenterBitmapContainer.hxx"
++#include "PresenterController.hxx"
++#include "PresenterWindowManager.hxx"
+ #include <com/sun/star/awt/XWindowPeer.hpp>
+ #include <com/sun/star/rendering/CompositeOperation.hpp>
+ 
+@@ -216,6 +218,14 @@
+         bCustomAnimation = PresenterController::HasCustomAnimation(mxCurrentSlide);
+         bTransition = PresenterController::HasTransition(mxCurrentSlide);
+     }
++    // Wild OS: the Slides presenter view shows slides as they are, without
++    // the little transition and animation markers in their corner.
++    if (mpPresenterController.is() && mpPresenterController->GetWindowManager().is()
++        && mpPresenterController->GetWindowManager()->IsWildOSLayout())
++    {
++        bTransition = false;
++        bCustomAnimation = false;
++    }
+ 
+     if ( ! mxPreview.is() && mxCurrentSlide.is())
+     {
+--- a/sd/source/console/PresenterSlideSorter.cxx
++++ b/sd/source/console/PresenterSlideSorter.cxx
+@@ -77,6 +77,10 @@
+     explicit Layout (::rtl::Reference<PresenterScrollBar> xVerticalScrollBar);
+ 
+     void Update (const geometry::RealRectangle2D& rBoundingBox, const double nSlideAspectRatio);
++    // Wild OS: one row of thumbnails as high as the box, ending at its right
++    // edge; further slides are further rows, shown one row at a time.
++    void UpdateStrip (const geometry::RealRectangle2D& rBoundingBox, const double nSlideAspectRatio);
++    bool ShowRowOf (const sal_Int32 nSlideIndex);
+     void SetupVisibleArea();
+     void UpdateScrollBars();
+     bool IsScrollBarNeeded (const sal_Int32 nSlideCount);
+@@ -588,6 +592,18 @@
+ 
+     mnCurrentSlideIndex = nNewCurrentSlideIndex;
+ 
++    // Wild OS: the thumbnail strip follows the show to the row its slide
++    // is in.
++    if (mpPresenterController->GetWindowManager().is()
++        && mpPresenterController->GetWindowManager()->IsWildOSLayout()
++        && mpLayout->ShowRowOf(mnCurrentSlideIndex))
++    {
++        mxPreviewCache->setVisibleRange(
++            mpLayout->GetFirstVisibleSlideIndex(),
++            mpLayout->GetLastVisibleSlideIndex());
++        mpPresenterController->GetPaintManager()->Invalidate(mxWindow);
++    }
++
+     // Request a repaint of the previous current slide to hide its
+     // current slide indicator.
+     mpPresenterController->GetPaintManager()->Invalidate(
+@@ -642,6 +658,29 @@
+     }
+     while(false);
+ 
++    // Wild OS: in the Slides presenter view this is the thumbnail strip in
++    // the bottom bar. No close button, separator or scroll bar: a row of
++    // thumbnails, and the row with the slide on screen is the one shown.
++    if (mpPresenterController->GetWindowManager().is()
++        && mpPresenterController->GetWindowManager()->IsWildOSLayout())
++    {
++        mnSeparatorY = aWindowBox.Height + 16;
++        mpCloseButton->SetCenter(geometry::RealPoint2D(-1000, -1000));
++        if (mpVerticalScrollBar.is())
++            mpVerticalScrollBar->SetVisible(false);
++        mpLayout->UpdateStrip(
++            geometry::RealRectangle2D(0, 0, aWindowBox.Width, aWindowBox.Height),
++            GetSlideAspectRatio());
++        mpLayout->SetupVisibleArea();
++        mpLayout->ShowRowOf(mnCurrentSlideIndex);
++        mxPreviewCache->setPreviewSize(mpLayout->maPreviewSize);
++        mxPreviewCache->setVisibleRange(
++            mpLayout->GetFirstVisibleSlideIndex(),
++            mpLayout->GetLastVisibleSlideIndex());
++        mxPreviewFrame = nullptr;
++        return;
++    }
++
+     // Place vertical separator.
+     mnSeparatorY = aWindowBox.Height - mpCloseButton->GetSize().Height - gnVerticalButtonPadding;
+ 
+@@ -836,6 +875,14 @@
+     Reference<drawing::XDrawPage> xPage( xIndexAccess->getByIndex(nSlideIndex), UNO_QUERY);
+     bool bTransition = PresenterController::HasTransition(xPage);
+     bool bCustomAnimation = PresenterController::HasCustomAnimation(xPage);
++    // Wild OS: the thumbnail strip shows slides without the transition and
++    // animation markers.
++    if (mpPresenterController->GetWindowManager().is()
++        && mpPresenterController->GetWindowManager()->IsWildOSLayout())
++    {
++        bTransition = false;
++        bCustomAnimation = false;
++    }
+ 
+     // Create clip rectangle as intersection of the current update area and
+     // the bounding box of all previews.
+@@ -1162,6 +1209,48 @@
+         / 2);
+ }
+ 
++void PresenterSlideSorter::Layout::UpdateStrip (
++    const geometry::RealRectangle2D& rBoundingBox,
++    const double nSlideAspectRatio)
++{
++    maBoundingBox = rBoundingBox;
++
++    mnHorizontalBorder = 0;
++    mnVerticalBorder = 4;
++
++    const double nWidth (rBoundingBox.X2 - rBoundingBox.X1);
++    const double nHeight (rBoundingBox.Y2 - rBoundingBox.Y1 - 2*mnVerticalBorder);
++    if (nWidth<=0 || nHeight<=0)
++        return;
++
++    const double nPreviewWidth (nHeight * nSlideAspectRatio);
++    mnHorizontalGap = 10;
++    mnColumnCount = ::std::max(sal_Int32(1),
++        sal_Int32(floor((nWidth + mnHorizontalGap) / (nPreviewWidth + mnHorizontalGap))));
++    mnRowCount = 1;
++    // Enough that the row below never shows at the box's lower edge.
++    mnVerticalGap = 4*mnVerticalBorder;
++    maPreviewSize = geometry::IntegerSize2D(floor(nPreviewWidth), floor(nHeight));
++
++    mnVerticalOffset = 0;
++    const sal_Int32 nShown (::std::min(mnColumnCount, ::std::max(sal_Int32(1), mnSlideCount)));
++    mnHorizontalOffset = round(-(nWidth
++        - nShown*maPreviewSize.Width
++        - (nShown-1)*mnHorizontalGap));
++}
++
++bool PresenterSlideSorter::Layout::ShowRowOf (const sal_Int32 nSlideIndex)
++{
++    if (nSlideIndex < 0 || mnColumnCount <= 0)
++        return false;
++    const sal_Int32 nOffset (GetRow(nSlideIndex) * (maPreviewSize.Height + mnVerticalGap));
++    if (nOffset == mnVerticalOffset)
++        return false;
++    mnVerticalOffset = nOffset;
++    SetupVisibleArea();
++    return true;
++}
++
+ void PresenterSlideSorter::Layout::SetupVisibleArea()
+ {
+     geometry::RealPoint2D aPoint (GetLocalPosition(
+--- a/sd/source/console/PresenterToolBar.cxx
++++ b/sd/source/console/PresenterToolBar.cxx
+@@ -40,6 +40,11 @@
+ #include <com/sun/star/rendering/ViewState.hpp>
+ #include <com/sun/star/rendering/XSpriteCanvas.hpp>
+ #include <com/sun/star/util/Color.hpp>
++#include <com/sun/star/frame/XModel.hpp>
++#include <com/sun/star/frame/XTitle.hpp>
++#include <com/sun/star/geometry/RealBezierSegment2D.hpp>
++#include <com/sun/star/presentation/XSlideShowController.hpp>
++#include <com/sun/star/rendering/XBezierPolyPolygon2D.hpp>
+ #include <rtl/ustrbuf.hxx>
+ 
+ using namespace ::com::sun::star;
+@@ -213,8 +218,16 @@
+         virtual awt::Size CreateBoundingSize (
+             const Reference<rendering::XCanvas>& rxCanvas) override;
+ 
++    public:
++        // Wild OS: the Slides presenter view draws its buttons as pills,
++        // the icon beside the label on a rounded fill. A button whose
++        // Name starts with Pill is drawn so; PillEnd is End show's red.
++        void SetPill (const bool bIsDanger) { mbIsPill = true; mbIsDanger = bIsDanger; }
++
+     private:
+         bool mbIsListenerRegistered;
++        bool mbIsPill = false;
++        bool mbIsDanger = false;
+ 
+         Button (const ::rtl::Reference<PresenterToolBar>& rpToolBar);
+         void Initialize();
+@@ -243,12 +256,43 @@
+             const Reference<rendering::XCanvas>& rxCanvas) override;
+     };
+ 
++    // Wild OS: the presentation's file name, and "Slide 2 of 6" from the
++    // entry's Text with LibreOffice's own placeholders in it.
++    class DocumentTitleLabel : public Label
++    {
++    public:
++        explicit DocumentTitleLabel (const ::rtl::Reference<PresenterToolBar>& rpToolBar) : Label(rpToolBar) {}
++        virtual void SetModes (
++            const SharedElementMode& rpNormalMode,
++            const SharedElementMode& rpMouseOverMode,
++            const SharedElementMode& rpSelectedMode,
++            const SharedElementMode& rpDisabledMode,
++            const SharedElementMode& rpMouseOverSelectedMode) override;
++    };
++
++    class SlideNumberLabel : public Label
++    {
++    public:
++        explicit SlideNumberLabel (const ::rtl::Reference<PresenterToolBar>& rpToolBar) : Label(rpToolBar) {}
++        virtual void SetModes (
++            const SharedElementMode& rpNormalMode,
++            const SharedElementMode& rpMouseOverMode,
++            const SharedElementMode& rpSelectedMode,
++            const SharedElementMode& rpDisabledMode,
++            const SharedElementMode& rpMouseOverSelectedMode) override;
++        void Update();
++    private:
++        OUString msPattern;
++    };
++
+ // Some specialized controls.
+ 
+     class TimeFormatter
+     {
+     public:
+-        static OUString FormatTime (const oslDateTime& rTime);
++        // Wild OS: nKind 1 is a clock for the Slides presenter view (10:24)
++        // and 2 its timer (04:12, or 1:04:12 past the hour).
++        static OUString FormatTime (const oslDateTime& rTime, const sal_Int32 nKind = 0);
+     };
+ 
+     class TimeLabel : public Label
+@@ -258,6 +302,9 @@
+         virtual void TimeHasChanged (const oslDateTime& rCurrentTime) = 0;
+     protected:
+         explicit TimeLabel(const ::rtl::Reference<PresenterToolBar>& rpToolBar);
++        // Wild OS: the given kind in the Slides presenter view, and
++        // LibreOffice's own format otherwise.
++        sal_Int32 TimeKind (const sal_Int32 nKind) const;
+         using Element::disposing;
+         virtual void SAL_CALL disposing() override;
+     private:
+@@ -640,10 +687,23 @@
+     pDisabledMode->ReadElementMode(rxProperties, u"Disabled"_ustr, pNormalMode, rContext);
+     pMouseOverSelectedMode->ReadElementMode(rxProperties, u"MouseOverSelected"_ustr, pSelectedMode, rContext);
+ 
++    // Wild OS: an entry's Name picks the pill look for a button and the two
++    // labels that follow the presentation.
++    OUString sName;
++    PresenterConfigurationAccess::GetProperty(rxProperties, u"Name"_ustr) >>= sName;
++
+     // Create new element.
+     ::rtl::Reference<Element> pElement;
+     if ( sType == "Button" )
++    {
+         pElement = Button::Create(this);
++        if (sName.startsWith("Pill"))
++            static_cast<Button*>(pElement.get())->SetPill(sName.startsWith("PillEnd"));
++    }
++    else if ( sType == "Label" && sName == "DocumentTitle" )
++        pElement.set(new DocumentTitleLabel(this));
++    else if ( sType == "Label" && sName == "SlideNumber" )
++        pElement.set(new SlideNumberLabel(this));
+     else if ( sType == "CurrentTimeLabel" )
+         pElement = CurrentTimeLabel::Create(this);
+     else if ( sType == "PresentationTimeLabel" )
+@@ -735,6 +795,7 @@
+     switch (meAnchor)
+     {
+         case Left : nX = 0; break;
++        case Right: nX = aWindowBox.Width - aTotalSize.Width - nTotalHorizontalGap; break;
+         case Center: nX = (aWindowBox.Width - aTotalSize.Width - nTotalHorizontalGap) / 2; break;
+     }
+ 
+@@ -956,7 +1017,11 @@
+             for (auto& rxElement : *rxPart)
+             {
+                 if (rxElement)
++                {
+                     rxElement->CurrentSlideHasChanged();
++                    if (auto pSlideNumber = dynamic_cast<SlideNumberLabel*>(rxElement.get()))
++                        pSlideNumber->Update();
++                }
+             }
+         }
+     }
+@@ -1008,7 +1073,9 @@
+     const Reference<XComponentContext>& rxContext,
+     const Reference<XResourceId>& rxViewId,
+     const rtl::Reference<::sd::DrawController>& rxController,
+-    const ::rtl::Reference<PresenterController>& rpPresenterController)
++    const ::rtl::Reference<PresenterController>& rpPresenterController,
++    const OUString& rsConfigurationPath,
++    const PresenterToolBar::Anchor eAnchor)
+     : PresenterToolBarViewInterfaceBase(m_aMutex),
+       mxViewId(rxViewId),
+       mpPresenterController(rpPresenterController)
+@@ -1026,8 +1093,8 @@
+             mxWindow,
+             mxCanvas,
+             rpPresenterController,
+-            PresenterToolBar::Center);
+-        mpToolBar->Initialize(u"PresenterScreenSettings/ToolBars/ToolBar"_ustr);
++            eAnchor);
++        mpToolBar->Initialize(rsConfigurationPath);
+ 
+         if (mxWindow.is())
+         {
+@@ -1417,6 +1484,47 @@
+     Element::disposing();
+ }
+ 
++// Wild OS: a filled box with rounded corners, for the pill buttons.
++static void PaintRoundedBox (
++    const Reference<rendering::XCanvas>& rxCanvas,
++    const rendering::ViewState& rViewState,
++    const awt::Rectangle& rBox,
++    const double nRadius,
++    const util::Color nColor)
++{
++    Reference<rendering::XGraphicDevice> xDevice (rxCanvas->getDevice());
++    if (!xDevice.is())
++        return;
++    const double nX1 (rBox.X), nY1 (rBox.Y), nX2 (rBox.X + rBox.Width), nY2 (rBox.Y + rBox.Height);
++    const double nR (nRadius), nK (nRadius * 0.4477);
++    // Each segment starts at its point; the two control points lead to the
++    // next segment's point. Edges are straight, corners quarter circles.
++    Sequence<Sequence<geometry::RealBezierSegment2D>> aPolygon
++    {
++        {
++            { nX1+nR, nY1, nX1+nR, nY1, nX2-nR, nY1 },
++            { nX2-nR, nY1, nX2-nK, nY1, nX2, nY1+nK },
++            { nX2, nY1+nR, nX2, nY1+nR, nX2, nY2-nR },
++            { nX2, nY2-nR, nX2, nY2-nK, nX2-nK, nY2 },
++            { nX2-nR, nY2, nX2-nR, nY2, nX1+nR, nY2 },
++            { nX1+nR, nY2, nX1+nK, nY2, nX1, nY2-nK },
++            { nX1, nY2-nR, nX1, nY2-nR, nX1, nY1+nR },
++            { nX1, nY1+nR, nX1, nY1+nK, nX1+nK, nY1 }
++        }
++    };
++    Reference<rendering::XPolyPolygon2D> xPolygon (xDevice->createCompatibleBezierPolyPolygon(aPolygon));
++    if (!xPolygon.is())
++        return;
++    xPolygon->setClosed(0, true);
++    rendering::RenderState aRenderState (
++        geometry::AffineMatrix2D(1,0,0, 0,1,0),
++        nullptr,
++        Sequence<double>(4),
++        rendering::CompositeOperation::SOURCE);
++    PresenterCanvasHelper::SetDeviceColor(aRenderState, nColor);
++    rxCanvas->fillPolyPolygon(xPolygon, rViewState, aRenderState);
++}
++
+ void Button::Paint (
+     const Reference<rendering::XCanvas>& rxCanvas,
+     const rendering::ViewState& rViewState)
+@@ -1426,6 +1534,44 @@
+     if (!mpMode)
+         return;
+ 
++    if (mbIsPill)
++    {
++        // The fills are the board's translucent whites and reds over the
++        // presenter view's #0c0d10, worked out once: the canvas has no
++        // blending for a plain fill.
++        const awt::Rectangle aBox (GetBoundingBox());
++        util::Color nFill (mbIsDanger ? 0x00331c1f : 0x001d1e21);
++        if (mbIsSelected)
++            nFill = 0x00293245;
++        else if (mbIsOver && IsEnabled())
++            nFill = mbIsDanger ? 0x00462426 : 0x00292a2d;
++        PaintRoundedBox(rxCanvas, rViewState, aBox, 10, nFill);
++
++        sal_Int32 nX (aBox.X + 16);
++        Reference<rendering::XBitmap> xBitmap;
++        if (mpMode->mpIcon)
++            xBitmap = mpMode->mpIcon->GetBitmap(GetMode());
++        if (xBitmap.is())
++        {
++            const geometry::IntegerSize2D aSize (xBitmap->getSize());
++            const rendering::RenderState aRenderState(
++                geometry::AffineMatrix2D(1,0,nX, 0,1,aBox.Y + (aBox.Height - aSize.Height) / 2),
++                nullptr,
++                Sequence<double>(4),
++                rendering::CompositeOperation::OVER);
++            rxCanvas->drawBitmap(xBitmap, rViewState, aRenderState);
++            nX += aSize.Width + 9;
++        }
++        const geometry::RealRectangle2D aTextBBox (mpMode->maText.GetBoundingBox(rxCanvas));
++        const sal_Int32 nTextHeight (sal::static_int_cast<sal_Int32>(0.5 + aTextBBox.Y2 - aTextBBox.Y1));
++        mpMode->maText.Paint(rxCanvas, rViewState, awt::Rectangle(
++            nX,
++            aBox.Y + (aBox.Height - nTextHeight) / 2,
++            aBox.X + aBox.Width - 16 - nX,
++            nTextHeight));
++        return;
++    }
++
+     if (!mpMode->mpIcon)
+         return;
+ 
+@@ -1465,6 +1611,14 @@
+     Reference<rendering::XBitmap> xBitmap;
+     if (mpMode->mpIcon)
+         xBitmap = mpMode->mpIcon->GetNormalBitmap();
++    if (mbIsPill)
++    {
++        // 16 px either side, the icon, 9 px, the label; 44 px high.
++        const sal_Int32 nIconWidth (xBitmap.is() ? xBitmap->getSize().Width + 9 : 0);
++        return awt::Size(
++            16 + nIconWidth + *std::max_element(widths.begin(), widths.end()) + 16,
++            44);
++    }
+     if (xBitmap.is())
+     {
+         const sal_Int32 nGap (5);
+@@ -1596,6 +1750,52 @@
+     return Element::SetState(false, false);
+ }
+ 
++void DocumentTitleLabel::SetModes (
++    const SharedElementMode& rpNormalMode,
++    const SharedElementMode& rpMouseOverMode,
++    const SharedElementMode& rpSelectedMode,
++    const SharedElementMode& rpDisabledMode,
++    const SharedElementMode& rpMouseOverSelectedMode)
++{
++    Label::SetModes(rpNormalMode, rpMouseOverMode, rpSelectedMode, rpDisabledMode, rpMouseOverSelectedMode);
++    const rtl::Reference<::sd::DrawController>& rxController (
++        mpToolBar->GetPresenterController()->GetDrawController());
++    if (rxController.is())
++    {
++        Reference<frame::XTitle> xTitle (rxController->getModel(), UNO_QUERY);
++        if (xTitle.is())
++            SetText(xTitle->getTitle());
++    }
++}
++
++void SlideNumberLabel::SetModes (
++    const SharedElementMode& rpNormalMode,
++    const SharedElementMode& rpMouseOverMode,
++    const SharedElementMode& rpSelectedMode,
++    const SharedElementMode& rpDisabledMode,
++    const SharedElementMode& rpMouseOverSelectedMode)
++{
++    Label::SetModes(rpNormalMode, rpMouseOverMode, rpSelectedMode, rpDisabledMode, rpMouseOverSelectedMode);
++    if (rpNormalMode)
++        msPattern = rpNormalMode->maText.GetText();
++    Update();
++}
++
++void SlideNumberLabel::Update()
++{
++    OUString sText (msPattern);
++    Reference<presentation::XSlideShowController> xController (
++        mpToolBar->GetPresenterController()->GetSlideShowController());
++    if (xController.is())
++    {
++        sText = sText.replaceFirst("%CURRENT_SLIDE_NUMBER%",
++            OUString::number(xController->getCurrentSlideIndex() + 1));
++        sText = sText.replaceFirst("%SLIDE_COUNT%", OUString::number(xController->getSlideCount()));
++    }
++    SetText(sText);
++    Invalidate(false);
++}
++
+ } // end of anonymous namespace
+ 
+ //===== Text ==================================================================
+@@ -1692,8 +1892,20 @@
+ 
+ //===== TimeFormatter =========================================================
+ 
+-OUString TimeFormatter::FormatTime (const oslDateTime& rTime)
++OUString TimeFormatter::FormatTime (const oslDateTime& rTime, const sal_Int32 nKind)
+ {
++    if (nKind != 0)
++    {
++        auto aTwoDigits = [] (const sal_Int32 nValue)
++        { return (nValue < 10 ? u"0"_ustr : OUString()) + OUString::number(nValue); };
++        const sal_Int32 nH (rTime.Hours), nM (rTime.Minutes), nS (rTime.Seconds);
++        if (nKind == 1)
++            return aTwoDigits(nH) + ":" + aTwoDigits(nM);
++        if (nH > 0)
++            return OUString::number(nH) + ":" + aTwoDigits(nM) + ":" + aTwoDigits(nS);
++        return aTwoDigits(nM) + ":" + aTwoDigits(nS);
++    }
++
+     OUStringBuffer sText;
+ 
+     const sal_Int32 nHours (sal::static_int_cast<sal_Int32>(rTime.Hours));
+@@ -1730,6 +1942,13 @@
+     mpListener.reset();
+ }
+ 
++sal_Int32 TimeLabel::TimeKind (const sal_Int32 nKind) const
++{
++    const ::rtl::Reference<PresenterWindowManager>& rpWindowManager (
++        mpToolBar->GetPresenterController()->GetWindowManager());
++    return rpWindowManager.is() && rpWindowManager->IsWildOSLayout() ? nKind : 0;
++}
++
+ void TimeLabel::ConnectToTimer()
+ {
+     mpListener = std::make_shared<Listener>(this);
+@@ -1758,7 +1977,7 @@
+ 
+ void CurrentTimeLabel::TimeHasChanged (const oslDateTime& rCurrentTime)
+ {
+-    SetText(TimeFormatter::FormatTime(rCurrentTime));
++    SetText(TimeFormatter::FormatTime(rCurrentTime, TimeKind(1)));
+     Invalidate(false);
+ }
+ 
+@@ -1770,7 +1989,7 @@
+     const SharedElementMode& rpMouseOverSelectedMode)
+ {
+     TimeLabel::SetModes(rpNormalMode, rpMouseOverMode, rpSelectedMode, rpDisabledMode, rpMouseOverSelectedMode);
+-    SetText(TimeFormatter::FormatTime(PresenterClockTimer::GetCurrentTime()));
++    SetText(TimeFormatter::FormatTime(PresenterClockTimer::GetCurrentTime(), TimeKind(1)));
+ }
+ 
+ //===== PresentationTimeLabel =================================================
+@@ -1893,7 +2112,7 @@
+     oslDateTime aElapsedDateTime;
+     if (osl_getDateTimeFromTimeValue(&aElapsedTimeValue, &aElapsedDateTime) && !isPaused())
+     {
+-        SetText(TimeFormatter::FormatTime(aElapsedDateTime));
++        SetText(TimeFormatter::FormatTime(aElapsedDateTime, TimeKind(2)));
+         Invalidate(false);
+     }
+ }
+@@ -1910,7 +2129,7 @@
+     oslDateTime aStartDateTime;
+     if (osl_getDateTimeFromTimeValue(&maStartTimeValue, &aStartDateTime))
+     {
+-        SetText(TimeFormatter::FormatTime(aStartDateTime));
++        SetText(TimeFormatter::FormatTime(aStartDateTime, TimeKind(2)));
+     }
+ }
+ 
+--- a/sd/source/console/PresenterToolBar.hxx
++++ b/sd/source/console/PresenterToolBar.hxx
+@@ -66,7 +66,7 @@
+ public:
+     typedef ::std::function<void ()> Action;
+ 
+-    enum Anchor { Left, Center };
++    enum Anchor { Left, Center, Right };
+ 
+     PresenterToolBar (
+         const css::uno::Reference<css::uno::XComponentContext>& rxContext,
+@@ -201,7 +201,9 @@
+         const css::uno::Reference<css::uno::XComponentContext>& rxContext,
+         const css::uno::Reference<css::drawing::framework::XResourceId>& rxViewId,
+         const ::rtl::Reference<::sd::DrawController>& rxController,
+-        const ::rtl::Reference<PresenterController>& rpPresenterController);
++        const ::rtl::Reference<PresenterController>& rpPresenterController,
++        const OUString& rsConfigurationPath,
++        const PresenterToolBar::Anchor eAnchor);
+     virtual ~PresenterToolBarView() override;
+     PresenterToolBarView(const PresenterToolBarView&) = delete;
+     PresenterToolBarView& operator=(const PresenterToolBarView&) = delete;
+--- a/sd/source/console/PresenterViewFactory.cxx
++++ b/sd/source/console/PresenterViewFactory.cxx
+@@ -128,6 +128,9 @@
+         mxConfigurationController->addResourceFactory(msNextSlidePreviewViewURL, this);
+         mxConfigurationController->addResourceFactory(msNotesViewURL, this);
+         mxConfigurationController->addResourceFactory(msToolBarViewURL, this);
++        mxConfigurationController->addResourceFactory(msTopBarViewURL, this);
++        mxConfigurationController->addResourceFactory(msTimeBarViewURL, this);
++        mxConfigurationController->addResourceFactory(msEndBarViewURL, this);
+         mxConfigurationController->addResourceFactory(msSlideSorterURL, this);
+         mxConfigurationController->addResourceFactory(msHelpViewURL, this);
+     }
+@@ -309,7 +312,23 @@
+         }
+         else if (sResourceURL == msToolBarViewURL)
+         {
+-            xView = CreateToolBarView(rxViewId);
++            xView = CreateToolBarView(rxViewId, u"PresenterScreenSettings/ToolBars/ToolBar"_ustr,
++                                      PresenterToolBar::Center);
++        }
++        else if (sResourceURL == msTopBarViewURL)
++        {
++            xView = CreateToolBarView(rxViewId, u"PresenterScreenSettings/ToolBars/TopBar"_ustr,
++                                      PresenterToolBar::Left);
++        }
++        else if (sResourceURL == msTimeBarViewURL)
++        {
++            xView = CreateToolBarView(rxViewId, u"PresenterScreenSettings/ToolBars/TimeBar"_ustr,
++                                      PresenterToolBar::Right);
++        }
++        else if (sResourceURL == msEndBarViewURL)
++        {
++            xView = CreateToolBarView(rxViewId, u"PresenterScreenSettings/ToolBars/EndBar"_ustr,
++                                      PresenterToolBar::Right);
+         }
+         else if (sResourceURL == msSlideSorterURL)
+         {
+@@ -392,13 +411,17 @@
+ }
+ 
+ Reference<XView> PresenterViewFactory::CreateToolBarView(
+-    const Reference<XResourceId>& rxViewId) const
++    const Reference<XResourceId>& rxViewId,
++    const OUString& rsConfigurationPath,
++    const sal_Int32 nAnchor) const
+ {
+     return new PresenterToolBarView(
+         mxComponentContext,
+         rxViewId,
+         mxControllerWeak.get(),
+-        mpPresenterController);
++        mpPresenterController,
++        rsConfigurationPath,
++        static_cast<PresenterToolBar::Anchor>(nAnchor));
+ }
+ 
+ Reference<XView> PresenterViewFactory::CreateNotesView(
+--- a/sd/source/console/PresenterViewFactory.hxx
++++ b/sd/source/console/PresenterViewFactory.hxx
+@@ -84,6 +84,12 @@
+         = u"private:resource/view/Presenter/NextSlidePreview"_ustr;
+     static constexpr OUString msNotesViewURL = u"private:resource/view/Presenter/Notes"_ustr;
+     static constexpr OUString msToolBarViewURL = u"private:resource/view/Presenter/ToolBar"_ustr;
++    // Wild OS: the bars of the Slides presenter view. The top bar holds the
++    // file name and slide count, the time bar the timer and the clock, and
++    // the end bar End show; the tool bar keeps the other buttons.
++    static constexpr OUString msTopBarViewURL = u"private:resource/view/Presenter/TopBar"_ustr;
++    static constexpr OUString msTimeBarViewURL = u"private:resource/view/Presenter/TimeBar"_ustr;
++    static constexpr OUString msEndBarViewURL = u"private:resource/view/Presenter/EndBar"_ustr;
+     static constexpr OUString msSlideSorterURL
+         = u"private:resource/view/Presenter/SlideSorter"_ustr;
+     static constexpr OUString msHelpViewURL = u"private:resource/view/Presenter/Help"_ustr;
+@@ -138,7 +144,9 @@
+         const css::uno::Reference<css::drawing::framework::XPane>& rxPane) const;
+ 
+     css::uno::Reference<css::drawing::framework::XView> CreateToolBarView(
+-        const css::uno::Reference<css::drawing::framework::XResourceId>& rxViewId) const;
++        const css::uno::Reference<css::drawing::framework::XResourceId>& rxViewId,
++        const OUString& rsConfigurationPath,
++        const sal_Int32 nAnchor) const;
+ 
+     css::uno::Reference<css::drawing::framework::XView> CreateNotesView(
+         const css::uno::Reference<css::drawing::framework::XResourceId>& rxViewId) const;
+--- a/sd/source/console/PresenterWindowManager.cxx
++++ b/sd/source/console/PresenterWindowManager.cxx
+@@ -543,7 +543,9 @@
+ 
+     try
+     {
+-        if (mbIsSlideSorterActive)
++        if (IsWildOSLayout() && !mbIsHelpViewActive)
++            LayoutWildOSMode();
++        else if (mbIsSlideSorterActive)
+             LayoutSlideSorterMode();
+         else if (mbIsHelpViewActive)
+             LayoutHelpMode();
+@@ -626,6 +628,98 @@
+     LayoutToolBar();
+ }
+ 
++bool PresenterWindowManager::IsWildOSLayout()
++{
++    return mpPaneContainer.is()
++        && mpPaneContainer->FindViewURL(PresenterViewFactory::msTopBarViewURL) != nullptr;
++}
++
++// Wild OS: the Slides presenter view (board 12.20). A top bar with the file
++// name, slide count, timer and clock; the slide on screen large on the left;
++// the next slide and the notes on the right; and along the bottom the
++// buttons, a strip of slide thumbnails and End show. The board is 1440 by
++// 900 and its measures are used as they are.
++void PresenterWindowManager::LayoutWildOSMode()
++{
++    const awt::Rectangle aBox = mxParentWindow->getPosSize();
++    const double nMargin (32);
++    const double nGap (36);
++    const double nTopBar (64);
++    const double nBottomBar (96);
++    const double nPadding (26);
++
++    // A bar's own width: its buttons and labels, with its pane's border.
++    auto aBarWidth = [this] (const OUString& rsViewURL) -> double
++    {
++        PresenterPaneContainer::SharedPaneDescriptor pDescriptor (mpPaneContainer->FindViewURL(rsViewURL));
++        if (!pDescriptor)
++            return 0;
++        PresenterToolBarView* pView = dynamic_cast<PresenterToolBarView*>(pDescriptor->mxView.get());
++        if (pView == nullptr || !pView->GetPresenterToolBar().is())
++            return 0;
++        return pView->GetPresenterToolBar()->GetMinimalSize().Width;
++    };
++    auto aPlace = [this] (const OUString& rsViewURL, double nX, double nY, double nWidth, double nHeight)
++    {
++        const OUString sPaneURL (mpPaneContainer->GetPaneURLForViewURL(rsViewURL));
++        if (!sPaneURL.isEmpty() && nWidth > 0 && nHeight > 0)
++            SetPanePosSizeAbsolute(sPaneURL, nX, nY, nWidth, nHeight);
++    };
++
++    // The top bar: file name and slide count from the left, timer and clock
++    // to the right.
++    aPlace(PresenterViewFactory::msTopBarViewURL, nMargin, 0, aBox.Width * 0.55, nTopBar);
++    aPlace(PresenterViewFactory::msTimeBarViewURL,
++        aBox.Width - nMargin - aBox.Width * 0.3, 0, aBox.Width * 0.3, nTopBar);
++
++    // The bottom bar: the buttons, then the thumbnails up to End show.
++    const double nBottomY (aBox.Height - nBottomBar);
++    const double nToolBarWidth (aBarWidth(PresenterViewFactory::msToolBarViewURL));
++    const double nEndBarWidth (aBarWidth(PresenterViewFactory::msEndBarViewURL));
++    // (A pixel down, clear of the hairline over the bar.)
++    aPlace(PresenterViewFactory::msToolBarViewURL, nMargin, nBottomY + 1, nToolBarWidth, nBottomBar - 1);
++    aPlace(PresenterViewFactory::msEndBarViewURL,
++        aBox.Width - nMargin - nEndBarWidth, nBottomY + 1, nEndBarWidth, nBottomBar - 1);
++    const double nStripX (nMargin + nToolBarWidth + nGap);
++    aPlace(PresenterViewFactory::msSlideSorterURL,
++        nStripX, nBottomY + 21, aBox.Width - nMargin - nEndBarWidth - 12 - nStripX, 54);
++
++    // Between the bars: the slide on screen takes the board's share of the
++    // width, less on a screen too low for it; the next slide and the notes
++    // share the rest.
++    const double nTop (nTopBar + nPadding);
++    const double nHeight (aBox.Height - nBottomBar - nPadding - nTop);
++    const double nWidth (aBox.Width - 2*nMargin - nGap);
++    double nCurrentWidth (nWidth * 0.627);
++    awt::Size aCurrent (CalculatePaneSize(nCurrentWidth, PresenterPaneFactory::msCurrentSlidePreviewPaneURL));
++    if (aCurrent.Height > nHeight && aCurrent.Height > 0)
++    {
++        nCurrentWidth = nCurrentWidth * nHeight / aCurrent.Height;
++        aCurrent = CalculatePaneSize(nCurrentWidth, PresenterPaneFactory::msCurrentSlidePreviewPaneURL);
++    }
++    SetPanePosSizeAbsolute(PresenterPaneFactory::msCurrentSlidePreviewPaneURL,
++        nMargin, nTop, aCurrent.Width, aCurrent.Height);
++
++    const double nRightX (nMargin + aCurrent.Width + nGap);
++    double nRightWidth (aBox.Width - nMargin - nRightX);
++    if (nRightWidth < 160)
++        nRightWidth = 160;
++    double nNextWidth (nRightWidth);
++    awt::Size aNext (CalculatePaneSize(nNextWidth, PresenterPaneFactory::msNextSlidePreviewPaneURL));
++    if (aNext.Height > nHeight * 0.5 && aNext.Height > 0)
++    {
++        nNextWidth = nNextWidth * nHeight * 0.5 / aNext.Height;
++        aNext = CalculatePaneSize(nNextWidth, PresenterPaneFactory::msNextSlidePreviewPaneURL);
++    }
++    SetPanePosSizeAbsolute(PresenterPaneFactory::msNextSlidePreviewPaneURL,
++        nRightX, nTop, aNext.Width, aNext.Height);
++
++    const double nNotesY (nTop + aNext.Height + 14);
++    if (nTop + nHeight - nNotesY > 40)
++        SetPanePosSizeAbsolute(PresenterPaneFactory::msNotesPaneURL,
++            nRightX, nNotesY, nRightWidth, nTop + nHeight - nNotesY);
++}
++
+ void PresenterWindowManager::LayoutNotesMode()
+ {
+     awt::Rectangle aBox = mxParentWindow->getPosSize();
+@@ -952,6 +1046,25 @@
+             aViewState,
+             aRenderState);
+     }
++
++    // Wild OS: a hairline under the top bar and over the bottom bar, the
++    // board's 10% white on its background.
++    if (IsWildOSLayout())
++    {
++        const awt::Rectangle aBox (mxParentWindow->getPosSize());
++        auto pDeviceColor = aRenderState.DeviceColor.getArray();
++        pDeviceColor[0] = 0x24 / 255.0;
++        pDeviceColor[1] = 0x25 / 255.0;
++        pDeviceColor[2] = 0x28 / 255.0;
++        pDeviceColor[3] = 1.0;
++        for (const sal_Int32 nY : { sal_Int32(64), sal_Int32(aBox.Height - 96) })
++        {
++            mxParentCanvas->fillPolyPolygon(
++                PresenterGeometryHelper::CreatePolygon(awt::Rectangle(0, nY, aBox.Width, 1), xDevice),
++                aViewState,
++                aRenderState);
++        }
++    }
+ }
+ 
+ void PresenterWindowManager::ProvideBackgroundBitmap()
+--- a/sd/source/console/PresenterWindowManager.hxx
++++ b/sd/source/console/PresenterWindowManager.hxx
+@@ -81,6 +81,16 @@
+     void Update();
+     void Layout();
+ 
++    /** Wild OS: whether the presenter layout is the Slides one, which lists
++        the top bar view. Everything Wild OS changes here hangs on it.
++    */
++    bool IsWildOSLayout();
++
++    /** Wild OS: tells the buttons that what they show (pen on, screen
++        black) may have changed.
++    */
++    void NotifyStateChange() { NotifyLayoutModeChange(); }
++
+     void SetSlideSorterState (bool bIsActive);
+     void SetHelpViewState (bool bIsActive);
+     void SetPauseState (bool bIsPaused);
+@@ -182,6 +192,7 @@
+     void LayoutNotesMode();
+     void LayoutSlideSorterMode();
+     void LayoutHelpMode();
++    void LayoutWildOSMode();
+ 
+     /** Layout the tool bar and return its outer bounding box.
+     */
+--- a/sd/source/ui/dlg/PaneChildWindows.cxx
++++ b/sd/source/ui/dlg/PaneChildWindows.cxx
+@@ -53,6 +53,15 @@
+     SetAlignment(eAlignment);
+     SfxDockingWindow* pDockingWindow = static_cast<SfxDockingWindow*>(GetWindow());
+     pDockingWindow->EnableInput();
++    // Wild OS: the notes under the slide start as a short strip, as on the
++    // Slides board, rather than at LibreOffice's size, which leaves the slide
++    // a small part of the window. A height someone dragged it to is kept.
++    if (eAlignment == SfxChildAlignment::BOTTOM && (!pInfo || pInfo->aExtraString.isEmpty()))
++    {
++        pDockingWindow->SetOutputSizePixel(
++            Size(pDockingWindow->GetOutputSizePixel().Width(),
++                 ::tools::Long(96 * pDockingWindow->GetDPIScaleFactor())));
++    }
+     pDockingWindow->Initialize(pInfo);
+     SetHideNotDelete(true);
+ 
+--- a/sd/source/ui/presenter/PresenterHelper.cxx
++++ b/sd/source/ui/presenter/PresenterHelper.cxx
+@@ -291,6 +291,12 @@
+           BMP_PRESENTERSCREEN_BUTTON_EXIT_PRESENTER_MOUSE_OVER },
+         { "bitmaps/ButtonExitPresenterNormal.png",
+           BMP_PRESENTERSCREEN_BUTTON_EXIT_PRESENTER_NORMAL },
++        { "bitmaps/WildOSBack.png", BMP_PRESENTERSCREEN_WILDOS_BACK },
++        { "bitmaps/WildOSNext.png", BMP_PRESENTERSCREEN_WILDOS_NEXT },
++        { "bitmaps/WildOSPointer.png", BMP_PRESENTERSCREEN_WILDOS_POINTER },
++        { "bitmaps/WildOSPen.png", BMP_PRESENTERSCREEN_WILDOS_PEN },
++        { "bitmaps/WildOSBlack.png", BMP_PRESENTERSCREEN_WILDOS_BLACK },
++        { "bitmaps/WildOSEnd.png", BMP_PRESENTERSCREEN_WILDOS_END },
+         { "bitmaps/ButtonMinusDisabled.png",
+           BMP_PRESENTERSCREEN_BUTTON_MINUS_DISABLED },
+         { "bitmaps/ButtonMinusMouseOver.png",
+--- a/sd/source/ui/view/drviewsa.cxx
++++ b/sd/source/ui/view/drviewsa.cxx
+@@ -70,6 +70,9 @@
+ #include <comphelper/lok.hxx>
+ #include <comphelper/servicehelper.hxx>
+ #include <LayerTabBar.hxx>
++#include <vcl/settings.hxx>
++#include <vcl/svapp.hxx>
++#include <i18nlangtag/languagetag.hxx>
+ 
+ #include <memory>
+ 
+@@ -754,6 +757,44 @@
+         sal_Int32 nPos = aString.indexOf(SD_LT_SEPARATOR);
+         if (nPos != -1)
+             aString = aString.copy(0, nPos);
++        // Wild OS: a slide shows the name of its layout ("Title and content"),
++        // as on the Slides board, rather than of its master, which is
++        // "Default" for almost every slide. In English the names are the
++        // short ones Wild OS uses.
++        if (GetDoc()->GetDocumentType() == DocumentType::Impress && mePageKind == PageKind::Standard
++            && meEditMode == EditMode::Page)
++        {
++            static const struct
++            {
++                AutoLayout eLayout;
++                TranslateId aName;
++                const char* pShort;
++            } aLayouts[] = {
++                { AUTOLAYOUT_NONE, STR_AUTOLAYOUT_NONE, "Blank" },
++                { AUTOLAYOUT_TITLE, STR_AUTOLAYOUT_TITLE, "Title slide" },
++                { AUTOLAYOUT_TITLE_CONTENT, STR_AUTOLAYOUT_CONTENT, "Title and content" },
++                { AUTOLAYOUT_TITLE_2CONTENT, STR_AUTOLAYOUT_2CONTENT, "Two content" },
++                { AUTOLAYOUT_TITLE_ONLY, STR_AUTOLAYOUT_ONLY_TITLE, "Title only" },
++                { AUTOLAYOUT_ONLY_TEXT, STR_AUTOLAYOUT_ONLY_TEXT, "Centred text" },
++                { AUTOLAYOUT_TITLE_2CONTENT_CONTENT, STR_AUTOLAYOUT_2CONTENT_CONTENT, "Two content and content" },
++                { AUTOLAYOUT_TITLE_CONTENT_2CONTENT, STR_AUTOLAYOUT_CONTENT_2CONTENT, "Content and two content" },
++                { AUTOLAYOUT_TITLE_2CONTENT_OVER_CONTENT, STR_AUTOLAYOUT_2CONTENT_OVER_CONTENT, "Two content over content" },
++                { AUTOLAYOUT_TITLE_CONTENT_OVER_CONTENT, STR_AUTOLAYOUT_CONTENT_OVER_CONTENT, "Content over content" },
++                { AUTOLAYOUT_TITLE_4CONTENT, STR_AUTOLAYOUT_4CONTENT, "Four content" },
++                { AUTOLAYOUT_TITLE_6CONTENT, STR_AUTOLAYOUT_6CONTENT, "Six content" },
++            };
++            const bool bEnglish
++                = Application::GetSettings().GetUILanguageTag().getLanguage() == "en";
++            for (const auto& rLayout : aLayouts)
++            {
++                if (rLayout.eLayout == mpActualPage->GetAutoLayout())
++                {
++                    aString = bEnglish ? OUString::createFromAscii(rLayout.pShort)
++                                       : SdResId(rLayout.aName);
++                    break;
++                }
++            }
++        }
+         rSet.Put( SfxStringItem( SID_STATUS_LAYOUT, aString ) );
+     }
+     // Scale
+--- a/sd/uiconfig/simpress/statusbar/statusbar.xml
++++ b/sd/uiconfig/simpress/statusbar/statusbar.xml
+@@ -18,14 +18,9 @@
+  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ -->
+ <statusbar:statusbar xmlns:statusbar="http://openoffice.org/2001/statusbar" xmlns:xlink="http://www.w3.org/1999/xlink">
+- <statusbar:statusbaritem xlink:href=".uno:PageStatus" statusbar:align="left" statusbar:width="124"/>
+- <statusbar:statusbaritem xlink:href=".uno:Context" statusbar:align="left" statusbar:autosize="true" statusbar:mandatory="false" statusbar:width="184"/>
+- <statusbar:statusbaritem xlink:href=".uno:LayoutStatus" statusbar:align="left" statusbar:autosize="true" statusbar:mandatory="false" statusbar:width="54"/>
+- <statusbar:statusbaritem xlink:href=".uno:Size" statusbar:align="center" statusbar:ownerdraw="true" statusbar:width="200"/>
+- <statusbar:statusbaritem xlink:href=".uno:ModifiedStatus" statusbar:align="center" statusbar:ownerdraw="true" statusbar:width="9"/>
+- <statusbar:statusbaritem xlink:href=".uno:Signature" statusbar:align="center" statusbar:ownerdraw="true" statusbar:width="16"/>
+- <statusbar:statusbaritem xlink:href=".uno:LanguageStatus" statusbar:align="center" statusbar:autosize="true" statusbar:width="100"/>
+- <statusbar:statusbaritem xlink:href=".uno:ZoomPage" statusbar:align="center" statusbar:ownerdraw="true" statusbar:width="9"/>
+- <statusbar:statusbaritem xlink:href=".uno:ZoomSlider" statusbar:align="center" statusbar:ownerdraw="true" statusbar:width="130"/>
+- <statusbar:statusbaritem xlink:href=".uno:Zoom" statusbar:align="center" statusbar:width="36"/>
++ <statusbar:statusbaritem xlink:href=".uno:PageStatus" statusbar:align="left" statusbar:mandatory="true" statusbar:width="70" statusbar:offset="20"/>
++ <statusbar:statusbaritem xlink:href=".uno:LayoutStatus" statusbar:align="left" statusbar:mandatory="false" statusbar:width="110" statusbar:offset="20"/>
++ <statusbar:statusbaritem xlink:href=".uno:LanguageStatus" statusbar:align="left" statusbar:autosize="true" statusbar:mandatory="false" statusbar:width="80"/>
++ <statusbar:statusbaritem xlink:href=".uno:ZoomSlider" statusbar:align="center" statusbar:ownerdraw="true" statusbar:mandatory="true" statusbar:width="160"/>
++ <statusbar:statusbaritem xlink:href=".uno:Zoom" statusbar:align="right" statusbar:mandatory="true" statusbar:width="40"/>
+ </statusbar:statusbar>
+--- a/sfx2/source/sidebar/SidebarChildWindow.cxx
++++ b/sfx2/source/sidebar/SidebarChildWindow.cxx
+@@ -42,8 +42,10 @@
+     pDockWin->SetHelpId(HID_SIDEBAR_WINDOW);
+     pDockWin->SetOutputSizePixel(Size(GetDefaultWidth(pDockWin), 450));
+ 
++    // Wild OS: Slides too starts with the sidebar closed to its tab strip,
++    // as on its board.
+     if (pInfo && pInfo->aExtraString.isEmpty() && pInfo->aModule != "sdraw"
+-        && pInfo->aModule != "simpress" && pInfo->aModule != "smath")
++        && pInfo->aModule != "smath")
+     {
+         // When this is the first start (never had the sidebar open yet),
+         // default to non-expanded sidebars in Writer and Calc.

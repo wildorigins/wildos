@@ -7,6 +7,7 @@
 #include <kscreen/output.h>
 #include <kscreen/setconfigoperation.h>
 
+#include <QCoreApplication>
 #include <QRect>
 #include <QSizeF>
 
@@ -133,15 +134,15 @@ double recommendedScale(const OutputPtr &output)
 QString label(const OutputPtr &output)
 {
     if (isBuiltIn(output)) {
-        return QStringLiteral("Built-in");
+        return QCoreApplication::translate("Displays", "Built-in");
     }
     // Projectors and some TVs report an aspect ratio in place of a size.
     const QSize mm = output->sizeMm();
     if (mm.width() >= 100 && mm.height() >= 100) {
         const int inches = int(std::round(std::hypot(mm.width(), mm.height()) / 25.4));
-        return QStringLiteral("External, %1 inch").arg(inches);
+        return QCoreApplication::translate("Displays", "External, %1 inch").arg(inches);
     }
-    return QStringLiteral("External");
+    return QCoreApplication::translate("Displays", "External");
 }
 }
 
@@ -267,7 +268,7 @@ QVariantMap Displays::describe(const OutputPtr &output, int number) const
     for (const QSize &size : sizeList) {
         QString text = QStringLiteral("%1 × %2").arg(size.width()).arg(size.height());
         if (preferred && preferred->size() == size) {
-            text += QStringLiteral(" (recommended)");
+            text = tr("%1 (recommended)").arg(text);
         }
         sizes << QVariantMap{{QStringLiteral("value"), sizeKey(size)}, {QStringLiteral("text"), text}};
     }
@@ -276,7 +277,7 @@ QVariantMap Displays::describe(const OutputPtr &output, int number) const
     QString rate;
     const auto rateList = refreshRates(output);
     for (const float r : rateList) {
-        rates << QVariantMap{{QStringLiteral("value"), rateKey(r)}, {QStringLiteral("text"), QStringLiteral("%1 Hz").arg(int(std::lround(r)))}};
+        rates << QVariantMap{{QStringLiteral("value"), rateKey(r)}, {QStringLiteral("text"), tr("%1 Hz").arg(int(std::lround(r)))}};
         if (current && rate.isEmpty() && sameRate(r, current->refreshRate())) {
             rate = rateKey(r);
         }
@@ -351,7 +352,7 @@ void Displays::apply()
         return;
     }
     if (!Config::canBeApplied(m_config)) {
-        Q_EMIT failed(QStringLiteral("These screen settings cannot be used."));
+        Q_EMIT failed(tr("These screen settings cannot be used."));
         reload();
         return;
     }

@@ -5,6 +5,7 @@ import QtQuick.Window
 import org.kde.plasma.private.brightnesscontrolplugin
 import WildOS.Settings
 import WildOS.UI as UI
+import org.wildos.overlays
 
 // Display (SettingsDisplay.dc): the screens as they sit on the desk, then
 // everything about the screen picked there, with brightness and night light
@@ -33,10 +34,10 @@ PageScroll {
     readonly property var selected: outputs.find(o => o.id === chosenId) || outputs.find(o => o.primary) || outputs[0] || blank
 
     readonly property var rotations: [
-        { value: 1, text: "Landscape" },
-        { value: 2, text: "Portrait" },
-        { value: 4, text: "Landscape (flipped)" },
-        { value: 8, text: "Portrait (flipped)" }
+        { value: 1, text: qsTr("Landscape") },
+        { value: 2, text: qsTr("Portrait") },
+        { value: 4, text: qsTr("Landscape (flipped)") },
+        { value: 8, text: qsTr("Portrait (flipped)") }
     ]
 
     function scaleOptions(current, recommended) {
@@ -49,18 +50,18 @@ PageScroll {
         list.sort((a, b) => a - b);
         return list.map(s => ({
             value: s,
-            text: Math.round(s * 100) + "%" + (Math.abs(s - recommended) < 0.001 ? " (recommended)" : "")
+            text: Math.abs(s - recommended) < 0.001 ? qsTr("%1% (recommended)").arg(Math.round(s * 100)) : qsTr("%1%").arg(Math.round(s * 100))
         }));
     }
 
     function arrangementOptions(screen) {
         const list = [
-            { value: "extend", text: "Extend" },
-            { value: "duplicate", text: "Duplicate" },
-            { value: "only", text: "Only this screen" }
+            { value: "extend", text: qsTr("Extend") },
+            { value: "duplicate", text: qsTr("Duplicate") },
+            { value: "only", text: qsTr("Only this screen") }
         ];
         if (!screen.enabled || enabledOutputs.length > 1) {
-            list.push({ value: "off", text: "Off" });
+            list.push({ value: "off", text: qsTr("Off") });
         }
         return list;
     }
@@ -80,7 +81,7 @@ PageScroll {
     Connections {
         target: Displays
         function onFailed(reason) {
-            notice.show("The screens were not changed", reason, true);
+            notice.show(qsTr("The screens were not changed"), reason, true);
         }
         function onConfirmChanged() {
             if (Displays.confirming && !keepDialog.visible) {
@@ -255,7 +256,7 @@ PageScroll {
                 hoverEnabled: true
                 focusPolicy: Qt.StrongFocus
                 Accessible.role: Accessible.RadioButton
-                Accessible.name: "Display " + modelData.title + (modelData.caption.length > 0 ? ", " + modelData.caption : "")
+                Accessible.name: modelData.caption.length > 0 ? qsTr("Display %1, %2").arg(modelData.title).arg(modelData.caption) : qsTr("Display %1").arg(modelData.title)
                 Accessible.checked: current
 
                 onClicked: page.chosenId = modelData.members[0]
@@ -340,7 +341,7 @@ PageScroll {
             anchors.rightMargin: 12
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
-            text: "Drag the screens to match how they sit on your desk. Edges snap together."
+            text: qsTr("Drag the screens to match how they sit on your desk. Edges snap together.")
             size: 12
             color: UI.Style.inkMuted
         }
@@ -354,7 +355,7 @@ PageScroll {
             spacing: 8
 
             UI.Button {
-                text: "Identify"
+                text: qsTr("Identify")
                 implicitHeight: 30
                 onClicked: {
                     identify.active = true;
@@ -363,7 +364,7 @@ PageScroll {
             }
 
             UI.Button {
-                text: "Detect"
+                text: qsTr("Detect")
                 implicitHeight: 30
                 onClicked: Displays.reload()
             }
@@ -383,7 +384,7 @@ PageScroll {
             border.width: 1
             border.color: UI.Style.tone(0.08)
             Accessible.role: Accessible.Grouping
-            Accessible.name: "Display to change"
+            Accessible.name: qsTr("Display to change")
 
             Row {
                 id: choices
@@ -414,20 +415,20 @@ PageScroll {
 
             UI.Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Main display"
+                text: qsTr("Main display")
                 size: 13
             }
 
             UI.Label {
                 anchors.verticalCenter: parent.verticalCenter
-                text: page.selected.primary ? "On" : "Off"
+                text: page.selected.primary ? qsTr("On") : qsTr("Off")
                 size: 12
                 color: UI.Style.inkMuted
             }
 
             UI.Toggle {
                 anchors.verticalCenter: parent.verticalCenter
-                Accessible.name: "Make this my main display"
+                Accessible.name: qsTr("Make this my main display")
                 checked: page.selected.primary
                 // There is always a main display; another screen takes the
                 // role over rather than this one giving it up.
@@ -453,13 +454,13 @@ PageScroll {
                 width: parent.width
 
                 UI.SettingRow {
-                    title: "Resolution"
+                    title: qsTr("Resolution")
                     minHeight: 52
                     enabled: page.selected.enabled
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Resolution"
+                        Accessible.name: qsTr("Resolution")
                         model: page.selected.resolutions
                         readonly property string choice: page.selected.resolution
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -468,14 +469,14 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Scale"
-                    description: "Size of text and apps"
+                    title: qsTr("Scale")
+                    description: qsTr("Size of text and apps")
                     minHeight: 52
                     enabled: page.selected.enabled
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Scale"
+                        Accessible.name: qsTr("Scale")
                         model: page.scaleOptions(page.selected.scale, page.selected.recommendedScale)
                         readonly property real choice: page.selected.scale
                         currentIndex: model ? model.findIndex(o => Math.abs(o.value - choice) < 0.001) : -1
@@ -484,13 +485,13 @@ PageScroll {
                 }
 
                 UI.SettingRow {
-                    title: "Orientation"
+                    title: qsTr("Orientation")
                     minHeight: 52
                     enabled: page.selected.enabled
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Orientation"
+                        Accessible.name: qsTr("Orientation")
                         model: page.rotations
                         readonly property int choice: page.selected.rotation
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -500,12 +501,12 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.several
-                    title: "With more than one display"
+                    title: qsTr("With more than one display")
                     minHeight: 52
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Multiple displays"
+                        Accessible.name: qsTr("Multiple displays")
                         model: page.arrangementOptions(page.selected)
                         readonly property string choice: page.arrangementOf(page.selected)
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -530,14 +531,14 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.selected.rates.length > 0
-                    title: "Refresh rate"
-                    description: "Smoother motion, more power"
+                    title: qsTr("Refresh rate")
+                    description: qsTr("Smoother motion, more power")
                     minHeight: 52
                     enabled: page.selected.enabled
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Refresh rate"
+                        Accessible.name: qsTr("Refresh rate")
                         model: page.selected.rates
                         readonly property string choice: page.selected.rate
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
@@ -547,15 +548,15 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.selected.vrrCapable
-                    title: "Variable refresh rate"
-                    description: "Stops tearing in games and video"
-                    status: page.selected.vrr ? "On" : "Off"
+                    title: qsTr("Variable refresh rate")
+                    description: qsTr("Stops tearing in games and video")
+                    status: page.selected.vrr ? qsTr("On") : qsTr("Off")
                     minHeight: 52
                     enabled: page.selected.enabled
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "Variable refresh rate"
+                        Accessible.name: qsTr("Variable refresh rate")
                         checked: page.selected.vrr
                         onToggled: Displays.setVrr(page.selected.id, checked)
                     }
@@ -563,15 +564,15 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.selected.hdrCapable
-                    title: "HDR"
-                    description: "Brighter, richer video and games"
-                    status: page.selected.hdr ? "On" : "Off"
+                    title: qsTr("HDR")
+                    description: qsTr("Brighter, richer video and games")
+                    status: page.selected.hdr ? qsTr("On") : qsTr("Off")
                     minHeight: 52
                     enabled: page.selected.enabled
 
                     UI.Toggle {
                         anchors.verticalCenter: parent.verticalCenter
-                        Accessible.name: "HDR"
+                        Accessible.name: qsTr("HDR")
                         checked: page.selected.hdr
                         onToggled: Displays.setHdr(page.selected.id, checked)
                     }
@@ -579,8 +580,8 @@ PageScroll {
 
                 UI.SettingRow {
                     visible: page.selected.hdrCapable && page.selected.hdr
-                    title: "Brightness of everyday content"
-                    description: "With HDR on"
+                    title: qsTr("Brightness of everyday content")
+                    description: qsTr("With HDR on")
                     minHeight: 52
                     enabled: page.selected.enabled
 
@@ -588,7 +589,7 @@ PageScroll {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 120
                         flat: true
-                        accessibleName: "SDR content brightness"
+                        accessibleName: qsTr("SDR content brightness")
                         from: page.selected.sdrMin
                         to: page.selected.sdrMax
                         stepSize: 10
@@ -603,7 +604,7 @@ PageScroll {
     UI.Label {
         Layout.fillWidth: true
         visible: Displays.available
-        text: "Changes to resolution, refresh rate and HDR show a preview and switch back on their own after 15 seconds unless you choose Keep."
+        text: qsTr("Changes to resolution, refresh rate and HDR show a preview and switch back on their own after 15 seconds unless you choose Keep.")
         size: 12
         color: UI.Style.inkMuted
         lineHeight: 1.5
@@ -620,8 +621,8 @@ PageScroll {
 
             UI.SettingRow {
                 iconName: "display"
-                title: "Screen settings are not available"
-                description: "Wild OS could not read the screens from the display service."
+                title: qsTr("Screen settings are not available")
+                description: qsTr("Wild OS could not read the screens from the display service.")
             }
         }
     }
@@ -664,7 +665,7 @@ PageScroll {
         spacing: 10
 
         SectionTitle {
-            text: "Brightness and colour"
+            text: qsTr("Brightness and colour")
         }
 
         UI.Card {
@@ -681,9 +682,9 @@ PageScroll {
                         required property var modelData
                         readonly property int percent: modelData.maxBrightness > 0 ? Math.round(modelData.brightness / modelData.maxBrightness * 100) : 0
                         iconName: "sun"
-                        title: page.dimmable.length > 1 ? "Brightness of " + modelData.label : "Brightness"
-                        description: page.dimmable.length > 1 ? "Makes this screen brighter or dimmer" : "Makes the screen brighter or dimmer"
-                        status: percent + "%"
+                        title: page.dimmable.length > 1 ? qsTr("Brightness of %1").arg(modelData.label) : qsTr("Brightness")
+                        description: page.dimmable.length > 1 ? qsTr("Makes this screen brighter or dimmer") : qsTr("Makes the screen brighter or dimmer")
+                        status: qsTr("%1%").arg(percent)
 
                         UI.Slider {
                             anchors.verticalCenter: parent.verticalCenter
@@ -700,9 +701,9 @@ PageScroll {
                 UI.SettingRow {
                     visible: Pages.exists("nightlight")
                     iconName: "moon"
-                    title: "Night light"
-                    description: "Warmer colours to help you sleep"
-                    status: nightLight.enabled ? (nightLight.inhibited ? "Paused" : "On") : "Off"
+                    title: qsTr("Night light")
+                    description: qsTr("Warmer colours to help you sleep")
+                    status: nightLight.enabled ? (nightLight.inhibited ? qsTr("Paused") : qsTr("On")) : qsTr("Off")
                     chevron: true
                     onClicked: Navigator.open("nightlight")
                 }
@@ -719,9 +720,9 @@ PageScroll {
 
                 UI.SettingRow {
                     iconName: "chip"
-                    title: "Graphics driver"
+                    title: qsTr("Graphics driver")
                     description: Graphics.nvidiaName
-                    status: Graphics.restartNeeded ? "Restart needed" : Graphics.driverInUse === "nvidia" ? "NVIDIA" : "Open"
+                    status: Graphics.restartNeeded ? qsTr("Restart needed") : Graphics.driverInUse === "nvidia" ? "NVIDIA" : qsTr("Open")
                     chevron: true
                     onClicked: Navigator.open("graphicsdriver")
                 }
@@ -730,8 +731,9 @@ PageScroll {
     }
 
     // Identify: each screen's number, large in its bottom left corner, for
-    // three seconds. A full-screen window is the one placement Wayland lets
-    // an app ask for on a given screen; it is see-through and lets every
+    // three seconds. Each is a layer surface on its own screen: KWin puts
+    // an ordinary full-screen window on whichever screen is active, which
+    // put every number on the same one. It is see-through and lets every
     // click pass, so nothing under it is blocked.
     Instantiator {
         id: identify
@@ -743,20 +745,37 @@ PageScroll {
 
             required property var modelData
 
-            screen: {
-                const screens = Qt.application.screens;
-                for (let i = 0; i < screens.length; ++i) {
-                    if (screens[i].name === modelData.name) {
-                        return screens[i];
-                    }
-                }
-                return null;
-            }
             transientParent: null
             flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
             color: "transparent"
-            title: "Display " + modelData.number
-            visibility: Window.FullScreen
+            title: qsTr("Display %1").arg(modelData.number)
+            width: screen ? screen.width : 0
+            height: screen ? screen.height : 0
+            // The screen is given once the window exists, then it is shown,
+            // so the layer surface is made on that screen. As a binding, Qt
+            // put a window made inside the Settings window back on its screen.
+            // Qt also moves a window, when first shown, to the screen that
+            // holds its position, so the position is that screen's too.
+            Component.onCompleted: {
+                const screens = Qt.application.screens;
+                for (let i = 0; i < screens.length; ++i) {
+                    if (screens[i].name === modelData.name) {
+                        screen = screens[i];
+                        x = screens[i].virtualX;
+                        y = screens[i].virtualY;
+                    }
+                }
+                visible = true;
+            }
+
+            OverlayPlacement {
+                window: marker
+                edges: OverlayPlacement.Top | OverlayPlacement.Bottom | OverlayPlacement.Left | OverlayPlacement.Right
+                layer: OverlayPlacement.Overlay
+                keyboard: OverlayPlacement.NoKeyboard
+                fromScreenEdge: true
+                scope: "wildos-identify"
+            }
 
             UI.Glass {
                 level: "menu"
@@ -785,20 +804,20 @@ PageScroll {
     UI.Dialog {
         id: keepDialog
 
-        title: "Keep these display settings?"
-        text: "Switching back to the previous settings in " + Displays.secondsLeft + (Displays.secondsLeft === 1 ? " second." : " seconds.")
+        title: qsTr("Keep these display settings?")
+        text: Displays.secondsLeft === 1 ? qsTr("Switching back to the previous settings in 1 second.") : qsTr("Switching back to the previous settings in %1 seconds.").arg(Displays.secondsLeft)
         // Only Keep or the countdown ends it; a stray Escape must not leave
         // an unreadable screen in place.
         closePolicy: T.Popup.NoAutoClose
 
         buttons: [
             UI.Button {
-                text: "Keep"
+                text: qsTr("Keep")
                 kind: "primary"
                 onClicked: Displays.keep()
             },
             UI.Button {
-                text: "Switch back"
+                text: qsTr("Switch back")
                 onClicked: Displays.revert()
             }
         ]
