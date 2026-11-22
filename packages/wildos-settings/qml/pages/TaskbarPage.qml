@@ -28,8 +28,8 @@ PageScroll {
     }
 
     readonly property var choices: [
-        { mode: 0, title: qsTr("Always show the taskbar"), description: qsTr("Windows stop above it") },
-        { mode: 1, title: qsTr("Hide the taskbar automatically"), description: qsTr("Move the pointer to the bottom of the screen to show it") },
+        { mode: 0, title: qsTr("Always show the taskbar"), description: System.taskbarTop ? qsTr("Windows stop below it") : qsTr("Windows stop above it") },
+        { mode: 1, title: qsTr("Hide the taskbar automatically"), description: System.taskbarTop ? qsTr("Move the pointer to the top of the screen to show it") : qsTr("Move the pointer to the bottom of the screen to show it") },
         { mode: 2, title: qsTr("Hide it when a window covers it"), description: qsTr("It stays visible until a window needs the space") }
     ]
 

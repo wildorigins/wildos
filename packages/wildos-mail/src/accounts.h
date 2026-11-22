@@ -2,6 +2,7 @@
 
 #include <QList>
 #include <QObject>
+#include <QDateTime>
 #include <QString>
 #include <QVariantMap>
 
@@ -29,13 +30,36 @@ struct Account {
     int smtpPort = 465;
     QString smtpSecurity = QStringLiteral("ssl");
     QString user;
-    // "password" (an ordinary or app password) or "google" (Sign in with
-    // Google: the stored secret is the refresh token).
+    // "password" (an ordinary or app password), "google" or "microsoft"
+    // (Sign in with Google or Microsoft: the stored secret is the refresh
+    // token).
     QString auth = QStringLiteral("password");
+    bool signsInWithOAuth() const
+    {
+        return auth == QLatin1String("google") || auth == QLatin1String("microsoft");
+    }
     // Keep every message on this PC for offline reading and search, or only
     // the newest.
     bool keepAll = true;
+    // How far back keepAll keeps mail, in months; 0 is everything.
+    int keepMonths = 0;
+    // How often to look for new mail, in minutes: 0 as it arrives (IMAP
+    // IDLE), -1 only when asked.
+    int checkEvery = 0;
     QString signature;
+    // The named signatures (MailEngine::signatures) added to new messages
+    // and to replies and forwards; empty for none.
+    QString signatureNew;
+    QString signatureReply;
+    // Automatic replies Mail sends itself (accounts other than Microsoft's,
+    // whose replies Microsoft sends): on, the words, and an optional window.
+    bool autoReply = false;
+    QString autoReplyMessage;
+    QDateTime autoReplyStart;
+    QDateTime autoReplyEnd;
+    QString autoReplySubject;
+    // Who gets one: "all" or "contacts".
+    QString autoReplyAudience = QStringLiteral("all");
 
     QVariantMap toMap() const;
     static Account fromMap(const QVariantMap &map);

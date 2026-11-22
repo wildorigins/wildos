@@ -6,6 +6,7 @@
 #include <QDBusObjectPath>
 #include <QDBusReply>
 #include <QDBusVariant>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QMimeDatabase>
@@ -285,4 +286,28 @@ void System::setDedicatedGraphics(const QString &target, bool on) const
     }
     group.writeEntry("Dedicated", chosen);
     group.sync();
+}
+
+bool System::addToDesktop(const QString &target) const
+{
+    const QString source = desktopFileOf(target);
+    const QString desktop = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+    if (source.isEmpty() || desktop.isEmpty() || QDir::cleanPath(desktop) == QDir::homePath() || !QDir().mkpath(desktop)) {
+        return false;
+    }
+    const QString base = QFileInfo(source).completeBaseName();
+    QString path = desktop + QLatin1Char('/') + base + desktopSuffix;
+    // A link left by an app that was removed counts as taken too.
+    const auto taken = [](const QString &file) {
+        const QFileInfo info(file);
+        return info.exists() || info.isSymLink();
+    };
+    for (int n = 2; taken(path); ++n) {
+        path = desktop + QLatin1Char('/') + base + QStringLiteral(" (%1)").arg(n) + desktopSuffix;
+    }
+    // A link to the app's own entry, like a Windows shortcut: it follows the
+    // app's updates (a new name, icon or command) and stops working if the
+    // app is removed. The desktop opens it without asking because the file
+    // it leads to sits in an applications folder, which KDE trusts.
+    return QFile::link(source, path);
 }

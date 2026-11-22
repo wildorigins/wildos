@@ -349,6 +349,12 @@ void SystemStats::findDisks()
     if (::stat("/", &st) == 0) {
         rootDevice = QStringLiteral("%1:%2").arg(major(st.st_dev)).arg(minor(st.st_dev));
     }
+    // On Btrfs, which Wild OS installs on, / reports a device number of its
+    // own that no block device has, so the disk was never found and its
+    // activity never read. The device the root is mounted from names it
+    // instead (/dev/mapper/... resolves to its dm-N).
+    const QString rootFrom = QString::fromUtf8(QStorageInfo::root().device());
+    const QString rootSource = rootFrom.startsWith(QLatin1String("/dev/")) ? QFileInfo(rootFrom).canonicalFilePath().section(QLatin1Char('/'), -1) : QString();
     QHash<QString, QString> mounts;
     for (const QStorageInfo &volume : QStorageInfo::mountedVolumes()) {
         mounts.insert(QString::fromUtf8(volume.device()), volume.rootPath());
@@ -374,7 +380,7 @@ void SystemStats::findDisks()
         const QString dev = readLine(sys + QStringLiteral("/dev"));
         // A root on LVM or encryption sits on a dm device; its slave is the
         // partition whose activity counts.
-        if (dev == rootDevice && system.device.isEmpty()) {
+        if ((dev == rootDevice || (!rootSource.isEmpty() && name == rootSource)) && system.device.isEmpty()) {
             d.system = true;
             d.mount = QStringLiteral("/");
             const auto slaves = QDir(sys + QStringLiteral("/slaves")).entryList(QDir::Dirs | QDir::System | QDir::NoDotAndDotDot);

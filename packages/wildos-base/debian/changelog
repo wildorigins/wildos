@@ -1,3 +1,19 @@
+wildos-base (0.1.18) trixie; urgency=medium
+
+  * Broadcom's own Wi-Fi driver can be installed from Debian's development
+    branch, the only version that builds for this kernel (see Settings >
+    Network and internet).
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 16:30:00 +0000
+
+wildos-base (0.1.17) trixie; urgency=medium
+
+  * Every processor thread runs by default, including on older Intel
+    processors where Linux used to switch half of them off. Settings >
+    System > Power and battery still turns them off. From the next restart.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 12:30:00 +0000
+
 wildos-base (0.1.16) trixie; urgency=medium
 
   * The start-up menu has an entry for the start-up manager, which Space

@@ -1,0 +1,886 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="pt_BR">
+    <context>
+        <name>Archive</name>
+        <message>
+            <source>Extracting</source>
+            <translation>Extraindo</translation>
+        </message>
+        <message>
+            <source>Extracting %1</source>
+            <translation>Extraindo %1</translation>
+        </message>
+        <message>
+            <source>Testing</source>
+            <translation>Testando</translation>
+        </message>
+        <message>
+            <source>Testing %1</source>
+            <translation>Testando %1</translation>
+        </message>
+        <message>
+            <source>Opening %1</source>
+            <translation>Abrindo %1</translation>
+        </message>
+        <message>
+            <source>Reading the archive</source>
+            <translation>Lendo o arquivo compactado</translation>
+        </message>
+        <message>
+            <source>%1 · %2 unpacked, %3 packed</source>
+            <translation>%1 · %2 descompactados, %3 compactados</translation>
+        </message>
+        <message>
+            <source>Archive</source>
+            <translation>Archive</translation>
+        </message>
+        <message>
+            <source>Extract everything</source>
+            <translation>Extrair tudo</translation>
+        </message>
+        <message>
+            <source>Extract 1 photo</source>
+            <translation>Extrair 1 foto</translation>
+        </message>
+        <message>
+            <source>Extract %1 photos</source>
+            <translation>Extrair %1 fotos</translation>
+        </message>
+        <message>
+            <source>Extract 1 file</source>
+            <translation>Extrair 1 arquivo</translation>
+        </message>
+        <message>
+            <source>Extract %1 files</source>
+            <translation>Extrair %1 arquivos</translation>
+        </message>
+        <message>
+            <source>Stopped. The files already extracted are in %1.</source>
+            <translation>Interrompido. Os arquivos já extraídos estão em %1.</translation>
+        </message>
+        <message>
+            <source>Stopped. Nothing was extracted.</source>
+            <translation>Interrompido. Nada foi extraído.</translation>
+        </message>
+        <message>
+            <source>Couldn't finish extracting</source>
+            <translation>Não foi possível concluir a extração</translation>
+        </message>
+        <message>
+            <source>Some items were skipped</source>
+            <translation>Alguns itens foram ignorados</translation>
+        </message>
+        <message>
+            <source>These would have been written outside %1, so Archive didn't extract them. Everything else is there.</source>
+            <translation>Eles seriam gravados fora de %1, então o Archive não os extraiu. Todo o resto está lá.</translation>
+        </message>
+        <message>
+            <source>Some files couldn't be extracted</source>
+            <translation>Alguns arquivos não puderam ser extraídos</translation>
+        </message>
+        <message>
+            <source>The rest are in %1.</source>
+            <translation>O restante está em %1.</translation>
+        </message>
+        <message>
+            <source>Extracted 1 file to %1</source>
+            <translation>1 arquivo extraído para %1</translation>
+        </message>
+        <message>
+            <source>Extracted %1 files to %2</source>
+            <translation>%1 arquivos extraídos para %2</translation>
+        </message>
+        <message>
+            <source>. 1 file with the same name was already there and was kept.</source>
+            <translation>. 1 arquivo com o mesmo nome já estava lá e foi mantido.</translation>
+        </message>
+        <message>
+            <source>. %1 files with the same names were already there and were kept.</source>
+            <translation>. %1 arquivos com os mesmos nomes já estavam lá e foram mantidos.</translation>
+        </message>
+        <message>
+            <source>Couldn't get those ready to drag</source>
+            <translation>Não foi possível preparar estes itens para arrastar</translation>
+        </message>
+        <message>
+            <source>Nothing could be read from the archive. Try Extract instead.</source>
+            <translation>Nada pôde ser lido do arquivo compactado. Tente Extrair.</translation>
+        </message>
+        <message>
+            <source>Test stopped.</source>
+            <translation>Teste interrompido.</translation>
+        </message>
+        <message>
+            <source>This archive is damaged</source>
+            <translation>Este arquivo compactado está danificado</translation>
+        </message>
+        <message>
+            <source>%1 files checked out before the damage. %2</source>
+            <translation>%1 arquivos foram verificados antes do dano. %2</translation>
+        </message>
+        <message>
+            <source>1 file is damaged</source>
+            <translation>1 arquivo está danificado</translation>
+        </message>
+        <message>
+            <source>%1 files are damaged</source>
+            <translation>%1 arquivos estão danificados</translation>
+        </message>
+        <message>
+            <source>The other %1 are OK.</source>
+            <translation>Os outros %1 estão OK.</translation>
+        </message>
+        <message>
+            <source>Everything is OK</source>
+            <translation>Tudo está OK</translation>
+        </message>
+        <message>
+            <source>The 1 file in this archive is intact.</source>
+            <translation>O único arquivo deste arquivo compactado está íntegro.</translation>
+        </message>
+        <message>
+            <source>All %1 files in this archive are intact.</source>
+            <translation>Todos os %1 arquivos deste arquivo compactado estão íntegros.</translation>
+        </message>
+        <message>
+            <source>Couldn't open %1</source>
+            <translation>Não foi possível abrir %1</translation>
+        </message>
+    </context>
+    <context>
+        <name>ArchiveApp</name>
+        <message>
+            <source>Opens ZIP, 7z, RAR, TAR and GZ</source>
+            <translation>Abre ZIP, 7z, RAR, TAR e GZ</translation>
+        </message>
+    </context>
+    <context>
+        <name>ArchiveMaker</name>
+        <message>
+            <source>1 item, %1</source>
+            <translation>1 item, %1</translation>
+        </message>
+        <message>
+            <source>%1 items, %2</source>
+            <translation>%1 itens, %2</translation>
+        </message>
+        <message>
+            <source>Give the archive a name.</source>
+            <translation>Dê um nome ao arquivo compactado.</translation>
+        </message>
+        <message>
+            <source>A name can't contain a /.</source>
+            <translation>Um nome não pode conter /.</translation>
+        </message>
+        <message>
+            <source>Add the files and folders to put in it.</source>
+            <translation>Adicione os arquivos e pastas que vão nele.</translation>
+        </message>
+        <message>
+            <source>There's already a file called %1 in this folder.</source>
+            <translation>Já existe um arquivo chamado %1 nesta pasta.</translation>
+        </message>
+        <message>
+            <source>You can't save in this folder. Choose another.</source>
+            <translation>Você não pode salvar nesta pasta. Escolha outra.</translation>
+        </message>
+        <message>
+            <source>Compressing</source>
+            <translation>Compactando</translation>
+        </message>
+        <message>
+            <source>Compressing %1</source>
+            <translation>Compactando %1</translation>
+        </message>
+        <message>
+            <source>New archive</source>
+            <translation>Novo arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Made %1</source>
+            <translation>%1 criado</translation>
+        </message>
+    </context>
+    <context>
+        <name>EntryModel</name>
+        <message>
+            <source>Unsafe path</source>
+            <translation>Caminho inseguro</translation>
+        </message>
+        <message>
+            <source>Link</source>
+            <translation>Link</translation>
+        </message>
+    </context>
+    <context>
+        <name>EntryRow</name>
+        <message>
+            <source>Select %1</source>
+            <translation>Selecionar %1</translation>
+        </message>
+    </context>
+    <context>
+        <name>ExtractHereWindow</name>
+        <message>
+            <source>Extracting %1</source>
+            <translation>Extraindo %1</translation>
+        </message>
+        <message>
+            <source>Archive couldn't open %1</source>
+            <translation>O Archive não conseguiu abrir %1</translation>
+        </message>
+        <message>
+            <source>Archive can't unlock this RAR</source>
+            <translation>O Archive não consegue desbloquear este RAR</translation>
+        </message>
+        <message>
+            <source>%1 is protected with the older RAR 4 encryption, which Archive can't unlock. Ask whoever sent it for a 7z or ZIP copy.</source>
+            <translation>%1 está protegido com a criptografia mais antiga do RAR 4, que o Archive não consegue desbloquear. Peça a quem enviou uma cópia em 7z ou ZIP.</translation>
+        </message>
+        <message>
+            <source>Archive</source>
+            <translation>Archive</translation>
+        </message>
+        <message>
+            <source>“%1” is already here</source>
+            <translation>“%1” já está aqui</translation>
+        </message>
+        <message>
+            <source>Enter the password</source>
+            <translation>Digite a senha</translation>
+        </message>
+        <message>
+            <source>Reading the archive</source>
+            <translation>Lendo o arquivo compactado</translation>
+        </message>
+        <message>
+            <source>To %1</source>
+            <translation>Para %1</translation>
+        </message>
+        <message>
+            <source>That password isn't right. Check it and try again.</source>
+            <translation>Esta senha não está correta. Verifique e tente novamente.</translation>
+        </message>
+        <message>
+            <source>%1 is protected with a password.</source>
+            <translation>%1 está protegido por senha.</translation>
+        </message>
+        <message>
+            <source>Password</source>
+            <translation>Senha</translation>
+        </message>
+        <message>
+            <source>A folder with this name is already beside the archive. Replace the files in it with the ones from the archive, or keep both and extract to a new folder.</source>
+            <translation>Já existe uma pasta com este nome ao lado do arquivo compactado. Substitua os arquivos dela pelos do arquivo compactado ou mantenha ambos e extraia para uma nova pasta.</translation>
+        </message>
+        <message>
+            <source>Show folder</source>
+            <translation>Mostrar pasta</translation>
+        </message>
+        <message>
+            <source>Replace</source>
+            <translation>Substituir</translation>
+        </message>
+        <message>
+            <source>Keep both</source>
+            <translation>Manter ambos</translation>
+        </message>
+        <message>
+            <source>Unlock</source>
+            <translation>Desbloquear</translation>
+        </message>
+        <message>
+            <source>OK</source>
+            <translation>OK</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Cancelar</translation>
+        </message>
+    </context>
+    <context>
+        <name>ExtractPane</name>
+        <message>
+            <source>To</source>
+            <translation>Para</translation>
+        </message>
+        <message>
+            <source>Choose folder</source>
+            <translation>Escolher pasta</translation>
+        </message>
+        <message>
+            <source>Keep the folder structure</source>
+            <translation>Manter a estrutura de pastas</translation>
+        </message>
+        <message>
+            <source>Open the folder when done</source>
+            <translation>Abrir a pasta ao concluir</translation>
+        </message>
+        <message>
+            <source>Replace files with the same name</source>
+            <translation>Substituir arquivos com o mesmo nome</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Cancelar</translation>
+        </message>
+        <message>
+            <source>Extract</source>
+            <translation>Extrair</translation>
+        </message>
+    </context>
+    <context>
+        <name>Format</name>
+        <message>
+            <source>%1 KB</source>
+            <translation>%1 KB</translation>
+        </message>
+        <message>
+            <source>%1 MB</source>
+            <translation>%1 MB</translation>
+        </message>
+        <message>
+            <source>%1 GB</source>
+            <translation>%1 GB</translation>
+        </message>
+        <message>
+            <source>%1 TB</source>
+            <translation>%1 TB</translation>
+        </message>
+        <message>
+            <source>Folder</source>
+            <translation>Pasta</translation>
+        </message>
+        <message>
+            <source>Spreadsheet</source>
+            <translation>Planilha</translation>
+        </message>
+        <message>
+            <source>Document</source>
+            <translation>Documento</translation>
+        </message>
+        <message>
+            <source>Presentation</source>
+            <translation>Apresentação</translation>
+        </message>
+        <message>
+            <source>Text</source>
+            <translation>Texto</translation>
+        </message>
+        <message>
+            <source>GPX route</source>
+            <translation>Rota GPX</translation>
+        </message>
+        <message>
+            <source>ZIP archive</source>
+            <translation>Arquivo ZIP</translation>
+        </message>
+        <message>
+            <source>7z archive</source>
+            <translation>Arquivo 7z</translation>
+        </message>
+        <message>
+            <source>RAR archive</source>
+            <translation>Arquivo RAR</translation>
+        </message>
+        <message>
+            <source>Windows app</source>
+            <translation>Aplicativo do Windows</translation>
+        </message>
+        <message>
+            <source>Windows installer</source>
+            <translation>Instalador do Windows</translation>
+        </message>
+        <message>
+            <source>File</source>
+            <translation>Arquivo</translation>
+        </message>
+        <message>
+            <source>less than a second</source>
+            <translation>menos de um segundo</translation>
+        </message>
+        <message>
+            <source>about 1 second</source>
+            <translation>cerca de 1 segundo</translation>
+        </message>
+        <message>
+            <source>about %1 seconds</source>
+            <translation>cerca de %1 segundos</translation>
+        </message>
+        <message>
+            <source>about 1 minute</source>
+            <translation>cerca de 1 minuto</translation>
+        </message>
+        <message>
+            <source>about %1 minutes</source>
+            <translation>cerca de %1 minutos</translation>
+        </message>
+        <message>
+            <source>about 1 hour</source>
+            <translation>cerca de 1 hora</translation>
+        </message>
+        <message>
+            <source>about %1 hours</source>
+            <translation>cerca de %1 horas</translation>
+        </message>
+        <message>
+            <source>Home</source>
+            <translation>Pasta pessoal</translation>
+        </message>
+    </context>
+    <context>
+        <name>Main</name>
+        <message>
+            <source>Archive</source>
+            <translation>Archive</translation>
+        </message>
+        <message>
+            <source>Extract all</source>
+            <translation>Extrair tudo</translation>
+        </message>
+        <message>
+            <source>Extract selected</source>
+            <translation>Extrair selecionados</translation>
+        </message>
+        <message>
+            <source>Add files</source>
+            <translation>Adicionar arquivos</translation>
+        </message>
+        <message>
+            <source>Makes a new archive with this one's contents and your files</source>
+            <translation>Cria um novo arquivo compactado com o conteúdo deste e os seus arquivos</translation>
+        </message>
+        <message>
+            <source>New archive</source>
+            <translation>Novo arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Test</source>
+            <translation>Testar</translation>
+        </message>
+        <message>
+            <source>Check that every file in the archive is intact</source>
+            <translation>Verifica se todos os arquivos estão íntegros</translation>
+        </message>
+        <message>
+            <source>Search this archive</source>
+            <translation>Pesquisar neste arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Clear</source>
+            <translation>Limpar</translation>
+        </message>
+        <message>
+            <source>Back</source>
+            <translation>Voltar</translation>
+        </message>
+        <message>
+            <source>Up</source>
+            <translation>Acima</translation>
+        </message>
+        <message>
+            <source>Search results for “%1”</source>
+            <translation>Resultados da pesquisa por “%1”</translation>
+        </message>
+        <message>
+            <source>This archive is read only. Extract files to change them.</source>
+            <translation>Este arquivo compactado é somente leitura. Extraia os arquivos para alterá-los.</translation>
+        </message>
+        <message>
+            <source>This RAR is protected with the older RAR 4 encryption, which Archive can't unlock. You can see what's in it, but not extract it.</source>
+            <translation>Este RAR está protegido com a criptografia mais antiga do RAR 4, que o Archive não consegue desbloquear. Você pode ver o que há nele, mas não extrair.</translation>
+        </message>
+        <message>
+            <source>This archive is protected with a password, and even the names of its files are hidden until you enter it.</source>
+            <translation>Este arquivo compactado está protegido por senha, e até os nomes dos arquivos ficam ocultos até você digitá-la.</translation>
+        </message>
+        <message>
+            <source>Enter password</source>
+            <translation>Digite a senha</translation>
+        </message>
+        <message>
+            <source>1 item in this archive points outside it. Archive won't extract it.</source>
+            <translation>1 item deste arquivo compactado aponta para fora dele. O Archive não vai extraí-lo.</translation>
+        </message>
+        <message>
+            <source>%1 items in this archive point outside it. Archive won't extract them.</source>
+            <translation>%1 itens deste arquivo compactado apontam para fora dele. O Archive não vai extraí-los.</translation>
+        </message>
+        <message>
+            <source>Part of this archive couldn't be read: %1</source>
+            <translation>Uma parte deste arquivo compactado não pôde ser lida: %1</translation>
+        </message>
+        <message>
+            <source>Name</source>
+            <translation>Nome</translation>
+        </message>
+        <message>
+            <source>Size</source>
+            <translation>Tamanho</translation>
+        </message>
+        <message>
+            <source>Packed</source>
+            <translation>Compactado</translation>
+        </message>
+        <message>
+            <source>Modified</source>
+            <translation>Modificado</translation>
+        </message>
+        <message>
+            <source>Type</source>
+            <translation>Tipo</translation>
+        </message>
+        <message>
+            <source>Contents of %1</source>
+            <translation>Conteúdo de %1</translation>
+        </message>
+        <message>
+            <source>Open folder</source>
+            <translation>Abrir pasta</translation>
+        </message>
+        <message>
+            <source>Open</source>
+            <translation>Abrir</translation>
+        </message>
+        <message>
+            <source>Extract</source>
+            <translation>Extrair</translation>
+        </message>
+        <message>
+            <source>Select all</source>
+            <translation>Selecionar tudo</translation>
+        </message>
+        <message>
+            <source>Nothing in this archive matches “%1”</source>
+            <translation>Nada neste arquivo compactado corresponde a “%1”</translation>
+        </message>
+        <message>
+            <source>This folder is empty</source>
+            <translation>Esta pasta está vazia</translation>
+        </message>
+        <message>
+            <source>Reading the archive, %1%</source>
+            <translation>Lendo o arquivo compactado, %1%</translation>
+        </message>
+        <message>
+            <source>Reading the archive</source>
+            <translation>Lendo o arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Archive couldn't open this file</source>
+            <translation>O Archive não conseguiu abrir este arquivo</translation>
+        </message>
+        <message>
+            <source>Open another archive</source>
+            <translation>Abrir outro arquivo compactado</translation>
+        </message>
+        <message>
+            <source>1 item</source>
+            <translation>1 item</translation>
+        </message>
+        <message>
+            <source>%1 items</source>
+            <translation>%1 itens</translation>
+        </message>
+        <message>
+            <source>%1, %2 selected</source>
+            <translation>%1, %2 selecionados</translation>
+        </message>
+        <message>
+            <source>Open an archive</source>
+            <translation>Abrir um arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Archives (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.tar.xz *.txz *.tar.bz2 *.tbz2 *.tar.zst *.gz *.xz *.bz2 *.zst *.cab *.cpio *.lzh)</source>
+            <translation>Arquivos compactados (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.tar.xz *.txz *.tar.bz2 *.tbz2 *.tar.zst *.gz *.xz *.bz2 *.zst *.cab *.cpio *.lzh)</translation>
+        </message>
+        <message>
+            <source>All files (*)</source>
+            <translation>Todos os arquivos (*)</translation>
+        </message>
+        <message>
+            <source>Add files to a new archive</source>
+            <translation>Adicionar arquivos a um novo arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Extract to</source>
+            <translation>Extrair para</translation>
+        </message>
+        <message>
+            <source>Enter the password</source>
+            <translation>Digite a senha</translation>
+        </message>
+        <message>
+            <source>That password isn't right. Check it and try again.</source>
+            <translation>Esta senha não está correta. Verifique e tente novamente.</translation>
+        </message>
+        <message>
+            <source>%1 is protected with a password.</source>
+            <translation>%1 está protegido por senha.</translation>
+        </message>
+        <message>
+            <source>Password</source>
+            <translation>Senha</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Cancelar</translation>
+        </message>
+        <message>
+            <source>Unlock</source>
+            <translation>Desbloquear</translation>
+        </message>
+        <message>
+            <source>OK</source>
+            <translation>OK</translation>
+        </message>
+    </context>
+    <context>
+        <name>NewArchiveDialog</name>
+        <message>
+            <source>Add files to a new archive</source>
+            <translation>Adicionar arquivos a um novo arquivo compactado</translation>
+        </message>
+        <message>
+            <source>New archive</source>
+            <translation>Novo arquivo compactado</translation>
+        </message>
+        <message>
+            <source>%1 stays as it is. The new archive holds everything in it, plus the files you add here.</source>
+            <translation>%1 permanece como está. O novo arquivo compactado contém tudo o que há nele, mais os arquivos que você adicionar aqui.</translation>
+        </message>
+        <message>
+            <source>Pick the files and folders to put in it. ZIP opens anywhere; 7z packs smaller.</source>
+            <translation>Escolha os arquivos e pastas que vão nele. O ZIP abre em qualquer lugar; o 7z compacta mais.</translation>
+        </message>
+        <message>
+            <source>Couldn't make the archive</source>
+            <translation>Não foi possível criar o arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Add files</source>
+            <translation>Adicionar arquivos</translation>
+        </message>
+        <message>
+            <source>Add a folder</source>
+            <translation>Adicionar uma pasta</translation>
+        </message>
+        <message>
+            <source>Save the archive in</source>
+            <translation>Salvar o arquivo compactado em</translation>
+        </message>
+        <message>
+            <source>Name</source>
+            <translation>Nome</translation>
+        </message>
+        <message>
+            <source>Save in</source>
+            <translation>Salvar em</translation>
+        </message>
+        <message>
+            <source>Choose folder</source>
+            <translation>Escolher pasta</translation>
+        </message>
+        <message>
+            <source>Nothing added yet</source>
+            <translation>Nada adicionado ainda</translation>
+        </message>
+        <message>
+            <source>Everything in %1</source>
+            <translation>Tudo em %1</translation>
+        </message>
+        <message>
+            <source>Leave out</source>
+            <translation>Excluir</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Cancelar</translation>
+        </message>
+        <message>
+            <source>Make archive</source>
+            <translation>Criar arquivo compactado</translation>
+        </message>
+    </context>
+    <context>
+        <name>Reader</name>
+        <message>
+            <source>unknown error</source>
+            <translation>erro desconhecido</translation>
+        </message>
+        <message>
+            <source>Archive</source>
+            <translation>Archive</translation>
+        </message>
+        <message>
+            <source>This file isn't an archive.</source>
+            <translation>Este arquivo não é um arquivo compactado.</translation>
+        </message>
+        <message>
+            <source>This file isn't an archive Archive can open.</source>
+            <translation>Este arquivo não é um arquivo compactado que o Archive possa abrir.</translation>
+        </message>
+        <message>
+            <source>Archive needs 7-Zip (the 7zip package) for this archive, and it isn't installed.</source>
+            <translation>O Archive precisa do 7-Zip (o pacote 7zip) para este arquivo compactado, e ele não está instalado.</translation>
+        </message>
+        <message>
+            <source>Archive needs The Unarchiver (the unar package) for this archive, and it isn't installed.</source>
+            <translation>O Archive precisa do The Unarchiver (o pacote unar) para este arquivo compactado, e ele não está instalado.</translation>
+        </message>
+        <message>
+            <source>This file isn't there any more.</source>
+            <translation>Este arquivo não existe mais.</translation>
+        </message>
+        <message>
+            <source>You don't have permission to open this file.</source>
+            <translation>Você não tem permissão para abrir este arquivo.</translation>
+        </message>
+        <message>
+            <source>Couldn't write in %1: %2</source>
+            <translation>Não foi possível gravar em %1: %2</translation>
+        </message>
+        <message>
+            <source>%1: a file is in the way of its folder</source>
+            <translation>%1: há um arquivo no lugar da pasta</translation>
+        </message>
+        <message>
+            <source>%1: a folder has the same name</source>
+            <translation>%1: há uma pasta com o mesmo nome</translation>
+        </message>
+        <message>
+            <source>%1: it couldn't be unpacked</source>
+            <translation>%1: não foi possível descompactar</translation>
+        </message>
+        <message>
+            <source>Couldn't write %1: %2</source>
+            <translation>Não foi possível gravar %1: %2</translation>
+        </message>
+        <message>
+            <source>%1: its checksum is wrong</source>
+            <translation>%1: a soma de verificação está errada</translation>
+        </message>
+        <message>
+            <source>Couldn't make a private folder to test in.</source>
+            <translation>Não foi possível criar uma pasta privada para testar.</translation>
+        </message>
+        <message>
+            <source>The file isn't in the archive any more.</source>
+            <translation>O arquivo não está mais no arquivo compactado.</translation>
+        </message>
+        <message>
+            <source>It couldn't be unpacked.</source>
+            <translation>Não foi possível descompactar.</translation>
+        </message>
+        <message>
+            <source>Couldn't make the folder %1.</source>
+            <translation>Não foi possível criar a pasta %1.</translation>
+        </message>
+        <message>
+            <source>The archive is damaged: %1</source>
+            <translation>O arquivo compactado está danificado: %1</translation>
+        </message>
+        <message>
+            <source>%1: it links to a file that wasn't extracted</source>
+            <translation>%1: ele aponta para um arquivo que não foi extraído</translation>
+        </message>
+        <message>
+            <source>%1: couldn't copy the file it links to</source>
+            <translation>%1: não foi possível copiar o arquivo para o qual ele aponta</translation>
+        </message>
+        <message>
+            <source>Couldn't read %1: %2</source>
+            <translation>Não foi possível ler %1: %2</translation>
+        </message>
+        <message>
+            <source>Archive can't unlock it.</source>
+            <translation>O Archive não consegue desbloqueá-lo.</translation>
+        </message>
+        <message>
+            <source>it couldn't be unpacked.</source>
+            <translation>não foi possível descompactar.</translation>
+        </message>
+        <message>
+            <source>Couldn't save in %1: %2</source>
+            <translation>Não foi possível salvar em %1: %2</translation>
+        </message>
+        <message>
+            <source>%1 is damaged: %2</source>
+            <translation>%1 está danificado: %2</translation>
+        </message>
+        <message>
+            <source>%1: hard links can't go into a new archive</source>
+            <translation>%1: links físicos não podem ir para um novo arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Couldn't read %1 from %2: %3</source>
+            <translation>Não foi possível ler %1 de %2: %3</translation>
+        </message>
+        <message>
+            <source>Couldn't save %1: a file with that name is there now.</source>
+            <translation>Não foi possível salvar %1: já existe um arquivo com esse nome.</translation>
+        </message>
+    </context>
+    <context>
+        <name>StartView</name>
+        <message>
+            <source>Open an archive or make a new one</source>
+            <translation>Abra um arquivo compactado ou crie um novo</translation>
+        </message>
+        <message>
+            <source>ZIP, 7z, RAR, TAR and GZ archives open here. Nothing leaves this PC.</source>
+            <translation>Arquivos ZIP, 7z, RAR, TAR e GZ abrem aqui. Nada sai deste PC.</translation>
+        </message>
+        <message>
+            <source>Open an archive</source>
+            <translation>Abrir um arquivo compactado</translation>
+        </message>
+        <message>
+            <source>New archive</source>
+            <translation>Novo arquivo compactado</translation>
+        </message>
+        <message>
+            <source>Recent</source>
+            <translation>Recentes</translation>
+        </message>
+        <message>
+            <source>Remove from the list</source>
+            <translation>Remover da lista</translation>
+        </message>
+    </context>
+    <context>
+        <name>Tools</name>
+        <message>
+            <source>7-Zip couldn't read this archive.</source>
+            <translation>O 7-Zip não conseguiu ler este arquivo compactado.</translation>
+        </message>
+        <message>
+            <source>The Unarchiver couldn't read this archive.</source>
+            <translation>O The Unarchiver não conseguiu ler este arquivo compactado.</translation>
+        </message>
+        <message>
+            <source>The Unarchiver listed this archive out of order.</source>
+            <translation>O The Unarchiver listou este arquivo compactado fora de ordem.</translation>
+        </message>
+    </context>
+    <context>
+        <name>main</name>
+        <message>
+            <source>Opening %1</source>
+            <translation>Abrindo %1</translation>
+        </message>
+        <message>
+            <source>Getting ready</source>
+            <translation>Preparando</translation>
+        </message>
+        <message>
+            <source>ZIP, 7z, RAR, TAR and GZ</source>
+            <translation>ZIP, 7z, RAR, TAR e GZ</translation>
+        </message>
+        <message>
+            <source>Nothing leaves this PC</source>
+            <translation>Nada sai deste PC</translation>
+        </message>
+    </context>
+</TS>

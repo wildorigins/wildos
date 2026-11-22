@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QFile>
 #include <QHash>
 #include <QMutex>
 #include <QMutexLocker>
@@ -458,6 +459,8 @@ int onDest(void *data, unsigned flags, cups_dest_t *dest)
     state->publish(state->found);
     return 1;
 }
+
+const char *const printerDriver = "/usr/libexec/wildos/printer-driver";
 
 // lpadmin asks for a password on the terminal when CUPS wants one. Settings
 // started from a terminal would hang there, so the helper gets none and
@@ -959,7 +962,7 @@ struct DeviceList {
     QVariantList devices;
 };
 
-void onDevice(const char *deviceClass, const char *, const char *info, const char *model, const char *uri, const char *, void *data)
+void onDevice(const char *deviceClass, const char *deviceId, const char *info, const char *model, const char *uri, const char *, void *data)
 {
     auto *list = static_cast<DeviceList *>(data);
     const QString address = QString::fromUtf8(uri);
@@ -976,6 +979,7 @@ void onDevice(const char *deviceClass, const char *, const char *info, const cha
     list->devices << QVariantMap{{QStringLiteral("uri"), address},
                                  {QStringLiteral("name"), QString::fromUtf8(info)},
                                  {QStringLiteral("model"), makeAndModel},
+                                 {QStringLiteral("deviceId"), QString::fromUtf8(deviceId ? deviceId : "")},
                                  {QStringLiteral("kind"), qstrcmp(deviceClass, "direct") == 0 ? QStringLiteral("usb") : QStringLiteral("network")}};
 }
 
@@ -992,7 +996,8 @@ QVariantList parseLpinfo(const QString &output, const QSet<QString> &known)
             const QByteArray info = current.value(QStringLiteral("info")).toString().toUtf8();
             const QByteArray model = current.value(QStringLiteral("make-and-model")).toString().toUtf8();
             const QByteArray uri = current.value(QStringLiteral("uri")).toString().toUtf8();
-            onDevice(cls.constData(), nullptr, info.constData(), model.constData(), uri.constData(), nullptr, &list);
+            const QByteArray deviceId = current.value(QStringLiteral("device-id")).toString().toUtf8();
+            onDevice(cls.constData(), deviceId.constData(), info.constData(), model.constData(), uri.constData(), nullptr, &list);
         }
         current.clear();
     };
@@ -1169,6 +1174,48 @@ QString Printers::makeFor(const QString &model) const
         }
     }
     return best;
+}
+
+// printer-driver's table, read without root: the driver's name when one
+// can be fetched for this printer, or nothing.
+QString Printers::driverToGet(const QString &deviceId) const
+{
+    if (deviceId.trimmed().isEmpty() || !QFile::exists(QString::fromLatin1(printerDriver))) {
+        return {};
+    }
+    QProcess process;
+    process.start(QString::fromLatin1(printerDriver), {QStringLiteral("need"), deviceId});
+    if (!process.waitForFinished(3000) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        process.kill();
+        return {};
+    }
+    return QString::fromUtf8(process.readAllStandardOutput()).trimmed();
+}
+
+void Printers::getDriver(const QString &deviceId, const QString &name)
+{
+    if (!m_busy.isEmpty()) {
+        return;
+    }
+    setBusy(QStringLiteral("driver"));
+    const QString printer = name.trimmed().isEmpty() ? tr("The printer") : name.trimmed();
+    auto process = new QProcess(this);
+    detach(process);
+    connect(process, &QProcess::finished, this, [this, process, printer](int code, QProcess::ExitStatus status) {
+        process->deleteLater();
+        setBusy({});
+        if (status == QProcess::NormalExit && code == 0) {
+            // The new driver joins the makes and models.
+            m_drivers.clear();
+            loadDrivers();
+            Q_EMIT done(tr("Driver installed"), tr("%1's driver is ready. Check the model, then add the printer.").arg(printer));
+        } else if (code == 126 || code == 127) {
+            Q_EMIT failed(tr("The driver was not installed"), tr("An administrator's password is needed for this."));
+        } else {
+            Q_EMIT failed(tr("The driver was not installed"), tr("Wild OS couldn't download it. Check you're online, then try again."));
+        }
+    });
+    process->start(QStringLiteral("pkexec"), {QString::fromLatin1(printerDriver), QStringLiteral("get"), deviceId});
 }
 
 QString Printers::addressUri(const QString &address, const QString &protocol) const

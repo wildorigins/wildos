@@ -365,6 +365,11 @@ def own_hosts():
     return hosts
 
 
+# Kicksecure's server being down holds nothing back: Wild OS republishes the
+# Kicksecure packages it changes, and apt keeps Kicksecure's last lists, so
+# the rest installs and Kicksecure's own updates come with a later check.
+SKIPPABLE_HOSTS = {"deb.kicksecure.com"}
+
 ADDRESS = re.compile(r"(?:tor\+)?https?://([^/\s'\"]+)")
 
 
@@ -453,7 +458,7 @@ def only_others_failed(details):
         match = ADDRESS.search(line)
         if match:
             failed.add(match.group(1).lower())
-    return bool(failed) and not failed & own_hosts()
+    return bool(failed) and not failed & (own_hosts() - SKIPPABLE_HOSTS)
 
 
 def retry_quietly(bus, code, details):

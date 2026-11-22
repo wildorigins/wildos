@@ -73,7 +73,17 @@ QVariantMap Account::toMap() const
         {QStringLiteral("user"), user},
         {QStringLiteral("auth"), auth},
         {QStringLiteral("keepAll"), keepAll},
+        {QStringLiteral("keepMonths"), keepMonths},
+        {QStringLiteral("checkEvery"), checkEvery},
         {QStringLiteral("signature"), signature},
+        {QStringLiteral("signatureNew"), signatureNew},
+        {QStringLiteral("signatureReply"), signatureReply},
+        {QStringLiteral("autoReply"), autoReply},
+        {QStringLiteral("autoReplyMessage"), autoReplyMessage},
+        {QStringLiteral("autoReplyStart"), autoReplyStart.isValid() ? autoReplyStart.toString(Qt::ISODate) : QString()},
+        {QStringLiteral("autoReplyEnd"), autoReplyEnd.isValid() ? autoReplyEnd.toString(Qt::ISODate) : QString()},
+        {QStringLiteral("autoReplySubject"), autoReplySubject},
+        {QStringLiteral("autoReplyAudience"), autoReplyAudience},
     };
 }
 
@@ -94,7 +104,17 @@ Account Account::fromMap(const QVariantMap &map)
     a.user = map.value(QStringLiteral("user")).toString();
     a.auth = map.value(QStringLiteral("auth"), QStringLiteral("password")).toString();
     a.keepAll = map.value(QStringLiteral("keepAll"), true).toBool();
+    a.keepMonths = map.value(QStringLiteral("keepMonths"), 0).toInt();
+    a.checkEvery = map.value(QStringLiteral("checkEvery"), 0).toInt();
     a.signature = map.value(QStringLiteral("signature")).toString();
+    a.signatureNew = map.value(QStringLiteral("signatureNew")).toString();
+    a.signatureReply = map.value(QStringLiteral("signatureReply")).toString();
+    a.autoReply = map.value(QStringLiteral("autoReply"), false).toBool();
+    a.autoReplyMessage = map.value(QStringLiteral("autoReplyMessage")).toString();
+    a.autoReplyStart = QDateTime::fromString(map.value(QStringLiteral("autoReplyStart")).toString(), Qt::ISODate);
+    a.autoReplyEnd = QDateTime::fromString(map.value(QStringLiteral("autoReplyEnd")).toString(), Qt::ISODate);
+    a.autoReplySubject = map.value(QStringLiteral("autoReplySubject")).toString();
+    a.autoReplyAudience = map.value(QStringLiteral("autoReplyAudience"), QStringLiteral("all")).toString();
     if (a.name.isEmpty()) {
         a.name = a.email;
     }

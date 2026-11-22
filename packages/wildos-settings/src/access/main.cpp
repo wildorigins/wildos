@@ -19,6 +19,7 @@
 // to KWin; both work as Plasma ships them.
 
 #include "accesscore.h"
+#include "osklanguages.h"
 
 #include <KGlobalAccel>
 
@@ -121,6 +122,8 @@ int runService(int argc, char **argv)
             toggleStickyKeys(true);
         }
     });
+
+    OskLanguages languages(&app);
 
     return app.exec();
 }

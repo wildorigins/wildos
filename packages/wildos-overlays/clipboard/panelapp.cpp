@@ -22,8 +22,8 @@ KConfigGroup settings()
 }
 
 // Long enough for KWin to hand the keyboard back to the app before the
-// keys arrive, short enough not to be noticed.
-constexpr int focusReturnDelay = 120;
+// keys arrive. A picture of the panel stays on the screen meanwhile.
+constexpr int focusReturnDelay = 160;
 // The app reads the clipboard when it gets Ctrl+V; give it time before
 // the earlier contents go back.
 constexpr int restoreDelay = 700;

@@ -1,3 +1,106 @@
+wildos-settings (0.1.87) trixie; urgency=medium
+
+  * Updates no longer lists an update that could not install under an older
+    build number, and a run that installed nothing is not listed as
+    "0 updates".
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 19:45:00 +0000
+
+wildos-settings (0.1.86) trixie; urgency=medium
+
+  * Settings > Personalisation > Taskbar position puts the taskbar along
+    the top of the screen instead of the bottom.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 18:00:00 +0000
+
+wildos-settings (0.1.85) trixie; urgency=medium
+
+  * The Wi-Fi driver card is translated.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 17:00:00 +0000
+
+wildos-settings (0.1.84) trixie; urgency=medium
+
+  * PCs with a Broadcom Wi-Fi chip the open drivers don't cover (BCM4360,
+    4352, 43142, 4313 and others) get a "Your Wi-Fi needs a driver" card in
+    Settings > Network and internet, which downloads and sets up Broadcom's
+    own driver, Secure Boot included.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 16:30:00 +0000
+
+wildos-settings (0.1.83) trixie; urgency=medium
+
+  * The on-screen keyboard has a language key showing the language it types
+    in (EN, AR). Tapping it switches language, or opens its menu when there
+    is only one, and the menu's Settings item opens the new Settings >
+    Accessibility > Keyboard languages page, where its languages are chosen.
+  * The printer driver messages are translated.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 13:00:00 +0000
+
+wildos-settings (0.1.82) trixie; urgency=medium
+
+  * The display language list shows only the languages Wild OS itself is
+    translated into, so a choice never leaves the desktop half in English.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 12:00:00 +0000
+
+wildos-settings (0.1.81) trixie; urgency=medium
+
+  * The on-screen keyboard has a language for each keyboard layout added in
+    Settings > Devices > Keyboard, with a key to switch between
+    them, and changes language when the layout does.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 10:30:00 +0000
+
+wildos-settings (0.1.80) trixie; urgency=medium
+
+  * Printers that need a driver get it from the internet the first time
+    they are plugged in or added, the way Windows does.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 10:00:00 +0000
+
+wildos-settings (0.1.79) trixie; urgency=medium
+
+  * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,
+    Filipino, Finnish, Latvian, Lithuanian, Malay, Marathi, Norwegian,
+    Serbian, Slovak, Slovenian, Tamil, Telugu and Thai.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 02:00:00 +0000
+
+wildos-settings (0.1.78) trixie; urgency=medium
+
+  * Updates: when Kicksecure's update server cannot be reached, the other
+    updates still install, and the page says Kicksecure's come later. It
+    used to say Debian could not be reached and install nothing.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 21:30:00 +0000
+
+wildos-settings (0.1.77) trixie; urgency=medium
+
+  * Now also in Arabic, Chinese (Simplified and Traditional), Czech, Greek,
+    Hindi, Hungarian, Indonesian, Japanese, Korean, Brazilian Portuguese,
+    Romanian, Russian, Swedish, Turkish, Ukrainian and Vietnamese.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 20:00:00 +0000
+
+wildos-settings (0.1.76) trixie; urgency=medium
+
+  * Now also in Dutch, German, Spanish, Italian, Portuguese and Polish:
+    the display language chosen in Settings > Time and language applies
+    to this app.
+  * Settings shows counts like "2 minutes" correctly in every language, and
+    the camera and microphone option for Windows mode reads more clearly.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 14:00:00 +0000
+
+wildos-settings (0.1.75) trixie; urgency=medium
+
+  * With Steam and 32-bit apps on, games that ask for GameMode get the
+    processor's full speed while they run.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 18 Nov 2026 17:00:00 +0000
+
 wildos-settings (0.1.74) trixie; urgency=medium
 
   * Themes says keyboard and mouse lighting follows the underglow unless

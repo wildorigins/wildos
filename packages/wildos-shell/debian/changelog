@@ -1,3 +1,50 @@
+wildos-shell (0.1.30) trixie; urgency=medium
+
+  * Built for Debian's KWin update (6.3.6-1+deb13u1), and KWin is held at
+    the version these effects were built for until a matching update is
+    published, so an update run never fails on a newer KWin.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 19:30:00 +0000
+
+wildos-shell (0.1.29) trixie; urgency=medium
+
+  * Built for Debian's KWin update (6.3.6-1+deb13u1), so it installs
+    alongside it.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 19:00:00 +0000
+
+wildos-shell (0.1.28) trixie; urgency=medium
+
+  * The taskbar works along the top of the screen: the docked bar's edge
+    line faces the desktop, and floating panels keep their gap from the
+    screen's edge.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 18:00:00 +0000
+
+wildos-shell (0.1.27) trixie; urgency=medium
+
+  * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,
+    Filipino, Finnish, Latvian, Lithuanian, Malay, Marathi, Norwegian,
+    Serbian, Slovak, Slovenian, Tamil, Telugu and Thai.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 02:00:00 +0000
+
+wildos-shell (0.1.26) trixie; urgency=medium
+
+  * Now also in Arabic, Chinese (Simplified and Traditional), Czech, Greek,
+    Hindi, Hungarian, Indonesian, Japanese, Korean, Brazilian Portuguese,
+    Romanian, Russian, Swedish, Turkish, Ukrainian and Vietnamese.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 20:00:00 +0000
+
+wildos-shell (0.1.25) trixie; urgency=medium
+
+  * Now also in Dutch, German, Spanish, Italian, Portuguese and Polish:
+    the display language chosen in Settings > Time and language applies
+    to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 14:00:00 +0000
+
 wildos-shell (0.1.24) trixie; urgency=medium
 
   * The band just outside a window that resizes it is a little wider.

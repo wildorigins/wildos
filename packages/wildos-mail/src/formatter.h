@@ -45,6 +45,9 @@ public:
     Q_INVOKABLE void indent(int step);
     Q_INVOKABLE void insertLink(const QString &url, const QString &text);
     Q_INVOKABLE void insertText(const QString &text);
+    // A picture from a file, kept in the text itself (a signature's logo),
+    // at most 320px wide.
+    Q_INVOKABLE void insertPicture(const QUrl &file);
     // The words as HTML for sending, without Qt's document boilerplate
     // and with Albert Sans as the font.
     Q_INVOKABLE QString html() const;

@@ -3,6 +3,7 @@ import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import WildOS.Mail
 import WildOS.UI as UI
+import "Formats.js" as Formats
 
 // Mail's settings (MailMsSetAccounts.dc, MailMsSetMail.dc,
 // MailMsSetPrivacy.dc), in the window in place of the mail. Only what Mail
@@ -17,19 +18,28 @@ Rectangle {
     signal addAccount()
     signal signIn(string accountId)
 
+
     radius: UI.Style.radiusPanel
     color: UI.Style.surfaceRest
     border.width: 1
     border.color: UI.Style.borderSubtle
     clip: true
 
+    // The sidebar (MailMsSetAccounts.dc and the boards after it), with the
+    // words "Find a setting" matches besides each name.
     readonly property var sections: [
-        { id: "accounts", name: qsTr("Accounts"), icon: "people" },
-        { id: "mail", name: qsTr("Mail"), icon: "layout" },
-        { id: "writing", name: qsTr("Writing and signatures"), icon: "signature" },
-        { id: "privacy", name: qsTr("Privacy and security"), icon: "shield" },
-        { id: "notifications", name: qsTr("Notifications"), icon: "bell" }
+        { id: "accounts", name: qsTr("Accounts"), icon: "people", words: qsTr("account add remove sign in default order sync calendar contacts") },
+        { id: "writing", name: qsTr("Writing and signatures"), icon: "signature", words: qsTr("signature spelling plain rich text") },
+        { id: "replies", name: qsTr("Automatic replies"), icon: "airplane", words: qsTr("away holiday out of office vacation") },
+        { id: "rules", name: qsTr("Rules"), icon: "sort", words: qsTr("filter sort move folder") },
+        { id: "privacy", name: qsTr("Privacy and security"), icon: "shield", words: qsTr("pictures trackers read receipts location") },
+        { id: "notifications", name: qsTr("Notifications"), icon: "bell", words: qsTr("sound alert new mail closed") },
+        { id: "transfer", name: qsTr("Import and export"), icon: "send", words: qsTr("pst thunderbird evolution mbox backup restore export import contacts calendars vcard ics") },
+        { id: "mail", name: qsTr("Appearance"), icon: "layout", words: qsTr("reading pane layout conversations density preview") }
     ]
+    property string findText: ""
+    readonly property var shownSections: findText.trim().length === 0 ? sections
+        : sections.filter(x => (x.name + " " + x.words).toLowerCase().indexOf(findText.trim().toLowerCase()) >= 0)
 
     RowLayout {
         anchors.fill: parent
@@ -56,8 +66,17 @@ Rectangle {
                 }
             }
 
+            UI.SearchField {
+                id: findField
+                Layout.fillWidth: true
+                Layout.bottomMargin: 6
+                placeholderText: qsTr("Find a setting")
+                onTextChanged: page.findText = text
+                onAccepted: if (page.shownSections.length > 0) page.section = page.shownSections[0].id
+            }
+
             Repeater {
-                model: page.sections
+                model: page.shownSections
                 delegate: Rectangle {
                     id: nav
                     required property var modelData
@@ -127,123 +146,45 @@ Rectangle {
                     wrapMode: Text.WordWrap
                     size: 13
                     color: UI.Style.inkMuted
-                    text: page.section === "accounts" ? qsTr("Mail accounts on this PC")
+                    text: page.section === "accounts" ? qsTr("Mail, calendar and contacts accounts on this PC")
                         : page.section === "mail" ? qsTr("Layout, reading and how messages are sorted")
-                        : page.section === "writing" ? qsTr("What goes at the end of what you write")
+                        : page.section === "writing" ? qsTr("Signatures for each account, and how new messages start")
+                        : page.section === "transfer" ? qsTr("Move mail, contacts and calendars in and out of Wild OS")
+                        : page.section === "replies" ? qsTr("A reply that sends itself while you are away")
+                        : page.section === "rules" ? qsTr("Sort, tag and tidy mail as it arrives")
                         : page.section === "privacy" ? qsTr("What senders can learn about you, and what leaves this PC")
                         : qsTr("When Mail lets you know")
                 }
 
-                // Accounts
-                Repeater {
-                    model: page.section === "accounts" ? MailEngine.accounts : []
-                    delegate: UI.Card {
-                        id: accountCard
-                        required property var modelData
-                        Layout.fillWidth: true
-                        padding: 16
-
-                        ColumnLayout {
-                            width: parent.width
-                            spacing: 10
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 12
-                                SenderBadge {
-                                    size: 36
-                                    initials: MailEngine.initialsOf(accountCard.modelData.fullName || accountCard.modelData.email)
-                                    colourIndex: MailEngine.colourOf(accountCard.modelData.email)
-                                }
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 1
-                                    UI.Label {
-                                        text: accountCard.modelData.email
-                                        size: 14
-                                        font.weight: UI.Style.weightSemiBold
-                                    }
-                                    UI.Label {
-                                        Layout.fillWidth: true
-                                        text: accountCard.modelData.problem ? accountCard.modelData.problem
-                                            : accountCard.modelData.connected ? qsTr("Up to date") : MailEngine.online ? qsTr("Connecting") : qsTr("Offline")
-                                        color: accountCard.modelData.problem ? UI.Style.warning : UI.Style.inkMuted
-                                        size: 12
-                                        wrapMode: Text.WordWrap
-                                    }
-                                }
-                            }
-
-                            UI.SettingRow {
-                                Layout.fillWidth: true
-                                title: qsTr("Name people see")
-                                UI.TextField {
-                                    width: 240
-                                    text: accountCard.modelData.fullName
-                                    function save() {
-                                        const a = MailEngine.account(accountCard.modelData.id);
-                                        a.fullName = text.trim();
-                                        MailEngine.updateAccount(a);
-                                    }
-                                    // Saving rebuilds this card, and the open text menu
-                                    // with it; the menu holds focus while it is up.
-                                    onEditingFinished: if (!textMenuOpen) save()
-                                    onTextMenuFocusLeft: save()
-                                }
-                            }
-                            UI.SettingRow {
-                                Layout.fillWidth: true
-                                title: qsTr("Account name in Mail")
-                                UI.TextField {
-                                    width: 240
-                                    text: accountCard.modelData.name
-                                    function save() {
-                                        const a = MailEngine.account(accountCard.modelData.id);
-                                        a.name = text.trim() || a.email;
-                                        MailEngine.updateAccount(a);
-                                    }
-                                    // Saving rebuilds this card, and the open text menu
-                                    // with it; the menu holds focus while it is up.
-                                    onEditingFinished: if (!textMenuOpen) save()
-                                    onTextMenuFocusLeft: save()
-                                }
-                            }
-                            UI.SettingRow {
-                                Layout.fillWidth: true
-                                title: qsTr("Keep all mail on this PC")
-                                description: qsTr("Read and search everything offline. Off keeps only what you open.")
-                                UI.Toggle {
-                                    checked: accountCard.modelData.keepAll
-                                    onToggled: {
-                                        const a = MailEngine.account(accountCard.modelData.id);
-                                        a.keepAll = checked;
-                                        MailEngine.updateAccount(a);
-                                    }
-                                }
-                            }
-                            RowLayout {
-                                spacing: 8
-                                UI.Button {
-                                    text: qsTr("Sign in again")
-                                    size: "small"
-                                    iconName: "refresh"
-                                    onClicked: page.signIn(accountCard.modelData.id)
-                                }
-                                UI.Button {
-                                    text: qsTr("Remove account")
-                                    size: "small"
-                                    danger: true
-                                    onClicked: removeConfirm.ask(accountCard.modelData)
-                                }
-                            }
-                        }
+                SettingsAccounts {
+                    visible: page.section === "accounts"
+                    Layout.fillWidth: true
+                    onAddAccount: page.addAccount()
+                    onImportMail: page.section = "transfer"
+                    onSignIn: function (accountId) {
+                        page.signIn(accountId);
+                    }
+                    onRemoveAccount: function (account) {
+                        removeConfirm.ask(account);
                     }
                 }
-                UI.Button {
-                    visible: page.section === "accounts"
-                    text: qsTr("Add account")
-                    iconName: "plus"
-                    onClicked: page.addAccount()
+
+                SettingsTransfer {
+                    visible: page.section === "transfer"
+                    Layout.fillWidth: true
+                }
+
+                SettingsReplies {
+                    visible: page.section === "replies"
+                    Layout.fillWidth: true
+                    onSignIn: function (accountId) {
+                        page.signIn(accountId);
+                    }
+                }
+
+                SettingsRules {
+                    visible: page.section === "rules"
+                    Layout.fillWidth: true
                 }
 
                 // Mail
@@ -286,62 +227,9 @@ Rectangle {
                     }
                 }
 
-                // Writing and signatures
-                Repeater {
-                    model: page.section === "writing" ? MailEngine.accounts : []
-                    delegate: UI.Card {
-                        id: sigCard
-                        required property var modelData
-                        Layout.fillWidth: true
-                        padding: 16
-                        ColumnLayout {
-                            width: parent.width
-                            spacing: 8
-                            UI.Label {
-                                text: qsTr("Signature for %1").arg(sigCard.modelData.email)
-                                size: 13
-                                font.weight: UI.Style.weightSemiBold
-                            }
-                            QQC.TextArea {
-                                id: signatureEdit
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 110
-                                text: sigCard.modelData.signature
-                                wrapMode: TextEdit.Wrap
-                                color: UI.Style.ink
-                                font.family: UI.Style.fontFamily
-                                font.letterSpacing: UI.Style.tracking(UI.Style.px(13))
-                                font.pixelSize: UI.Style.px(13)
-                                placeholderText: qsTr("For example, your name and phone number")
-                                placeholderTextColor: UI.Style.inkPlaceholder
-                                background: Rectangle {
-                                    radius: UI.Style.radiusXs
-                                    color: UI.Style.surfaceSunken
-                                    border.width: 1
-                                    border.color: UI.Style.borderField
-                                }
-                                function save() {
-                                    const a = MailEngine.account(sigCard.modelData.id);
-                                    a.signature = text;
-                                    MailEngine.updateAccount(a);
-                                }
-                                // Saving rebuilds this card, and the open text menu with
-                                // it; the menu holds focus while it is up.
-                                onEditingFinished: if (!signatureMenu.opened) save()
-                                Keys.onPressed: event => {
-                                    if (signatureMenu.isMenuKey(event)) {
-                                        signatureMenu.openAtCaret();
-                                        event.accepted = true;
-                                    }
-                                }
-
-                                UI.TextMenu {
-                                    id: signatureMenu
-                                    onFocusLeft: signatureEdit.save()
-                                }
-                            }
-                        }
-                    }
+                SettingsSignatures {
+                    visible: page.section === "writing"
+                    Layout.fillWidth: true
                 }
 
                 // Privacy and security
@@ -395,6 +283,15 @@ Rectangle {
                         }
                         UI.SettingRow {
                             Layout.fillWidth: true
+                            title: qsTr("Show company logos")
+                            description: qsTr("Logos come from each company's own website and are kept on this PC. No other service is asked.")
+                            UI.Toggle {
+                                checked: SenderImages.logos
+                                onToggled: SenderImages.logos = checked
+                            }
+                        }
+                        UI.SettingRow {
+                            Layout.fillWidth: true
                             title: qsTr("Trackers")
                             description: qsTr("Tiny or hidden pictures that report when you read a message stay blocked, even after Show pictures")
                             UI.Label {
@@ -440,13 +337,28 @@ Rectangle {
                 UI.Card {
                     visible: page.section === "notifications"
                     Layout.fillWidth: true
-                    UI.SettingRow {
+                    // A card sizes itself to one child: the rows go in a column.
+                    ColumnLayout {
                         width: parent.width
-                        title: qsTr("New mail")
-                        description: qsTr("A notification for new mail in your Inbox while Mail is open, with Reply, Mark as read and Archive")
-                        UI.Toggle {
-                            checked: Notifier.enabled
-                            onToggled: Notifier.enabled = checked
+                        spacing: 0
+                        UI.SettingRow {
+                            Layout.fillWidth: true
+                            title: qsTr("New mail")
+                            description: qsTr("A notification for new mail in your Inbox, with Reply, Mark as read and Archive")
+                            UI.Toggle {
+                                checked: Notifier.enabled
+                                onToggled: Notifier.enabled = checked
+                            }
+                        }
+                        UI.SettingRow {
+                            Layout.fillWidth: true
+                            enabled: Notifier.enabled
+                            title: qsTr("While Mail is closed")
+                            description: qsTr("Mail keeps checking your Inbox after you close it, so new mail still shows up")
+                            UI.Toggle {
+                                checked: Notifier.background
+                                onToggled: Notifier.background = checked
+                            }
                         }
                     }
                 }
@@ -457,7 +369,6 @@ Rectangle {
             }
         }
     }
-
 
     UI.Dialog {
         id: removeConfirm

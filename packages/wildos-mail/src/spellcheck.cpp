@@ -174,8 +174,12 @@ void SpellCheck::reload()
     }
     // "Check spelling" and "Check as I type" in Settings > Typing, and a
     // dictionary for the language.
-    m_active = stored.value(QStringLiteral("checkerEnabledByDefault"), false).toBool() && stored.value(QStringLiteral("backgroundCheckerEnabled"), true).toBool()
-        && m_speller.isValid();
+    // Mail's own "Check spelling as you type" (Settings, Writing) wins once
+    // it has been set.
+    const QVariant mine = QSettings().value(QStringLiteral("writing/spelling"));
+    const bool on = mine.isValid() ? mine.toBool()
+                                  : stored.value(QStringLiteral("checkerEnabledByDefault"), false).toBool() && stored.value(QStringLiteral("backgroundCheckerEnabled"), true).toBool();
+    m_active = on && m_speller.isValid();
     recheckAll();
 }
 

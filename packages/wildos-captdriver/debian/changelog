@@ -1,0 +1,6 @@
+wildos-captdriver (0.1.0) trixie; urgency=medium
+
+  * Canon CAPT laser printers such as the LBP2900 get their driver when
+    plugged in.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 10:00:00 +0000

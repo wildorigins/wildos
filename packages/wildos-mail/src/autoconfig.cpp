@@ -156,7 +156,7 @@ QVariantMap AutoConfig::preset(const QString &provider, const QString &email)
     } else if (provider == QLatin1String("aol")) {
         s = settings(provider, QStringLiteral("imap.aol.com"), 993, QStringLiteral("ssl"), QStringLiteral("smtp.aol.com"), 465, QStringLiteral("ssl"));
     } else if (provider == QLatin1String("outlook")) {
-        s = settings(provider, QStringLiteral("outlook.office365.com"), 993, QStringLiteral("ssl"), QStringLiteral("smtp-mail.outlook.com"), 587, QStringLiteral("starttls"));
+        s = settings(provider, QStringLiteral("outlook.office365.com"), 993, QStringLiteral("ssl"), QStringLiteral("smtp.office365.com"), 587, QStringLiteral("starttls"));
     } else {
         return {};
     }

@@ -1,0 +1,309 @@
+#!/bin/sh
+# Gets the driver a printer needs from the internet the first time it is
+# plugged in or added, the way Windows Update does, so older printers that
+# do not print driverless still set themselves up. Wild OS ships no printer
+# drivers; printer-drivers.tsv lists
+# every printer Debian's driver packages drive, by the maker and model the
+# printer reports, with the packages it needs.
+#
+#   plugged INSTANCE   From configure-printer@INSTANCE.service before CUPS's
+#                      udev-configure-printer sets the printer up: gets the
+#                      driver of every USB printer connected that has none,
+#                      with notifications. Always exits 0, so setting up
+#                      still runs.
+#   ready INSTANCE     After udev-configure-printer: tells the person the
+#                      printer is ready, or where to finish setting it up,
+#                      if plugged got a driver for it.
+#   need DEVICE-ID     Prints the driver's name if a printer with this IEEE
+#                      1284 device ID has a driver to get. Exit 1 if not.
+#   get DEVICE-ID      Gets it (Settings, as root through pkexec, polkit
+#                      action org.wildos.settings.printer-driver). Prints
+#                      "step download|install|firmware" as it goes. Exits 0
+#                      when done, 3 when there is nothing known to get, 6
+#                      when the download or install failed.
+#
+# The HP LaserJet 1000, 1005, 1018, 1020, P1005 to P1008 and P1505 also need
+# firmware sent to them each time they are switched on. HP's licence does
+# not let anyone put it on a public server, so like HP's own hp-plugin this
+# downloads HP's plugin from OpenPrinting, checks it is the file expected,
+# and keeps only the firmware. foo2zjs's udev rule sends it to the printer
+# from then on.
+
+export LC_ALL=C
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+TABLE=/usr/share/wildos/printer-drivers.tsv
+STATE=/run/wildos/printer-driver
+LOG=/var/log/wildos/printer-driver.log
+USB_BACKEND=/usr/lib/cups/backend/usb
+
+PLUGIN_URL=https://www.openprinting.org/download/printdriver/auxfiles/HP/plugins/hplip-3.22.10-plugin.run
+PLUGIN_SHA256=bb9648ea0626a9b3cfa29e260348d5d617f328c55b66eda346384c04f4740b1f
+PLUGIN_HEADER_LINES=591
+FIRMWARE_DIR=/usr/lib/firmware/hp
+
+log() {
+    mkdir -p "${LOG%/*}"
+    echo "$(date '+%F %T') $*" >> "$LOG"
+}
+
+# "maker|model" in lower case, as make-table.py writes keys. Reads the
+# device ID from the environment so nothing in it is parsed as code.
+key_of() {
+    DID=$1 awk 'BEGIN {
+        n = split(ENVIRON["DID"], parts, ";")
+        for (i = 1; i <= n; i++) {
+            c = index(parts[i], ":")
+            if (!c) continue
+            k = toupper(substr(parts[i], 1, c - 1)); gsub(/^[ \t]+|[ \t]+$/, "", k)
+            v = substr(parts[i], c + 1)
+            if (k == "MFG" || (k == "MANUFACTURER" && mfg == "")) mfg = v
+            if (k == "MDL" || (k == "MODEL" && mdl == "")) mdl = v
+        }
+        mfg = tolower(mfg); gsub(/[ \t\r\n]+/, " ", mfg); gsub(/^ | $/, "", mfg)
+        mdl = tolower(mdl); gsub(/[ \t\r\n]+/, " ", mdl); gsub(/^ | $/, "", mdl)
+        if (mfg == "hewlett-packard" || mfg == "hewlett packard") mfg = "hp"
+        np = split(mfg " |hewlett-packard |hewlett packard |hp ", pre, "|")
+        for (i = 1; i <= np; i++) {
+            if (mfg != "" && substr(mdl, 1, length(pre[i])) == pre[i]) { mdl = substr(mdl, length(pre[i]) + 1); break }
+        }
+        if (mfg != "" && mdl != "") print mfg "|" mdl
+    }'
+}
+
+# The printer's name for people: "HP LaserJet 1020", "Canon LBP2900".
+name_of() {
+    DID=$1 awk 'BEGIN {
+        n = split(ENVIRON["DID"], parts, ";")
+        for (i = 1; i <= n; i++) {
+            c = index(parts[i], ":")
+            if (!c) continue
+            k = toupper(substr(parts[i], 1, c - 1)); gsub(/^[ \t]+|[ \t]+$/, "", k)
+            v = substr(parts[i], c + 1); gsub(/^[ \t]+|[ \t]+$/, "", v)
+            if (k == "MFG" || (k == "MANUFACTURER" && mfg == "")) mfg = v
+            if (k == "MDL" || (k == "MODEL" && mdl == "")) mdl = v
+        }
+        if (tolower(mfg) ~ /^hewlett.packard$/) mfg = "HP"
+        if (mfg != "" && tolower(substr(mdl, 1, length(mfg))) != tolower(mfg) && tolower(substr(mdl, 1, 3)) != "hp ") mdl = mfg " " mdl
+        print mdl
+    }' | tr -cd '[:print:]' | cut -c1-80
+}
+
+# The table's packages for a device ID, or nothing.
+packages_for() {
+    key=$(key_of "$1")
+    [ -n "$key" ] || return 1
+    KEY=$key awk -F '\t' '$1 == ENVIRON["KEY"] { print $2; exit }' "$TABLE"
+}
+
+missing() {
+    for p in $1; do
+        dpkg-query -W -f '${db:Status-Status}\n' "$p" 2>/dev/null | grep -qx installed || echo "$p"
+    done
+}
+
+# foo2zjs's firmware file for a model that needs one, and the file in HP's
+# plugin that holds it.
+firmware_for() {
+    model=$(name_of "$1" | tr '[:upper:]' '[:lower:]')
+    case $model in
+    "hp laserjet 1000") echo "sihp1000.dl hp_laserjet_1000.fw.gz" ;;
+    "hp laserjet 1005"*) echo "sihp1005.dl hp_laserjet_1005_series.fw.gz" ;;
+    "hp laserjet 1018") echo "sihp1018.dl hp_laserjet_1018.fw.gz" ;;
+    "hp laserjet 1020") echo "sihp1020.dl hp_laserjet_1020.fw.gz" ;;
+    "hp laserjet p1005" | "hp laserjet p1007") echo "sihpP1005.dl hp_laserjet_p1005.fw.gz" ;;
+    "hp laserjet p1006" | "hp laserjet p1008") echo "sihpP1006.dl hp_laserjet_p1006.fw.gz" ;;
+    "hp laserjet p1505") echo "sihpP1505.dl hp_laserjet_p1505.fw.gz" ;;
+    "hp laserjet p1505n") echo "sihpP1505n.dl hp_laserjet_p1505.fw.gz" ;;
+    esac
+}
+
+get_firmware() {
+    set -- $(firmware_for "$1")
+    [ $# -eq 2 ] || return 0
+    file=$1 member=$2
+    [ -s "$FIRMWARE_DIR/$file" ] && return 0
+    tmp=$(mktemp -d) || return 1
+    ok=1
+    if curl -fsSL --max-time 300 --retry 2 -o "$tmp/plugin.run" "$PLUGIN_URL" >> "$LOG" 2>&1 &&
+        echo "$PLUGIN_SHA256  $tmp/plugin.run" | sha256sum -c --status; then
+        offset=$(head -n "$PLUGIN_HEADER_LINES" "$tmp/plugin.run" | wc -c)
+        if tail -c +"$((offset + 1))" "$tmp/plugin.run" | tar -xzf - -C "$tmp" "./$member" 2>> "$LOG" &&
+            mkdir -p "$FIRMWARE_DIR" && gzip -dc "$tmp/$member" > "$tmp/$file" && [ -s "$tmp/$file" ]; then
+            install -m 0644 "$tmp/$file" "$FIRMWARE_DIR/$file" && ok=0
+        fi
+    else
+        log "firmware: HP's plugin did not download or is not the file expected"
+    fi
+    rm -rf "$tmp"
+    [ $ok -eq 0 ] || return 1
+    log "firmware: $file installed"
+    # Sent now, so the printer works without being plugged in again.
+    loader=/usr/lib/udev/hplj${file#sihp}
+    loader=${loader%.dl}
+    [ -x "$loader" ] && SUBSYSTEM=usb "$loader" >> "$LOG" 2>&1
+    return 0
+}
+
+# Installs the packages for one device ID. 0 done or nothing to do, 3 not
+# in the table, 6 failed.
+get() {
+    did=$1
+    pkgs=$(packages_for "$did") || true
+    [ -n "$pkgs" ] || return 3
+    need=$(missing "$pkgs")
+    if [ -n "$need" ]; then
+        log "install: $(name_of "$did"): $need"
+        export WILDOS_RESTORE_LABEL="Before installing a printer driver"
+        echo "step download"
+        apt-get -q -o DPkg::Lock::Timeout=600 update >> "$LOG" 2>&1 || true
+        if ! apt-get -y -q --no-install-recommends -o DPkg::Lock::Timeout=600 \
+            -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
+            install --download-only $need >> "$LOG" 2>&1; then
+            log "install: download failed"
+            return 6
+        fi
+        echo "step install"
+        if ! apt-get -y -q --no-install-recommends -o DPkg::Lock::Timeout=600 \
+            -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
+            install $need >> "$LOG" 2>&1; then
+            log "install: apt failed"
+            return 6
+        fi
+    fi
+    if [ -n "$(firmware_for "$did")" ]; then
+        echo "step firmware"
+        get_firmware "$did" || return 6
+    fi
+    return 0
+}
+
+# Notifications for everyone signed in at the screen. ID files keep one
+# notification per person and printer, so "Getting the driver" turns into
+# "ready" rather than piling up.
+notify() {
+    tag=$1 title=$2 body=$3
+    for s in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{ print $1 }'); do
+        [ "$(loginctl show-session "$s" -P Active 2>/dev/null)" = yes ] || continue
+        case $(loginctl show-session "$s" -P Type 2>/dev/null) in wayland | x11) ;; *) continue ;; esac
+        uid=$(loginctl show-session "$s" -P User 2>/dev/null)
+        user=$(loginctl show-session "$s" -P Name 2>/dev/null)
+        case $uid in '' | *[!0-9]*) continue ;; esac
+        [ -S "/run/user/$uid/bus" ] || continue
+        idfile="$STATE/notice-$uid-$tag"
+        id=$(cat "$idfile" 2>/dev/null)
+        case $id in '' | *[!0-9]*) id=0 ;; esac
+        new=$(timeout 10 runuser -u "$user" -- env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+            notify-send --app-name="Wild OS" --icon=printer --print-id --replace-id="$id" "$title" "$body" 2>/dev/null)
+        case $new in '' | *[!0-9]*) ;; *) echo "$new" > "$idfile" ;; esac
+    done
+}
+
+# Each USB printer connected: "uri<TAB>device ID", from CUPS's usb backend.
+usb_printers() {
+    [ -x "$USB_BACKEND" ] || return 0
+    timeout 30 "$USB_BACKEND" 2>/dev/null | awk '
+        $1 == "direct" {
+            uri = $2
+            n = split($0, q, "\"")
+            if (n >= 8 && q[8] != "") print uri "\t" q[8]
+        }'
+}
+
+instance_ok() {
+    printf '%s' "$1" | grep -qE '^usb-[0-9]+-[0-9]+$'
+}
+
+plugged() {
+    instance_ok "$1" || return 0
+    mkdir -p "$STATE"
+    rm -f "$STATE/$1"
+    exec 9> "$STATE/lock"
+    flock 9
+    usb_printers | while IFS="$(printf '\t')" read -r uri did; do
+        pkgs=$(packages_for "$did") || true
+        [ -n "$pkgs" ] || continue
+        [ -n "$(missing "$pkgs")" ] || [ -n "$(firmware_for "$did")" ] || continue
+        name=$(name_of "$did")
+        tag=$(printf '%s' "$uri" | sha256sum | cut -c1-12)
+        if [ -z "$(missing "$pkgs")" ]; then
+            # Driver there, firmware maybe not: quietly fetch if needed.
+            get "$did" > /dev/null || log "firmware for $name: failed"
+            continue
+        fi
+        notify "$tag" "Setting up $name" "Getting its driver. This takes a minute or two."
+        if get "$did" > /dev/null; then
+            printf '%s\t%s\t%s\t%s\n' "$uri" "$tag" "$name" "$(key_of "$did")" >> "$STATE/$1"
+        else
+            notify "$tag" "$name couldn't be set up" "Wild OS couldn't download its driver. Check you're online, then unplug the printer and plug it back in."
+        fi
+    done
+    return 0
+}
+
+has_queue() {
+    lpstat -v 2>/dev/null | grep -qF " $1"
+}
+
+ready() {
+    instance_ok "$1" || return 0
+    [ -s "$STATE/$1" ] || return 0
+    # udev-configure-printer has just asked CUPS to add the queue.
+    sleep 2
+    while IFS="$(printf '\t')" read -r uri tag name key; do
+        # udev-configure-printer matches drivers by the device ID in their
+        # PPDs, which some drivers (captdriver) do not carry. The table
+        # knows the driver, so the printer is added with it here.
+        if ! has_queue "$uri"; then
+            ppd=$(KEY=$key awk -F '\t' '$1 == ENVIRON["KEY"] { print $4; exit }' "$TABLE")
+            queue=$(printf '%s' "$name" | tr -c 'A-Za-z0-9_-' '_' | cut -c1-100)
+            [ -n "$ppd" ] && [ -n "$queue" ] &&
+                lpadmin -p "$queue" -E -v "$uri" -m "$ppd" -D "$name" >> "$LOG" 2>&1
+        fi
+        if has_queue "$uri"; then
+            notify "$tag" "$name is ready" "It's set up and ready to print."
+        else
+            notify "$tag" "$name has its driver" "Finish setting it up in Settings, Printers and scanners."
+        fi
+    done < "$STATE/$1"
+    rm -f "$STATE/$1"
+}
+
+device_id_ok() {
+    [ -n "$1" ] && [ "${#1}" -le 1024 ] && ! printf '%s' "$1" | grep -q '[[:cntrl:]]'
+}
+
+case $1 in
+plugged)
+    plugged "$2"
+    exit 0
+    ;;
+ready)
+    ready "$2"
+    exit 0
+    ;;
+need)
+    device_id_ok "$2" || exit 2
+    pkgs=$(packages_for "$2") || true
+    [ -n "$pkgs" ] || exit 1
+    if [ -z "$(missing "$pkgs")" ]; then
+        set -- $(firmware_for "$2")
+        [ $# -eq 2 ] && [ ! -s "$FIRMWARE_DIR/$1" ] || exit 1
+    fi
+    KEY=$(key_of "$2") awk -F '\t' '$1 == ENVIRON["KEY"] { print $3; exit }' "$TABLE"
+    exit 0
+    ;;
+get)
+    device_id_ok "$2" || exit 2
+    [ "$(id -u)" -eq 0 ] || exit 2
+    mkdir -p "$STATE"
+    exec 9> "$STATE/lock"
+    flock 9
+    get "$2"
+    exit $?
+    ;;
+*)
+    echo "usage: printer-driver plugged|ready INSTANCE | need|get DEVICE-ID" >&2
+    exit 2
+    ;;
+esac

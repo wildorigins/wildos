@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+maliit_triplet() {
+    case $(dpkg --print-architecture) in
+    arm64) echo aarch64-linux-gnu ;;
+    *) echo x86_64-linux-gnu ;;
+    esac
+}
+
 if [ "$1" = "remove" ] || [ "$1" = "purge" ] || [ "$1" = "abort-install" ]; then
     for bin in systemsettings kcmshell6; do
         dpkg-divert --package wildos-settings --remove --rename \
@@ -13,9 +20,14 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ] || [ "$1" = "abort-install" ]; then
         dpkg-divert --package wildos-settings --remove --rename \
             --divert "/usr/share/wildos/steam-devices/$rule" "/usr/lib/udev/rules.d/$rule" >/dev/null || true
     done
+    if [ -L /etc/polkit-1/rules.d/50-wildos-gamemode.rules ]; then
+        rm -f /etc/polkit-1/rules.d/50-wildos-gamemode.rules
+    fi
     # The kill switch's rules outlive its service on purpose (a crash must
     # not let traffic out), so they go with the package.
     nft delete table inet wildos_kill_switch 2>/dev/null || true
+    key=/usr/lib/$(maliit_triplet)/maliit/keyboard2/qml/keys/LanguageKey.qml
+    dpkg-divert --package wildos-settings --remove --rename --divert "$key.maliit" "$key" >/dev/null || true
 fi
 
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then

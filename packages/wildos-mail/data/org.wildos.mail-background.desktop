@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Mail notifications
+Comment=Shows new mail while Mail is closed
+Exec=wildos-mail --background
+Icon=org.wildos.mail
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=2
+X-GNOME-Autostart-Delay=20

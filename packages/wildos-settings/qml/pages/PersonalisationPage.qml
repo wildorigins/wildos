@@ -220,7 +220,7 @@ PageScroll {
 
                 UI.SettingRow {
                     title: qsTr("Taskbar style")
-                    description: qsTr("Docked along the bottom like Windows, or floating panels")
+                    description: qsTr("Docked along the screen's edge like Windows, or floating panels")
 
                     UI.ComboBox {
                         anchors.verticalCenter: parent.verticalCenter
@@ -232,6 +232,23 @@ PageScroll {
                         readonly property var choice: System.taskbarFloating
                         currentIndex: model ? model.findIndex(o => o.value === choice) : -1
                         onActivated: index => System.setTaskbarFloating(model[index].value)
+                    }
+                }
+
+                UI.SettingRow {
+                    title: qsTr("Taskbar position")
+                    description: qsTr("Along the bottom of the screen like Windows, or along the top")
+
+                    UI.ComboBox {
+                        anchors.verticalCenter: parent.verticalCenter
+                        Accessible.name: qsTr("Taskbar position")
+                        model: [
+                            { value: false, text: qsTr("Bottom") },
+                            { value: true, text: qsTr("Top") }
+                        ]
+                        readonly property var choice: System.taskbarTop
+                        currentIndex: model ? model.findIndex(o => o.value === choice) : -1
+                        onActivated: index => System.setTaskbarTop(model[index].value)
                     }
                 }
 

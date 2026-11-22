@@ -24,6 +24,7 @@ Depends:
  ${misc:Depends},
  xdg-desktop-portal,
  xdg-desktop-portal-kde,
+ xdg-desktop-portal-gtk,
  kio6,
  kio-extras,
  qml6-module-qtcore,

@@ -36,8 +36,10 @@ QtObject {
         return pad(date.getDate()) + "/" + pad(date.getMonth() + 1) + "/" + date.getFullYear();
     }
 
-    function plural(n, one, many) {
-        return n === 1 ? "1 " + one : n + " " + many;
+    // one is the whole phrase for 1 ("1 minute"); many is a qsTr("%n minutes", "", n)
+    // numerus string, so languages with more than two plural forms get theirs.
+    function count(n, one, many) {
+        return n === 1 ? one : many;
     }
 
     // "today", "yesterday", "Tuesday" within the week, then "21 October".

@@ -97,15 +97,28 @@ Window {
         function onTypingChanged() {
             if (PanelApp.typing) {
                 panel.stepping = true;
-                panel.visible = false;
+                // A picture of the panel takes its place first, so it never
+                // seems to blink, however fast emoji are picked.
+                const grabbing = panel.contentItem.grabToImage(result => {
+                    if (PanelApp.typing) {
+                        standIn.show(result);
+                    }
+                });
+                if (grabbing) {
+                    standInLate.restart();
+                } else {
+                    panel.visible = false;
+                }
             } else if (PanelApp.shown) {
                 // Back where it was, search and place in the list included.
                 panel.wasActive = false;
                 panel.visible = true;
                 panel.requestActivate();
+                standIn.dropAfterPanel = true;
                 settled.restart();
             } else {
                 panel.stepping = false;
+                standIn.drop();
             }
         }
     }
@@ -113,6 +126,108 @@ Window {
         id: settled
         interval: 400
         onTriggered: panel.stepping = false
+    }
+
+    onFrameSwapped: {
+        if (standIn.dropAfterPanel) {
+            standIn.dropAfterPanel = false;
+            // The compositor shows the panel a frame after Qt has drawn it.
+            dropLater.restart();
+        }
+    }
+    // The app only gets the keyboard once the panel is gone, so it goes
+    // in time even if its picture is slow to come.
+    Timer {
+        id: standInLate
+        interval: 80
+        onTriggered: panel.visible = false
+    }
+    Timer {
+        id: dropLater
+        interval: 50
+        onTriggered: standIn.drop()
+    }
+
+    // Stands in for the panel while it is off the screen so the app can take
+    // the keyboard. It never asks for the keyboard itself, like the volume
+    // pop-up, so KWin hands it straight back to the app. Clicks on it go
+    // nowhere, rather than into the app underneath.
+    readonly property Window standIn: Window {
+        id: standIn
+
+        property var shot: null
+        property bool hidePanel: false
+        property bool dropAfterPanel: false
+
+        function show(result): void {
+            shot = result;
+            shotImage.source = result.url;
+            if (shotImage.status === Image.Ready) {
+                reveal();
+            }
+        }
+        function reveal(): void {
+            hidePanel = true;
+            visible = true;
+        }
+        function drop(): void {
+            standInLate.stop();
+            dropLater.stop();
+            dropAfterPanel = false;
+            hidePanel = false;
+            visible = false;
+            shotImage.source = "";
+            shot = null;
+        }
+
+        width: panel.width
+        height: panel.height
+        color: "transparent"
+        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | (placement.wayland ? 0 : Qt.Tool)
+        title: panel.title
+        visible: false
+
+        onFrameSwapped: {
+            if (hidePanel) {
+                hidePanel = false;
+                standInLate.stop();
+                panel.visible = false;
+            }
+        }
+
+        OverlayPlacement {
+            window: standIn
+            edges: placement.edges
+            marginRight: placement.marginRight
+            fromScreenEdge: placement.fromScreenEdge
+            marginBottom: placement.marginBottom
+            layer: OverlayPlacement.Overlay
+            keyboard: OverlayPlacement.NoKeyboard
+            slideFrom: OverlayPlacement.NoEdge
+            scope: "wildos-clipboard-standin"
+        }
+
+        UI.WindowFrame {
+            window: standIn
+            radius: UI.Style.radius2xl
+            shadowColor: UI.Style.shadowFlyout
+        }
+
+        Image {
+            id: shotImage
+            anchors.fill: parent
+            cache: false
+            smooth: true
+            onStatusChanged: {
+                if (status === Image.Ready && standIn.shot && !standIn.visible) {
+                    standIn.reveal();
+                }
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+        }
     }
 
     Rectangle {

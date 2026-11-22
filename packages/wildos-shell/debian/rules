@@ -10,3 +10,18 @@ override_dh_auto_configure:
 # the corners effect was compiled with.
 override_dh_gencontrol:
 	dh_gencontrol -- -Vkwin:Version=$(shell dpkg-query -W -f='$${Version}' libkwin6)
+
+# The same version, held in apt: a newer KWin from Debian is then not offered
+# as an update until a wildos-shell built for it is published, and the two
+# arrive together. Without it, Settings > Updates offered the new KWin, which
+# this package refuses, and the whole update run failed.
+override_dh_install:
+	dh_install
+	mkdir -p debian/wildos-shell/etc/apt/preferences.d
+	printf '%s\n' \
+		'# Written when wildos-shell was built: KWin stays at the version its' \
+		'# effects were compiled for until a matching wildos-shell is published.' \
+		'Package: src:kwin' \
+		'Pin: version $(shell dpkg-query -W -f='$${Version}' libkwin6)' \
+		'Pin-Priority: 1001' \
+		> debian/wildos-shell/etc/apt/preferences.d/wildos-kwin.pref

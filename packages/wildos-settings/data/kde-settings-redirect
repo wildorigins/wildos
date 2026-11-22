@@ -17,6 +17,10 @@ while [ $# -gt 0 ]; do
     esac
     [ $# -gt 0 ] && shift
 done
+# Also a systemsettings:// link (org.wildos.settings-link.desktop), which
+# the on-screen keyboard's Settings item opens.
+page=${page#systemsettings://}
+page=${page%%/*}
 page=${page%.desktop}
 if [ -n "$page" ]; then
     exec wildos-settings --page "$page"

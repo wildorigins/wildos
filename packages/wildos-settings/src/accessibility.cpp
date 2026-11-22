@@ -1,18 +1,23 @@
 #include "accessibility.h"
 
 #include "accesscore.h"
+#include "osklangs.h"
 
 #include <KConfig>
 #include <KConfigGroup>
 #include <KSharedConfig>
 
+#include <QCollator>
 #include <QDBusConnection>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLocale>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTimer>
+
+#include <algorithm>
 
 Accessibility::Accessibility(QObject *parent)
     : QObject(parent)
@@ -331,4 +336,46 @@ void Accessibility::setStrongerText(bool on)
     AccessCore::setStrongerText(on);
     m_strongerText = on;
     Q_EMIT changed();
+}
+
+QVariantList Accessibility::oskLanguages() const
+{
+    const QStringList on = OskLangs::enabled();
+    QVariantList list;
+    for (const QString &code : OskLangs::installed()) {
+        list << QVariantMap{{QStringLiteral("value"), code},
+                            {QStringLiteral("text"), OskLangs::nativeName(code)},
+                            {QStringLiteral("english"), OskLangs::englishName(code)},
+                            {QStringLiteral("on"), on.contains(code)}};
+    }
+    // Switched-on languages first, in the keyboard's order, then the rest
+    // by English name.
+    QCollator collator(QLocale(QStringLiteral("en_GB")));
+    std::sort(list.begin(), list.end(), [&collator, &on](const QVariant &a, const QVariant &b) {
+        const QVariantMap x = a.toMap();
+        const QVariantMap y = b.toMap();
+        const int i = on.indexOf(x.value(QStringLiteral("value")).toString());
+        const int j = on.indexOf(y.value(QStringLiteral("value")).toString());
+        if ((i >= 0) != (j >= 0)) {
+            return i >= 0;
+        }
+        if (i >= 0) {
+            return i < j;
+        }
+        return collator.compare(x.value(QStringLiteral("english")).toString(), y.value(QStringLiteral("english")).toString()) < 0;
+    });
+    return list;
+}
+
+QVariantList Accessibility::setOskLanguage(const QString &code, bool on)
+{
+    QStringList enabled = OskLangs::enabled();
+    if (on && !enabled.contains(code) && OskLangs::installed().contains(code)) {
+        enabled.append(code);
+    } else if (!on && enabled.size() > 1) {
+        enabled.removeAll(code);
+    }
+    OskLangs::setChosen();
+    OskLangs::setEnabled(enabled);
+    return oskLanguages();
 }

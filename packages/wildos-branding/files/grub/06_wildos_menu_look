@@ -26,6 +26,36 @@ for dir in "${pkgdatadir}" /boot/grub /usr/share/grub; do
 done
 [ -n "$font_path" ] || exit 0
 
+# The screen's own shape first. GRUB_GFXMODE starts at 1920x1080, which most
+# screens offer, so an ultrawide (3440x1440) drew its menu stretched. The
+# screen's preferred mode is read here, while the menu is written: up to
+# 1600 tall it is asked for as it is; taller, half of it in each direction
+# (3840x2160 gives 1920x1080, 5120x2160 gives 2560x1080), so a 4K menu is
+# not tiny. A built-in panel wins over an external screen, as it is the one
+# the firmware draws on. GRUB skips a mode the firmware doesn't offer and
+# goes on down GRUB_GFXMODE.
+native_mode() {
+    for want in eDP LVDS DSI ""; do
+        for dir in /sys/class/drm/card*-"$want"*; do
+            [ -r "$dir/status" ] && [ -r "$dir/modes" ] || continue
+            [ "$(cat "$dir/status")" = connected ] || continue
+            mode=$(head -n 1 "$dir/modes")
+            case $mode in
+            *[0-9]x[0-9]*) echo "${mode%%[!0-9x]*}"; return ;;
+            esac
+        done
+    done
+}
+mode=$(native_mode 2>/dev/null || true)
+if [ -n "$mode" ]; then
+    width=${mode%x*}
+    height=${mode#*x}
+    if [ "$height" -gt 1600 ] && [ $((width % 2)) -eq 0 ] && [ $((height % 2)) -eq 0 ]; then
+        mode="$((width / 2))x$((height / 2)),$mode"
+    fi
+    GRUB_GFXMODE="$mode,${GRUB_GFXMODE:-auto}"
+fi
+
 # GRUB's script has no || or &&, so the two reasons set one flag.
 cat << 'EOF'
 set wildos_menu_look=0

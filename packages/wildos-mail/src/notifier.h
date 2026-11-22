@@ -14,12 +14,16 @@ class Notifier : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(bool enabled MEMBER m_enabled NOTIFY enabledChanged)
+    // Whether notifications carry on while Mail's window is closed
+    // (wildos-mail --background).
+    Q_PROPERTY(bool background MEMBER m_background NOTIFY backgroundChanged)
 
 public:
     explicit Notifier(QObject *parent = nullptr);
 
 Q_SIGNALS:
     void enabledChanged();
+    void backgroundChanged();
     void openRequested(const QString &key);
 
 private Q_SLOTS:
@@ -33,4 +37,5 @@ private:
 
     QHash<uint, QString> m_keys;
     bool m_enabled = true;
+    bool m_background = true;
 };

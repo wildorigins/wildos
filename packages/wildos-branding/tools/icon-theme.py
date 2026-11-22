@@ -23,7 +23,8 @@ window controls.
     python3 tools/icon-theme.py files/icons
 
 Needs fontTools (python3-fonttools) and Inter (fonts-inter) for the PDF
-lettering. Set INTER_DIR if Inter is not in /usr/share/fonts/opentype/inter.
+lettering, and picosvg (pip install picosvg) to outline the symbolic glyphs.
+Set INTER_DIR if Inter is not in /usr/share/fonts/opentype/inter.
 The output is committed, so the package build does not run this.
 
 Aliases are written as real files rather than symlinks: the tree is edited on
@@ -305,7 +306,7 @@ CONTEXTS = (("apps", "Applications", APPS), ("mimetypes", "MimeTypes", MIMETYPES
 
 
 # Symbolic UI glyphs: the design's line icons on a 24 px grid, round caps and
-# joins, drawn in currentColor. KIconLoader swaps the "current-color-scheme"
+# joins, drawn in currentColor and written out as filled outlines. KIconLoader swaps the "current-color-scheme"
 # stylesheet for the active colour scheme, so the same files work on light
 # and dark. Faded parts (unlit signal arcs) use stroke opacity so they follow
 # the colour too.
@@ -819,8 +820,57 @@ def svg(body):
             f"{body}</svg>\n")
 
 
+def outline(tag, attrs):
+    """One glyph shape as a filled outline of its stroke (and fill).
+
+    GTK recolours a symbolic icon by forcing the fill of every shape, so a
+    stroked line drew nothing there and a stroked outline filled in solid:
+    GTK and Flatpak apps showed blank minimise and close buttons and a solid
+    square for maximise. Filled outlines, as Breeze ships its symbolic icons,
+    draw the same in GTK and in KDE."""
+    from picosvg import svg_pathops
+    from picosvg.svg_types import SVGCircle, SVGEllipse, SVGPath, SVGRect
+
+    a = dict(re.findall(r'([a-z-]+)="([^"]*)"', attrs))
+
+    def num(key, default=0.0):
+        return float(a.get(key, default))
+
+    if tag == "path":
+        shape = SVGPath(d=a["d"])
+    elif tag == "rect":
+        shape = SVGRect(x=num("x"), y=num("y"), width=num("width"), height=num("height"),
+                        rx=num("rx"), ry=num("ry", num("rx")))
+    elif tag == "circle":
+        shape = SVGCircle(cx=num("cx"), cy=num("cy"), r=num("r"))
+    else:
+        shape = SVGEllipse(cx=num("cx"), cy=num("cy"), rx=num("rx"), ry=num("ry"))
+    # Skia's stroker fits its curves to about a quarter of a unit, which on
+    # a 24 unit grid bulged arcs visibly; outlined 64 times larger, the
+    # error is a few thousandths of a unit once scaled back.
+    from picosvg.svg_transform import Affine2D
+    scale = 64
+    path = shape.as_path().absolute().explicit_lines().expand_shorthand().arcs_to_cubics()
+    path = path.apply_transform(Affine2D.fromstring(f"scale({scale})"))
+    parts = []
+    if a.get("fill", "none") != "none":
+        parts.append(tuple(path.as_cmd_seq()))
+    if a.get("stroke", "none") != "none":
+        parts.append(tuple(svg_pathops.stroke(path.as_cmd_seq(), a.get("stroke-linecap", "round"),
+                                              a.get("stroke-linejoin", "round"),
+                                              num("stroke-width") * scale, 4, 0.05)))
+    d = (SVGPath.from_commands(svg_pathops.union(parts, ["nonzero"] * len(parts)))
+         .apply_transform(Affine2D.fromstring(f"scale({1 / scale})")).round_floats(2).d)
+    # Faded parts keep their opacity on the fill, which GTK leaves alone.
+    opacity = a.get("stroke-opacity") if a.get("stroke", "none") != "none" else None
+    opacity = opacity or a.get("fill-opacity")
+    extra = f' fill-opacity="{opacity}"' if opacity else ""
+    return f'<path d="{d}" class="{a["class"]}" fill="currentColor"{extra}/>'
+
+
 def symbolic_svg(body, px, stroke):
-    """Give every shape the stroke and colour class unless it sets its own.
+    """Give every shape the stroke and colour class unless it sets its own,
+    then turn it into a filled outline (see outline).
 
     Attributes go on each element rather than a group because Qt's SVG
     renderer resolves the class colour on the element that carries it."""
@@ -834,8 +884,7 @@ def symbolic_svg(body, px, stroke):
             attrs += ' stroke="currentColor"'
         if "stroke-width=" not in attrs:
             attrs += f' stroke-width="{stroke}"'
-        attrs += ' stroke-linecap="round" stroke-linejoin="round"'
-        return f"<{tag}{attrs}/>"
+        return outline(tag, attrs)
     body = re.sub(r"<(path|rect|circle|ellipse)([^>]*?)/>", fix, body)
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{px}" height="{px}" viewBox="0 0 24 24">'
             f"{STYLE}{body}</svg>\n")

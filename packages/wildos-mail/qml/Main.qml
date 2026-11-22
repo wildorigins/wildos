@@ -58,8 +58,19 @@ UI.AppWindow {
         MailEngine.openFolder(parts[0], parts[1]);
         MailEngine.selected = key;
     }
-    // Mail's Google accounts, for Calendar's bar offering their calendars.
-    readonly property var googleAccounts: MailEngine.accounts.filter(a => a.auth === "google")
+    // Mail's Google and Microsoft accounts, for Calendar's and People's bar
+    // offering their calendars and contacts.
+    readonly property var googleAccounts: MailEngine.accounts.filter(a => a.auth === "google" || a.auth === "microsoft")
+    // A Microsoft account needs no second sign-in: Mail's covers calendars.
+    function addAccountCalendar(email) {
+        const account = MailEngine.accounts.find(a => a.email === email);
+        if (account && account.auth === "microsoft") {
+            MailEngine.addMicrosoftCalendar(account.id);
+            return;
+        }
+        window.calendarSignIn = email;
+        GoogleSignIn.startCalendar(email);
+    }
 
     // A mailto: link, from main.cpp.
     function compose(data) {
@@ -169,7 +180,23 @@ UI.AppWindow {
             toast.show(text);
         }
         function onUndoable(text) {
-            toast.show(text, qsTr("Undo"));
+            toast.hide();
+            undoBar.show(text);
+        }
+    }
+    Connections {
+        target: MicrosoftSignIn
+        function onSignedIn(address, refreshToken) {
+            if (signInDialog.microsoftAccount.length > 0) {
+                MailEngine.signInAgain(signInDialog.microsoftAccount, refreshToken);
+                signInDialog.microsoftAccount = "";
+            }
+        }
+        function onFailed(message) {
+            if (signInDialog.microsoftAccount.length > 0) {
+                toast.show(message);
+                signInDialog.microsoftAccount = "";
+            }
         }
     }
     // The address Calendar's bar is signing in, between asking Google and
@@ -203,12 +230,7 @@ UI.AppWindow {
     Connections {
         target: Notifier
         function onOpenRequested(key) {
-            const parts = key.split("\x1f");
-            window.section = "mail";
-            window.showSettings = false;
-            window.composing = false;
-            MailEngine.openFolder(parts[0], parts[1]);
-            MailEngine.selected = key;
+            window.showMessage(key);
             window.raise();
             window.requestActivate();
         }
@@ -443,8 +465,7 @@ UI.AppWindow {
                 sourceComponent: CalendarPage {
                     mailAccounts: window.googleAccounts
                     onAddGoogleCalendar: function (email) {
-                        window.calendarSignIn = email;
-                        GoogleSignIn.startCalendar(email);
+                        window.addAccountCalendar(email);
                     }
                 }
             }
@@ -459,8 +480,7 @@ UI.AppWindow {
                 sourceComponent: PeoplePage {
                     mailAccounts: window.googleAccounts
                     onAddGoogleAccount: function (email) {
-                        window.calendarSignIn = email;
-                        GoogleSignIn.startCalendar(email);
+                        window.addAccountCalendar(email);
                     }
                     onEmailTo: function (address) {
                         window.section = "mail";
@@ -882,6 +902,15 @@ UI.AppWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         visible: window.composing && !window.showSettings
+                        // A new message scales up from 96% as it fades in,
+                        // 180 ms (MailMsMotion.dc), ready to type at once.
+                        transformOrigin: Item.Center
+                        onVisibleChanged: if (visible) composeIn.restart()
+                        ParallelAnimation {
+                            id: composeIn
+                            NumberAnimation { target: composePane; property: "opacity"; from: 0; to: 1; duration: 180; easing.type: Easing.OutCubic }
+                            NumberAnimation { target: composePane; property: "scale"; from: UI.Style.reducedMotion ? 1 : 0.96; to: 1; duration: 180; easing.type: Easing.OutCubic }
+                        }
                         onClosed: window.composing = false
                         onProblem: function (text) {
                             toast.show(text);
@@ -894,6 +923,17 @@ UI.AppWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         visible: window.showSettings
+                        // Fades and rises 8 px into place, 200 ms
+                        // (MailMsMotion.dc); closing is instant.
+                        transform: Translate {
+                            id: settingsRise
+                        }
+                        onVisibleChanged: if (visible) settingsIn.restart()
+                        ParallelAnimation {
+                            id: settingsIn
+                            NumberAnimation { target: settingsPage; property: "opacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
+                            NumberAnimation { target: settingsRise; property: "y"; from: UI.Style.reducedMotion ? 0 : 8; to: 0; duration: 200; easing.type: Easing.OutCubic }
+                        }
                         readingPane: prefs.readingPane
                         onReadingPaneChanged: prefs.readingPane = readingPane
                         onCloseRequested: window.showSettings = false
@@ -1207,14 +1247,22 @@ UI.AppWindow {
     UI.Dialog {
         id: signInDialog
         property string accountId
-        // An account signed in with Google signs in again on Google's page.
+        // An account signed in with Google or Microsoft signs in again on
+        // their page.
         property string googleAccount
+        property string microsoftAccount
         function ask(id) {
             const account = MailEngine.account(id);
             if (account.auth === "google") {
                 googleAccount = id;
                 GoogleSignIn.start(account.email);
                 toast.show(qsTr("Sign in on Google's page in your browser."));
+                return;
+            }
+            if (account.auth === "microsoft") {
+                microsoftAccount = id;
+                MicrosoftSignIn.start(account.email);
+                toast.show(qsTr("Sign in on Microsoft's page in your browser."));
                 return;
             }
             accountId = id;
@@ -1290,6 +1338,25 @@ UI.AppWindow {
                 onClicked: shortcutsDialog.close()
             }
         ]
+    }
+
+    UndoBar {
+        id: undoBar
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 24
+        z: 61
+    }
+    // Ctrl Z puts back the last of the ten most recent moves and deletes;
+    // in a text box it undoes typing as usual.
+    Shortcut {
+        sequence: StandardKey.Undo
+        enabled: window.section === "mail" && !window.composing && !window.showSettings && MailEngine.canUndo
+            && !(window.activeFocusItem && window.activeFocusItem.hasOwnProperty("selectByMouse"))
+        onActivated: {
+            undoBar.shown = false;
+            MailEngine.undo();
+        }
     }
 
     UI.Toast {

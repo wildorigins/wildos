@@ -130,9 +130,9 @@ PageScroll {
     }
 
     function dimTimeouts(current) {
-        const list = [{ value: 30, text: qsTr("30 seconds") }].concat([1, 2, 3, 5, 10, 15, 20, 30].map(m => ({ value: m * 60, text: Format.plural(m, qsTr("minute"), qsTr("minutes")) })));
+        const list = [{ value: 30, text: qsTr("30 seconds") }].concat([1, 2, 3, 5, 10, 15, 20, 30].map(m => ({ value: m * 60, text: Format.count(m, qsTr("1 minute"), qsTr("%n minutes", "", m)) })));
         if (current > 0 && !list.some(o => o.value === current)) {
-            list.push({ value: current, text: current < 60 ? Format.plural(current, qsTr("second"), qsTr("seconds")) : Format.plural(Math.round(current / 60), qsTr("minute"), qsTr("minutes")) });
+            list.push({ value: current, text: current < 60 ? Format.count(current, qsTr("1 second"), qsTr("%n seconds", "", current)) : Format.count(Math.round(current / 60), qsTr("1 minute"), qsTr("%n minutes", "", Math.round(current / 60))) });
             list.sort((a, b) => a.value - b.value);
         }
         return [{ value: 0, text: qsTr("Never") }].concat(list);

@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(GNUInstallDirs)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets DBus Network PrintSupport Qml Quick QuickControls2)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets DBus Network PrintSupport Qml Quick QuickControls2 Svg)
 find_package(Qt6Keychain REQUIRED)
 find_package(KF6Sonnet REQUIRED)
 find_package(litehtml REQUIRED)
@@ -14,6 +14,7 @@ pkg_check_modules(CAMEL REQUIRED IMPORTED_TARGET camel-1.2)
 pkg_check_modules(EDS REQUIRED IMPORTED_TARGET libedataserver-1.2)
 pkg_check_modules(ECAL REQUIRED IMPORTED_TARGET libecal-2.0)
 pkg_check_modules(EBOOK REQUIRED IMPORTED_TARGET libebook-1.2)
+pkg_check_modules(EBACKEND REQUIRED IMPORTED_TARGET libebackend-1.2)
 pkg_check_modules(SQLITE REQUIRED IMPORTED_TARGET sqlite3)
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -45,10 +46,12 @@ qt_add_qml_module(wildos-mail
         src/formatter.cpp src/formatter.h
         src/spellcheck.cpp src/spellcheck.h
         src/googlesignin.cpp src/googlesignin.h
+        src/microsoftsignin.cpp src/microsoftsignin.h
         src/calendarengine.cpp src/calendarengine.h
         src/reminders.cpp src/reminders.h
         src/peopleengine.cpp src/peopleengine.h
         src/tasksengine.cpp src/tasksengine.h
+        src/senderimages.cpp src/senderimages.h
         src/apps.h
         src/formats.h
 )
@@ -56,7 +59,7 @@ qt_add_qml_module(wildos-mail
 target_include_directories(wildos-mail PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(wildos-mail PRIVATE Qt6::Widgets
-    Qt6::Gui Qt6::DBus Qt6::Network Qt6::PrintSupport Qt6::Qml Qt6::Quick Qt6::QuickControls2
+    Qt6::Gui Qt6::DBus Qt6::Network Qt6::PrintSupport Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Svg
     qt6keychain
     KF6::SonnetCore
     litehtml
@@ -64,6 +67,7 @@ target_link_libraries(wildos-mail PRIVATE Qt6::Widgets
     PkgConfig::EDS
     PkgConfig::ECAL
     PkgConfig::EBOOK
+    PkgConfig::EBACKEND
     PkgConfig::SQLITE
 )
 
@@ -73,7 +77,7 @@ install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink wildos-
 
 install(FILES data/org.wildos.mail.desktop data/org.wildos.calendar.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/org.wildos.mail.svg data/org.wildos.calendar.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
-install(FILES data/org.wildos.calendar-reminders.desktop DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg/autostart)
+install(FILES data/org.wildos.calendar-reminders.desktop data/org.wildos.mail-background.desktop DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg/autostart)
 
 # Translations: i18n/<package>_<lang>.ts, compiled to .qm and loaded by
 # WildOS.UI for the language chosen in Settings.

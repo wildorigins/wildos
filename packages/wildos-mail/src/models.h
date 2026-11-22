@@ -79,6 +79,8 @@ struct MessageRow {
     bool pinned = false;
     bool attachment = false;
     bool draft = false;
+    // From a mailing list, which never gets an automatic reply.
+    bool list = false;
     // Sent mail and drafts are listed by who they're to, as in Outlook.
     bool outgoing = false;
     QString toAddress;

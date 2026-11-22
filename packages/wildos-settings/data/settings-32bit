@@ -27,8 +27,13 @@
 # package moves the rules aside (debian/preinst), and they are linked back
 # into udev only while 32-bit apps are on.
 #
+# GameMode (Debian's gamemode) comes with it the same way: games that ask
+# for it get the processor's full speed while they run. Its daemon starts
+# only when a game asks, and its rule for changing the processor's speed
+# without a password is linked into polkit only while 32-bit apps are on.
+#
 #   on | off   save the choice and rebuild the boot menu
-#   devices    link or unlink the controller rules to match the saved choice
+#   devices    link or unlink the controller and GameMode rules to match the saved choice
 #   ptrace     write the ptrace file on PCs that turned this on before it existed
 
 set -eu
@@ -42,6 +47,8 @@ RULES_SRC=/usr/share/wildos/steam-devices
 RULES_DST=/etc/udev/rules.d
 RULES="60-steam-input.rules 60-steam-vr.rules"
 NTSYNC=/etc/modules-load.d/wildos-ntsync.conf
+GAMEMODE_SRC=/usr/share/wildos/gamemode/50-wildos-gamemode.rules
+GAMEMODE_DST=/etc/polkit-1/rules.d/50-wildos-gamemode.rules
 # Takes the place of Kicksecure's file of the same name in /usr/lib/sysctl.d.
 # A later file cannot do it: that one sets 3, and the kernel never lets 3
 # be lowered again until the next start-up.
@@ -90,6 +97,13 @@ devices() {
             rm -f "$RULES_DST/$rule"
         fi
     done
+    # polkit notices the change by itself; a game already running keeps
+    # what it has until it ends.
+    if [ -e "$CHOICE" ] && [ -e "$GAMEMODE_SRC" ] && [ -d "${GAMEMODE_DST%/*}" ]; then
+        ln -sfn "$GAMEMODE_SRC" "$GAMEMODE_DST"
+    elif [ -L "$GAMEMODE_DST" ]; then
+        rm -f "$GAMEMODE_DST"
+    fi
     # ntsync (Linux 6.14 and later) does Windows' locking in the kernel,
     # which Proton uses for smoother frame times in games. Loaded from the
     # next start-up on and now; left loaded on turning off, as a game may

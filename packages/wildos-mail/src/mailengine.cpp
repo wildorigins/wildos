@@ -1,5 +1,27 @@
 #include "mailengine.h"
+#include "peopleengine.h"
+#include "calendarengine.h"
 
+#include <QCoreApplication>
+#include <QTemporaryDir>
+#include <QProcess>
+#include <QDirIterator>
+#include <QPointer>
+#include <QGuiApplication>
+#include <fcntl.h>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QEventLoop>
+#include <QJsonObject>
+#include <QRegularExpression>
+#include <QTextDocumentFragment>
+#include <QTimeZone>
+#include "composer.h"
+#include "microsoftsignin.h"
+#include <QSaveFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QFileInfo>
 #include <QDir>
 #include <QJSEngine>
 #include <QLoggingCategory>
@@ -7,6 +29,7 @@
 #include <QNetworkInformation>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QThread>
 #include <QThreadPool>
 #include <QUuid>
 
@@ -189,6 +212,7 @@ MessageRow rowFrom(const QString &accountId, const QString &folder, CamelMessage
     r.flagged = flags & CAMEL_MESSAGE_FLAGGED;
     r.attachment = flags & CAMEL_MESSAGE_ATTACHMENTS;
     r.draft = flags & CAMEL_MESSAGE_DRAFT;
+    r.list = camel_message_info_get_mlist(mi) && *camel_message_info_get_mlist(mi);
     r.pinned = camel_message_info_get_user_flag(mi, "wildos-pinned");
     if (const gchar *snooze = camel_message_info_get_user_tag(mi, "wildos-snooze")) {
         r.snoozedUntil = QDateTime::fromString(str(snooze), Qt::ISODate);
@@ -278,9 +302,29 @@ MailEngine::MailEngine(QObject *parent)
     m_syncHold.setInterval(700);
     connect(&m_syncHold, &QTimer::timeout, this, &MailEngine::syncingChanged);
     Session::instance();
+    // Microsoft's rotated refresh token goes to the password store in place
+    // of the old one, which stops working 90 days after it was issued.
+    QPointer<MailEngine> self(this);
+    Session::instance().setRefreshSaver([self](const QString &id, const QString &refreshToken) {
+        if (id.startsWith(QLatin1String("test-"))) {
+            return;
+        }
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [self, id, refreshToken]() {
+            if (self && self->m_store.find(id)) {
+                self->m_store.writePassword(id, refreshToken);
+            }
+        }, Qt::QueuedConnection);
+    });
+    loadRules();
+    loadSignatures();
     m_messageModel->folderName = [this](const QString &accountId, const QString &folder) {
         return folderLabel(accountId, folder);
     };
+
+    // A transfer's counts come from its worker; the page reads them a few
+    // times a second rather than being told of every message.
+    m_transferTick.setInterval(250);
+    connect(&m_transferTick, &QTimer::timeout, this, &MailEngine::transferChanged);
 
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(250);
@@ -293,8 +337,9 @@ MailEngine::MailEngine(QObject *parent)
 
     // IDLE brings new mail to the Inbox as it arrives; the other folders
     // are looked at every five minutes.
-    m_pollTimer.setInterval(5 * 60 * 1000);
-    connect(&m_pollTimer, &QTimer::timeout, this, &MailEngine::refresh);
+    // Each account's own "Check for new mail": looked at once a minute.
+    m_pollTimer.setInterval(60 * 1000);
+    connect(&m_pollTimer, &QTimer::timeout, this, &MailEngine::pollDue);
     m_pollTimer.start();
 
     // Snoozed mail comes back on time, unread, at the top.
@@ -328,6 +373,7 @@ QVariantList MailEngine::accountList() const
         map.insert(QStringLiteral("problem"), live.problem);
         map.insert(QStringLiteral("problemKind"), live.problemKind);
         map.insert(QStringLiteral("connected"), live.connected);
+        map.insert(QStringLiteral("isDefault"), a.id == defaultAccount());
         list.append(map);
     }
     return list;
@@ -477,11 +523,14 @@ void MailEngine::configure(CamelService *store, CamelService *smtp, const Accoun
                      "port", guint(account.imapPort),
                      "user", account.user.toUtf8().constData(),
                      "security-method", securityOf(account.imapSecurity),
-                     "use-idle", TRUE,
+                     "use-idle", account.checkEvery == 0,
                      "check-all", TRUE,
                      "use-subscriptions", FALSE,
                      "stay-synchronized", account.keepAll,
-                     "auth-mechanism", account.auth == QLatin1String("google") ? "XOAUTH2" : nullptr,
+                     "limit-by-age", account.keepAll && account.keepMonths > 0,
+                     "limit-unit", CAMEL_TIME_UNIT_MONTHS,
+                     "limit-value", account.keepMonths > 0 ? account.keepMonths : 1,
+                     "auth-mechanism", account.signsInWithOAuth() ? "XOAUTH2" : nullptr,
                      nullptr);
         g_object_unref(settings);
     }
@@ -492,7 +541,7 @@ void MailEngine::configure(CamelService *store, CamelService *smtp, const Accoun
                      "port", guint(account.smtpPort),
                      "user", account.user.toUtf8().constData(),
                      "security-method", securityOf(account.smtpSecurity),
-                     "auth-mechanism", account.auth == QLatin1String("google") ? "XOAUTH2" : "PLAIN",
+                     "auth-mechanism", account.signsInWithOAuth() ? "XOAUTH2" : "PLAIN",
                      nullptr);
         g_object_unref(settings);
     }
@@ -527,7 +576,7 @@ void MailEngine::startAccount(const Account &account)
     }
     configure(CAMEL_SERVICE(live.store), live.smtp, account);
     lock.unlock();
-    Session::instance().setOAuth(account.id, account.auth == QLatin1String("google"));
+    Session::instance().setOAuth(account.id, account.auth);
 
     // The cached folders and mail show straight away, before the password
     // store answers and the server is reached.
@@ -1113,7 +1162,6 @@ void MailEngine::reloadMessages()
     const bool outbox = m_folderRole == QLatin1String("outbox");
     const QString outboxAccount = m_folderAccount;
     auto rows = std::make_shared<QList<MessageRow>>();
-    auto inbox = std::make_shared<QHash<QString, QList<MessageRow>>>();
     QSet<QString> outgoingFolders;
     for (auto it = m_live.cbegin(); it != m_live.cend(); ++it) {
         for (const FolderEntry &f : it->folders) {
@@ -1122,8 +1170,9 @@ void MailEngine::reloadMessages()
             }
         }
     }
-    run([this, folders, rows, inbox, outbox, outboxAccount, outgoingFolders]() {
-        if (outbox) {
+    // The Outbox is files on this PC, read in one go.
+    if (outbox) {
+        run([outboxAccount, rows]() {
             const QDir dir(outboxDir(outboxAccount));
             for (const QFileInfo &file : dir.entryInfoList({QStringLiteral("*.eml")}, QDir::Files)) {
                 CamelMimeMessage *message = camel_mime_message_new();
@@ -1143,14 +1192,28 @@ void MailEngine::reloadMessages()
                 g_clear_object(&stream);
                 g_object_unref(message);
             }
-            return;
-        }
-        for (const auto &[accountId, full] : folders) {
+        }, [this, generation, rows]() {
+            if (generation == m_generation) {
+                m_messageModel->reset(*rows);
+            }
+        });
+        return;
+    }
+
+    // What this PC already has shows straight away; each folder is then
+    // read on its own and replaces its rows as soon as it is done.
+    showFolderRows();
+    for (const auto &[accountId, full] : folders) {
+        const QString folderKey = accountId + keySep + full;
+        auto folderRows = std::make_shared<QList<MessageRow>>();
+        auto isInbox = std::make_shared<bool>(false);
+        const bool outgoing = outgoingFolders.contains(folderKey);
+        run([this, accountId, full, folderRows, isInbox, outgoing]() {
             GError *error = nullptr;
             CamelFolder *folder = folderSync(accountId, full, &error);
             g_clear_error(&error);
             if (!folder) {
-                continue;
+                return;
             }
             camel_folder_summary_prepare_fetch_all(camel_folder_get_folder_summary(folder), nullptr);
             GPtrArray *uids = camel_folder_get_uids(folder);
@@ -1162,25 +1225,59 @@ void MailEngine::reloadMessages()
                 const guint32 flags = camel_message_info_get_flags(mi);
                 if (!(flags & (CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_JUNK)) || full.contains(QLatin1String("Junk"), Qt::CaseInsensitive)) {
                     MessageRow r = rowFrom(accountId, full, mi);
-                    r.outgoing = outgoingFolders.contains(accountId + keySep + full);
-                    rows->append(r);
-                    if ((camel_folder_get_flags(folder) & CAMEL_FOLDER_IS_JUNK) == 0 && full.compare(QLatin1String("INBOX"), Qt::CaseInsensitive) == 0) {
-                        (*inbox)[accountId].append(r);
-                    }
+                    r.outgoing = outgoing;
+                    folderRows->append(r);
                 }
                 g_object_unref(mi);
             }
             camel_folder_free_uids(folder, uids);
+            *isInbox = (camel_folder_get_flags(folder) & CAMEL_FOLDER_IS_JUNK) == 0 && full.compare(QLatin1String("INBOX"), Qt::CaseInsensitive) == 0;
+        }, [this, generation, accountId, folderKey, folderRows, isInbox]() {
+            if (*isInbox) {
+                checkNewMail(accountId, *folderRows);
+            }
+            m_folderRows.insert(folderKey, *folderRows);
+            if (generation == m_generation) {
+                showFolderRows(folderKey);
+            }
+        });
+    }
+}
+
+// The rows of the folders on view, from each folder's last read, with
+// moves still on their way to the server left out and Undo's put back.
+void MailEngine::showFolderRows(const QString &fresh)
+{
+    const QList<QPair<QString, QString>> viewed = currentFolders();
+    QList<MessageRow> rows;
+    for (const auto &[accountId, full] : viewed) {
+        rows += m_folderRows.value(accountId + keySep + full);
+    }
+    // A row already on screen may carry a change made since its folder was
+    // last read (marked read, flagged): that copy wins until the folder has
+    // been read again. The folder just read is shown as the server has it.
+    for (MessageRow &r : rows) {
+        if (r.accountId + keySep + r.folder == fresh) {
+            continue;
         }
-    }, [this, generation, rows, inbox]() {
-        for (auto it = inbox->cbegin(); it != inbox->cend(); ++it) {
-            checkNewMail(it.key(), it.value());
+        if (const MessageRow *shown = m_messageModel->row(r.key())) {
+            r.unread = shown->unread;
+            r.flagged = shown->flagged;
+            r.pinned = shown->pinned;
+            r.snoozedUntil = shown->snoozedUntil;
         }
-        if (generation != m_generation) {
-            return;
+    }
+    if (!m_pendingGone.isEmpty()) {
+        rows.erase(std::remove_if(rows.begin(), rows.end(), [this](const MessageRow &r) {
+            return m_pendingGone.contains(r.key());
+        }), rows.end());
+    }
+    for (const MessageRow &r : std::as_const(m_pendingBack)) {
+        if (viewed.contains(QPair<QString, QString>{r.accountId, r.folder})) {
+            rows.append(r);
         }
-        m_messageModel->reset(*rows);
-    });
+    }
+    m_messageModel->reset(rows);
 }
 
 // A message in the Inbox that wasn't there the last time Mail looked, and
@@ -1192,10 +1289,19 @@ void MailEngine::checkNewMail(const QString &accountId, const QList<MessageRow> 
         return;
     }
     Live &live = m_live[accountId];
+    m_lastInbox.insert(accountId, inboxRows);
+    QList<MessageRow> arrived;
+    for (const MessageRow &r : inboxRows) {
+        if (live.inboxPrimed && !live.knownInboxUids.contains(r.uid)) {
+            arrived.append(r);
+        }
+    }
+    const QSet<QString> handled = applyRules(arrived);
+    sendAutoReplies(accountId, arrived, handled);
     QSet<QString> now;
     for (const MessageRow &r : inboxRows) {
         now.insert(r.uid);
-        if (live.inboxPrimed && r.unread && !live.knownInboxUids.contains(r.uid)
+        if (live.inboxPrimed && r.unread && !live.knownInboxUids.contains(r.uid) && !handled.contains(r.key())
             && r.date > QDateTime::currentDateTime().addDays(-1)) {
             Q_EMIT newMail(r.key(), r.fromName, r.subject, r.preview);
         }
@@ -1204,12 +1310,59 @@ void MailEngine::checkNewMail(const QString &accountId, const QList<MessageRow> 
     live.inboxPrimed = live.connected || live.inboxPrimed;
 }
 
+QString MailEngine::defaultAccount() const
+{
+    const QString id = QSettings().value(QStringLiteral("mail/defaultAccount")).toString();
+    if (m_store.find(id)) {
+        return id;
+    }
+    return m_store.accounts().isEmpty() ? QString() : m_store.accounts().first().id;
+}
+
+void MailEngine::setDefaultAccount(const QString &id)
+{
+    if (!m_store.find(id) || id == defaultAccount()) {
+        return;
+    }
+    QSettings().setValue(QStringLiteral("mail/defaultAccount"), id);
+    Q_EMIT accountsChanged();
+}
+
+// Every minute: the accounts whose "Check for new mail" time has come. One
+// that gets mail as it arrives still has its other folders looked at every
+// five minutes; one set to "only when I check" waits for F5.
+void MailEngine::pollDue()
+{
+    const QDateTime now = QDateTime::currentDateTime();
+    for (const Account &a : m_store.accounts()) {
+        const int every = a.checkEvery == 0 ? 5 : a.checkEvery;
+        if (a.checkEvery < 0) {
+            continue;
+        }
+        const QDateTime last = m_lastCheck.value(a.id);
+        if (!last.isValid() || last.addSecs(every * 60 - 5) <= now) {
+            refreshAccount(a.id);
+        }
+    }
+}
+
 void MailEngine::refresh()
+{
+    for (const Account &a : m_store.accounts()) {
+        refreshAccount(a.id);
+    }
+}
+
+void MailEngine::refreshAccount(const QString &id)
 {
     if (!m_online) {
         return;
     }
+    m_lastCheck.insert(id, QDateTime::currentDateTime());
     for (auto it = m_live.cbegin(); it != m_live.cend(); ++it) {
+        if (it.key() != id) {
+            continue;
+        }
         if (!it->connected) {
             if (!Session::instance().password(it.key()).isEmpty()) {
                 connectAccount(it.key());
@@ -1397,8 +1550,27 @@ void MailEngine::transfer(const QStringList &keys, const QString &targetRole, co
             next = candidate;
         }
     }
+    QList<MessageRow> movedRows;
+    for (const QString &key : std::as_const(moved)) {
+        if (const MessageRow *r = m_messageModel->row(key)) {
+            movedRows.append(*r);
+        }
+    }
     m_messageModel->removeKeys(moved);
-    select(next);
+    for (const QString &key : std::as_const(moved)) {
+        m_pendingGone.insert(key);
+    }
+    for (QList<MessageRow> &cached : m_folderRows) {
+        cached.erase(std::remove_if(cached.begin(), cached.end(), [&moved](const MessageRow &r) {
+            return moved.contains(r.key());
+        }), cached.end());
+    }
+    const bool quiet = m_quiet;
+    int undoId = 0;
+
+    if (!quiet) {
+        select(next);
+    }
 
     const int count = items.size();
     const bool permanentAll = std::all_of(items.cbegin(), items.cend(), [](const Item &i) {
@@ -1411,9 +1583,19 @@ void MailEngine::transfer(const QStringList &keys, const QString &targetRole, co
         : targetRole == QLatin1String("junk")                   ? tr("Moved %1 to Junk email").arg(what)
         : targetRole == QLatin1String("inbox")                  ? tr("Moved %1 to the Inbox").arg(what)
                                                                 : tr("Moved %1").arg(what);
-    if (permanentAll) {
+    if (quiet) {
+        // A rule's work: nothing to announce or undo.
+    } else if (permanentAll) {
         Q_EMIT notice(label);
     } else {
+        UndoBatch batch;
+        batch.id = undoId = m_nextUndoId++;
+        batch.rows = movedRows;
+        m_undoStack.append(batch);
+        while (m_undoStack.size() > 10) {
+            m_undoStack.removeFirst();
+        }
+        Q_EMIT undoChanged();
         Q_EMIT undoable(label);
     }
 
@@ -1486,24 +1668,63 @@ void MailEngine::transfer(const QStringList &keys, const QString &targetRole, co
             }
             camel_folder_synchronize_sync(source, TRUE, nullptr, nullptr);
         }
-    }, [this, error, done]() {
+    }, [this, error, done, moved, quiet, undoId]() {
+        for (const QString &key : moved) {
+            m_pendingGone.remove(key);
+        }
         if (!error->isEmpty()) {
             Q_EMIT notice(*error);
         }
-        m_undo = *done;
-        Q_EMIT undoChanged();
+        if (quiet || undoId == 0) {
+            reloadMessages();
+            return;
+        }
+        for (UndoBatch &b : m_undoStack) {
+            if (b.id == undoId) {
+                b.moved = *done;
+                b.done = true;
+            }
+        }
+        // Undone while the server was still moving it: now it can go back.
+        for (int i = 0; i < m_undoing.size(); ++i) {
+            if (m_undoing[i].id == undoId) {
+                UndoBatch b = m_undoing.takeAt(i);
+                b.moved = *done;
+                moveBack(b);
+                break;
+            }
+        }
         reloadMessages();
     });
 }
 
 void MailEngine::undo()
 {
-    if (m_undo.isEmpty()) {
+    if (m_undoStack.isEmpty()) {
         return;
     }
-    const QList<Moved> moves = m_undo;
-    m_undo.clear();
+    UndoBatch batch = m_undoStack.takeLast();
     Q_EMIT undoChanged();
+    // On screen again straight away.
+    for (const MessageRow &r : std::as_const(batch.rows)) {
+        m_pendingBack.insert(r.key(), r);
+        m_pendingGone.remove(r.key());
+    }
+    reloadMessages();
+    if (batch.done) {
+        moveBack(batch);
+    } else {
+        m_undoing.append(batch);
+    }
+}
+
+void MailEngine::moveBack(const UndoBatch &batch)
+{
+    const QList<Moved> moves = batch.moved;
+    QStringList keys;
+    for (const MessageRow &r : batch.rows) {
+        keys.append(r.key());
+    }
     auto error = std::make_shared<QString>();
     run([this, moves, error]() {
         for (const Moved &m : moves) {
@@ -1527,8 +1748,13 @@ void MailEngine::undo()
             g_ptr_array_free(uids, TRUE);
             camel_folder_synchronize_sync(from, TRUE, nullptr, nullptr);
         }
-    }, [this, error]() {
-        Q_EMIT notice(error->isEmpty() ? tr("Put back") : *error);
+    }, [this, error, keys]() {
+        for (const QString &key : keys) {
+            m_pendingBack.remove(key);
+        }
+        if (!error->isEmpty()) {
+            Q_EMIT notice(*error);
+        }
         reloadMessages();
     });
 }
@@ -1987,7 +2213,7 @@ void MailEngine::testAccount(const QVariantMap &settings, const QString &passwor
     Account account = Account::fromMap(settings);
     const QString testId = QStringLiteral("test-") + AccountStore::newId();
     Session::instance().setPassword(testId, password);
-    Session::instance().setOAuth(testId, account.auth == QLatin1String("google"));
+    Session::instance().setOAuth(testId, account.auth);
     CamelSession *session = Session::instance().camel();
     GError *error = nullptr;
     CamelService *store = camel_session_add_service(session, testId.toUtf8().constData(), "imapx", CAMEL_PROVIDER_STORE, &error);
@@ -2037,7 +2263,7 @@ void MailEngine::testAccount(const QVariantMap &settings, const QString &passwor
         qCInfo(mailLog) << "incoming server signed in";
         camel_service_disconnect_sync(store, TRUE, nullptr, nullptr);
         // Picks a sign-in method the outgoing server offers.
-        // Google accounts keep XOAUTH2.
+        // Google and Microsoft accounts keep XOAUTH2.
         CamelSettings *current = camel_service_ref_settings(smtp);
         gchar *chosen = nullptr;
         g_object_get(current, "auth-mechanism", &chosen, nullptr);
@@ -2096,7 +2322,7 @@ void MailEngine::saveAccount(const QVariantMap &settings, const QString &passwor
         account.name = tr("Personal");
     }
     Session::instance().setPassword(account.id, password);
-    Session::instance().setOAuth(account.id, account.auth == QLatin1String("google"));
+    Session::instance().setOAuth(account.id, account.auth);
     m_store.writePassword(account.id, password);
     m_store.add(account);
     startAccount(account);
@@ -2137,6 +2363,1569 @@ void MailEngine::removeAccount(const QString &id)
     }
     rebuildFolderModel();
     Q_EMIT problemsChanged();
+}
+
+namespace
+{
+QString rulesPath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QStringLiteral("/rules.json");
+}
+}
+
+void MailEngine::loadRules()
+{
+    QFile file(rulesPath());
+    if (!file.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    m_rules = QJsonDocument::fromJson(file.readAll()).array().toVariantList();
+    // The first rules (one condition, one action, no name or account) in
+    // the shape of the rule editor's.
+    bool changed = false;
+    for (QVariant &v : m_rules) {
+        QVariantMap rule = v.toMap();
+        if (rule.contains(QStringLiteral("conditions"))) {
+            continue;
+        }
+        const QString field = rule.value(QStringLiteral("field"), QStringLiteral("from")).toString();
+        const QString text = rule.value(QStringLiteral("contains")).toString();
+        QVariantMap action{{QStringLiteral("type"), rule.value(QStringLiteral("action")).toString()}};
+        if (action.value(QStringLiteral("type")) == QLatin1String("move")) {
+            action.insert(QStringLiteral("folder"), rule.value(QStringLiteral("folder")));
+        }
+        QString accountId = rule.value(QStringLiteral("accountId")).toString();
+        if (accountId.isEmpty() && !m_store.accounts().isEmpty()) {
+            accountId = m_store.accounts().first().id;
+        }
+        v = QVariantMap{{QStringLiteral("id"), AccountStore::newId()},
+                        {QStringLiteral("name"), text},
+                        {QStringLiteral("enabled"), rule.value(QStringLiteral("enabled"), true)},
+                        {QStringLiteral("accountId"), accountId},
+                        {QStringLiteral("match"), QStringLiteral("any")},
+                        {QStringLiteral("conditions"), QVariantList{QVariantMap{{QStringLiteral("field"), field}, {QStringLiteral("text"), text}}}},
+                        {QStringLiteral("actions"), QVariantList{action}},
+                        {QStringLiteral("stop"), true}};
+        changed = true;
+    }
+    if (changed) {
+        setRules(m_rules);
+    }
+}
+
+void MailEngine::setRules(const QVariantList &rules)
+{
+    m_rules = rules;
+    QDir().mkpath(QFileInfo(rulesPath()).absolutePath());
+    QSaveFile file(rulesPath());
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(QJsonDocument(QJsonArray::fromVariantList(rules)).toJson());
+        file.commit();
+    }
+    Q_EMIT rulesChanged();
+}
+
+namespace
+{
+// Whether one rule's conditions hold for a message: any of them, or all.
+bool ruleMatches(const QVariantMap &rule, const MessageRow &r)
+{
+    const QVariantList conditions = rule.value(QStringLiteral("conditions")).toList();
+    if (conditions.isEmpty()) {
+        return false;
+    }
+    const bool all = rule.value(QStringLiteral("match")).toString() == QLatin1String("all");
+    for (const QVariant &c : conditions) {
+        const QVariantMap condition = c.toMap();
+        const QString field = condition.value(QStringLiteral("field")).toString();
+        const QString text = condition.value(QStringLiteral("text")).toString().trimmed();
+        bool holds = false;
+        if (field == QLatin1String("list")) {
+            holds = r.list;
+        } else if (field == QLatin1String("attachment")) {
+            holds = r.attachment;
+        } else if (!text.isEmpty()) {
+            const QString haystack = field == QLatin1String("subject") ? r.subject
+                : field == QLatin1String("to")                         ? r.to + QLatin1Char(' ') + r.toAddress
+                                                                       : r.fromName + QLatin1Char(' ') + r.fromAddress;
+            holds = haystack.contains(text, Qt::CaseInsensitive);
+        }
+        if (all && !holds) {
+            return false;
+        }
+        if (!all && holds) {
+            return true;
+        }
+    }
+    return all;
+}
+}
+
+QSet<QString> MailEngine::applyRules(const QList<MessageRow> &rows, const QString &onlyRule)
+{
+    QSet<QString> handled;
+    if (m_rules.isEmpty() || rows.isEmpty()) {
+        return handled;
+    }
+    // Keys per action, so each action runs once for all its messages. Marks
+    // (read, flag, pin) go before the one move a message can make, which
+    // the last rule to ask for one decides.
+    QHash<QString, QStringList> marks;
+    QHash<QString, QString> moveOf;
+    for (const MessageRow &r : rows) {
+        for (const QVariant &v : std::as_const(m_rules)) {
+            const QVariantMap rule = v.toMap();
+            if (!onlyRule.isEmpty() && rule.value(QStringLiteral("id")).toString() != onlyRule) {
+                continue;
+            }
+            if ((onlyRule.isEmpty() && !rule.value(QStringLiteral("enabled"), true).toBool())
+                || rule.value(QStringLiteral("accountId")).toString() != r.accountId || !ruleMatches(rule, r)) {
+                continue;
+            }
+            for (const QVariant &a : rule.value(QStringLiteral("actions")).toList()) {
+                const QVariantMap action = a.toMap();
+                const QString type = action.value(QStringLiteral("type")).toString();
+                if (type == QLatin1String("move")) {
+                    const QString folder = action.value(QStringLiteral("folder")).toString();
+                    if (!folder.isEmpty() && folder != r.folder) {
+                        moveOf.insert(r.key(), QStringLiteral("move\x1f") + folder);
+                    }
+                } else if (type == QLatin1String("archive") || type == QLatin1String("delete")) {
+                    moveOf.insert(r.key(), type);
+                } else if (type == QLatin1String("pin")) {
+                    if (!r.pinned) {
+                        marks[type].append(r.key());
+                    }
+                } else if (!type.isEmpty()) {
+                    marks[type].append(r.key());
+                }
+                if (type != QLatin1String("flag") && type != QLatin1String("pin")) {
+                    handled.insert(r.key());
+                }
+            }
+            if (rule.value(QStringLiteral("stop")).toBool()) {
+                break;
+            }
+        }
+    }
+    QHash<QString, QStringList> moves;
+    for (auto it = moveOf.cbegin(); it != moveOf.cend(); ++it) {
+        moves[it.value()].append(it.key());
+    }
+    m_quiet = true;
+    setReadKeys(marks.value(QStringLiteral("read")), true);
+    setFlaggedKeys(marks.value(QStringLiteral("flag")), true);
+    for (const QString &key : marks.value(QStringLiteral("pin"))) {
+        togglePin(key);
+    }
+    for (auto it = moves.cbegin(); it != moves.cend(); ++it) {
+        if (it.key().startsWith(QLatin1String("move\x1f"))) {
+            moveKeys(it.value(), it.key().mid(5));
+        } else if (it.key() == QLatin1String("archive")) {
+            archiveKeys(it.value());
+        } else if (it.key() == QLatin1String("delete")) {
+            removeKeys(it.value());
+        }
+    }
+    m_quiet = false;
+    return handled;
+}
+
+int MailEngine::countRuleMatches(const QVariantMap &rule) const
+{
+    int count = 0;
+    for (const MessageRow &r : m_lastInbox.value(rule.value(QStringLiteral("accountId")).toString())) {
+        count += ruleMatches(rule, r) ? 1 : 0;
+    }
+    return count;
+}
+
+void MailEngine::runRule(const QString &id)
+{
+    QString accountId;
+    for (const QVariant &v : std::as_const(m_rules)) {
+        if (v.toMap().value(QStringLiteral("id")).toString() == id) {
+            accountId = v.toMap().value(QStringLiteral("accountId")).toString();
+        }
+    }
+    const int count = applyRules(m_lastInbox.value(accountId), id).size();
+    Q_EMIT notice(count == 0 ? tr("No messages in the Inbox matched this rule.")
+                  : count == 1 ? tr("The rule took care of 1 message.")
+                               : tr("The rule took care of %1 messages.").arg(count));
+}
+
+namespace
+{
+// A Graph request for the signed-in person's mailbox settings, waited for
+// here (it runs on a worker thread).
+QJsonObject graphMailbox(const QString &token, const QByteArray &patch, QString *error)
+{
+    QNetworkAccessManager network;
+    network.setCookieJar(nullptr);
+    QNetworkRequest request{QUrl(QStringLiteral("https://graph.microsoft.com/v1.0/me/mailboxSettings"))};
+    request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    request.setTransferTimeout(30000);
+    QNetworkReply *reply = patch.isEmpty() ? network.get(request) : network.sendCustomRequest(request, "PATCH", patch);
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+    const QJsonObject json = QJsonDocument::fromJson(reply->readAll()).object();
+    if (reply->error() != QNetworkReply::NoError) {
+        const QString message = json.value(QStringLiteral("error")).toObject().value(QStringLiteral("message")).toString();
+        *error = message.isEmpty() ? reply->errorString() : message;
+    }
+    delete reply;
+    return json;
+}
+
+QJsonObject graphTime(const QDateTime &when)
+{
+    return {{QStringLiteral("dateTime"), when.toUTC().toString(QStringLiteral("yyyy-MM-ddTHH:mm:ss"))}, {QStringLiteral("timeZone"), QStringLiteral("UTC")}};
+}
+
+QDateTime fromGraphTime(const QJsonObject &o)
+{
+    QDateTime t = QDateTime::fromString(o.value(QStringLiteral("dateTime")).toString().left(19), QStringLiteral("yyyy-MM-ddTHH:mm:ss"));
+    if (o.value(QStringLiteral("timeZone")).toString() == QLatin1String("UTC")) {
+        t.setTimeZone(QTimeZone::UTC);
+    }
+    return t.toLocalTime();
+}
+
+QString plainFromHtml(const QString &html)
+{
+    return QTextDocumentFragment::fromHtml(html).toPlainText().trimmed();
+}
+
+QString htmlFromPlain(const QString &text)
+{
+    return QStringLiteral("<html><body><p>") + text.toHtmlEscaped().replace(QLatin1Char('\n'), QStringLiteral("<br>")) + QStringLiteral("</p></body></html>");
+}
+}
+
+void MailEngine::loadAutoReply(const QString &accountId)
+{
+    const Account *account = m_store.find(accountId);
+    if (!account) {
+        return;
+    }
+    const bool personal = QRegularExpression(QStringLiteral("@(outlook|hotmail|live|msn)\\."), QRegularExpression::CaseInsensitiveOption).match(account->email).hasMatch();
+    if (account->auth != QLatin1String("microsoft")) {
+        Q_EMIT autoReplyLoaded(accountId, {{QStringLiteral("enabled"), account->autoReply},
+                                           {QStringLiteral("message"), account->autoReplyMessage},
+                                           {QStringLiteral("start"), account->autoReplyStart},
+                                           {QStringLiteral("end"), account->autoReplyEnd},
+                                           {QStringLiteral("subject"), account->autoReplySubject},
+                                           {QStringLiteral("audience"), account->autoReplyAudience},
+                                           {QStringLiteral("server"), false}});
+        return;
+    }
+    const QString refresh = Session::instance().password(accountId);
+    auto result = std::make_shared<QVariantMap>();
+    run([refresh, result, personal]() {
+        QVariantMap &r = *result;
+        r.insert(QStringLiteral("server"), true);
+        r.insert(QStringLiteral("personal"), personal);
+        QString token, error;
+        bool consent = false;
+        if (!MicrosoftSignIn::settingsToken(refresh, &token, &error, &consent)) {
+            r.insert(QStringLiteral("needsSignIn"), consent);
+            r.insert(QStringLiteral("error"), consent ? MailEngine::tr("Sign in again to let Mail set automatic replies for this account.")
+                                                      : MailEngine::tr("Microsoft didn't answer. %1").arg(error));
+            return;
+        }
+        const QJsonObject settings = graphMailbox(token, {}, &error).value(QStringLiteral("automaticRepliesSetting")).toObject();
+        if (!error.isEmpty()) {
+            r.insert(QStringLiteral("error"), MailEngine::tr("Microsoft didn't answer. %1").arg(error));
+            return;
+        }
+        const QString status = settings.value(QStringLiteral("status")).toString();
+        r.insert(QStringLiteral("enabled"), status == QLatin1String("alwaysEnabled") || status == QLatin1String("scheduled"));
+        r.insert(QStringLiteral("message"), plainFromHtml(settings.value(QStringLiteral("internalReplyMessage")).toString()));
+        const QString external = settings.value(QStringLiteral("externalAudience")).toString();
+        r.insert(QStringLiteral("audience"), external == QLatin1String("all") ? QStringLiteral("all")
+                     : external == QLatin1String("contactsOnly") ? QStringLiteral("contacts") : QStringLiteral("organisation"));
+        if (status == QLatin1String("scheduled")) {
+            r.insert(QStringLiteral("start"), fromGraphTime(settings.value(QStringLiteral("scheduledStartDateTime")).toObject()));
+            r.insert(QStringLiteral("end"), fromGraphTime(settings.value(QStringLiteral("scheduledEndDateTime")).toObject()));
+        }
+    }, [this, accountId, result]() {
+        Q_EMIT autoReplyLoaded(accountId, *result);
+    });
+}
+
+void MailEngine::saveAutoReply(const QString &accountId, const QVariantMap &settings)
+{
+    const Account *found = m_store.find(accountId);
+    if (!found) {
+        return;
+    }
+    const bool enabled = settings.value(QStringLiteral("enabled")).toBool();
+    const QString message = settings.value(QStringLiteral("message")).toString().trimmed();
+    const QDateTime start = settings.value(QStringLiteral("start")).toDateTime();
+    const QDateTime end = settings.value(QStringLiteral("end")).toDateTime();
+    if (found->auth != QLatin1String("microsoft")) {
+        Account account = *found;
+        // Turned on afresh: everyone gets one reply again.
+        if (enabled && !account.autoReply) {
+            QSettings().remove(QStringLiteral("autoReply/") + accountId);
+        }
+        account.autoReply = enabled;
+        account.autoReplyMessage = message;
+        account.autoReplyStart = start;
+        account.autoReplyEnd = end;
+        account.autoReplySubject = settings.value(QStringLiteral("subject")).toString().trimmed();
+        account.autoReplyAudience = settings.value(QStringLiteral("audience"), QStringLiteral("all")).toString();
+        m_store.update(account);
+        Q_EMIT autoReplySaved(accountId, true, {}, false);
+        return;
+    }
+    const QString audience = settings.value(QStringLiteral("audience"), QStringLiteral("all")).toString();
+    QJsonObject reply{
+        {QStringLiteral("status"), !enabled ? QStringLiteral("disabled") : (start.isValid() && end.isValid()) ? QStringLiteral("scheduled") : QStringLiteral("alwaysEnabled")},
+        {QStringLiteral("externalAudience"), audience == QLatin1String("all") ? QStringLiteral("all")
+                                                 : audience == QLatin1String("contacts") ? QStringLiteral("contactsOnly") : QStringLiteral("none")},
+        {QStringLiteral("internalReplyMessage"), htmlFromPlain(message)},
+        {QStringLiteral("externalReplyMessage"), htmlFromPlain(message)},
+    };
+    if (enabled && start.isValid() && end.isValid()) {
+        reply.insert(QStringLiteral("scheduledStartDateTime"), graphTime(start));
+        reply.insert(QStringLiteral("scheduledEndDateTime"), graphTime(end));
+    }
+    const QByteArray patch = QJsonDocument(QJsonObject{{QStringLiteral("automaticRepliesSetting"), reply}}).toJson(QJsonDocument::Compact);
+    const QString refresh = Session::instance().password(accountId);
+    auto error = std::make_shared<QString>();
+    auto consent = std::make_shared<bool>(false);
+    run([refresh, patch, error, consent]() {
+        QString token;
+        if (!MicrosoftSignIn::settingsToken(refresh, &token, error.get(), consent.get())) {
+            return;
+        }
+        graphMailbox(token, patch, error.get());
+    }, [this, accountId, error, consent]() {
+        if (*consent) {
+            Q_EMIT autoReplySaved(accountId, false, tr("Sign in again to let Mail set automatic replies for this account."), true);
+        } else if (!error->isEmpty()) {
+            Q_EMIT autoReplySaved(accountId, false, tr("Microsoft didn't save it. %1").arg(*error), false);
+        } else {
+            Q_EMIT autoReplySaved(accountId, true, {}, false);
+        }
+    });
+}
+
+// Automatic replies Mail sends itself: once to each person while they are
+// on, never to mailing lists, automatic senders or mail a rule moved away.
+void MailEngine::sendAutoReplies(const QString &accountId, const QList<MessageRow> &arrived, const QSet<QString> &handled)
+{
+    const Account *account = m_store.find(accountId);
+    if (!account || !account->autoReply || account->auth == QLatin1String("microsoft") || arrived.isEmpty()) {
+        return;
+    }
+    const QDateTime now = QDateTime::currentDateTime();
+    if ((account->autoReplyStart.isValid() && now < account->autoReplyStart) || (account->autoReplyEnd.isValid() && now > account->autoReplyEnd)) {
+        return;
+    }
+    static const QRegularExpression automatic(QStringLiteral("^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounces?|notifications?)([+.-]|@)"),
+                                              QRegularExpression::CaseInsensitiveOption);
+    QSettings settings;
+    const QString key = QStringLiteral("autoReply/") + accountId;
+    QStringList answered = settings.value(key).toStringList();
+    for (const MessageRow &r : arrived) {
+        const QString address = r.fromAddress.toLower();
+        if (address.isEmpty() || r.list || handled.contains(r.key()) || answered.contains(address)
+            || address == account->email.toLower() || automatic.match(address).hasMatch()
+            || r.date < now.addDays(-1)) {
+            continue;
+        }
+        if (account->autoReplyAudience == QLatin1String("contacts") && PeopleEngine::instance()->list(QStringLiteral("all"), {}, address).isEmpty()) {
+            continue;
+        }
+        Composer composer;
+        composer.start({{QStringLiteral("accountId"), accountId}, {QStringLiteral("to"), QStringList{r.fromAddress}},
+                        {QStringLiteral("subject"), account->autoReplySubject.isEmpty() ? tr("Automatic reply: %1").arg(r.subject) : account->autoReplySubject}});
+        composer.setProperty("bodyText", account->autoReplyMessage);
+        composer.setProperty("bodyHtml", account->autoReplyMessage.toHtmlEscaped().replace(QLatin1Char('\n'), QStringLiteral("<br>")));
+        composer.setProperty("autoReply", true);
+        if (composer.send()) {
+            answered.append(address);
+        }
+    }
+    settings.setValue(key, answered);
+}
+
+namespace
+{
+QString signaturesPath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QStringLiteral("/signatures.json");
+}
+}
+
+void MailEngine::loadSignatures()
+{
+    QFile file(signaturesPath());
+    if (file.open(QIODevice::ReadOnly)) {
+        m_signatures = QJsonDocument::fromJson(file.readAll()).array().toVariantList();
+        return;
+    }
+    // Before named signatures, each account had one of its own: those
+    // become signatures, named after the account and used as before.
+    for (const Account &a : m_store.accounts()) {
+        if (a.signature.trimmed().isEmpty()) {
+            continue;
+        }
+        const QString id = AccountStore::newId();
+        m_signatures.append(QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("name"), a.name},
+                                        {QStringLiteral("html"), a.signature.toHtmlEscaped().replace(QLatin1Char('\n'), QStringLiteral("<br>"))}});
+        Account updated = a;
+        updated.signatureNew = id;
+        updated.signatureReply = id;
+        m_store.update(updated);
+    }
+    writeSignatures();
+}
+
+void MailEngine::writeSignatures() const
+{
+    QDir().mkpath(QFileInfo(signaturesPath()).absolutePath());
+    QSaveFile file(signaturesPath());
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(QJsonDocument(QJsonArray::fromVariantList(m_signatures)).toJson());
+        file.commit();
+    }
+}
+
+QString MailEngine::addSignature(const QString &name)
+{
+    const QString id = AccountStore::newId();
+    m_signatures.append(QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("name"), name}, {QStringLiteral("html"), QString()}});
+    writeSignatures();
+    Q_EMIT signaturesChanged();
+    return id;
+}
+
+void MailEngine::saveSignature(const QString &id, const QString &name, const QString &html)
+{
+    for (QVariant &v : m_signatures) {
+        QVariantMap m = v.toMap();
+        if (m.value(QStringLiteral("id")).toString() == id) {
+            m.insert(QStringLiteral("name"), name);
+            m.insert(QStringLiteral("html"), html);
+            v = m;
+        }
+    }
+    writeSignatures();
+    Q_EMIT signaturesChanged();
+}
+
+void MailEngine::removeSignature(const QString &id)
+{
+    m_signatures.erase(std::remove_if(m_signatures.begin(), m_signatures.end(), [&id](const QVariant &v) {
+        return v.toMap().value(QStringLiteral("id")).toString() == id;
+    }), m_signatures.end());
+    for (const Account &a : m_store.accounts()) {
+        if (a.signatureNew == id || a.signatureReply == id) {
+            Account updated = a;
+            if (updated.signatureNew == id) {
+                updated.signatureNew.clear();
+            }
+            if (updated.signatureReply == id) {
+                updated.signatureReply.clear();
+            }
+            m_store.update(updated);
+        }
+    }
+    writeSignatures();
+    Q_EMIT signaturesChanged();
+    Q_EMIT accountsChanged();
+}
+
+QString MailEngine::signatureFor(const QString &accountId, bool reply) const
+{
+    const Account *a = m_store.find(accountId);
+    if (!a) {
+        return {};
+    }
+    const QString id = reply ? a->signatureReply : a->signatureNew;
+    for (const QVariant &v : m_signatures) {
+        const QVariantMap m = v.toMap();
+        if (!id.isEmpty() && m.value(QStringLiteral("id")).toString() == id) {
+            return m.value(QStringLiteral("html")).toString();
+        }
+    }
+    return {};
+}
+
+void Transfer::setTitle(const QString &text, const QString &address)
+{
+    QMutexLocker locker(&lock);
+    title = text;
+    if (!address.isEmpty()) {
+        account = address;
+    }
+}
+
+bool Transfer::carryOn() const
+{
+    while (paused && !cancelled) {
+        QThread::msleep(150);
+    }
+    return !cancelled;
+}
+
+QString MailEngine::transferStatus() const
+{
+    if (!m_transfer) {
+        return {};
+    }
+    QMutexLocker locker(&m_transfer->lock);
+    return m_transfer->title;
+}
+
+QString MailEngine::transferKind() const
+{
+    return m_transfer ? m_transfer->kind : QString();
+}
+
+QString MailEngine::transferAccount() const
+{
+    if (!m_transfer) {
+        return {};
+    }
+    QMutexLocker locker(&m_transfer->lock);
+    return m_transfer->account;
+}
+
+int MailEngine::transferDone() const
+{
+    return m_transfer ? m_transfer->done.load() : 0;
+}
+
+int MailEngine::transferTotal() const
+{
+    return m_transfer ? m_transfer->total.load() : 0;
+}
+
+bool MailEngine::transferPaused() const
+{
+    return m_transfer && m_transfer->paused;
+}
+
+void MailEngine::pauseTransfer(bool paused)
+{
+    if (m_transfer) {
+        m_transfer->paused = paused;
+        Q_EMIT transferChanged();
+    }
+}
+
+void MailEngine::cancelTransfer()
+{
+    if (m_transfer) {
+        m_transfer->cancelled = true;
+        m_transfer->paused = false;
+        Q_EMIT transferChanged();
+    }
+}
+
+std::shared_ptr<Transfer> MailEngine::startTransfer(const QString &kind, const QString &title, const QString &account)
+{
+    if (m_transfer) {
+        return {};
+    }
+    auto job = std::make_shared<Transfer>();
+    job->kind = kind;
+    job->title = title;
+    job->account = account;
+    m_transfer = job;
+    m_transferTick.start();
+    Q_EMIT transferChanged();
+    return job;
+}
+
+void MailEngine::finishTransfer(bool ok, const QString &message)
+{
+    m_transfer.reset();
+    m_transferTick.stop();
+    Q_EMIT transferChanged();
+    Q_EMIT transferFinished(ok, message);
+}
+
+namespace
+{
+// The folder named under parent (empty for the top), made if it isn't there;
+// its full name, or empty when the server wouldn't make it.
+QString ensureFolder(CamelStore *store, const QString &parent, const QString &name, GError **error)
+{
+    CamelFolderInfo *top = camel_store_get_folder_info_sync(store, parent.isEmpty() ? nullptr : parent.toUtf8().constData(),
+                                                            CamelStoreGetFolderInfoFlags(0), nullptr, nullptr);
+    QString found;
+    for (CamelFolderInfo *fi = parent.isEmpty() ? top : (top ? top->child : nullptr); fi; fi = fi->next) {
+        if (QString::fromUtf8(fi->display_name).compare(name, Qt::CaseInsensitive) == 0) {
+            found = QString::fromUtf8(fi->full_name);
+            break;
+        }
+    }
+    if (top) {
+        camel_folder_info_free(top);
+    }
+    if (!found.isEmpty()) {
+        return found;
+    }
+    CamelFolderInfo *made = camel_store_create_folder_sync(store, parent.isEmpty() ? nullptr : parent.toUtf8().constData(), name.toUtf8().constData(), nullptr, error);
+    if (!made) {
+        return {};
+    }
+    found = QString::fromUtf8(made->full_name);
+    camel_folder_info_free(made);
+    return found;
+}
+
+bool appendMessage(CamelFolder *folder, CamelMimeMessage *message)
+{
+    CamelMessageInfo *info = camel_message_info_new(nullptr);
+    camel_message_info_set_flags(info, CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+    const bool ok = camel_folder_append_message_sync(folder, message, info, nullptr, nullptr, nullptr);
+    g_object_unref(info);
+    return ok;
+}
+
+// A message kept as a file of its own: an .eml file, or one message of a
+// Maildir folder.
+bool appendFile(CamelFolder *folder, const QString &path)
+{
+    CamelStream *stream = camel_stream_fs_new_with_name(QFile::encodeName(path).constData(), O_RDONLY, 0, nullptr);
+    if (!stream) {
+        return false;
+    }
+    CamelMimeMessage *message = camel_mime_message_new();
+    const bool ok = camel_data_wrapper_construct_from_stream_sync(CAMEL_DATA_WRAPPER(message), stream, nullptr, nullptr)
+        && appendMessage(folder, message);
+    g_object_unref(stream);
+    g_object_unref(message);
+    return ok;
+}
+
+// Each message of an mbox file into folder, counted on the transfer and
+// stopping when it is cancelled; how many went in.
+int appendMbox(CamelFolder *folder, const QString &path, Transfer &job)
+{
+    const int fd = ::open(QFile::encodeName(path).constData(), O_RDONLY);
+    if (fd < 0) {
+        return 0;
+    }
+    CamelMimeParser *parser = camel_mime_parser_new();
+    camel_mime_parser_scan_from(parser, TRUE);
+    camel_mime_parser_init_with_fd(parser, fd);
+    int count = 0;
+    while (job.carryOn() && camel_mime_parser_step(parser, nullptr, nullptr) == CAMEL_MIME_PARSER_STATE_FROM) {
+        CamelMimeMessage *message = camel_mime_message_new();
+        if (!camel_mime_part_construct_from_parser_sync(CAMEL_MIME_PART(message), parser, nullptr, nullptr)) {
+            g_object_unref(message);
+            break;
+        }
+        if (appendMessage(folder, message)) {
+            ++count;
+        }
+        ++job.done;
+        g_object_unref(message);
+        camel_mime_parser_step(parser, nullptr, nullptr);
+    }
+    g_object_unref(parser);
+    return count;
+}
+
+// How many messages an mbox file holds, by its "From " lines, so progress
+// has a total before the first is imported.
+int countMbox(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return 0;
+    }
+    int count = 0;
+    QByteArray carry("\n");
+    while (!file.atEnd()) {
+        const QByteArray chunk = carry + file.read(1 << 20);
+        count += int(chunk.count("\nFrom "));
+        carry = chunk.right(5);
+    }
+    return count;
+}
+
+bool startsWithFrom(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) && file.read(5) == "From ";
+}
+
+bool isMaildir(const QString &dir)
+{
+    return QFileInfo(dir + QStringLiteral("/cur")).isDir() && QFileInfo(dir + QStringLiteral("/new")).isDir();
+}
+
+QStringList maildirFiles(const QString &dir)
+{
+    QStringList out;
+    for (const QString &sub : {QStringLiteral("/cur"), QStringLiteral("/new")}) {
+        for (const QFileInfo &fi : QDir(dir + sub).entryInfoList(QDir::Files, QDir::Name)) {
+            out << fi.absoluteFilePath();
+        }
+    }
+    return out;
+}
+
+// Something to import, and the folders under Imported it goes into.
+struct ImportSource {
+    enum Kind { Mbox, Eml, Maildir };
+    Kind kind = Mbox;
+    QString path;
+    QStringList folder;
+    // What the progress row says is being imported.
+    QString label;
+};
+
+// A folder name as a server takes it: no separators.
+QString folderPart(QString name)
+{
+    name.replace(QLatin1Char('/'), QLatin1Char('-'));
+    return name.trimmed().isEmpty() ? MailEngine::tr("Folder") : name.trimmed();
+}
+
+void collect(const QString &path, const QStringList &folder, QList<ImportSource> *out, QList<QPair<QString, QStringList>> *psts);
+
+void collectFile(const QString &path, const QStringList &folder, QList<ImportSource> *out, QList<QPair<QString, QStringList>> *psts)
+{
+    const QFileInfo fi(path);
+    const QString suffix = fi.suffix().toLower();
+    if (fi.size() == 0) {
+        return;
+    }
+    if (suffix == QLatin1String("eml")) {
+        out->append(ImportSource{ImportSource::Eml, path, folder, fi.fileName()});
+    } else if (suffix == QLatin1String("pst") || suffix == QLatin1String("ost")) {
+        psts->append(qMakePair(path, folder + QStringList{folderPart(fi.completeBaseName())}));
+    } else if (suffix == QLatin1String("mbox") || suffix == QLatin1String("mbx")) {
+        out->append(ImportSource{ImportSource::Mbox, path, folder + QStringList{folderPart(fi.completeBaseName())}, fi.fileName()});
+    } else if (startsWithFrom(path)) {
+        // Thunderbird's folders are mbox files with no extension at all.
+        out->append(ImportSource{ImportSource::Mbox, path, folder + QStringList{folderPart(fi.fileName())}, fi.fileName()});
+    }
+}
+
+// A folder picked to import, a Thunderbird account's folder or Evolution's
+// mail: mbox, eml and pst files in it and in folders inside it, Thunderbird's
+// ".sbd" subfolders and Maildir folders (Evolution's own, with its
+// subfolders beside it as ".Name.Child").
+void collect(const QString &path, const QStringList &folder, QList<ImportSource> *out, QList<QPair<QString, QStringList>> *psts)
+{
+    if (!QFileInfo(path).isDir()) {
+        collectFile(path, folder, out, psts);
+        return;
+    }
+    const bool maildir = isMaildir(path);
+    const QFileInfoList entries = QDir(path).entryInfoList(QDir::Files | QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot, QDir::Name);
+    bool plusPlus = false;
+    for (const QFileInfo &fi : entries) {
+        const QString name = fi.fileName();
+        if (fi.isDir() && name.startsWith(QLatin1Char('.')) && isMaildir(fi.absoluteFilePath())) {
+            plusPlus = true;
+            QStringList parts;
+            for (QString part : name.mid(1).split(QLatin1Char('.'), Qt::SkipEmptyParts)) {
+                parts << folderPart(part.replace(QStringLiteral("_2E"), QStringLiteral(".")));
+            }
+            out->append(ImportSource{ImportSource::Maildir, fi.absoluteFilePath(), folder + parts, parts.isEmpty() ? name : parts.last()});
+        }
+    }
+    if (maildir) {
+        // A Maildir++ store keeps its Inbox in the top folder.
+        const QStringList at = plusPlus ? folder + QStringList{MailEngine::tr("Inbox")} : folder;
+        out->append(ImportSource{ImportSource::Maildir, path, at, at.isEmpty() ? QFileInfo(path).fileName() : at.last()});
+    }
+    for (const QFileInfo &fi : entries) {
+        const QString name = fi.fileName();
+        if (name.startsWith(QLatin1Char('.'))) {
+            continue;
+        }
+        if (fi.isDir()) {
+            if (maildir && (name == QLatin1String("cur") || name == QLatin1String("new") || name == QLatin1String("tmp"))) {
+                continue;
+            }
+            const QString part = name.endsWith(QLatin1String(".sbd")) ? name.chopped(4) : name;
+            collect(fi.absoluteFilePath(), folder + QStringList{folderPart(part)}, out, psts);
+        } else {
+            collectFile(fi.absoluteFilePath(), folder, out, psts);
+        }
+    }
+}
+
+// Everything to import from these files and folders, with each Outlook
+// file opened by readpst into a folder that lives in temps until the import
+// is done. When label is set, the progress row names that throughout.
+QList<ImportSource> gather(const QList<QPair<QString, QStringList>> &roots, const QString &label, QList<std::shared_ptr<QTemporaryDir>> &temps,
+                           Transfer &job, QString *error)
+{
+    QList<ImportSource> out;
+    QList<QPair<QString, QStringList>> psts;
+    for (const auto &[path, folder] : roots) {
+        collect(path, folder, &out, &psts);
+    }
+    for (const auto &[path, folder] : std::as_const(psts)) {
+        if (!job.carryOn()) {
+            break;
+        }
+        const QString name = QFileInfo(path).fileName();
+        job.setTitle(MailEngine::tr("Reading %1").arg(label.isEmpty() ? name : label));
+        auto dir = std::make_shared<QTemporaryDir>();
+        QProcess readpst;
+        readpst.start(QStringLiteral("readpst"), {QStringLiteral("-q"), QStringLiteral("-r"), QStringLiteral("-o"), dir->path(), path});
+        if (!readpst.waitForFinished(-1) || readpst.exitCode() != 0) {
+            *error = MailEngine::tr("%1 couldn't be read. It may be damaged, or protected by a password.").arg(name);
+            continue;
+        }
+        temps << dir;
+        // readpst makes a folder per Outlook folder, each with an "mbox"
+        // file; the same folders go under Imported.
+        QDirIterator it(dir->path(), {QStringLiteral("mbox")}, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            const QString mbox = it.next();
+            QStringList parts = folder;
+            for (const QString &part : QDir(dir->path()).relativeFilePath(QFileInfo(mbox).absolutePath()).split(QLatin1Char('/'), Qt::SkipEmptyParts)) {
+                if (part != QLatin1String(".")) {
+                    parts << folderPart(part);
+                }
+            }
+            out.append(ImportSource{ImportSource::Mbox, mbox, parts, name});
+        }
+    }
+    if (!label.isEmpty()) {
+        for (ImportSource &s : out) {
+            s.label = label;
+        }
+    }
+    return out;
+}
+
+int countOf(const QList<ImportSource> &sources)
+{
+    int total = 0;
+    for (const ImportSource &s : sources) {
+        switch (s.kind) {
+        case ImportSource::Mbox:
+            total += countMbox(s.path);
+            break;
+        case ImportSource::Eml:
+            ++total;
+            break;
+        case ImportSource::Maildir:
+            total += int(maildirFiles(s.path).size());
+            break;
+        }
+    }
+    return total;
+}
+
+// The sources into the account's Imported folder, their folders made
+// inside it as they come; how many messages went in.
+int importSources(CamelStore *store, const QString &importedName, const QList<ImportSource> &sources, Transfer &job, QString *error)
+{
+    if (sources.isEmpty()) {
+        return 0;
+    }
+    GError *gerror = nullptr;
+    const QString top = ensureFolder(store, {}, importedName, &gerror);
+    if (top.isEmpty()) {
+        *error = MailEngine::plainError(gerror, MailEngine::tr("The Imported folder couldn't be made. Try again in a moment."));
+        g_clear_error(&gerror);
+        return 0;
+    }
+    QHash<QString, QString> made;
+    int count = 0;
+    for (const ImportSource &s : sources) {
+        if (!job.carryOn()) {
+            break;
+        }
+        job.setTitle(MailEngine::tr("Importing %1").arg(s.label));
+        QString full = top;
+        for (int i = 0; i < s.folder.size() && !full.isEmpty(); ++i) {
+            const QString key = s.folder.mid(0, i + 1).join(QChar(0x1f));
+            if (!made.contains(key)) {
+                made.insert(key, ensureFolder(store, full, s.folder.at(i), nullptr));
+            }
+            full = made.value(key);
+        }
+        CamelFolder *folder = full.isEmpty() ? nullptr : camel_store_get_folder_sync(store, full.toUtf8().constData(), CamelStoreGetFolderFlags(0), nullptr, nullptr);
+        if (!folder) {
+            *error = MailEngine::tr("A folder for %1 couldn't be made on the server.").arg(s.folder.isEmpty() ? s.label : s.folder.last());
+            continue;
+        }
+        switch (s.kind) {
+        case ImportSource::Mbox:
+            count += appendMbox(folder, s.path, job);
+            break;
+        case ImportSource::Eml:
+            if (appendFile(folder, s.path)) {
+                ++count;
+            }
+            ++job.done;
+            break;
+        case ImportSource::Maildir:
+            for (const QString &file : maildirFiles(s.path)) {
+                if (!job.carryOn()) {
+                    break;
+                }
+                if (appendFile(folder, file)) {
+                    ++count;
+                }
+                ++job.done;
+            }
+            break;
+        }
+        g_object_unref(folder);
+    }
+    return count;
+}
+
+// The folder's messages as an mbox file, counted on the transfer; how many
+// went out, or -1 when the file couldn't be written.
+int writeMbox(CamelFolder *f, const QString &path, Transfer &job)
+{
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile out(path);
+    if (!out.open(QIODevice::WriteOnly)) {
+        return -1;
+    }
+    int count = 0;
+    GPtrArray *uids = camel_folder_get_uids(f);
+    for (guint i = 0; i < uids->len && job.carryOn(); ++i) {
+        ++job.done;
+        CamelMimeMessage *message = camel_folder_get_message_sync(f, static_cast<const char *>(uids->pdata[i]), nullptr, nullptr);
+        if (!message) {
+            continue;
+        }
+        GOutputStream *mem = g_memory_output_stream_new_resizable();
+        camel_data_wrapper_write_to_output_stream_sync(CAMEL_DATA_WRAPPER(message), mem, nullptr, nullptr);
+        g_output_stream_close(mem, nullptr, nullptr);
+        QByteArray bytes(static_cast<const char *>(g_memory_output_stream_get_data(G_MEMORY_OUTPUT_STREAM(mem))),
+                         qsizetype(g_memory_output_stream_get_data_size(G_MEMORY_OUTPUT_STREAM(mem))));
+        g_object_unref(mem);
+        // mbox: a "From " line before each message, and lines in it that
+        // start "From " quoted with ">".
+        bytes.replace("\nFrom ", "\n>From ");
+        if (bytes.startsWith("From ")) {
+            bytes.prepend('>');
+        }
+        gchar *from = camel_mime_message_build_mbox_from(message);
+        out.write(from);
+        g_free(from);
+        out.write(bytes);
+        if (!bytes.endsWith('\n')) {
+            out.write("\n");
+        }
+        out.write("\n");
+        g_object_unref(message);
+        ++count;
+    }
+    camel_folder_free_uids(f, uids);
+    return count;
+}
+
+// Where Thunderbird keeps each account's mail, whichever way it was
+// installed: one folder per account under Mail (POP and Local Folders) or
+// ImapMail.
+QStringList thunderbirdAccounts()
+{
+    const QString home = QDir::homePath();
+    QStringList out;
+    for (const QString &base : {home + QStringLiteral("/.thunderbird"),
+                                home + QStringLiteral("/.var/app/org.mozilla.Thunderbird/.thunderbird"),
+                                home + QStringLiteral("/.var/app/net.thunderbird.Thunderbird/.thunderbird"),
+                                home + QStringLiteral("/snap/thunderbird/common/.thunderbird")}) {
+        for (const QFileInfo &profile : QDir(base).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            for (const QString &kind : {QStringLiteral("/Mail"), QStringLiteral("/ImapMail")}) {
+                for (const QFileInfo &account : QDir(profile.absoluteFilePath() + kind).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                    out << account.absoluteFilePath();
+                }
+            }
+        }
+    }
+    return out;
+}
+
+QStringList evolutionStores()
+{
+    const QString home = QDir::homePath();
+    QStringList out;
+    for (const QString &dir : {home + QStringLiteral("/.local/share/evolution/mail/local"),
+                               home + QStringLiteral("/.var/app/org.gnome.Evolution/data/evolution/mail/local")}) {
+        if (isMaildir(dir)) {
+            out << dir;
+        }
+    }
+    return out;
+}
+
+// Whether any of these holds a message, without reading them all.
+bool holdsMail(const QStringList &dirs)
+{
+    for (const QString &dir : dirs) {
+        QDirIterator it(dir, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            const QFileInfo fi(it.nextFileInfo());
+            const QString parent = fi.dir().dirName();
+            if (fi.size() > 0 && (parent == QLatin1String("cur") || parent == QLatin1String("new") || startsWithFrom(fi.absoluteFilePath()))) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// What a backup holds, and what it is called inside the archive.
+const QString backupFormat = QStringLiteral("wildos-mail-backup");
+
+// Settings that name this PC's accounts, folders or windows, or only
+// count things here: not carried to another PC by a backup.
+bool settingStaysHere(const QString &key)
+{
+    static const QStringList here = {
+        QStringLiteral("mail/folder"), QStringLiteral("mail/folderAccount"), QStringLiteral("calendar/holidaysUid"),
+        QStringLiteral("privacy/photosCleaned"),
+    };
+    const QString lower = key.toLower();
+    return here.contains(key) || key.startsWith(QLatin1String("Window/")) || key.startsWith(QLatin1String("trackersCounted/"))
+        || lower.contains(QLatin1String("password")) || lower.contains(QLatin1String("token")) || lower.contains(QLatin1String("secret"));
+}
+
+bool writeJson(const QString &path, const QJsonDocument &doc)
+{
+    QFile file(path);
+    return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(doc.toJson()) >= 0;
+}
+
+QJsonDocument readJson(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()) : QJsonDocument();
+}
+}
+
+void MailEngine::importMail(const QString &accountId, const QList<QUrl> &files)
+{
+    QList<QPair<QString, QStringList>> roots;
+    for (const QUrl &url : files) {
+        const QFileInfo fi(url.toLocalFile());
+        // A folder picked keeps its own name as the top folder inside Imported.
+        roots.append(qMakePair(fi.absoluteFilePath(), fi.isDir() ? QStringList{folderPart(fi.fileName())} : QStringList{}));
+    }
+    const QString label = files.size() == 1 && QFileInfo(files.first().toLocalFile()).isDir() ? QFileInfo(files.first().toLocalFile()).fileName() : QString();
+    importRoots(accountId, roots, label);
+}
+
+QVariantList MailEngine::mailApps() const
+{
+    QVariantList apps;
+    if (holdsMail(thunderbirdAccounts())) {
+        apps << QVariantMap{{QStringLiteral("id"), QStringLiteral("thunderbird")}, {QStringLiteral("name"), QStringLiteral("Thunderbird")}};
+    }
+    if (holdsMail(evolutionStores())) {
+        apps << QVariantMap{{QStringLiteral("id"), QStringLiteral("evolution")}, {QStringLiteral("name"), QStringLiteral("Evolution")}};
+    }
+    return apps;
+}
+
+void MailEngine::importApp(const QString &accountId, const QString &appId)
+{
+    QList<QPair<QString, QStringList>> roots;
+    QString name;
+    if (appId == QLatin1String("thunderbird")) {
+        name = QStringLiteral("Thunderbird");
+        for (const QString &dir : thunderbirdAccounts()) {
+            roots.append(qMakePair(dir, QStringList{name, folderPart(QFileInfo(dir).fileName())}));
+        }
+    } else if (appId == QLatin1String("evolution")) {
+        name = QStringLiteral("Evolution");
+        for (const QString &dir : evolutionStores()) {
+            roots.append(qMakePair(dir, QStringList{name}));
+        }
+    }
+    importRoots(accountId, roots, name);
+}
+
+void MailEngine::importRoots(const QString &accountId, const QList<QPair<QString, QStringList>> &roots, const QString &label)
+{
+    const Account *account = m_store.find(accountId);
+    CamelStore *store = nullptr;
+    {
+        QMutexLocker lock(&m_folderLock);
+        store = m_live.value(accountId).store;
+    }
+    if (!account || !store || roots.isEmpty()) {
+        return;
+    }
+    auto job = startTransfer(QStringLiteral("import"), label.isEmpty() ? tr("Getting ready to import") : tr("Importing %1").arg(label), account->email);
+    if (!job) {
+        return;
+    }
+    g_object_ref(store);
+    auto count = std::make_shared<int>(0);
+    auto error = std::make_shared<QString>();
+    const QString importedName = tr("Imported");
+    run([store, roots, label, job, count, error, importedName]() {
+        QList<std::shared_ptr<QTemporaryDir>> temps;
+        const QList<ImportSource> sources = gather(roots, label, temps, *job, error.get());
+        job->total = countOf(sources);
+        *count = importSources(store, importedName, sources, *job, error.get());
+        g_object_unref(store);
+    }, [this, accountId, job, count, error]() {
+        listFolders(accountId);
+        if (job->cancelled) {
+            finishTransfer(true, *count == 1 ? tr("Import stopped. 1 message went into the Imported folder.")
+                                             : tr("Import stopped. %1 messages went into the Imported folder.").arg(*count));
+        } else if (*count == 0) {
+            finishTransfer(false, error->isEmpty() ? tr("No messages were found to import.") : *error);
+        } else {
+            const QString done = *count == 1 ? tr("Imported 1 message into the Imported folder.") : tr("Imported %1 messages into the Imported folder.").arg(*count);
+            finishTransfer(true, error->isEmpty() ? done : done + QLatin1Char(' ') + *error);
+        }
+    });
+}
+
+void MailEngine::exportMail(const QVariantMap &choice, const QUrl &folder)
+{
+    struct Part {
+        QString accountId;
+        QString email;
+        QStringList folders;
+    };
+    QList<Part> parts;
+    for (const Account &a : m_store.accounts()) {
+        if (!choice.contains(a.id) || !m_live.contains(a.id)) {
+            continue;
+        }
+        const QStringList chosen = choice.value(a.id).toStringList();
+        Part part{a.id, a.email, {}};
+        for (const FolderEntry &f : m_live.value(a.id).folders) {
+            if (f.role != QLatin1String("outbox") && (chosen.isEmpty() || chosen.contains(f.fullName))) {
+                part.folders << f.fullName;
+            }
+        }
+        if (!part.folders.isEmpty()) {
+            parts << part;
+        }
+    }
+    if (parts.isEmpty()) {
+        return;
+    }
+    const QString dir = folder.toLocalFile();
+    auto job = startTransfer(QStringLiteral("export"), tr("Getting ready to export"), parts.size() == 1 ? parts.first().email : QString());
+    if (!job) {
+        return;
+    }
+    auto count = std::make_shared<int>(0);
+    auto error = std::make_shared<QString>();
+    run([this, parts, dir, job, count, error]() {
+        // Every folder opened first, so the total is known before any is
+        // written.
+        QList<QPair<CamelFolder *, QString>> open;
+        for (const Part &part : parts) {
+            for (const QString &full : part.folders) {
+                GError *gerror = nullptr;
+                if (CamelFolder *f = folderSync(part.accountId, full, &gerror)) {
+                    job->total += int(camel_folder_get_message_count(f));
+                    open.append(qMakePair(f, part.email + QLatin1Char('/') + full));
+                }
+                g_clear_error(&gerror);
+            }
+        }
+        for (const auto &[f, name] : std::as_const(open)) {
+            if (job->carryOn() && error->isEmpty()) {
+                job->setTitle(tr("Exporting %1").arg(name.section(QLatin1Char('/'), -1)), name.section(QLatin1Char('/'), 0, 0));
+                const int n = writeMbox(f, dir + QLatin1Char('/') + name + QStringLiteral(".mbox"), *job);
+                if (n < 0) {
+                    *error = tr("Mail couldn't write to %1.").arg(dir);
+                } else {
+                    *count += n;
+                }
+            }
+            g_object_unref(f);
+        }
+    }, [this, job, count, error, dir]() {
+        if (!error->isEmpty()) {
+            finishTransfer(false, *error);
+        } else if (job->cancelled) {
+            finishTransfer(true, tr("Export stopped. %1 messages were saved to %2.").arg(*count).arg(dir));
+        } else {
+            finishTransfer(true, *count == 1 ? tr("Exported 1 message to %1.").arg(dir) : tr("Exported %1 messages to %2.").arg(*count).arg(dir));
+        }
+    });
+}
+
+void MailEngine::backUp(const QUrl &file)
+{
+    QString path = file.toLocalFile();
+    if (!path.endsWith(QLatin1String(".tar.gz")) && !path.endsWith(QLatin1String(".tgz"))) {
+        path += QStringLiteral(".tar.gz");
+    }
+    // Accounts as accounts.json keeps them: addresses and servers, never a
+    // password or sign-in token, which live only in the password store.
+    QJsonArray accounts;
+    QList<QPair<QString, QString>> mailboxes;
+    for (const Account &a : m_store.accounts()) {
+        accounts.append(QJsonObject::fromVariantMap(a.toMap()));
+        if (m_live.contains(a.id)) {
+            for (const FolderEntry &f : m_live.value(a.id).folders) {
+                if (f.role != QLatin1String("outbox")) {
+                    mailboxes.append(qMakePair(a.id, f.fullName));
+                }
+            }
+        }
+    }
+    QSettings current;
+    current.sync();
+    QVariantMap settings;
+    for (const QString &key : current.allKeys()) {
+        if (!settingStaysHere(key)) {
+            settings.insert(key, current.value(key));
+        }
+    }
+    QHash<QString, QString> emails;
+    for (const Account &a : m_store.accounts()) {
+        emails.insert(a.id, a.email);
+    }
+    const QJsonDocument rules(QJsonArray::fromVariantList(m_rules));
+    const QJsonDocument signatures(QJsonArray::fromVariantList(m_signatures));
+    auto job = startTransfer(QStringLiteral("backup"), tr("Backing up contacts and calendars"), QString());
+    if (!job) {
+        return;
+    }
+    auto count = std::make_shared<int>(0);
+    auto error = std::make_shared<QString>();
+    auto notes = std::make_shared<QStringList>();
+    run([this, path, accounts, mailboxes, settings, emails, rules, signatures, job, count, error, notes]() {
+        QTemporaryDir tmp;
+        const QString root = tmp.path() + QLatin1Char('/') + backupFormat;
+        QDir().mkpath(root + QStringLiteral("/mail"));
+        writeJson(root + QStringLiteral("/manifest.json"), QJsonDocument(QJsonObject{
+            {QStringLiteral("format"), backupFormat},
+            {QStringLiteral("version"), 1},
+            {QStringLiteral("created"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate)},
+        }));
+        writeJson(root + QStringLiteral("/accounts.json"), QJsonDocument(accounts));
+        writeJson(root + QStringLiteral("/rules.json"), rules);
+        writeJson(root + QStringLiteral("/signatures.json"), signatures);
+        {
+            QSettings out(root + QStringLiteral("/settings.conf"), QSettings::IniFormat);
+            for (auto it = settings.cbegin(); it != settings.cend(); ++it) {
+                out.setValue(it.key(), it.value());
+            }
+        }
+        QString why;
+        if (PeopleEngine::writeVcf(root + QStringLiteral("/contacts.vcf"), &why) < 0) {
+            *notes << tr("Contacts weren't backed up. %1").arg(why);
+        }
+        if (CalendarEngine::writeAll(root + QStringLiteral("/calendars"), &why) < 0) {
+            *notes << tr("Calendars weren't backed up. %1").arg(why);
+        }
+        QList<QPair<CamelFolder *, QString>> open;
+        for (const auto &[accountId, full] : mailboxes) {
+            GError *gerror = nullptr;
+            if (CamelFolder *f = folderSync(accountId, full, &gerror)) {
+                job->total += int(camel_folder_get_message_count(f));
+                open.append(qMakePair(f, emails.value(accountId) + QLatin1Char('/') + full));
+            }
+            g_clear_error(&gerror);
+        }
+        for (const auto &[f, name] : std::as_const(open)) {
+            if (job->carryOn() && error->isEmpty()) {
+                job->setTitle(tr("Backing up %1").arg(name.section(QLatin1Char('/'), 0, 0)), name.section(QLatin1Char('/'), 0, 0));
+                const int n = writeMbox(f, root + QStringLiteral("/mail/") + name + QStringLiteral(".mbox"), *job);
+                if (n < 0) {
+                    *error = tr("The backup couldn't be put together. Is there space on this PC?");
+                } else {
+                    *count += n;
+                }
+            }
+            g_object_unref(f);
+        }
+        if (job->cancelled || !error->isEmpty()) {
+            return;
+        }
+        job->setTitle(tr("Saving the backup"));
+        // Written beside the file chosen, then renamed over it, so a backup
+        // that fails half way never replaces a good one.
+        const QString partial = path + QStringLiteral(".part");
+        QProcess tar;
+        tar.start(QStringLiteral("tar"), {QStringLiteral("-czf"), partial, QStringLiteral("-C"), tmp.path(), backupFormat});
+        if (!tar.waitForFinished(-1) || tar.exitCode() != 0) {
+            QFile::remove(partial);
+            *error = tr("The backup couldn't be saved to %1.").arg(QFileInfo(path).absolutePath());
+            return;
+        }
+        // It holds private mail: only this account can read it.
+        QFile::setPermissions(partial, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        QFile::remove(path);
+        if (!QFile::rename(partial, path)) {
+            QFile::remove(partial);
+            *error = tr("The backup couldn't be saved to %1.").arg(QFileInfo(path).absolutePath());
+        }
+    }, [this, path, job, count, error, notes]() {
+        if (!error->isEmpty()) {
+            finishTransfer(false, *error);
+        } else if (job->cancelled) {
+            finishTransfer(true, tr("Backup stopped. Nothing was saved."));
+        } else {
+            QStringList words{*count == 1 ? tr("Backed up 1 message, your contacts, calendars and settings to %1.").arg(path)
+                                          : tr("Backed up %1 messages, your contacts, calendars and settings to %2.").arg(*count).arg(path)};
+            finishTransfer(notes->isEmpty(), (words + *notes).join(QLatin1Char(' ')));
+        }
+    });
+}
+
+void MailEngine::restoreSettings(const QString &root, QStringList *notes)
+{
+    // The backup's account ids are another PC's; addresses tie them to the
+    // accounts here.
+    QHash<QString, QString> idHere;
+    QHash<QString, QVariantMap> backedUp;
+    for (const QJsonValue &v : readJson(root + QStringLiteral("/accounts.json")).array()) {
+        const QVariantMap a = v.toObject().toVariantMap();
+        const QString email = a.value(QStringLiteral("email")).toString().toLower();
+        for (const Account &here : m_store.accounts()) {
+            if (here.email.toLower() == email) {
+                idHere.insert(a.value(QStringLiteral("id")).toString(), here.id);
+                backedUp.insert(here.id, a);
+            }
+        }
+    }
+
+    QSet<QString> signatureIds;
+    for (const QVariant &v : std::as_const(m_signatures)) {
+        signatureIds.insert(v.toMap().value(QStringLiteral("id")).toString());
+    }
+    bool signaturesAdded = false;
+    for (const QVariant &v : readJson(root + QStringLiteral("/signatures.json")).array().toVariantList()) {
+        const QString id = v.toMap().value(QStringLiteral("id")).toString();
+        if (!id.isEmpty() && !signatureIds.contains(id)) {
+            m_signatures.append(v);
+            signatureIds.insert(id);
+            signaturesAdded = true;
+        }
+    }
+    if (signaturesAdded) {
+        writeSignatures();
+        Q_EMIT signaturesChanged();
+    }
+    // An account with no signature chosen takes the one it had.
+    for (auto it = backedUp.cbegin(); it != backedUp.cend(); ++it) {
+        const Account *here = m_store.find(it.key());
+        if (!here) {
+            continue;
+        }
+        Account updated = *here;
+        const QString forNew = it.value().value(QStringLiteral("signatureNew")).toString();
+        const QString forReply = it.value().value(QStringLiteral("signatureReply")).toString();
+        if (updated.signatureNew.isEmpty() && signatureIds.contains(forNew)) {
+            updated.signatureNew = forNew;
+        }
+        if (updated.signatureReply.isEmpty() && signatureIds.contains(forReply)) {
+            updated.signatureReply = forReply;
+        }
+        if (updated.signatureNew != here->signatureNew || updated.signatureReply != here->signatureReply) {
+            m_store.update(updated);
+            Q_EMIT accountsChanged();
+        }
+    }
+
+    QSet<QString> ruleIds;
+    for (const QVariant &v : std::as_const(m_rules)) {
+        ruleIds.insert(v.toMap().value(QStringLiteral("id")).toString());
+    }
+    QVariantList rules = m_rules;
+    int skippedRules = 0;
+    for (const QVariant &v : readJson(root + QStringLiteral("/rules.json")).array().toVariantList()) {
+        QVariantMap rule = v.toMap();
+        const QString accountId = idHere.value(rule.value(QStringLiteral("accountId")).toString());
+        if (accountId.isEmpty()) {
+            ++skippedRules;
+            continue;
+        }
+        if (ruleIds.contains(rule.value(QStringLiteral("id")).toString())) {
+            continue;
+        }
+        rule.insert(QStringLiteral("accountId"), accountId);
+        rules.append(rule);
+    }
+    if (rules.size() != m_rules.size()) {
+        setRules(rules);
+    }
+    if (skippedRules > 0) {
+        *notes << (skippedRules == 1 ? tr("1 rule was left out, as its account isn't on this PC.")
+                                     : tr("%1 rules were left out, as their accounts aren't on this PC.").arg(skippedRules));
+    }
+
+    const QString settingsFile = root + QStringLiteral("/settings.conf");
+    if (QFile::exists(settingsFile)) {
+        const QSettings from(settingsFile, QSettings::IniFormat);
+        QSettings to;
+        for (const QString &key : from.allKeys()) {
+            if (settingStaysHere(key)) {
+                continue;
+            }
+            if (key == QLatin1String("mail/defaultAccount")) {
+                const QString id = idHere.value(from.value(key).toString());
+                if (!id.isEmpty()) {
+                    to.setValue(key, id);
+                }
+            } else if (key == QLatin1String("people/emptyGroups")) {
+                QStringList groups = to.value(key).toStringList();
+                for (const QString &g : from.value(key).toStringList()) {
+                    if (!groups.contains(g, Qt::CaseInsensitive)) {
+                        groups << g;
+                    }
+                }
+                to.setValue(key, groups);
+            } else {
+                to.setValue(key, from.value(key));
+            }
+        }
+        Q_EMIT accountsChanged();
+    }
+}
+
+void MailEngine::restore(const QUrl &file)
+{
+    const QString path = file.toLocalFile();
+    auto job = startTransfer(QStringLiteral("restore"), tr("Opening %1").arg(QFileInfo(path).fileName()), QString());
+    if (!job) {
+        return;
+    }
+    auto tmp = std::make_shared<QTemporaryDir>();
+    auto error = std::make_shared<QString>();
+    run([path, tmp, error]() {
+        QProcess tar;
+        tar.start(QStringLiteral("tar"), {QStringLiteral("-xzf"), path, QStringLiteral("-C"), tmp->path(), QStringLiteral("--no-same-owner"),
+                                          QStringLiteral("--no-same-permissions"), backupFormat});
+        if (!tar.waitForFinished(-1) || tar.exitCode() != 0) {
+            *error = tr("That file isn't a Mail backup, or it is damaged.");
+        }
+    }, [this, job, tmp, error]() {
+        const QString root = tmp->path() + QLatin1Char('/') + backupFormat;
+        if (error->isEmpty() && readJson(root + QStringLiteral("/manifest.json")).object().value(QStringLiteral("format")).toString() != backupFormat) {
+            *error = tr("That file isn't a Mail backup, or it is damaged.");
+        }
+        if (!error->isEmpty()) {
+            finishTransfer(false, *error);
+            return;
+        }
+        auto notes = std::make_shared<QStringList>();
+        restoreSettings(root, notes.get());
+
+        // Mail goes back into the account with the same address, if it is
+        // here; a backup never adds accounts, which need signing in to.
+        struct Target {
+            QString accountId;
+            QString email;
+            QString dir;
+            CamelStore *store;
+        };
+        QList<Target> targets;
+        for (const QFileInfo &fi : QDir(root + QStringLiteral("/mail")).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+            const Account *here = nullptr;
+            for (const Account &a : m_store.accounts()) {
+                if (a.email.compare(fi.fileName(), Qt::CaseInsensitive) == 0) {
+                    here = &a;
+                }
+            }
+            CamelStore *store = nullptr;
+            if (here) {
+                QMutexLocker lock(&m_folderLock);
+                store = m_live.value(here->id).store;
+            }
+            if (!store) {
+                *notes << tr("Mail for %1 was left out. Add that account, then restore again to bring its mail back.").arg(fi.fileName());
+                continue;
+            }
+            g_object_ref(store);
+            targets.append(Target{here->id, here->email, fi.absoluteFilePath(), store});
+        }
+        const QString book = PeopleEngine::instance()->defaultBook();
+        const QString calendar = CalendarEngine::instance()->defaultCalendar();
+        const QString importedName = tr("Imported");
+        auto messages = std::make_shared<int>(0);
+        auto contacts = std::make_shared<int>(0);
+        auto events = std::make_shared<int>(0);
+        job->setTitle(tr("Restoring contacts and calendars"));
+        run([root, tmp, targets, book, calendar, importedName, job, messages, contacts, events, notes]() {
+            QString why;
+            if (QFile::exists(root + QStringLiteral("/contacts.vcf"))) {
+                *contacts = PeopleEngine::readVcf(root + QStringLiteral("/contacts.vcf"), book, &why);
+                if (*contacts < 0) {
+                    *notes << tr("Contacts weren't restored. %1").arg(why);
+                    *contacts = 0;
+                }
+            }
+            for (const QFileInfo &fi : QDir(root + QStringLiteral("/calendars")).entryInfoList({QStringLiteral("*.ics")}, QDir::Files, QDir::Name)) {
+                const int n = CalendarEngine::readInto(fi.absoluteFilePath(), fi.completeBaseName(), calendar, &why);
+                if (n < 0) {
+                    *notes << tr("Events from %1 weren't restored. %2").arg(fi.completeBaseName(), why);
+                } else {
+                    *events += n;
+                }
+            }
+            QList<QList<ImportSource>> perAccount;
+            QList<std::shared_ptr<QTemporaryDir>> temps;
+            QString error;
+            for (const Target &t : targets) {
+                perAccount << gather({qMakePair(t.dir, QStringList{})}, {}, temps, *job, &error);
+                job->total += countOf(perAccount.last());
+            }
+            for (int i = 0; i < targets.size(); ++i) {
+                job->setTitle(tr("Restoring mail"), targets.at(i).email);
+                *messages += importSources(targets.at(i).store, importedName, perAccount.at(i), *job, &error);
+                g_object_unref(targets.at(i).store);
+            }
+            if (!error.isEmpty()) {
+                *notes << error;
+            }
+        }, [this, targets, job, messages, contacts, events, notes]() {
+            for (const Target &t : targets) {
+                listFolders(t.accountId);
+            }
+            const QString done = job->cancelled ? tr("Restore stopped.") : tr("Restored %1 messages into the Imported folder, %2 contacts and %3 events.")
+                                                                               .arg(*messages).arg(*contacts).arg(*events);
+            finishTransfer(notes->isEmpty(), (QStringList{done} + *notes).join(QLatin1Char(' ')));
+        });
+    });
+}
+
+void MailEngine::runRules(const QString &accountId)
+{
+    QList<MessageRow> rows;
+    for (auto it = m_lastInbox.cbegin(); it != m_lastInbox.cend(); ++it) {
+        if (accountId.isEmpty() || it.key() == accountId) {
+            rows += it.value();
+        }
+    }
+    const int count = applyRules(rows).size();
+    Q_EMIT notice(count == 0 ? tr("No messages in the Inbox matched a rule.")
+                  : count == 1 ? tr("Rules took care of 1 message.")
+                               : tr("Rules took care of %1 messages.").arg(count));
+}
+
+void MailEngine::addMicrosoftCalendar(const QString &id)
+{
+    const Account *account = m_store.find(id);
+    if (!account || account->auth != QLatin1String("microsoft")) {
+        return;
+    }
+    const QString email = account->email;
+    m_store.readPassword(id, [email](const QString &refreshToken) {
+        if (!refreshToken.isEmpty()) {
+            CalendarEngine::instance()->addMicrosoftAccount(email, refreshToken);
+        }
+    });
 }
 
 void MailEngine::signInAgain(const QString &id, const QString &password)

@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: captdriver
+Source: https://github.com/mounaiban/captdriver
+
+Files: *
+Copyright: 2004-2022 Rildo Pragana, Nicolas Boichat, Benoit Bolsee,
+ Alexey Galakhov, Vitaliy Tomin, Moses Chong and the captdriver contributors
+License: GPL-3+
+ On Debian systems the full text of the GNU General Public License version 3
+ is in /usr/share/common-licenses/GPL-3.

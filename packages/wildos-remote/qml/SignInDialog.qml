@@ -114,7 +114,8 @@ Panel {
             Layout.fillWidth: true
             size: "large"
             leftPadding: 40
-            placeholderText: qsTr("Name, or DOMAIN\\name")
+            //: %1 is a backslash, written this way because lupdate reads \\n as a line break
+            placeholderText: qsTr("Name, or DOMAIN%1name").arg("\\\\")
             UI.Icon {
                 x: 14
                 anchors.verticalCenter: parent.verticalCenter

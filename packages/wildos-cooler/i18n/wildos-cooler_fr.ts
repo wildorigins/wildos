@@ -189,6 +189,10 @@
             <source>%1° %2</source>
             <translation>%1° %2</translation>
         </message>
+        <message>
+            <source>GPU</source>
+            <translation>GPU</translation>
+        </message>
     </context>
     <context>
         <name>CoolingPage</name>
@@ -1059,6 +1063,17 @@
         <message>
             <source>%1 %2°</source>
             <translation>%1 %2°</translation>
+        </message>
+    </context>
+    <context>
+        <name>Reading</name>
+        <message>
+            <source>CPU</source>
+            <translation>CPU</translation>
+        </message>
+        <message>
+            <source>GPU</source>
+            <translation>GPU</translation>
         </message>
     </context>
     <context>

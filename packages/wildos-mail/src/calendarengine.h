@@ -7,6 +7,7 @@
 #include <QSet>
 #include <QTimeZone>
 #include <QTimer>
+#include <QUrl>
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
@@ -132,6 +133,15 @@ public:
     // A Google account from a refresh token (GoogleSignIn), or a CalDAV
     // server with a password; the service finds the calendars in it.
     Q_INVOKABLE void addGoogleAccount(const QString &email, const QString &refreshToken);
+    // An Outlook.com or Microsoft 365 account from a refresh token
+    // (MicrosoftSignIn): calendars, contacts and task lists through
+    // evolution-data-server's Microsoft 365 module.
+    Q_INVOKABLE void addMicrosoftAccount(const QString &email, const QString &refreshToken);
+    // Whether the calendar service has an account for this address, and
+    // whether its calendars and contacts are on: {exists, calendar, contacts}.
+    Q_INVOKABLE QVariantMap accountParts(const QString &email) const;
+    // part: "calendar" or "contacts".
+    Q_INVOKABLE void setAccountPart(const QString &email, const QString &part, bool on);
     Q_INVOKABLE void addCalDavAccount(const QString &name, const QString &url, const QString &user, const QString &password);
     Q_INVOKABLE void removeAccount(const QString &uid);
     Q_INVOKABLE void refresh();
@@ -154,6 +164,19 @@ public:
     Q_INVOKABLE void removeInvitation(const QString &ics);
 
     // UK bank holidays and birthdays from contacts (CalMsSettings).
+    // iCalendar files. Export writes each calendar of people's own events
+    // (not web, holiday or birthday calendars) to a file of its own in the
+    // folder; import adds a file's events to a calendar, the default one
+    // when calendarUid is empty, leaving out any already there. Both are
+    // answered with notice.
+    Q_INVOKABLE void exportTo(const QUrl &folder);
+    Q_INVOKABLE void importFrom(const QUrl &file, const QString &calendarUid);
+    // The blocking halves, for Mail's backup and restore on a worker
+    // thread. writeAll gives how many events went out, readInto how many
+    // came in (into the calendar of the same name if there is one, else
+    // fallbackUid); -1 with error set when it failed.
+    static int writeAll(const QString &folder, QString *error);
+    static int readInto(const QString &path, const QString &calendarName, const QString &fallbackUid, QString *error);
     Q_INVOKABLE bool hasHolidays() const;
     Q_INVOKABLE void setHolidays(bool on);
     Q_INVOKABLE bool hasBirthdays() const;

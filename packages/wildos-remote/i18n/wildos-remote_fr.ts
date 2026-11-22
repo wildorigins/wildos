@@ -1956,11 +1956,6 @@
             <translation>Nom d'utilisateur</translation>
         </message>
         <message>
-            <source>Name, or DOMAIN
-ame</source>
-            <translation>Nom, ou DOMAINE\nom</translation>
-        </message>
-        <message>
             <source>Password</source>
             <translation>Mot de passe</translation>
         </message>
@@ -1979,6 +1974,11 @@ ame</source>
         <message>
             <source>Sign in</source>
             <translation>Se connecter</translation>
+        </message>
+        <message>
+            <source>Name, or DOMAIN%1name</source>
+            <extracomment>%1 is a backslash, written this way because lupdate reads \n as a line break</extracomment>
+            <translation>Nom, ou DOMAINE%1nom</translation>
         </message>
     </context>
     <context>

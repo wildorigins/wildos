@@ -1,3 +1,75 @@
+wildos-branding (0.1.96) trixie; urgency=medium
+
+  * With the taskbar at the top, the clock's notifications open below the
+    calendar, and window previews and taskbar tips open below the taskbar.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 18:00:00 +0000
+
+wildos-branding (0.1.95) trixie; urgency=medium
+
+  * The start-up menu uses the screen's own shape, so on an ultrawide or
+    other unusual screen it is no longer stretched. Very tall screens such
+    as 4K get half their size, keeping the menu readable.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 14:00:00 +0000
+
+wildos-branding (0.1.94) trixie; urgency=medium
+
+  * Title-bar buttons in Flatpak and other GTK apps, such as Firefox, show
+    their minimise, maximise and close pictures again. Every Wild OS
+    symbolic icon is now drawn as a filled shape, which GTK can colour.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 11:30:00 +0000
+
+wildos-branding (0.1.93) trixie; urgency=medium
+
+  * The on-screen keyboard comes up on the lock screen when its button is
+    pressed, and the password box moves above it on the lock and sign-in
+    screens instead of being covered. Typing on it no longer hides the
+    password box.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 21 Nov 2026 16:00:00 +0000
+
+wildos-branding (0.1.92) trixie; urgency=medium
+
+  * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,
+    Filipino, Finnish, Latvian, Lithuanian, Malay, Marathi, Norwegian,
+    Serbian, Slovak, Slovenian, Tamil, Telugu and Thai.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 02:00:00 +0000
+
+wildos-branding (0.1.91) trixie; urgency=medium
+
+  * The update check on the taskbar no longer stops when only Kicksecure's
+    update server cannot be reached.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 21:30:00 +0000
+
+wildos-branding (0.1.90) trixie; urgency=medium
+
+  * Start: right-click an app and choose Add to desktop to put a shortcut
+    to it on the desktop.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 21:00:00 +0000
+
+wildos-branding (0.1.89) trixie; urgency=medium
+
+  * Now also in Arabic, Chinese (Simplified and Traditional), Czech, Greek,
+    Hindi, Hungarian, Indonesian, Japanese, Korean, Brazilian Portuguese,
+    Romanian, Russian, Swedish, Turkish, Ukrainian and Vietnamese.
+  * The copy progress on the taskbar counts items correctly in every
+    language.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 20:00:00 +0000
+
+wildos-branding (0.1.88) trixie; urgency=medium
+
+  * Now also in Dutch, German, Spanish, Italian, Portuguese and Polish:
+    the display language chosen in Settings > Time and language applies
+    to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 14:00:00 +0000
+
 wildos-branding (0.1.87) trixie; urgency=medium
 
   * The start-up menu has pictures for the start-up manager and for

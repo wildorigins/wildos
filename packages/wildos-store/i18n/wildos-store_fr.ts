@@ -1780,6 +1780,14 @@ Gardez tout ce que vous faites.</translation>
             <source>Removed</source>
             <translation>Supprimée</translation>
         </message>
+        <message>
+            <source>Get</source>
+            <translation>Obtenir</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Installation</translation>
+        </message>
     </context>
     <context>
         <name>WindowsAppsPage</name>

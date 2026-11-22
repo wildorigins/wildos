@@ -22,7 +22,8 @@ Page {
     text: qsTr("Run Windows programs like Word, Excel and Photoshop in their own windows, next to your other apps. Windows stays hidden in the background and only wakes when you open one.")
     // Only a download can be matched to Microsoft's signature, so a file
     // someone brings is never called genuine, only Windows 11 Pro.
-    note: page.ownIso && page.ready ? qsTr("Your file is checked to be Windows 11 Pro. Unlike a download, it can't be checked against Microsoft's signature.")
+    note: page.ready && !Setup.coresOk ? qsTr("Windows will be slow on this processor. Programs take longer to open and run.")
+        : page.ownIso && page.ready ? qsTr("Your file is checked to be Windows 11 Pro. Unlike a download, it can't be checked against Microsoft's signature.")
         : page.ready || Setup.checking ? qsTr("Windows downloads straight from Microsoft and uses your own licence.")
         : Setup.virtualisation !== "ok" ? qsTr("Windows mode can't start until virtualisation is switched on.")
         : !Setup.spaceOk ? qsTr("Windows mode needs about %1 free to set up.").arg(Setup.needLabel)
@@ -136,6 +137,11 @@ Page {
         UI.Button {
             text: qsTr("Not now")
             onClicked: page.later()
+        },
+        UI.Button {
+            text: qsTr("Set up anyway")
+            visible: Setup.canAcceptSlow && !Setup.slowAccepted
+            onClicked: Setup.slowAccepted = true
         },
         UI.Button {
             kind: "primary"

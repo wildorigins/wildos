@@ -28,6 +28,7 @@ import QtQuick.Templates as T
 import org.kde.ksvg as KSvg
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasmoid
 import WildOS.UI as UI
 
 PlasmaCore.Dialog {
@@ -152,20 +153,21 @@ PlasmaCore.Dialog {
     onHeightChanged: if (visible) place()
 
     // Centred over the button, its foot 12 px above the taskbar's window and
-    // kept 8 px inside the screen.
+    // kept 8 px inside the screen; with the taskbar at the top, 12 px below.
     function place(): void {
         if (!task) {
             return;
         }
         const rect = backend.globalRect(task);
         const barTop = rect.y - task.mapToItem(null, 0, 0).y;
+        const barHeight = task.Window.window ? task.Window.window.height : 0;
         const screen = tasksModel.screenGeometry;
         let left = Math.round(rect.x + rect.width / 2 - width / 2);
         if (screen.width > 0) {
             left = Math.max(screen.x + 8, Math.min(left, screen.x + screen.width - 8 - width));
         }
         x = left;
-        y = Math.round(barTop - gap - height);
+        y = Plasmoid.location === PlasmaCore.Types.TopEdge ? Math.round(barTop + barHeight + gap) : Math.round(barTop - gap - height);
     }
 
     // Plasma can still be sizing the window as it appears. It only resizes

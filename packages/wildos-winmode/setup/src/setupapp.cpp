@@ -341,8 +341,27 @@ bool SetupApp::coresOk() const
     return m_cores >= PcCheck::neededCores;
 }
 
+// Offered only when the processor is the one thing in the way, so the
+// button never looks like it gets past something else.
+bool SetupApp::canAcceptSlow() const
+{
+    return !checking() && m_cores >= 2 && !coresOk() && m_virt == QLatin1String("ok") && m_memoryState == QLatin1String("ok") && spaceOk()
+        && m_internet != QLatin1String("offline");
+}
+
+void SetupApp::setSlowAccepted(bool accepted)
+{
+    if (m_slowAccepted != accepted) {
+        m_slowAccepted = accepted;
+        Q_EMIT checksChanged();
+    }
+}
+
 bool SetupApp::requirementsMet() const
 {
+    if (m_slowAccepted && canAcceptSlow()) {
+        return true;
+    }
     return !checking() && m_virt == QLatin1String("ok") && coresOk() && m_memoryState == QLatin1String("ok") && spaceOk()
         && m_internet != QLatin1String("offline");
 }

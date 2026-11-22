@@ -9,6 +9,26 @@ import WildOS.UI as UI
 Rectangle {
     id: pane
 
+    // Moving to another message cross-fades the pane, 120 ms
+    // (MailMsMotion.dc); its text shows first and pictures as they arrive.
+    Connections {
+        target: MailEngine
+        function onSelectedChanged() {
+            if (pane.visible && MailEngine.selected.length > 0) {
+                crossFade.restart();
+            }
+        }
+    }
+    NumberAnimation {
+        id: crossFade
+        target: pane
+        property: "opacity"
+        from: 0.4
+        to: 1
+        duration: 120
+        easing.type: Easing.OutCubic
+    }
+
     property alias view: message
     // The message shown: the list's selection, or one fixed message in its
     // own window.
@@ -172,6 +192,9 @@ Rectangle {
                     SenderBadge {
                         id: senderBadge
                         size: 40
+                        // Opening a message never asks for a logo; the list
+                        // already did when the sender showed there.
+                        image: SenderImages.revision >= 0 ? SenderImages.imageFor(message.fromAddress, false) : ""
                         Component.onCompleted: refresh()
                         function refresh() {
                             initials = MailEngine.initialsOf(message.fromName.length > 0 ? message.fromName : message.fromAddress);

@@ -216,6 +216,9 @@ QtObject {
 
         "accessibility": { title: QT_TR_NOOP("Accessibility"), icon: "accessibility", component: "AccessibilityPage", fallback: "kcm_access",
             keywords: "accessibility ease of access text size bigger larger pointer cursor mouse pointer colour color size magnifier magnify zoom screen reader orca narrator read aloud high contrast flash visual alerts bell deaf hearing mono audio on-screen keyboard virtual keyboard touch keyboard sticky keys slow keys bounce keys filter keys outline windows window border focus ring focused window blur background windows inactive windows dim low vision stronger text glass transparency readable contrast" },
+        "osklanguages": { title: QT_TR_NOOP("Keyboard languages"), parent: "accessibility", icon: "keyboard", component: "OskLanguagesPage",
+            description: QT_TR_NOOP("The languages the on-screen keyboard types in"),
+            keywords: "on-screen keyboard virtual keyboard touch keyboard osk language languages arabic layout lng" },
         "slowbouncekeys": { title: QT_TR_NOOP("Slow and bounce keys"), parent: "accessibility", icon: "keyboard", component: "SlowBounceKeysPage",
             description: QT_TR_NOOP("Ignore quick or repeated presses"),
             keywords: "slow keys bounce keys filter keys repeated presses double letters tremor hold key delay" },
@@ -333,6 +336,8 @@ QtObject {
         "kcm_recentFiles": "activityhistory",
         "kcm_kwinxwayland": "oldapps",
         "kcm_virtualkeyboard": "accessibility",
+        // Maliit's language menu opens systemsettings://kcm_mobile_onscreenkeyboard.
+        "kcm_mobile_onscreenkeyboard": "osklanguages",
         "kcm_access": "accessibility",
         "easeofaccess": "accessibility",
         "ease-of-access": "accessibility",

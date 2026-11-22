@@ -1,3 +1,34 @@
+wildos-mail (0.2.12) trixie; urgency=medium
+
+  * Outlook.com, Hotmail and Microsoft 365 accounts sign in with Microsoft,
+    and bring their calendars, contacts and task lists with them.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 09:09:38 +0000
+
+wildos-mail (0.2.11) trixie; urgency=medium
+
+  * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,
+    Filipino, Finnish, Latvian, Lithuanian, Malay, Marathi, Norwegian,
+    Serbian, Slovak, Slovenian, Tamil, Telugu and Thai.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 02:00:00 +0000
+
+wildos-mail (0.2.10) trixie; urgency=medium
+
+  * Now also in Arabic, Chinese (Simplified and Traditional), Czech, Greek,
+    Hindi, Hungarian, Indonesian, Japanese, Korean, Brazilian Portuguese,
+    Romanian, Russian, Swedish, Turkish, Ukrainian and Vietnamese.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 20:00:00 +0000
+
+wildos-mail (0.2.9) trixie; urgency=medium
+
+  * Now also in Dutch, German, Spanish, Italian, Portuguese and Polish:
+    the display language chosen in Settings > Time and language applies
+    to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 14:00:00 +0000
+
 wildos-mail (0.2.8) trixie; urgency=medium
 
   * Calendar accounts (iCloud, Fastmail, Nextcloud and other CalDAV

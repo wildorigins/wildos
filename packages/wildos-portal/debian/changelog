@@ -1,3 +1,35 @@
+wildos-portal (0.1.15) trixie; urgency=medium
+
+  * Flatpak apps that draw their own title bar, such as Firefox, show the
+    minimise and maximise buttons again, not only close. Flatpak apps can
+    keep passwords in the system wallet.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 21 Nov 2026 17:00:00 +0000
+
+wildos-portal (0.1.14) trixie; urgency=medium
+
+  * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,
+    Filipino, Finnish, Latvian, Lithuanian, Malay, Marathi, Norwegian,
+    Serbian, Slovak, Slovenian, Tamil, Telugu and Thai.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 02:00:00 +0000
+
+wildos-portal (0.1.13) trixie; urgency=medium
+
+  * Now also in Arabic, Chinese (Simplified and Traditional), Czech, Greek,
+    Hindi, Hungarian, Indonesian, Japanese, Korean, Brazilian Portuguese,
+    Romanian, Russian, Swedish, Turkish, Ukrainian and Vietnamese.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 20:00:00 +0000
+
+wildos-portal (0.1.12) trixie; urgency=medium
+
+  * Now also in Dutch, German, Spanish, Italian, Portuguese and Polish:
+    the display language chosen in Settings > Time and language applies
+    to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 14:00:00 +0000
+
 wildos-portal (0.1.11) trixie; urgency=medium
 
   * Saving a PDF from a browser names it file.pdf. Before, the Save dialog

@@ -1,6 +1,7 @@
 #include "composer.h"
 #include "formats.h"
 
+#include <QTextDocumentFragment>
 #include <QBuffer>
 #include <QFile>
 #include <QFileInfo>
@@ -136,10 +137,7 @@ void Composer::start(const QVariantMap &data)
 {
     m_accountId = data.value(QStringLiteral("accountId")).toString();
     if (m_accountId.isEmpty()) {
-        const QVariantList accounts = MailEngine::instance()->accountList();
-        if (!accounts.isEmpty()) {
-            m_accountId = accounts.first().toMap().value(QStringLiteral("id")).toString();
-        }
+        m_accountId = MailEngine::instance()->defaultAccount();
     }
     m_to = data.value(QStringLiteral("to")).toStringList().join(QStringLiteral(", "));
     m_cc = data.value(QStringLiteral("cc")).toStringList().join(QStringLiteral(", "));
@@ -156,8 +154,12 @@ void Composer::start(const QVariantMap &data)
     m_draftUid.clear();
     m_savedAt.clear();
     m_started = true;
-    if (const Account *a = MailEngine::instance()->accountData(m_accountId); a && !a->signature.isEmpty()) {
-        m_bodyText = QStringLiteral("\n\n") + a->signature;
+    // The account's signature for a new message, or for a reply or forward.
+    const bool reply = !m_inReplyTo.isEmpty() || !m_quote.isEmpty();
+    const QString signature = MailEngine::instance()->signatureFor(m_accountId, reply);
+    if (!signature.trimmed().isEmpty()) {
+        m_bodyHtml = QStringLiteral("<p></p><p></p>") + signature;
+        m_bodyText = QStringLiteral("\n\n") + QTextDocumentFragment::fromHtml(signature).toPlainText();
     }
     Q_EMIT changed();
     Q_EMIT attachmentsChanged();
@@ -252,6 +254,9 @@ QByteArray Composer::build(bool draft, int *cleanedPhotos) const
         camel_medium_set_header(CAMEL_MEDIUM(message), "In-Reply-To", ('<' + m_inReplyTo.toUtf8() + '>').constData());
         camel_medium_set_header(CAMEL_MEDIUM(message), "References", m_references.toUtf8().constData());
     }
+    if (m_autoReply) {
+        camel_medium_set_header(CAMEL_MEDIUM(message), "Auto-Submitted", "auto-replied");
+    }
     // No X-Mailer: what program wrote the mail is nobody's business.
     if (draft) {
         camel_medium_set_header(CAMEL_MEDIUM(message), "X-Wildos-Draft-Account", m_accountId.toUtf8().constData());
@@ -270,9 +275,44 @@ QByteArray Composer::build(bool draft, int *cleanedPhotos) const
     } else {
         html += quote;
     }
+    // Pictures in the message (a signature's logo) travel inside it, each a
+    // part of its own that the HTML names by Content-ID, as every mail
+    // program sends them.
+    static const QRegularExpression picture(QStringLiteral("src=\"data:(image/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\\s]+)\""));
+    QList<QPair<QByteArray, QByteArray>> pictures;
+    for (auto m = picture.match(html); m.hasMatch(); m = picture.match(html)) {
+        const QByteArray cid = QUuid::createUuid().toString(QUuid::Id128).toLatin1() + "@wildos";
+        pictures.append({m.captured(1).toLatin1(), QByteArray::fromBase64(m.captured(2).toLatin1())});
+        html.replace(m.capturedStart(), m.capturedLength(), QStringLiteral("src=\"cid:%1\"").arg(QString::fromLatin1(cid)));
+        pictures.last().first += QByteArray("\x1f") + cid;
+    }
     CamelMimePart *rich = textPart(html, "html");
     camel_multipart_add_part(alternative, plain);
-    camel_multipart_add_part(alternative, rich);
+    if (QSettings().value(QStringLiteral("writing/plain"), false).toBool() && m_calendarReply.isEmpty()) {
+        // Plain text only, as chosen in Settings, Writing.
+    } else if (pictures.isEmpty()) {
+        camel_multipart_add_part(alternative, rich);
+    } else {
+        CamelMultipart *related = camel_multipart_new();
+        camel_data_wrapper_set_mime_type(CAMEL_DATA_WRAPPER(related), "multipart/related");
+        camel_multipart_set_boundary(related, nullptr);
+        camel_multipart_add_part(related, rich);
+        for (const auto &[typeAndCid, data] : std::as_const(pictures)) {
+            const QList<QByteArray> parts = typeAndCid.split('\x1f');
+            CamelMimePart *part = camel_mime_part_new();
+            camel_mime_part_set_content(part, data.constData(), data.size(), parts.value(0).constData());
+            camel_mime_part_set_content_id(part, parts.value(1).constData());
+            camel_mime_part_set_disposition(part, "inline");
+            camel_mime_part_set_encoding(part, CAMEL_TRANSFER_ENCODING_BASE64);
+            camel_multipart_add_part(related, part);
+            g_object_unref(part);
+        }
+        CamelMimePart *holder = camel_mime_part_new();
+        camel_medium_set_content(CAMEL_MEDIUM(holder), CAMEL_DATA_WRAPPER(related));
+        camel_multipart_add_part(alternative, holder);
+        g_object_unref(holder);
+        g_object_unref(related);
+    }
     g_object_unref(plain);
     g_object_unref(rich);
     if (!m_calendarReply.isEmpty()) {

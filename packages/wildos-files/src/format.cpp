@@ -165,7 +165,7 @@ QString exactSize(qint64 bytes)
 
 QString count(qint64 n, const QString &one, const QString &many)
 {
-    return QLocale::system().toString(n) + QLatin1Char(' ') + (n == 1 ? one : many);
+    return n == 1 ? one : many;
 }
 
 }

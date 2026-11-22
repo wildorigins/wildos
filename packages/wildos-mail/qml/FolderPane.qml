@@ -505,7 +505,8 @@ Item {
             const at = accounts.findIndex(a => a.id === accountMenu.accountId);
             return [
                 { text: qsTr("Move up"), icon: "chevron-up", enabled: at > 0, run: () => pane.moveAccountBy(accountMenu.accountId, -1) },
-                { text: qsTr("Move down"), icon: "chevron-down", enabled: at >= 0 && at < accounts.length - 1, run: () => pane.moveAccountBy(accountMenu.accountId, 1) }
+                { text: qsTr("Move down"), icon: "chevron-down", enabled: at >= 0 && at < accounts.length - 1, run: () => pane.moveAccountBy(accountMenu.accountId, 1) },
+                { text: qsTr("Move to top"), enabled: at > 0, run: () => pane.moveAccountBy(accountMenu.accountId, -at) }
             ];
         }
     }

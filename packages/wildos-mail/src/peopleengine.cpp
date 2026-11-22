@@ -1,8 +1,11 @@
 #include "peopleengine.h"
 
 #include <QCollator>
+#include <QCryptographicHash>
 #include <QDir>
+#include <QImage>
 #include <QFile>
+#include <QFileInfo>
 #include <QJSEngine>
 #include <QPointer>
 #include <QRegularExpression>
@@ -11,6 +14,8 @@
 #include <QThreadPool>
 
 #include <sqlite3.h>
+
+#include "senderimages.h"
 
 #include <algorithm>
 #include <memory>
@@ -68,6 +73,60 @@ QStringList stringList(GList *list)
     }
     g_list_free_full(list, g_free);
     return out;
+}
+
+// The contact's photo as Mail's sender badge, written once per address to
+// the photo cache under a name that changes with the photo, so a new photo
+// is a new file and the list never shows a stale copy. Only photos on this
+// PC are used: a photo given as a web address is left alone.
+void savePhotos(EContact *contact, const QStringList &emails, QHash<QString, QString> *out)
+{
+    if (emails.isEmpty()) {
+        return;
+    }
+    auto *photo = static_cast<EContactPhoto *>(e_contact_get(contact, E_CONTACT_PHOTO));
+    if (!photo) {
+        return;
+    }
+    QByteArray data;
+    if (photo->type == E_CONTACT_PHOTO_TYPE_INLINED && photo->data.inlined.data) {
+        data = QByteArray(reinterpret_cast<const char *>(photo->data.inlined.data), qsizetype(photo->data.inlined.length));
+    } else if (photo->type == E_CONTACT_PHOTO_TYPE_URI && photo->data.uri) {
+        const QUrl url(QString::fromUtf8(photo->data.uri));
+        QFile file(url.toLocalFile());
+        if (url.isLocalFile() && file.size() < 8 * 1024 * 1024 && file.open(QIODevice::ReadOnly)) {
+            data = file.readAll();
+        }
+    }
+    e_contact_photo_free(photo);
+    if (data.isEmpty()) {
+        return;
+    }
+    const QString version = QString::fromLatin1(QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex().left(10));
+    const QString dir = SenderImages::photoDir();
+    QImage badge;
+    for (const QString &email : emails) {
+        const QString address = email.trimmed().toLower();
+        if (!address.contains(QLatin1Char('@'))) {
+            continue;
+        }
+        const QString name = QString::fromLatin1(QCryptographicHash::hash(address.toUtf8(), QCryptographicHash::Sha1).toHex().left(20));
+        const QString path = dir + QLatin1Char('/') + name + QLatin1Char('-') + version + QStringLiteral(".png");
+        if (!QFileInfo::exists(path)) {
+            if (badge.isNull()) {
+                const QImage image = QImage::fromData(data);
+                if (image.isNull()) {
+                    return;
+                }
+                badge = SenderImages::photoBadge(image);
+                QDir().mkpath(dir);
+            }
+            if (!badge.save(path, "PNG")) {
+                continue;
+            }
+        }
+        out->insert(address, path);
+    }
 }
 
 // Each EMAIL or TEL line with the first of its TYPE parameters.
@@ -474,6 +533,7 @@ void PeopleEngine::dropClient(const QString &uid)
         g_object_unref(client);
     }
     m_perBook.remove(uid);
+    SenderImages::instance()->setContactPhotos(uid, {});
 }
 
 // Only a sign that the book changed; its contacts are fetched again.
@@ -560,8 +620,9 @@ void PeopleEngine::reload(const QString &uid)
     }
     g_object_ref(client);
     auto result = std::make_shared<QList<Person>>();
+    auto photos = std::make_shared<QHash<QString, QString>>();
     const QString sexp = everyone();
-    run([client, uid, sexp, result]() {
+    run([client, uid, sexp, result, photos]() {
         GSList *contacts = nullptr;
         GError *error = nullptr;
         if (!e_book_client_get_contacts_sync(client, sexp.toUtf8().constData(), &contacts, nullptr, &error)) {
@@ -585,6 +646,7 @@ void PeopleEngine::reload(const QString &uid)
             for (const auto &t : typedValues(contact, E_CONTACT_TEL)) {
                 p.phones << t.second;
             }
+            savePhotos(contact, p.emails, photos.get());
             p.name = displayName(contact);
             if (p.name.isEmpty()) {
                 p.name = !p.emails.isEmpty() ? p.emails.first() : !p.phones.isEmpty() ? p.phones.first() : tr("(No name)");
@@ -600,11 +662,12 @@ void PeopleEngine::reload(const QString &uid)
         }
         g_slist_free_full(contacts, g_object_unref);
         g_object_unref(client);
-    }, [this, uid, result]() {
+    }, [this, uid, result, photos]() {
         if (!m_clients.value(uid)) {
             return;
         }
         m_perBook.insert(uid, *result);
+        SenderImages::instance()->setContactPhotos(uid, *photos);
         flatten();
     });
 }
@@ -1126,6 +1189,89 @@ void PeopleEngine::importFrom(const QUrl &url, const QString &bookUid)
         scheduleReload(target);
         Q_EMIT notice(*added == 1 ? tr("1 contact imported") : tr("%1 contacts imported").arg(*added));
     });
+}
+
+int PeopleEngine::writeVcf(const QString &path, QString *error)
+{
+    GError *err = nullptr;
+    ESourceRegistry *registry = e_source_registry_new_sync(nullptr, &err);
+    if (!registry) {
+        *error = str(err ? err->message : "");
+        g_clear_error(&err);
+        return -1;
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        *error = tr("Mail couldn't write to %1.").arg(QFileInfo(path).absolutePath());
+        g_object_unref(registry);
+        return -1;
+    }
+    const QByteArray sexp = everyone().toUtf8();
+    int written = 0;
+    GList *sources = e_source_registry_list_enabled(registry, E_SOURCE_EXTENSION_ADDRESS_BOOK);
+    for (GList *l = sources; l; l = l->next) {
+        EClient *client = e_book_client_connect_sync(E_SOURCE(l->data), 30, nullptr, nullptr);
+        if (!client) {
+            continue;
+        }
+        GSList *contacts = nullptr;
+        if (e_book_client_get_contacts_sync(E_BOOK_CLIENT(client), sexp.constData(), &contacts, nullptr, nullptr)) {
+            for (GSList *c = contacts; c; c = c->next) {
+                file.write(takeStr(e_vcard_to_string(E_VCARD(c->data), EVC_FORMAT_VCARD_30)).toUtf8());
+                file.write("\r\n");
+                ++written;
+            }
+            g_slist_free_full(contacts, g_object_unref);
+        }
+        g_object_unref(client);
+    }
+    g_list_free_full(sources, g_object_unref);
+    g_object_unref(registry);
+    return written;
+}
+
+int PeopleEngine::readVcf(const QString &path, const QString &bookUid, QString *error)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        *error = tr("The file couldn't be read.");
+        return -1;
+    }
+    const QList<QByteArray> cards = splitCards(file.readAll());
+    if (cards.isEmpty()) {
+        return 0;
+    }
+    GError *err = nullptr;
+    ESourceRegistry *registry = e_source_registry_new_sync(nullptr, &err);
+    ESource *source = registry ? e_source_registry_ref_source(registry, bookUid.toUtf8().constData()) : nullptr;
+    EClient *client = source ? e_book_client_connect_sync(source, 30, nullptr, &err) : nullptr;
+    g_clear_object(&source);
+    g_clear_object(&registry);
+    if (!client) {
+        *error = err ? str(err->message) : tr("The address book couldn't be opened.");
+        g_clear_error(&err);
+        return -1;
+    }
+    GSList *contacts = nullptr;
+    for (const QByteArray &card : cards) {
+        if (EContact *contact = e_contact_new_from_vcard(card.constData())) {
+            // A new UID each, as importFrom gives them.
+            e_contact_set(contact, E_CONTACT_UID, nullptr);
+            contacts = g_slist_append(contacts, contact);
+        }
+    }
+    int added = -1;
+    GSList *uids = nullptr;
+    if (e_book_client_add_contacts_sync(E_BOOK_CLIENT(client), contacts, E_BOOK_OPERATION_FLAG_NONE, &uids, nullptr, &err)) {
+        added = int(g_slist_length(uids));
+    } else {
+        *error = str(err ? err->message : "");
+    }
+    g_slist_free_full(uids, g_free);
+    g_clear_error(&err);
+    g_slist_free_full(contacts, g_object_unref);
+    g_object_unref(client);
+    return added;
 }
 
 QStringList PeopleEngine::accountAddresses() const

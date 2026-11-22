@@ -141,7 +141,7 @@ void ItemInfo::reload()
             files = 1;
         }
     } else if (!m_urls.isEmpty()) {
-        m_name = Format::count(m_urls.size(), QCoreApplication::translate("ItemInfo", "item"), QCoreApplication::translate("ItemInfo", "items"));
+        m_name = Format::count(int(m_urls.size()), QCoreApplication::translate("ItemInfo", "1 item"), QCoreApplication::translate("ItemInfo", "%Ln items", nullptr, int(m_urls.size())));
         m_icon = QStringLiteral("folder,folder");
         bool allDirs = true;
         for (const QUrl &url : std::as_const(m_urls)) {
@@ -189,8 +189,8 @@ void ItemInfo::count(const QList<QUrl> &folders, qint64 filesBytes, int files)
             // DirectorySizeJob counts what is inside the folders it was given;
             // for a selection the selected folders count too, as on Windows.
             const qint64 folderCount = qint64(job->totalSubdirs()) + (m_urls.size() > 1 ? folders.size() : 0);
-            m_contains = Format::count(fileCount, QCoreApplication::translate("ItemInfo", "file"), QCoreApplication::translate("ItemInfo", "files")) + QStringLiteral(", ")
-                + Format::count(folderCount, QCoreApplication::translate("ItemInfo", "folder"), QCoreApplication::translate("ItemInfo", "folders"));
+            m_contains = Format::count(int(fileCount), QCoreApplication::translate("ItemInfo", "1 file"), QCoreApplication::translate("ItemInfo", "%Ln files", nullptr, int(fileCount))) + QStringLiteral(", ")
+                + Format::count(int(folderCount), QCoreApplication::translate("ItemInfo", "1 folder"), QCoreApplication::translate("ItemInfo", "%Ln folders", nullptr, int(folderCount)));
         }
         Q_EMIT sizeChanged();
     });

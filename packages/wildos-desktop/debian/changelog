@@ -1,3 +1,25 @@
+wildos-desktop (0.1.33) trixie; urgency=medium
+
+  * Brave opens normally on NVIDIA cards using the standard driver, instead
+    of a grey or flickering window.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 09:30:00 +0000
+
+wildos-desktop (0.1.32) trixie; urgency=medium
+
+  * The on-screen keyboard comes up for any text box once it is switched on
+    in Settings > Accessibility, not only after a touch, and appears on the
+    sign-in screen when its button is pressed.
+
+ -- Wild OS Developers <dev@wildos.io>  Sat, 21 Nov 2026 16:00:00 +0000
+
+wildos-desktop (0.1.31) trixie; urgency=medium
+
+  * Games keep up to 4 GB of compiled shaders instead of 1 GB, so they
+    stutter less after other games have run.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 12:00:00 +0000
+
 wildos-desktop (0.1.30) trixie; urgency=medium
 
   * Brave no longer opens an extra "n/" tab each time it starts.

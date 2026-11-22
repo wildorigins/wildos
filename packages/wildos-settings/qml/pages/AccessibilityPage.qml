@@ -430,6 +430,15 @@ PageScroll {
                         }
 
                         UI.SettingRow {
+                            readonly property var info: Pages.page("osklanguages")
+                            visible: Accessibility.onScreenKeyboardInstalled
+                            title: info.title
+                            description: info.description
+                            chevron: true
+                            onClicked: Navigator.open("osklanguages")
+                        }
+
+                        UI.SettingRow {
                             title: qsTr("Sticky keys")
                             description: qsTr("Press shortcuts one at a time")
                             status: page.onOff(Accessibility.stickyKeys)

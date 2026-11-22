@@ -108,6 +108,13 @@ public:
     Q_INVOKABLE QUrl shareFile(const QString &key) const;
     // Adds every card in the file to the book; answered with notice.
     Q_INVOKABLE void importFrom(const QUrl &file, const QString &bookUid);
+    // For Mail's backup and restore, which run on a worker thread: every
+    // contact in every address book to one vCard file, and every card in a
+    // file into a book. Each blocks, asks the service itself rather than
+    // this engine's lists (which may not have loaded yet), and gives how
+    // many contacts it moved, or -1 with error set.
+    static int writeVcf(const QString &path, QString *error);
+    static int readVcf(const QString &path, const QString &bookUid, QString *error);
 
     // The address books' accounts, to offer a Google account's contacts.
     Q_INVOKABLE QStringList accountAddresses() const;

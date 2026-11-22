@@ -62,4 +62,9 @@ public:
     // card itself (PrefersNonDefaultGPU) is not offered the choice.
     Q_INVOKABLE bool dedicatedGraphics(const QString &target) const;
     Q_INVOKABLE void setDedicatedGraphics(const QString &target, bool on) const;
+    // Puts a shortcut to an app (its .desktop file, by id or path, with or
+    // without "applications:") on the desktop as a link to that file, as
+    // dragging it out of Start does on Windows. A second one beside the
+    // first is numbered, as on Windows. False when the app or the desktop folder cannot be found.
+    Q_INVOKABLE bool addToDesktop(const QString &target) const;
 };

@@ -115,6 +115,9 @@ if [ -x "$root/usr/libexec/wildos/crypttab-speed" ]; then
     in_target /usr/libexec/wildos/crypttab-speed >/dev/null || true
 fi
 
+# The boot loader step's grub-install wrapper (install-bootloader-packages).
+rm -rf "$root/usr/libexec/wildos-installer"
+
 # The initramfs copied from the image was generated in the build container and
 # knows nothing about this machine's disks or encryption. Regenerate it now
 # that crypttab exists and the live packages are gone.

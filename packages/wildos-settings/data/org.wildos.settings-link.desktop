@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+Comment=Opens systemsettings:// links, such as the on-screen keyboard's Settings item, in Wild OS Settings
+Exec=/usr/libexec/wildos/kde-settings-redirect %u
+NoDisplay=true
+MimeType=x-scheme-handler/systemsettings;

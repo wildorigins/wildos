@@ -42,6 +42,8 @@ Rectangle {
         editor.text = "";
         if (data && data.body) {
             editor.text = data.body;
+        } else if (composer.bodyHtml.length > 0) {
+            editor.text = composer.bodyHtml;
         } else if (composer.bodyText.length > 0) {
             editor.text = composer.bodyText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
         }

@@ -48,6 +48,8 @@ class System : public QObject
     Q_PROPERTY(bool taskbarCentred READ taskbarCentred NOTIFY taskbarCentredChanged)
     // Floating panels instead of the docked bar (wildos-shell reads it).
     Q_PROPERTY(bool taskbarFloating READ taskbarFloating NOTIFY taskbarFloatingChanged)
+    // The taskbar along the top of the screen instead of the bottom.
+    Q_PROPERTY(bool taskbarTop READ taskbarTop NOTIFY taskbarTopChanged)
     // The taskbar shows windows from every desktop, not only the one in
     // use. Read on demand, as it costs a call to plasmashell.
     Q_PROPERTY(bool taskbarAllDesktops READ taskbarAllDesktops NOTIFY taskbarAllDesktopsChanged)
@@ -121,6 +123,7 @@ public:
     int taskbarHiding() const { return m_taskbarHiding; }
     bool taskbarCentred() const { return m_taskbarCentred; }
     bool taskbarFloating() const { return m_taskbarFloating; }
+    bool taskbarTop() const { return m_taskbarTop; }
     bool taskbarAllDesktops() const { return m_taskbarAllDesktops; }
     bool desktopWidgets() const { return m_desktopWidgets; }
     bool taskbarWidgets() const { return m_taskbarWidgets; }
@@ -180,6 +183,7 @@ public:
     Q_INVOKABLE void setTaskbarHiding(int mode);
     Q_INVOKABLE void setTaskbarCentred(bool centred);
     Q_INVOKABLE void setTaskbarFloating(bool floating);
+    Q_INVOKABLE void setTaskbarTop(bool top);
     Q_INVOKABLE void readTaskbarDesktops();
     Q_INVOKABLE void setTaskbarAllDesktops(bool all);
     Q_INVOKABLE void readDesktopWidgets();
@@ -228,6 +232,7 @@ Q_SIGNALS:
     void taskbarHidingChanged();
     void taskbarCentredChanged();
     void taskbarFloatingChanged();
+    void taskbarTopChanged();
     void taskbarAllDesktopsChanged();
     void desktopWidgetsChanged();
     void taskbarWidgetsChanged();
@@ -282,6 +287,7 @@ private:
     int m_taskbarHiding = 0;
     bool m_taskbarCentred = true;
     bool m_taskbarFloating = false;
+    bool m_taskbarTop = false;
     bool m_taskbarAllDesktops = false;
     bool m_desktopWidgets = false;
     bool m_taskbarWidgets = false;

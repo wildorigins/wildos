@@ -165,13 +165,18 @@ FocusScope {
         if (!popup) {
             return;
         }
-        // Wild OS has no top panel, so the card may reach the screen's top edge,
-        // less the design's 16 px.
+        // The card sits on the side of the calendar away from the taskbar and
+        // may reach that screen edge, less the design's 16 px. With the
+        // taskbar at the top, Plasma hangs the calendar from it, so the card
+        // goes underneath.
         const screenTop = flyout.Screen.virtualY;
-        notifications.maxHeight = Math.max(160, popup.y - Metrics.cardGap - (screenTop + 16)
-            - 2 * (Metrics.glassBorder + 16));
+        const screenBottom = screenTop + flyout.Screen.height;
+        const barAtTop = popup.y - screenTop < flyout.Screen.height / 2;
+        const room = barAtTop ? screenBottom - 16 - (popup.y + popup.height + Metrics.cardGap)
+                              : popup.y - Metrics.cardGap - (screenTop + 16);
+        notifications.maxHeight = Math.max(160, room - 2 * (Metrics.glassBorder + 16));
         card.x = popup.x + Math.round((popup.width - card.width) / 2);
-        card.y = popup.y - Metrics.cardGap - card.height;
+        card.y = barAtTop ? popup.y + popup.height + Metrics.cardGap : popup.y - Metrics.cardGap - card.height;
     }
 
     Connections {

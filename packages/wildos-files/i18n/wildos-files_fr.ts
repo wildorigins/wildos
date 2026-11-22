@@ -1444,14 +1444,6 @@
             <translation>Dossier personnel</translation>
         </message>
         <message>
-            <source>item</source>
-            <translation>élément</translation>
-        </message>
-        <message>
-            <source>items</source>
-            <translation>éléments</translation>
-        </message>
-        <message>
             <source>Folders</source>
             <translation>Dossiers</translation>
         </message>
@@ -1472,20 +1464,37 @@
             <translation>Inconnue</translation>
         </message>
         <message>
-            <source>file</source>
-            <translation>fichier</translation>
+            <source>1 item</source>
+            <translation>1 élément</translation>
+        </message>
+        <message numerus="yes">
+            <source>%Ln items</source>
+            <translation>
+                <numerusform>%Ln élément</numerusform>
+                <numerusform>%Ln éléments</numerusform>
+            </translation>
         </message>
         <message>
-            <source>files</source>
-            <translation>fichiers</translation>
+            <source>1 file</source>
+            <translation>1 fichier</translation>
+        </message>
+        <message numerus="yes">
+            <source>%Ln files</source>
+            <translation>
+                <numerusform>%Ln fichier</numerusform>
+                <numerusform>%Ln fichiers</numerusform>
+            </translation>
         </message>
         <message>
-            <source>folder</source>
-            <translation>dossier</translation>
+            <source>1 folder</source>
+            <translation>1 dossier</translation>
         </message>
-        <message>
-            <source>folders</source>
-            <translation>dossiers</translation>
+        <message numerus="yes">
+            <source>%Ln folders</source>
+            <translation>
+                <numerusform>%Ln dossier</numerusform>
+                <numerusform>%Ln dossiers</numerusform>
+            </translation>
         </message>
     </context>
     <context>
@@ -2002,22 +2011,6 @@
     <context>
         <name>StatusBar</name>
         <message>
-            <source>item</source>
-            <translation>élément</translation>
-        </message>
-        <message>
-            <source>items</source>
-            <translation>éléments</translation>
-        </message>
-        <message>
-            <source>item selected</source>
-            <translation>élément sélectionné</translation>
-        </message>
-        <message>
-            <source>items selected</source>
-            <translation>éléments sélectionnés</translation>
-        </message>
-        <message>
             <source>Searching folders inside…</source>
             <translation>Recherche dans les sous-dossiers…</translation>
         </message>
@@ -2028,6 +2021,28 @@
         <message>
             <source>Icons</source>
             <translation>Icônes</translation>
+        </message>
+        <message>
+            <source>1 item</source>
+            <translation>1 élément</translation>
+        </message>
+        <message numerus="yes">
+            <source>%Ln items</source>
+            <translation>
+                <numerusform>%Ln élément</numerusform>
+                <numerusform>%Ln éléments</numerusform>
+            </translation>
+        </message>
+        <message>
+            <source>1 item selected</source>
+            <translation>1 élément sélectionné</translation>
+        </message>
+        <message numerus="yes">
+            <source>%Ln items selected</source>
+            <translation>
+                <numerusform>%Ln élément sélectionné</numerusform>
+                <numerusform>%Ln éléments sélectionnés</numerusform>
+            </translation>
         </message>
     </context>
     <context>

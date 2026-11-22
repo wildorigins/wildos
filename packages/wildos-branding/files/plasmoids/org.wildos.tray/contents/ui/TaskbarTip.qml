@@ -1,6 +1,7 @@
 import QtQuick
 import WildOS.UI as UI
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasmoid
 
 // The hover label of a taskbar item: one plain line of 12 px text, as
 // Windows shows. It has to leave the taskbar's window, which is only as
@@ -15,7 +16,8 @@ PlasmaCore.ToolTipArea {
     active: text.length > 0
     mainText: text
     textFormat: Text.PlainText
-    location: PlasmaCore.Types.BottomEdge
+    // The taskbar's own edge, so the tip opens away from it.
+    location: Plasmoid.location
     // Plasma sizes the tooltip to whole pixels and the label's own width is
     // a fraction more, which was enough to cut the end off the text. So the
     // size is rounded up and the label never shortens itself.

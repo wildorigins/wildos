@@ -355,7 +355,9 @@ PageScroll {
                         id: pendingRow
                         required property var modelData
                         readonly property bool wildos: modelData.group === "wildos"
-                        title: wildos && Updates.pendingBuild > 0 ? qsTr("Wild OS build %1").arg(Updates.pendingBuild)
+                        // A Wild OS package left over from an older build (one an
+                        // update could not install) is not a new build to name.
+                        title: wildos && Updates.pendingBuild > Updates.installedBuild ? qsTr("Wild OS build %1").arg(Updates.pendingBuild)
                             : modelData.group === "app" ? modelData.app : page.groupTitle(modelData.group, modelData.security)
                         description: wildos && page.pendingSummary.length > 0 ? page.sentence(page.pendingSummary)
                             : modelData.group === "app" ? qsTr("App update") : (modelData.count === 1 ? qsTr("1 update") : qsTr("%1 updates").arg(modelData.count))

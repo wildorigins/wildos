@@ -1,6 +1,11 @@
 #include "formatter.h"
 
+#include <QBuffer>
+#include <QFile>
+#include <QImage>
+#include <QMimeDatabase>
 #include <QRegularExpression>
+#include <QUrl>
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
@@ -162,6 +167,24 @@ void Formatter::insertLink(const QString &url, const QString &text)
     const QString shown = text.isEmpty() ? (c.hasSelection() ? c.selectedText() : url) : text;
     c.insertText(shown, f);
     c.insertText(QStringLiteral(" "), QTextCharFormat());
+}
+
+void Formatter::insertPicture(const QUrl &file)
+{
+    QTextCursor c = cursor();
+    QImage image(file.toLocalFile());
+    if (c.isNull() || image.isNull()) {
+        return;
+    }
+    if (image.width() > 640) {
+        image = image.scaledToWidth(640, Qt::SmoothTransformation);
+    }
+    QByteArray data;
+    QBuffer buffer(&data);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "PNG");
+    const int shown = qMin(320, image.width());
+    c.insertHtml(QStringLiteral("<img src=\"data:image/png;base64,%1\" width=\"%2\">").arg(QString::fromLatin1(data.toBase64())).arg(shown));
 }
 
 void Formatter::insertText(const QString &text)

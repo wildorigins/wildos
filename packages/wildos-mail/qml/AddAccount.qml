@@ -17,9 +17,13 @@ Item {
     property bool testing: false
     property string error
     property bool guessed: false
+    // The provider chosen on step 1, for an address we don't recognise.
+    property string picked: ""
+    readonly property bool addressComplete: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.text.trim())
+    readonly property bool recognised: addressComplete && autoConfig.providerOf(email.text.trim()) !== "other"
 
-    // The password, app password or (for Sign in with Google) refresh token
-    // that passed the test, kept for saving.
+    // The password, app password or (for Sign in with Google or Microsoft)
+    // refresh token that passed the test, kept for saving.
     property string secret
 
     signal finished()
@@ -28,6 +32,7 @@ Item {
         step = "email";
         settings = {};
         error = "";
+        picked = "";
         email.text = "";
         password.text = "";
         visible = true;
@@ -35,6 +40,7 @@ Item {
     }
     function close() {
         GoogleSignIn.cancel();
+        MicrosoftSignIn.cancel();
         visible = false;
         finished();
     }
@@ -51,6 +57,10 @@ Item {
             startGoogle();
             return;
         }
+        if (provider === "outlook") {
+            startMicrosoft();
+            return;
+        }
         step = "password";
         password.forceActiveFocus();
     }
@@ -59,6 +69,14 @@ Item {
         settings = Object.assign({}, autoConfig.preset("gmail", email.text.trim()), { auth: "google" });
         step = "google";
         GoogleSignIn.start(email.text.trim());
+    }
+    // Outlook.com, Hotmail and Microsoft 365: Microsoft's own sign-in page
+    // in the browser. Microsoft turned passwords off for mail apps, so
+    // there is no app password way in.
+    function startMicrosoft() {
+        settings = Object.assign({}, autoConfig.preset("outlook", email.text.trim()), { auth: "microsoft" });
+        step = "microsoft";
+        MicrosoftSignIn.start(email.text.trim());
     }
     function useAppPassword() {
         GoogleSignIn.cancel();
@@ -125,12 +143,26 @@ Item {
         }
     }
 
+    Connections {
+        target: MicrosoftSignIn
+        function onSignedIn(address, refreshToken) {
+            if (dialog.visible && dialog.step === "microsoft") {
+                dialog.test(refreshToken);
+            }
+        }
+        function onFailed(message) {
+            if (dialog.visible && dialog.step === "microsoft") {
+                dialog.error = message;
+            }
+        }
+    }
+
     AutoConfig {
         id: autoConfig
         onFound: function (found, wasGuessed) {
             dialog.guessed = wasGuessed;
             if (found.provider === "outlook") {
-                dialog.error = qsTr("Outlook and Microsoft 365 accounts need Microsoft's own sign-in, which is coming in an update.");
+                dialog.startMicrosoft();
                 return;
             }
             if (found.provider === "proton") {
@@ -196,6 +228,7 @@ Item {
                     Layout.fillWidth: true
                     text: dialog.step === "email" ? qsTr("Add an account")
                         : dialog.step === "google" ? qsTr("Sign in with Google")
+                        : dialog.step === "microsoft" ? qsTr("Sign in with Microsoft")
                         : dialog.step === "password" ? (dialog.appPasswordHelp[dialog.settings.provider] || dialog.appPasswordHelp.other).name || qsTr("Sign in")
                         : dialog.step === "manual" ? qsTr("Other account")
                         : dialog.step === "details" ? qsTr("You're signed in")
@@ -205,7 +238,10 @@ Item {
                     wrapMode: Text.WordWrap
                 }
 
-                // Step 1: the address, or a provider.
+                // Step 1 (MailMsAccount.dc, MailMsAccountTyped.dc): the
+                // address alone. Once it is a whole address, one we recognise
+                // goes straight on to signing in; for any other, the
+                // providers appear to choose from.
                 ColumnLayout {
                     visible: dialog.step === "email"
                     Layout.fillWidth: true
@@ -213,7 +249,7 @@ Item {
 
                     UI.Label {
                         Layout.fillWidth: true
-                        text: qsTr("Your mail, and for Gmail your calendar too.")
+                        text: qsTr("Mail, calendar and contacts are set up together.")
                         size: 13
                         color: UI.Style.inkMuted
                         wrapMode: Text.WordWrap
@@ -228,92 +264,119 @@ Item {
                         Layout.fillWidth: true
                         placeholderText: "name@example.com"
                         inputMethodHints: Qt.ImhEmailCharactersOnly | Qt.ImhNoAutoUppercase
+                        onTextChanged: dialog.picked = ""
                         onAccepted: if (continueButton.enabled) continueButton.clicked()
                     }
                     UI.Label {
                         Layout.fillWidth: true
-                        text: qsTr("We'll find the right settings for you. No server names needed.")
+                        visible: !dialog.addressComplete
+                        text: qsTr("Start with your address. The next step appears as soon as it is complete.")
                         size: 12
                         color: UI.Style.inkMuted
                         wrapMode: Text.WordWrap
                     }
-                    UI.Label {
-                        Layout.topMargin: 6
-                        text: qsTr("or choose your provider")
-                        size: 12
-                        color: UI.Style.inkMuted
-                    }
 
-                    GridLayout {
+                    ColumnLayout {
+                        visible: dialog.addressComplete && !dialog.recognised
                         Layout.fillWidth: true
-                        columns: 2
-                        columnSpacing: 8
-                        rowSpacing: 8
-
-                    Repeater {
-                        model: [
-                            { id: "gmail", name: "Gmail", note: qsTr("Sign in with Google") },
-                            { id: "outlook", name: qsTr("Outlook and Microsoft 365"), note: qsTr("Coming in an update") },
-                            { id: "icloud", name: qsTr("iCloud Mail"), note: qsTr("Uses an app-specific password") },
-                            { id: "yahoo", name: qsTr("Yahoo Mail"), note: qsTr("Uses an app password") },
-                            { id: "fastmail", name: "Fastmail", note: qsTr("Uses an app password") },
-                            { id: "other", name: qsTr("Other account"), note: qsTr("Any IMAP and SMTP mail") }
-                        ]
-
-                        // A compact tile per provider, two to a row, so the
-                        // first step fits without scrolling.
-                        delegate: Rectangle {
-                            id: tile
-                            required property var modelData
-                            readonly property bool available: modelData.id !== "outlook"
+                        spacing: 8
+                        UI.Label {
+                            Layout.topMargin: 4
+                            text: qsTr("Who provides this address?")
+                            size: 13
+                            font.weight: UI.Style.weightMedium
+                        }
+                        UI.Label {
                             Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            implicitHeight: 54
-                            radius: UI.Style.radiusSm
-                            color: tileMouse.containsMouse && available ? UI.Style.surfaceHover : UI.Style.surfaceRaised
-                            border.width: 1
-                            border.color: UI.Style.borderSubtle
-                            opacity: available ? 1 : 0.55
+                            text: qsTr("We could not tell from %1, so choose one. Addresses we recognise skip this step and go straight to signing in.").arg(email.text.trim().split("@")[1] || "")
+                            size: 12
+                            color: UI.Style.inkMuted
+                            wrapMode: Text.WordWrap
+                        }
 
-                            MouseArea {
-                                id: tileMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                enabled: tile.available
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (email.text.trim().indexOf("@") < 1) {
-                                        dialog.error = qsTr("Type your email address first.");
-                                        email.forceActiveFocus();
-                                        return;
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 2
+                            columnSpacing: 8
+                            rowSpacing: 8
+
+                            Repeater {
+                                model: [
+                                    { id: "gmail", name: "Gmail", note: qsTr("Sign in with Google") },
+                                    { id: "outlook", name: qsTr("Outlook and Microsoft 365"), note: qsTr("Sign in with Microsoft") },
+                                    { id: "icloud", name: qsTr("iCloud Mail"), note: qsTr("Uses an app-specific password") },
+                                    { id: "yahoo", name: qsTr("Yahoo Mail"), note: qsTr("Uses an app password") },
+                                    { id: "fastmail", name: "Fastmail", note: qsTr("Uses an app password") },
+                                    { id: "other", name: qsTr("Other account"), note: qsTr("Any IMAP and SMTP mail") }
+                                ]
+
+                                // A compact tile per provider, two to a row,
+                                // chosen with a click and confirmed with
+                                // Continue (or a double-click).
+                                delegate: Rectangle {
+                                    id: tile
+                                    required property var modelData
+                                    readonly property bool chosen: dialog.picked === modelData.id
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 1
+                                    implicitHeight: 54
+                                    radius: UI.Style.radiusSm
+                                    color: chosen ? UI.Style.surfaceSelected : tileMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRaised
+                                    border.width: chosen ? 2 : 1
+                                    border.color: chosen ? UI.Style.accent : UI.Style.borderSubtle
+                                    Behavior on color {
+                                        ColorAnimation { duration: 80 }
                                     }
-                                    dialog.choose(tile.modelData.id);
-                                }
-                            }
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 14
-                                anchors.rightMargin: 10
-                                anchors.topMargin: 8
-                                anchors.bottomMargin: 8
-                                spacing: 1
-                                UI.Label {
-                                    Layout.fillWidth: true
-                                    text: tile.modelData.name
-                                    size: 13
-                                    font.weight: UI.Style.weightSemiBold
-                                    elide: Text.ElideRight
-                                }
-                                UI.Label {
-                                    Layout.fillWidth: true
-                                    text: tile.modelData.note
-                                    size: 11.5
-                                    color: UI.Style.inkMuted
-                                    elide: Text.ElideRight
+                                    Accessible.role: Accessible.RadioButton
+                                    Accessible.name: modelData.name
+                                    Accessible.checked: chosen
+
+                                    MouseArea {
+                                        id: tileMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: dialog.picked = tile.modelData.id
+                                        onDoubleClicked: {
+                                            dialog.picked = tile.modelData.id;
+                                            continueButton.clicked();
+                                        }
+                                    }
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 14
+                                        anchors.rightMargin: 10
+                                        anchors.topMargin: 8
+                                        anchors.bottomMargin: 8
+                                        spacing: 1
+                                        UI.Label {
+                                            Layout.fillWidth: true
+                                            text: tile.modelData.name
+                                            size: 13
+                                            font.weight: UI.Style.weightSemiBold
+                                            elide: Text.ElideRight
+                                        }
+                                        UI.Label {
+                                            Layout.fillWidth: true
+                                            text: tile.modelData.note
+                                            size: 11.5
+                                            color: UI.Style.inkMuted
+                                            elide: Text.ElideRight
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                    // Only where it is true: Google's and Microsoft's own
+                    // pages. App passwords are typed into Mail.
+                    UI.Label {
+                        Layout.fillWidth: true
+                        visible: dialog.addressComplete && ["gmail", "outlook"].indexOf(dialog.recognised ? autoConfig.providerOf(email.text.trim()) : dialog.picked) >= 0
+                        text: qsTr("You sign in on your provider's own page in a secure window, so Wild OS never sees your password. You can remove access at any time.")
+                        size: 12
+                        color: UI.Style.inkMuted
+                        wrapMode: Text.WordWrap
                     }
                 }
 
@@ -386,6 +449,71 @@ Item {
                             text: qsTr("Use an app password instead")
                             onClicked: dialog.useAppPassword()
                         }
+                    }
+                }
+
+                // Step 2 for Outlook and Microsoft 365: Microsoft's page in
+                // the browser, the same as Google's (MailMsSetupSignin.dc).
+                ColumnLayout {
+                    visible: dialog.step === "microsoft"
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    UI.Label {
+                        Layout.fillWidth: true
+                        text: qsTr("We've opened Microsoft's sign-in page in your browser. Sign in there and allow access, then come back here.")
+                        size: 13
+                        wrapMode: Text.WordWrap
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: 64
+                        radius: UI.Style.radiusSm
+                        color: UI.Style.surfaceRaised
+                        border.width: 1
+                        border.color: UI.Style.borderSubtle
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 14
+                            anchors.rightMargin: 14
+                            spacing: 12
+                            SenderBadge {
+                                size: 32
+                                initials: MailEngine.initialsOf(email.text.trim())
+                                colourIndex: MailEngine.colourOf(email.text.trim())
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 1
+                                UI.Label {
+                                    Layout.fillWidth: true
+                                    text: email.text.trim()
+                                    size: 13
+                                    font.weight: UI.Style.weightSemiBold
+                                    elide: Text.ElideRight
+                                }
+                                UI.Label {
+                                    text: dialog.testing ? qsTr("Checking your mail") : qsTr("Waiting for you to sign in")
+                                    size: 12
+                                    color: UI.Style.inkMuted
+                                }
+                            }
+                            UI.Spinner {
+                                size: 20
+                            }
+                        }
+                    }
+                    UI.Label {
+                        Layout.fillWidth: true
+                        text: qsTr("Mail asks for your mail, calendars, contacts and tasks. Wild OS never sees your password, and you can take Mail's access back in your Microsoft account.")
+                        size: 12
+                        color: UI.Style.inkMuted
+                        wrapMode: Text.WordWrap
+                    }
+                    UI.LinkButton {
+                        text: qsTr("Open the page again")
+                        onClicked: MicrosoftSignIn.reopen()
                     }
                 }
 
@@ -642,11 +770,12 @@ Item {
                         onClicked: dialog.open()
                     }
                     UI.Button {
-                        visible: dialog.step === "password" || dialog.step === "manual" || dialog.step === "google"
+                        visible: dialog.step === "password" || dialog.step === "manual" || dialog.step === "google" || dialog.step === "microsoft"
                         text: qsTr("Back")
                         enabled: !dialog.testing
                         onClicked: {
                             GoogleSignIn.cancel();
+                            MicrosoftSignIn.cancel();
                             dialog.error = "";
                             dialog.step = "email";
                         }
@@ -662,11 +791,11 @@ Item {
                     }
                     UI.Button {
                         id: continueButton
-                        visible: dialog.step !== "google"
+                        visible: dialog.step !== "google" && dialog.step !== "microsoft"
                         kind: "primary"
                         busy: dialog.testing || autoConfig.busy
                         enabled: !dialog.testing && !autoConfig.busy
-                            && (dialog.step !== "email" || email.text.trim().indexOf("@") > 0)
+                            && (dialog.step !== "email" || dialog.addressComplete)
                             && (dialog.step !== "password" || password.text.length > 0)
                             && (dialog.step !== "manual" || (imapHost.text.length > 0 && smtpHost.text.length > 0 && manualPassword.text.length > 0))
                         text: dialog.step === "email" ? qsTr("Continue") : dialog.step === "details" ? qsTr("Finish")
@@ -674,7 +803,11 @@ Item {
                         onClicked: {
                             dialog.error = "";
                             if (dialog.step === "email") {
-                                autoConfig.lookup(email.text.trim());
+                                if (!dialog.recognised && dialog.picked.length > 0) {
+                                    dialog.choose(dialog.picked);
+                                } else {
+                                    autoConfig.lookup(email.text.trim());
+                                }
                             } else if (dialog.step === "password") {
                                 dialog.test(password.text);
                             } else if (dialog.step === "manual") {
@@ -690,9 +823,11 @@ Item {
                             } else if (dialog.step === "details") {
                                 const s = Object.assign({}, dialog.settings, { fullName: fullName.text.trim(), name: accountName.text.trim() || dialog.settings.email, keepAll: keepAll.checked });
                                 MailEngine.saveAccount(s, dialog.secret);
-                                // Google's sign-in allowed calendars and contacts too.
+                                // Google's and Microsoft's sign-ins allowed calendars and contacts too.
                                 if (s.auth === "google") {
                                     CalendarEngine.addGoogleAccount(s.email, dialog.secret);
+                                } else if (s.auth === "microsoft") {
+                                    CalendarEngine.addMicrosoftAccount(s.email, dialog.secret);
                                 }
                                 dialog.secret = "";
                                 password.text = "";

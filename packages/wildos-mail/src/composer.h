@@ -30,6 +30,8 @@ class Composer : public QObject
     // An answer to an invitation, as iCalendar (METHOD:REPLY), sent as a
     // version of the message calendar programs read.
     Q_PROPERTY(QString calendarReply MEMBER m_calendarReply NOTIFY changed)
+    // An automatic reply: marked so (RFC 3834) other programs don't answer it.
+    Q_PROPERTY(bool autoReply MEMBER m_autoReply NOTIFY changed)
     Q_PROPERTY(QVariantList attachments READ attachments NOTIFY attachmentsChanged)
     Q_PROPERTY(QString savedAt READ savedAt NOTIFY savedAtChanged)
     Q_PROPERTY(bool sending READ sending NOTIFY sendingChanged)
@@ -88,5 +90,6 @@ private:
     QString m_savedAt;
     bool m_sending = false;
     bool m_started = false;
+    bool m_autoReply = false;
     QTimer m_draftTimer;
 };

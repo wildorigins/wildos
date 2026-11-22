@@ -11,7 +11,7 @@ Architecture: all
 Depends:
  ${misc:Depends},
  wildos-fonts,
- wildos-ui (>= 0.1.19),
+ wildos-ui (>= 0.1.23),
  wildos-overlays (>= 0.1.5),
  wildos-desktop-view,
  wildos-fluent-icons,

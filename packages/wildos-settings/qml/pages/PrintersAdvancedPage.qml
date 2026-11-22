@@ -310,6 +310,10 @@ PageScroll {
         property var makeList: []
         property var modelList: []
         property string suggestedName
+        // A driver Wild OS can fetch for the printer chosen, by the device
+        // ID it reports.
+        readonly property var device: connection ? connection.device : null
+        readonly property string toGet: device && device.deviceId && !Printers.loadingDrivers ? Printers.driverToGet(device.deviceId) : ""
 
         function suggest() {
             const d = connection ? connection.device : null;
@@ -428,6 +432,22 @@ PageScroll {
 
                 Column {
                     width: parent.width
+
+                    UI.SettingRow {
+                        visible: add.toGet.length > 0
+                        iconName: "download"
+                        title: qsTr("Get its driver")
+                        description: qsTr("Wild OS doesn't have this printer's driver yet. It downloads from the internet.")
+
+                        UI.Button {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: qsTr("Get driver")
+                            kind: "primary"
+                            busy: Printers.busy === "driver"
+                            enabled: Printers.busy.length === 0
+                            onClicked: Printers.getDriver(add.device.deviceId, add.device.name.length > 0 ? add.device.name : add.device.model)
+                        }
+                    }
 
                     UI.SettingRow {
                         iconName: "cog"

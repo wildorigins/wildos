@@ -57,6 +57,7 @@ qt_add_qml_module(wildos-settings
         src/processor.cpp src/processor.h
         src/compat32.cpp src/compat32.h
         src/graphics.cpp src/graphics.h
+        src/wifidriver.cpp src/wifidriver.h
         src/inputdevices.cpp src/inputdevices.h
         src/defaultapps.cpp src/defaultapps.h
         src/clock.cpp src/clock.h
@@ -87,6 +88,7 @@ qt_add_qml_module(wildos-settings
         src/network.cpp src/network.h src/netshared.h
         src/soundtheme.cpp src/soundtheme.h
         src/accessibility.cpp src/accessibility.h
+        src/osklangs.cpp src/osklangs.h
         src/recovery.cpp src/recovery.h
         src/startupdisk.cpp src/startupdisk.h
         src/freespace.cpp src/freespace.h
@@ -128,8 +130,11 @@ install(TARGETS wildos-settings RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.settings.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 # The helpers are looked up by these exact paths (polkit pins the update
 # helper to it), so they do not follow the distribution's libexec layout.
-install(PROGRAMS data/settings-update-policy data/settings-users data/settings-locale data/settings-protection data/settings-firewall data/settings-firewall-off data/settings-history data/settings-devices data/settings-network data/settings-cpu-threads data/settings-32bit data/settings-game-overlay data/settings-graphics-driver data/graphics-driver-trial data/settings-brave-spelling data/settings-fingerprint data/settings-free-space data/settings-advanced data/advanced-protection-apply data/settings-time-source DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+install(PROGRAMS data/settings-update-policy data/settings-users data/settings-locale data/settings-protection data/settings-firewall data/settings-firewall-off data/settings-history data/settings-devices data/settings-network data/settings-cpu-threads data/settings-32bit data/settings-game-overlay data/settings-graphics-driver data/settings-wifi-driver data/graphics-driver-trial data/settings-brave-spelling data/settings-fingerprint data/settings-free-space data/settings-advanced data/advanced-protection-apply data/settings-time-source DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
 install(FILES data/org.wildos.settings.policy DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/actions)
+# Not in polkit's own folder: settings-32bit links it in while Steam and
+# 32-bit apps are on.
+install(FILES data/50-wildos-gamemode.rules DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/gamemode)
 # Privacy and security > Advanced protection: the hooks settings-advanced
 # runs for the choices Settings carries out itself, and the services behind
 # them. Other packages add hooks of their own to the same folder.
@@ -152,11 +157,15 @@ install(FILES data/org.wildos.auto-theme.desktop DESTINATION ${CMAKE_INSTALL_SYS
 # The accessibility shortcuts: a service in every session and the switches
 # the lock and sign-in screens run. It shares AccessCore with Settings so a
 # shortcut and its switch do the same thing.
-qt_add_executable(wildos-access src/access/main.cpp src/accesscore.cpp src/accesscore.h)
+qt_add_executable(wildos-access src/access/main.cpp src/access/osklanguages.cpp src/access/osklanguages.h src/osklangs.cpp src/osklangs.h src/accesscore.cpp src/accesscore.h)
 target_include_directories(wildos-access PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(wildos-access PRIVATE Qt6::Core Qt6::Gui Qt6::DBus KF6::ConfigCore KF6::GlobalAccel)
 install(TARGETS wildos-access RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.access.desktop DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg/autostart)
+# The on-screen keyboard's language key (over Maliit's own, see debian/preinst)
+# and the handler for the settings link its language menu opens.
+install(FILES data/maliit/LanguageKey.qml DESTINATION ${CMAKE_INSTALL_LIBDIR}/maliit/keyboard2/qml/keys)
+install(FILES data/org.wildos.settings-link.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 # Hands Typing's spelling languages to Brave, from Settings and once a session.
 qt_add_executable(wildos-brave-spelling src/bravespelling/main.cpp)
 target_link_libraries(wildos-brave-spelling PRIVATE Qt6::Core KF6::SonnetCore)
@@ -191,6 +200,14 @@ install(FILES data/wildos-devices.socket data/wildos-devices@.service
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
 install(FILES data/fprintd-wildos-history.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/fprintd.service.d
     RENAME wildos-history.conf)
+# Printer drivers from the internet the first time a printer needs one
+# (printer-driver): before and after CUPS's own set-up of a plugged-in
+# printer, and from Printers and scanners for one added by hand.
+install(PROGRAMS data/printer-driver DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+install(FILES data/printer-drivers.tsv DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos)
+install(FILES data/configure-printer-wildos.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/configure-printer@.service.d
+    RENAME wildos-printer-driver.conf)
+install(FILES data/71-wildos-printers.rules DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/udev/rules.d)
 
 # The root half of Advanced network settings and the firewall: encrypted DNS
 # for each new network, the VPN kill switch, loading the firewall again as

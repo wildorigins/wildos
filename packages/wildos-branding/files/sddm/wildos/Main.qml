@@ -252,16 +252,38 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             y: Math.round(root.height * 96 / 900)
             transform: Translate { y: handoff.clockShift }
+            // Out of the way when the sign-in box has risen over it.
+            opacity: signInBlock.y + signInBlock.keyboardShift < y + height + 24 ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         }
 
         Column {
             id: signInBlock
+
+            // The on-screen keyboard covers the lower half of the screen,
+            // where the password box sits, so the box rises above it while
+            // it is up, as on Windows.
+            readonly property real keyboardShift: {
+                const panel = keyboardLoader.item;
+                const keys = Qt.inputMethod.keyboardRectangle;
+                if (!panel || !panel.wanted || !Qt.inputMethod.visible || keys.height <= 0) {
+                    return 0;
+                }
+                const field = passwordPill.visible ? passwordPill : passwordlessButton;
+                // Its y is caught before it slides up; it always ends at the
+                // bottom of the screen.
+                return Math.min(0, root.height - keys.height - 24 - (y + field.y + field.height));
+            }
 
             anchors.horizontalCenter: parent.horizontalCenter
             y: Math.max(clock.y + clock.height + 48, Math.round(root.height * 500 / 900))
             width: 400
             spacing: 14
             opacity: handoff.uiOpacity
+            transform: Translate {
+                y: signInBlock.keyboardShift
+                Behavior on y { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            }
 
             UI.Avatar {
                 anchors.horizontalCenter: parent.horizontalCenter

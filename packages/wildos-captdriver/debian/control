@@ -1,0 +1,17 @@
+Source: wildos-captdriver
+Section: text
+Priority: optional
+Maintainer: Wild OS Developers <dev@wildos.io>
+Build-Depends: debhelper-compat (= 13), libcups2-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: wildos-captdriver
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, cups
+Description: Driver for Canon CAPT laser printers (LBP2900, LBP3000 and others)
+ captdriver, the free driver for Canon laser printers that only speak
+ Canon's CAPT protocol: the LBP2900 and LBP3000, and the LBP3010, 3018,
+ 3050, 3100, 3108, 3150, 6000 and 6018 through the LBP3010 driver. Not in
+ the Wild OS image: printer-driver installs it when one of these printers
+ is plugged in.

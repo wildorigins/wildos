@@ -103,6 +103,10 @@ public:
     Q_INVOKABLE void setVisibleBell(bool on);
     Q_INVOKABLE void setMonoAudio(bool on);
     Q_INVOKABLE void setOnScreenKeyboard(bool on);
+    // The on-screen keyboard's languages: every one it has, with on for
+    // those switched on. Setting one returns the list again.
+    Q_INVOKABLE QVariantList oskLanguages() const;
+    Q_INVOKABLE QVariantList setOskLanguage(const QString &code, bool on);
     Q_INVOKABLE void setStickyKeys(bool on);
     Q_INVOKABLE void setSlowKeys(bool on);
     Q_INVOKABLE void setSlowKeysDelay(int ms);

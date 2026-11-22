@@ -4625,14 +4625,6 @@
             <translation>%1 et %2</translation>
         </message>
         <message>
-            <source>more app</source>
-            <translation>autre application</translation>
-        </message>
-        <message>
-            <source>more apps</source>
-            <translation>autres applications</translation>
-        </message>
-        <message>
             <source>%1, to its earlier version</source>
             <translation>%1, à sa version précédente</translation>
         </message>
@@ -4703,6 +4695,17 @@
         <message>
             <source>Go back and restart</source>
             <translation>Revenir en arrière et redémarrer</translation>
+        </message>
+        <message>
+            <source>1 more app</source>
+            <translation>1 autre application</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n more apps</source>
+            <translation>
+                <numerusform>%n autre application</numerusform>
+                <numerusform>%n autres applications</numerusform>
+            </translation>
         </message>
     </context>
     <context>
@@ -5125,22 +5128,6 @@
         <message>
             <source>less than a minute</source>
             <translation>moins d'une minute</translation>
-        </message>
-        <message>
-            <source>minute</source>
-            <translation>minute</translation>
-        </message>
-        <message>
-            <source>minutes</source>
-            <translation>minutes</translation>
-        </message>
-        <message>
-            <source>hour</source>
-            <translation>heure</translation>
-        </message>
-        <message>
-            <source>hours</source>
-            <translation>heures</translation>
         </message>
         <message>
             <source>%1 %2</source>
@@ -5931,14 +5918,6 @@
             <translation>Chaque fichier a été vérifié. Aucun n'avait changé.</translation>
         </message>
         <message>
-            <source>second</source>
-            <translation>seconde</translation>
-        </message>
-        <message>
-            <source>seconds</source>
-            <translation>secondes</translation>
-        </message>
-        <message>
             <source>This PC started in %1, not counting the %2 the disk password screen waited for you. It was ready at %3.</source>
             <translation>Ce PC a démarré en %1, sans compter %2 d'attente sur l'écran du mot de passe du disque. Il était prêt à %3.</translation>
         </message>
@@ -6395,14 +6374,6 @@
             <translation>%1, sur %2.</translation>
         </message>
         <message>
-            <source>error</source>
-            <translation>erreur</translation>
-        </message>
-        <message>
-            <source>errors</source>
-            <translation>erreurs</translation>
-        </message>
-        <message>
             <source>%1 (%2) couldn't read or write some of its data at %3, %4 times within the hour.</source>
             <translation>%1 (%2) n'a pas pu lire ou écrire une partie de ses données à %3, %4 fois en une heure.</translation>
         </message>
@@ -6741,6 +6712,50 @@
         <message>
             <source>Technical detail</source>
             <translation>Détails techniques</translation>
+        </message>
+        <message>
+            <source>1 minute</source>
+            <translation>1 minute</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n minutes</source>
+            <translation>
+                <numerusform>%n minute</numerusform>
+                <numerusform>%n minutes</numerusform>
+            </translation>
+        </message>
+        <message>
+            <source>1 hour</source>
+            <translation>1 heure</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n hours</source>
+            <translation>
+                <numerusform>%n heure</numerusform>
+                <numerusform>%n heures</numerusform>
+            </translation>
+        </message>
+        <message>
+            <source>1 second</source>
+            <translation>1 seconde</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n seconds</source>
+            <translation>
+                <numerusform>%n seconde</numerusform>
+                <numerusform>%n secondes</numerusform>
+            </translation>
+        </message>
+        <message>
+            <source>1 error</source>
+            <translation>1 erreur</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n errors</source>
+            <translation>
+                <numerusform>%n erreur</numerusform>
+                <numerusform>%n erreurs</numerusform>
+            </translation>
         </message>
     </context>
     <context>
@@ -9078,6 +9093,17 @@
         </message>
     </context>
     <context>
+        <name>OskLanguagesPage</name>
+        <message>
+            <source>Choose the languages the on-screen keyboard types in. Its language key switches between them.</source>
+            <translation>Choisissez les langues dans lesquelles le clavier visuel écrit. Sa touche de langue permet de passer de l'une à l'autre.</translation>
+        </message>
+        <message>
+            <source>Languages</source>
+            <translation>Langues</translation>
+        </message>
+    </context>
+    <context>
         <name>OtherUsersPage</name>
         <message>
             <source>Account added</source>
@@ -9829,6 +9855,14 @@
             <source>What this PC starts by default, and restarting into Windows</source>
             <translation>Ce que ce PC démarre par défaut, et redémarrer dans Windows</translation>
         </message>
+        <message>
+            <source>Keyboard languages</source>
+            <translation>Langues du clavier</translation>
+        </message>
+        <message>
+            <source>The languages the on-screen keyboard types in</source>
+            <translation>Les langues dans lesquelles le clavier visuel écrit</translation>
+        </message>
     </context>
     <context>
         <name>PasswordCheck</name>
@@ -9991,10 +10025,6 @@
             <translation>Style de la barre des tâches</translation>
         </message>
         <message>
-            <source>Docked along the bottom like Windows, or floating panels</source>
-            <translation>Ancrée en bas comme Windows, ou en panneaux flottants</translation>
-        </message>
-        <message>
             <source>Docked</source>
             <translation>Ancrée</translation>
         </message>
@@ -10037,6 +10067,26 @@
         <message>
             <source>Add Plasma widgets, like a clock, a calendar or the weather, from the desktop's right-click menu</source>
             <translation>Ajoutez des widgets Plasma, comme une horloge, un calendrier ou la météo, depuis le menu contextuel du Bureau</translation>
+        </message>
+        <message>
+            <source>Docked along the screen's edge like Windows, or floating panels</source>
+            <translation>Ancrée au bord de l'écran comme Windows, ou en panneaux flottants</translation>
+        </message>
+        <message>
+            <source>Taskbar position</source>
+            <translation>Emplacement de la barre des tâches</translation>
+        </message>
+        <message>
+            <source>Along the bottom of the screen like Windows, or along the top</source>
+            <translation>En bas de l'écran comme Windows, ou en haut</translation>
+        </message>
+        <message>
+            <source>Bottom</source>
+            <translation>Bas</translation>
+        </message>
+        <message>
+            <source>Top</source>
+            <translation>Haut</translation>
         </message>
     </context>
     <context>
@@ -10160,22 +10210,6 @@
             <translation>30 secondes</translation>
         </message>
         <message>
-            <source>minute</source>
-            <translation>minute</translation>
-        </message>
-        <message>
-            <source>minutes</source>
-            <translation>minutes</translation>
-        </message>
-        <message>
-            <source>second</source>
-            <translation>seconde</translation>
-        </message>
-        <message>
-            <source>seconds</source>
-            <translation>secondes</translation>
-        </message>
-        <message>
             <source>Never</source>
             <translation>Jamais</translation>
         </message>
@@ -10231,25 +10265,31 @@
             <source>When the battery is critically low</source>
             <translation>Quand la batterie est presque vide</translation>
         </message>
+        <message>
+            <source>1 minute</source>
+            <translation>1 minute</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n minutes</source>
+            <translation>
+                <numerusform>%n minute</numerusform>
+                <numerusform>%n minutes</numerusform>
+            </translation>
+        </message>
+        <message>
+            <source>1 second</source>
+            <translation>1 seconde</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n seconds</source>
+            <translation>
+                <numerusform>%n seconde</numerusform>
+                <numerusform>%n secondes</numerusform>
+            </translation>
+        </message>
     </context>
     <context>
         <name>PowerPage</name>
-        <message>
-            <source>minute</source>
-            <translation>minute</translation>
-        </message>
-        <message>
-            <source>minutes</source>
-            <translation>minutes</translation>
-        </message>
-        <message>
-            <source>hour</source>
-            <translation>heure</translation>
-        </message>
-        <message>
-            <source>hours</source>
-            <translation>heures</translation>
-        </message>
         <message>
             <source>Never</source>
             <translation>Jamais</translation>
@@ -10377,6 +10417,28 @@
         <message>
             <source>Put my device to sleep after</source>
             <translation>Mettre mon appareil en veille après</translation>
+        </message>
+        <message>
+            <source>1 minute</source>
+            <translation>1 minute</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n minutes</source>
+            <translation>
+                <numerusform>%n minute</numerusform>
+                <numerusform>%n minutes</numerusform>
+            </translation>
+        </message>
+        <message>
+            <source>1 hour</source>
+            <translation>1 heure</translation>
+        </message>
+        <message numerus="yes">
+            <source>%n hours</source>
+            <translation>
+                <numerusform>%n heure</numerusform>
+                <numerusform>%n heures</numerusform>
+            </translation>
         </message>
     </context>
     <context>
@@ -10673,6 +10735,26 @@
             <source>It's no longer in your list. Capture can still find it on the network.</source>
             <translation>Il ne figure plus dans votre liste. Capture peut toujours le trouver sur le réseau.</translation>
         </message>
+        <message>
+            <source>The printer</source>
+            <translation>L'imprimante</translation>
+        </message>
+        <message>
+            <source>Driver installed</source>
+            <translation>Pilote installé</translation>
+        </message>
+        <message>
+            <source>%1's driver is ready. Check the model, then add the printer.</source>
+            <translation>Le pilote de %1 est prêt. Vérifiez le modèle, puis ajoutez l'imprimante.</translation>
+        </message>
+        <message>
+            <source>The driver was not installed</source>
+            <translation>Le pilote n'a pas été installé</translation>
+        </message>
+        <message>
+            <source>Wild OS couldn't download it. Check you're online, then try again.</source>
+            <translation>Wild OS n'a pas pu le télécharger. Vérifiez que vous êtes connecté à Internet, puis réessayez.</translation>
+        </message>
     </context>
     <context>
         <name>PrintersAdvancedPage</name>
@@ -10847,6 +10929,18 @@
         <message>
             <source>Add printer</source>
             <translation>Ajouter l'imprimante</translation>
+        </message>
+        <message>
+            <source>Get its driver</source>
+            <translation>Obtenir son pilote</translation>
+        </message>
+        <message>
+            <source>Wild OS doesn't have this printer's driver yet. It downloads from the internet.</source>
+            <translation>Wild OS n'a pas encore le pilote de cette imprimante. Il se télécharge depuis Internet.</translation>
+        </message>
+        <message>
+            <source>Get driver</source>
+            <translation>Obtenir le pilote</translation>
         </message>
     </context>
     <context>
@@ -13940,6 +14034,14 @@
             <source>Remove %1 from the taskbar</source>
             <translation>Supprimer %1 de la barre des tâches</translation>
         </message>
+        <message>
+            <source>Windows stop below it</source>
+            <translation>Les fenêtres s'arrêtent en dessous</translation>
+        </message>
+        <message>
+            <source>Move the pointer to the top of the screen to show it</source>
+            <translation>Placez le pointeur en haut de l'écran pour l'afficher</translation>
+        </message>
     </context>
     <context>
         <name>TextSizeBox</name>
@@ -15128,6 +15230,10 @@
             <source>%1 and %2</source>
             <translation>%1 et %2</translation>
         </message>
+        <message>
+            <source>Kicksecure's update server could not be reached, so its updates come with a later check. Everything else was checked.</source>
+            <translation>Le serveur de mises à jour de Kicksecure n'a pas pu être joint, ses mises à jour arriveront lors d'une prochaine vérification. Tout le reste a été vérifié.</translation>
+        </message>
     </context>
     <context>
         <name>Users</name>
@@ -15234,6 +15340,72 @@
         <message>
             <source>That user name is taken.</source>
             <translation>Ce nom d'utilisateur est déjà pris.</translation>
+        </message>
+    </context>
+    <context>
+        <name>WifiDriver</name>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>En attente de votre mot de passe</translation>
+        </message>
+        <message>
+            <source>Nothing was changed because the password was not given.</source>
+            <translation>Rien n'a été modifié, car le mot de passe n'a pas été fourni.</translation>
+        </message>
+        <message>
+            <source>Broadcom's driver doesn't support this Wi-Fi chip, so nothing was changed.</source>
+            <translation>Le pilote de Broadcom ne prend pas en charge cette puce Wi-Fi, donc rien n'a été modifié.</translation>
+        </message>
+        <message>
+            <source>Broadcom's driver could not be set up on this PC, so nothing was changed.</source>
+            <translation>Le pilote de Broadcom n'a pas pu être configuré sur ce PC, donc rien n'a été modifié.</translation>
+        </message>
+        <message>
+            <source>The driver could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Le pilote n'a pas pu être téléchargé. Vérifiez la connexion Internet et réessayez.</translation>
+        </message>
+    </context>
+    <context>
+        <name>WifiDriverCard</name>
+        <message>
+            <source>Your Wi-Fi needs a driver</source>
+            <translation>Votre Wi-Fi a besoin d'un pilote</translation>
+        </message>
+        <message>
+            <source>This takes a minute or two.</source>
+            <translation>Cela prend une minute ou deux.</translation>
+        </message>
+        <message>
+            <source>%1 needs Broadcom's own driver, which Wild OS can download for you. Get online first with a network cable or your phone's USB internet.</source>
+            <translation>%1 a besoin du pilote propre à Broadcom, que Wild OS peut télécharger pour vous. Connectez-vous d'abord à Internet avec un câble réseau ou le partage de connexion USB de votre téléphone.</translation>
+        </message>
+        <message>
+            <source>Get driver</source>
+            <translation>Obtenir le pilote</translation>
+        </message>
+        <message>
+            <source>One more step at the next restart</source>
+            <translation>Encore une étape au prochain redémarrage</translation>
+        </message>
+        <message>
+            <source>Secure Boot is on, so your PC needs to trust the key that signed the Wi-Fi driver. When it restarts, a blue screen appears before Wild OS. Press a key to continue, then choose Enroll MOK, Continue and Yes, type this code and press Enter, then choose Reboot.</source>
+            <translation>Le démarrage sécurisé est activé, votre PC doit donc faire confiance à la clé qui a signé le pilote Wi-Fi. Au redémarrage, un écran bleu apparaît avant Wild OS. Appuyez sur une touche pour continuer, puis choisissez Enroll MOK, Continue et Yes, tapez ce code et appuyez sur Entrée, puis choisissez Reboot.</translation>
+        </message>
+        <message>
+            <source>Nothing appears on screen as you type it. If the blue screen goes by, Wi-Fi stays off until the key is enrolled. Get the driver again from here for a new code.</source>
+            <translation>Rien ne s'affiche à l'écran pendant que vous le tapez. Si l'écran bleu passe, le Wi-Fi reste désactivé jusqu'à ce que la clé soit enregistrée. Obtenez à nouveau le pilote depuis ici pour avoir un nouveau code.</translation>
+        </message>
+        <message>
+            <source>Restart to finish</source>
+            <translation>Redémarrer pour terminer</translation>
+        </message>
+        <message>
+            <source>Wi-Fi starts after the restart.</source>
+            <translation>Le Wi-Fi démarre après le redémarrage.</translation>
+        </message>
+        <message>
+            <source>Restart now</source>
+            <translation>Redémarrer maintenant</translation>
         </message>
     </context>
     <context>
@@ -15664,10 +15836,6 @@
             <translation>Caméra et microphone</translation>
         </message>
         <message>
-            <source>Call apps in Windows mode always get them</source>
-            <translation>Les applications d'appel du mode Windows y ont toujours accès</translation>
-        </message>
-        <message>
             <source>Windows apps never get them</source>
             <translation>Les applications Windows n'y ont jamais accès</translation>
         </message>
@@ -16034,6 +16202,10 @@
         <message>
             <source>the space they use</source>
             <translation>l'espace qu'ils occupent</translation>
+        </message>
+        <message>
+            <source>Windows apps always get them</source>
+            <translation>Les applications Windows y ont toujours accès</translation>
         </message>
     </context>
     <context>

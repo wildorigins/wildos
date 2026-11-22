@@ -724,19 +724,38 @@ void Updates::applyShared()
 // refreshed every other source. That is no reason to say Wild OS could not
 // check: the check counts, and the page names what was skipped. Only Wild
 // OS's own server failing is an error.
+//
+// Kicksecure's server being down holds nothing back either: Wild OS
+// republishes the Kicksecure packages it changes, and apt keeps Kicksecure's
+// last lists, so everything else installs and Kicksecure's own updates come
+// with a later check.
 bool Updates::onlyOthersFailed(const QString &details)
 {
     const auto failed = failedSources(details);
     if (failed.isEmpty()) {
         return false;
     }
+    const QString kicksecure = QStringLiteral("deb.kicksecure.com");
     const QStringList own = ownHosts();
+    QList<QPair<QString, bool>> others;
+    bool kicksecureDown = false;
     for (const auto &entry : failed) {
-        if (own.contains(entry.first)) {
+        if (entry.first == kicksecure && !entry.second) {
+            kicksecureDown = true;
+        } else if (own.contains(entry.first)) {
             return false;
+        } else {
+            others.append(entry);
         }
     }
-    m_skipped = skippedText(failed);
+    QStringList skipped;
+    if (kicksecureDown) {
+        skipped << tr("Kicksecure's update server could not be reached, so its updates come with a later check. Everything else was checked.");
+    }
+    if (!others.isEmpty()) {
+        skipped << skippedText(others);
+    }
+    m_skipped = skipped.join(QLatin1Char('\n'));
     return true;
 }
 
@@ -1245,6 +1264,11 @@ void Updates::onOldTransaction(const QDBusObjectPath &, const QString &timespec,
         if (!id.isEmpty()) {
             names << Transaction::packageName(id);
         }
+    }
+    // A run that changed nothing (it failed before touching a package) is
+    // not an install, and listed it read "0 updates" once per attempt.
+    if (names.isEmpty()) {
+        return;
     }
     m_collected.append(QVariantMap{
         {QStringLiteral("when"), QDateTime::fromString(timespec, Qt::ISODateWithMs).toLocalTime()},

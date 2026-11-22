@@ -161,7 +161,7 @@ Rectangle {
                                 required property var modelData
                                 Layout.fillWidth: true
                                 title: modelData.name
-                                description: modelData.kind === "google" ? qsTr("Google") : qsTr("Calendar server")
+                                description: modelData.kind === "google" ? qsTr("Google") : modelData.kind === "microsoft365" ? qsTr("Outlook and Microsoft 365") : qsTr("Calendar server")
                                 UI.Button {
                                     size: "small"
                                     text: qsTr("Remove")

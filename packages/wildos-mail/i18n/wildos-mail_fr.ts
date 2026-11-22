@@ -28,10 +28,6 @@
             <translation>Personnel</translation>
         </message>
         <message>
-            <source>Outlook and Microsoft 365 accounts need Microsoft's own sign-in, which is coming in an update.</source>
-            <translation>Les comptes Outlook et Microsoft 365 demandent la connexion propre à Microsoft, qui arrive dans une mise à jour.</translation>
-        </message>
-        <message>
             <source>Proton Mail only lets other mail apps in through Proton Mail Bridge, which needs a paid Proton plan. Mail can't use Bridge yet, so read Proton mail in your browser for now.</source>
             <translation>Proton Mail n'autorise les autres applications de messagerie que via Proton Mail Bridge, qui demande un abonnement Proton payant. Courrier ne peut pas encore utiliser Bridge : lisez donc vos messages Proton dans votre navigateur pour l'instant.</translation>
         </message>
@@ -68,28 +64,12 @@
             <translation>Tout est prêt</translation>
         </message>
         <message>
-            <source>Your mail, and for Gmail your calendar too.</source>
-            <translation>Votre courrier, et pour Gmail votre calendrier aussi.</translation>
-        </message>
-        <message>
             <source>Email address</source>
             <translation>Adresse e-mail</translation>
         </message>
         <message>
-            <source>We'll find the right settings for you. No server names needed.</source>
-            <translation>Nous trouvons les bons paramètres pour vous. Aucun nom de serveur à saisir.</translation>
-        </message>
-        <message>
-            <source>or choose your provider</source>
-            <translation>ou choisissez votre fournisseur</translation>
-        </message>
-        <message>
             <source>Outlook and Microsoft 365</source>
             <translation>Outlook et Microsoft 365</translation>
-        </message>
-        <message>
-            <source>Coming in an update</source>
-            <translation>Arrive dans une mise à jour</translation>
         </message>
         <message>
             <source>iCloud Mail</source>
@@ -110,10 +90,6 @@
         <message>
             <source>Any IMAP and SMTP mail</source>
             <translation>Toute messagerie IMAP et SMTP</translation>
-        </message>
-        <message>
-            <source>Type your email address first.</source>
-            <translation>Saisissez d'abord votre adresse e-mail.</translation>
         </message>
         <message>
             <source>We've opened Google's sign-in page in your browser. Sign in there and allow access to your mail and calendar, then come back here.</source>
@@ -250,6 +226,38 @@
         <message>
             <source>Checking</source>
             <translation>Vérification</translation>
+        </message>
+        <message>
+            <source>Sign in with Microsoft</source>
+            <translation>Se connecter avec Microsoft</translation>
+        </message>
+        <message>
+            <source>We've opened Microsoft's sign-in page in your browser. Sign in there and allow access, then come back here.</source>
+            <translation>La page de connexion de Microsoft s'est ouverte dans votre navigateur. Connectez-vous et autorisez l'accès, puis revenez ici.</translation>
+        </message>
+        <message>
+            <source>Mail asks for your mail, calendars, contacts and tasks. Wild OS never sees your password, and you can take Mail's access back in your Microsoft account.</source>
+            <translation>Courrier demande l'accès à votre courrier, vos calendriers, vos contacts et vos tâches. Wild OS ne voit jamais votre mot de passe, et vous pouvez retirer l'accès de Courrier dans votre compte Microsoft.</translation>
+        </message>
+        <message>
+            <source>Mail, calendar and contacts are set up together.</source>
+            <translation>Le courrier, le calendrier et les contacts sont configurés ensemble.</translation>
+        </message>
+        <message>
+            <source>Start with your address. The next step appears as soon as it is complete.</source>
+            <translation>Commencez par votre adresse. L'étape suivante apparaît dès qu'elle est complète.</translation>
+        </message>
+        <message>
+            <source>Who provides this address?</source>
+            <translation>Qui fournit cette adresse ?</translation>
+        </message>
+        <message>
+            <source>We could not tell from %1, so choose one. Addresses we recognise skip this step and go straight to signing in.</source>
+            <translation>Nous n'avons pas pu le déterminer à partir de %1 : choisissez-en un. Les adresses que nous reconnaissons passent cette étape et vont directement à la connexion.</translation>
+        </message>
+        <message>
+            <source>You sign in on your provider's own page in a secure window, so Wild OS never sees your password. You can remove access at any time.</source>
+            <translation>Vous vous connectez sur la page de votre fournisseur, dans une fenêtre sécurisée : Wild OS ne voit donc jamais votre mot de passe. Vous pouvez retirer l'accès à tout moment.</translation>
         </message>
     </context>
     <context>
@@ -536,6 +544,58 @@
             <source>Taken out of your calendar</source>
             <translation>Retiré de votre calendrier</translation>
         </message>
+        <message>
+            <source>Microsoft calendars aren't available on this PC. Install the latest updates and try again.</source>
+            <translation>Les calendriers Microsoft ne sont pas disponibles sur ce PC. Installez les dernières mises à jour et réessayez.</translation>
+        </message>
+        <message>
+            <source>no Microsoft sign-in in the calendar service</source>
+            <translation>aucune connexion Microsoft dans le service de calendrier</translation>
+        </message>
+        <message>
+            <source>Microsoft didn't let Calendar in. %1</source>
+            <translation>Microsoft a refusé l'accès à Calendrier. %1</translation>
+        </message>
+        <message>
+            <source>Mail couldn't write to %1.</source>
+            <translation>Courrier n'a pas pu écrire dans %1.</translation>
+        </message>
+        <message>
+            <source>The file couldn't be read.</source>
+            <translation>Impossible de lire le fichier.</translation>
+        </message>
+        <message>
+            <source>That isn't a calendar file Mail can read.</source>
+            <translation>Ce n'est pas un fichier de calendrier que Courrier sait lire.</translation>
+        </message>
+        <message>
+            <source>The calendar can't be changed.</source>
+            <translation>Ce calendrier ne peut pas être modifié.</translation>
+        </message>
+        <message>
+            <source>The calendars weren't saved. %1</source>
+            <translation>Les calendriers n'ont pas été enregistrés. %1</translation>
+        </message>
+        <message>
+            <source>1 event saved to %1</source>
+            <translation>1 événement enregistré dans %1</translation>
+        </message>
+        <message>
+            <source>%1 events saved to %2</source>
+            <translation>%1 événements enregistrés dans %2</translation>
+        </message>
+        <message>
+            <source>The events weren't imported. %1</source>
+            <translation>Les événements n'ont pas été importés. %1</translation>
+        </message>
+        <message>
+            <source>1 event imported</source>
+            <translation>1 événement importé</translation>
+        </message>
+        <message>
+            <source>%1 events imported</source>
+            <translation>%1 événements importés</translation>
+        </message>
     </context>
     <context>
         <name>CalendarList</name>
@@ -789,6 +849,10 @@
             <source>New all-day event</source>
             <translation>Nouvel événement sur toute la journée</translation>
         </message>
+        <message>
+            <source>Show the calendar for %1 here too.</source>
+            <translation>Afficher ici aussi le calendrier de %1.</translation>
+        </message>
     </context>
     <context>
         <name>CalendarSettings</name>
@@ -951,6 +1015,10 @@
         <message>
             <source>Cancel</source>
             <translation>Annuler</translation>
+        </message>
+        <message>
+            <source>Outlook and Microsoft 365</source>
+            <translation>Outlook et Microsoft 365</translation>
         </message>
     </context>
     <context>
@@ -1504,6 +1572,10 @@
             <source>Move down</source>
             <translation>Descendre</translation>
         </message>
+        <message>
+            <source>Move to top</source>
+            <translation>Placer en haut</translation>
+        </message>
     </context>
     <context>
         <name>GoogleSignIn</name>
@@ -1767,10 +1839,6 @@
             <translation>Vous avez déplacé %1</translation>
         </message>
         <message>
-            <source>Put back</source>
-            <translation>Remis en place</translation>
-        </message>
-        <message>
             <source>Emptied</source>
             <translation>Vidé</translation>
         </message>
@@ -1886,6 +1954,206 @@
             <source>The outgoing mail server couldn't be reached. %1</source>
             <translation>Impossible de joindre le serveur de courrier sortant. %1</translation>
         </message>
+        <message>
+            <source>No messages in the Inbox matched a rule.</source>
+            <translation>Aucun message de la Boîte de réception ne correspondait à une règle.</translation>
+        </message>
+        <message>
+            <source>Rules took care of 1 message.</source>
+            <translation>Les règles ont traité 1 message.</translation>
+        </message>
+        <message>
+            <source>Rules took care of %1 messages.</source>
+            <translation>Les règles ont traité %1 messages.</translation>
+        </message>
+        <message>
+            <source>Sign in again to let Mail set automatic replies for this account.</source>
+            <translation>Reconnectez-vous pour que Courrier puisse définir des réponses automatiques pour ce compte.</translation>
+        </message>
+        <message>
+            <source>Microsoft didn't answer. %1</source>
+            <translation>Microsoft n'a pas répondu. %1</translation>
+        </message>
+        <message>
+            <source>Microsoft didn't save it. %1</source>
+            <translation>Microsoft ne l'a pas enregistré. %1</translation>
+        </message>
+        <message>
+            <source>Automatic reply: %1</source>
+            <translation>Réponse automatique : %1</translation>
+        </message>
+        <message>
+            <source>Getting ready to import</source>
+            <translation>Préparation de l'importation</translation>
+        </message>
+        <message>
+            <source>Imported</source>
+            <translation>Importés</translation>
+        </message>
+        <message>
+            <source>Reading %1</source>
+            <translation>Lecture de %1</translation>
+        </message>
+        <message>
+            <source>%1 couldn't be read. It may be damaged, or protected by a password.</source>
+            <translation>Impossible de lire %1. Le fichier est peut-être endommagé ou protégé par un mot de passe.</translation>
+        </message>
+        <message>
+            <source>No messages were found to import.</source>
+            <translation>Aucun message à importer n'a été trouvé.</translation>
+        </message>
+        <message>
+            <source>Imported 1 message into the Imported folder.</source>
+            <translation>1 message importé dans le dossier Importés.</translation>
+        </message>
+        <message>
+            <source>Imported %1 messages into the Imported folder.</source>
+            <translation>%1 messages importés dans le dossier Importés.</translation>
+        </message>
+        <message>
+            <source>Getting ready to export</source>
+            <translation>Préparation de l'exportation</translation>
+        </message>
+        <message>
+            <source>Mail couldn't write to %1.</source>
+            <translation>Courrier n'a pas pu écrire dans %1.</translation>
+        </message>
+        <message>
+            <source>Exported %1 messages to %2.</source>
+            <translation>%1 messages exportés vers %2.</translation>
+        </message>
+        <message>
+            <source>No messages in the Inbox matched this rule.</source>
+            <translation>Aucun message de la boîte de réception ne correspond à cette règle.</translation>
+        </message>
+        <message>
+            <source>The rule took care of 1 message.</source>
+            <translation>La règle a traité 1 message.</translation>
+        </message>
+        <message>
+            <source>The rule took care of %1 messages.</source>
+            <translation>La règle a traité %1 messages.</translation>
+        </message>
+        <message>
+            <source>Folder</source>
+            <translation>Dossier</translation>
+        </message>
+        <message>
+            <source>The Imported folder couldn't be made. Try again in a moment.</source>
+            <translation>Impossible de créer le dossier Importés. Réessayez dans un instant.</translation>
+        </message>
+        <message>
+            <source>Importing %1</source>
+            <translation>Importation de %1</translation>
+        </message>
+        <message>
+            <source>A folder for %1 couldn't be made on the server.</source>
+            <translation>Impossible de créer un dossier pour %1 sur le serveur.</translation>
+        </message>
+        <message>
+            <source>Import stopped. 1 message went into the Imported folder.</source>
+            <translation>Importation arrêtée. 1 message a été placé dans le dossier Importés.</translation>
+        </message>
+        <message>
+            <source>Import stopped. %1 messages went into the Imported folder.</source>
+            <translation>Importation arrêtée. %1 messages ont été placés dans le dossier Importés.</translation>
+        </message>
+        <message>
+            <source>Exporting %1</source>
+            <translation>Exportation de %1</translation>
+        </message>
+        <message>
+            <source>Export stopped. %1 messages were saved to %2.</source>
+            <translation>Exportation arrêtée. %1 messages ont été enregistrés dans %2.</translation>
+        </message>
+        <message>
+            <source>Exported 1 message to %1.</source>
+            <translation>1 message exporté dans %1.</translation>
+        </message>
+        <message>
+            <source>Backing up contacts and calendars</source>
+            <translation>Sauvegarde des contacts et des calendriers</translation>
+        </message>
+        <message>
+            <source>Contacts weren't backed up. %1</source>
+            <translation>Les contacts n'ont pas été sauvegardés. %1</translation>
+        </message>
+        <message>
+            <source>Calendars weren't backed up. %1</source>
+            <translation>Les calendriers n'ont pas été sauvegardés. %1</translation>
+        </message>
+        <message>
+            <source>Backing up %1</source>
+            <translation>Sauvegarde de %1</translation>
+        </message>
+        <message>
+            <source>The backup couldn't be put together. Is there space on this PC?</source>
+            <translation>Impossible de constituer la sauvegarde. Reste-t-il de la place sur ce PC ?</translation>
+        </message>
+        <message>
+            <source>Saving the backup</source>
+            <translation>Enregistrement de la sauvegarde</translation>
+        </message>
+        <message>
+            <source>The backup couldn't be saved to %1.</source>
+            <translation>Impossible d'enregistrer la sauvegarde dans %1.</translation>
+        </message>
+        <message>
+            <source>Backup stopped. Nothing was saved.</source>
+            <translation>Sauvegarde arrêtée. Rien n'a été enregistré.</translation>
+        </message>
+        <message>
+            <source>Backed up 1 message, your contacts, calendars and settings to %1.</source>
+            <translation>1 message, vos contacts, calendriers et paramètres ont été sauvegardés dans %1.</translation>
+        </message>
+        <message>
+            <source>Backed up %1 messages, your contacts, calendars and settings to %2.</source>
+            <translation>%1 messages, vos contacts, calendriers et paramètres ont été sauvegardés dans %2.</translation>
+        </message>
+        <message>
+            <source>1 rule was left out, as its account isn't on this PC.</source>
+            <translation>1 règle a été ignorée, car son compte n'est pas sur ce PC.</translation>
+        </message>
+        <message>
+            <source>%1 rules were left out, as their accounts aren't on this PC.</source>
+            <translation>%1 règles ont été ignorées, car leurs comptes ne sont pas sur ce PC.</translation>
+        </message>
+        <message>
+            <source>Opening %1</source>
+            <translation>Ouverture de %1</translation>
+        </message>
+        <message>
+            <source>That file isn't a Mail backup, or it is damaged.</source>
+            <translation>Ce fichier n'est pas une sauvegarde de Courrier, ou il est endommagé.</translation>
+        </message>
+        <message>
+            <source>Mail for %1 was left out. Add that account, then restore again to bring its mail back.</source>
+            <translation>Le courrier de %1 a été ignoré. Ajoutez ce compte, puis restaurez à nouveau pour récupérer son courrier.</translation>
+        </message>
+        <message>
+            <source>Restoring contacts and calendars</source>
+            <translation>Restauration des contacts et des calendriers</translation>
+        </message>
+        <message>
+            <source>Contacts weren't restored. %1</source>
+            <translation>Les contacts n'ont pas été restaurés. %1</translation>
+        </message>
+        <message>
+            <source>Events from %1 weren't restored. %2</source>
+            <translation>Les événements de %1 n'ont pas été restaurés. %2</translation>
+        </message>
+        <message>
+            <source>Restoring mail</source>
+            <translation>Restauration du courrier</translation>
+        </message>
+        <message>
+            <source>Restore stopped.</source>
+            <translation>Restauration arrêtée.</translation>
+        </message>
+        <message>
+            <source>Restored %1 messages into the Imported folder, %2 contacts and %3 events.</source>
+            <translation>%1 messages restaurés dans le dossier Importés, %2 contacts et %3 événements.</translation>
+        </message>
     </context>
     <context>
         <name>MailSession</name>
@@ -1902,8 +2170,8 @@
             <translation>Le mot de passe n'a pas été accepté</translation>
         </message>
         <message>
-            <source>Google sign-in has expired</source>
-            <translation>La connexion Google a expiré</translation>
+            <source>The sign-in has expired</source>
+            <translation>La connexion a expiré</translation>
         </message>
     </context>
     <context>
@@ -1927,10 +2195,6 @@
         <message>
             <source>Write your signature here, then add it from the message.</source>
             <translation>Écrivez votre signature ici, puis ajoutez-la depuis le message.</translation>
-        </message>
-        <message>
-            <source>Undo</source>
-            <translation>Annuler</translation>
         </message>
         <message>
             <source>Search events</source>
@@ -2308,6 +2572,10 @@ Rechercher de nouveaux messages : F5
 Imprimer : Ctrl+P
 Monter ou descendre un compte : Alt+Haut, Alt+Bas</translation>
         </message>
+        <message>
+            <source>Sign in on Microsoft's page in your browser.</source>
+            <translation>Connectez-vous sur la page de Microsoft dans votre navigateur.</translation>
+        </message>
     </context>
     <context>
         <name>MessageList</name>
@@ -2511,6 +2779,41 @@ Objet : %4</translation>
         </message>
     </context>
     <context>
+        <name>MicrosoftSignIn</name>
+        <message>
+            <source>Mail couldn't wait for Microsoft's answer on this PC.</source>
+            <translation>Courrier n'a pas pu attendre la réponse de Microsoft sur ce PC.</translation>
+        </message>
+        <message>
+            <source>You're signed in</source>
+            <translation>Vous êtes connecté</translation>
+        </message>
+        <message>
+            <source>You can close this tab and go back to Mail.</source>
+            <translation>Vous pouvez fermer cet onglet et revenir à Courrier.</translation>
+        </message>
+        <message>
+            <source>You weren't signed in</source>
+            <translation>Vous n'êtes pas connecté</translation>
+        </message>
+        <message>
+            <source>Go back to Mail to try again.</source>
+            <translation>Revenez à Courrier pour réessayer.</translation>
+        </message>
+        <message>
+            <source>Microsoft sign-in was cancelled.</source>
+            <translation>La connexion Microsoft a été annulée.</translation>
+        </message>
+        <message>
+            <source>Microsoft didn't sign you in. %1</source>
+            <translation>Microsoft ne vous a pas connecté. %1</translation>
+        </message>
+        <message>
+            <source>Microsoft didn't finish signing you in. %1</source>
+            <translation>Microsoft n'a pas terminé votre connexion. %1</translation>
+        </message>
+    </context>
+    <context>
         <name>MiniMonth</name>
         <message>
             <source>Previous month</source>
@@ -2638,6 +2941,14 @@ Objet : %4</translation>
         <message>
             <source>%1 contacts imported</source>
             <translation>%1 contacts importés</translation>
+        </message>
+        <message>
+            <source>Mail couldn't write to %1.</source>
+            <translation>Courrier n'a pas pu écrire dans %1.</translation>
+        </message>
+        <message>
+            <source>The address book couldn't be opened.</source>
+            <translation>Impossible d'ouvrir le carnet d'adresses.</translation>
         </message>
     </context>
     <context>
@@ -2950,6 +3261,10 @@ Objet : %4</translation>
             <source>Create</source>
             <translation>Créer</translation>
         </message>
+        <message>
+            <source>Show the contacts, calendar and tasks for %1 here too.</source>
+            <translation>Afficher ici aussi les contacts, le calendrier et les tâches de %1.</translation>
+        </message>
     </context>
     <context>
         <name>QObject</name>
@@ -3148,14 +3463,348 @@ Objet : %4</translation>
         </message>
     </context>
     <context>
-        <name>SettingsPage</name>
+        <name>RuleEditor</name>
         <message>
-            <source>Accounts</source>
-            <translation>Comptes</translation>
+            <source>From</source>
+            <translation>De</translation>
+        </message>
+        <message>
+            <source>Sent to</source>
+            <translation>Envoyé à</translation>
+        </message>
+        <message>
+            <source>Subject</source>
+            <translation>Objet</translation>
+        </message>
+        <message>
+            <source>Sent to a mailing list</source>
+            <translation>Envoyé à une liste de diffusion</translation>
+        </message>
+        <message>
+            <source>Has an attachment</source>
+            <translation>Contient une pièce jointe</translation>
+        </message>
+        <message>
+            <source>Move to folder</source>
+            <translation>Déplacer vers un dossier</translation>
+        </message>
+        <message>
+            <source>Mark as read</source>
+            <translation>Marquer comme lu</translation>
+        </message>
+        <message>
+            <source>Flag</source>
+            <translation>Indicateur</translation>
+        </message>
+        <message>
+            <source>Pin to the top</source>
+            <translation>Épingler en haut</translation>
+        </message>
+        <message>
+            <source>Archive</source>
+            <translation>Archiver</translation>
+        </message>
+        <message>
+            <source>Delete</source>
+            <translation>Supprimer</translation>
+        </message>
+        <message>
+            <source>Edit rule</source>
+            <translation>Modifier la règle</translation>
+        </message>
+        <message>
+            <source>New rule</source>
+            <translation>Nouvelle règle</translation>
+        </message>
+        <message>
+            <source>For new mail in %1</source>
+            <translation>Pour le nouveau courrier dans %1</translation>
+        </message>
+        <message>
+            <source>Name</source>
+            <translation>Nom</translation>
+        </message>
+        <message>
+            <source>For example, Bills and statements</source>
+            <translation>Par exemple, Factures et relevés</translation>
+        </message>
+        <message>
+            <source>If</source>
+            <translation>Si</translation>
+        </message>
+        <message>
+            <source>any</source>
+            <translation>l'une</translation>
+        </message>
+        <message>
+            <source>all</source>
+            <translation>toutes</translation>
+        </message>
+        <message>
+            <source>of these are true</source>
+            <translation>de ces conditions sont vraies</translation>
+        </message>
+        <message>
+            <source>contains</source>
+            <translation>contient</translation>
+        </message>
+        <message>
+            <source>Words in the subject</source>
+            <translation>Mots dans l'objet</translation>
+        </message>
+        <message>
+            <source>A name or address</source>
+            <translation>Un nom ou une adresse</translation>
+        </message>
+        <message>
+            <source>Remove</source>
+            <translation>Supprimer</translation>
+        </message>
+        <message>
+            <source>Add a condition</source>
+            <translation>Ajouter une condition</translation>
+        </message>
+        <message>
+            <source>Then</source>
+            <translation>Alors</translation>
+        </message>
+        <message>
+            <source>Folder</source>
+            <translation>Dossier</translation>
+        </message>
+        <message>
+            <source>Add an action</source>
+            <translation>Ajouter une action</translation>
+        </message>
+        <message>
+            <source>Stop running other rules on this message</source>
+            <translation>Ne plus appliquer d'autres règles à ce message</translation>
+        </message>
+        <message>
+            <source>Also run it now on mail already in Inbox</source>
+            <translation>L'appliquer aussi maintenant au courrier déjà dans la boîte de réception</translation>
+        </message>
+        <message>
+            <source>1 message matches</source>
+            <translation>1 message correspond</translation>
+        </message>
+        <message>
+            <source>%1 messages match</source>
+            <translation>%1 messages correspondent</translation>
+        </message>
+        <message>
+            <source>Delete rule</source>
+            <translation>Supprimer la règle</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Annuler</translation>
+        </message>
+        <message>
+            <source>Save</source>
+            <translation>Enregistrer</translation>
+        </message>
+    </context>
+    <context>
+        <name>SettingsAccounts</name>
+        <message>
+            <source>Microsoft 365</source>
+            <translation>Microsoft 365</translation>
+        </message>
+        <message>
+            <source>Outlook</source>
+            <translation>Outlook</translation>
+        </message>
+        <message>
+            <source>iCloud Mail</source>
+            <translation>iCloud Mail</translation>
+        </message>
+        <message>
+            <source>Yahoo Mail</source>
+            <translation>Yahoo Mail</translation>
+        </message>
+        <message>
+            <source>AOL Mail</source>
+            <translation>AOL Mail</translation>
+        </message>
+        <message>
+            <source>Other account (IMAP)</source>
+            <translation>Autre compte (IMAP)</translation>
+        </message>
+        <message>
+            <source>Add account</source>
+            <translation>Ajouter un compte</translation>
+        </message>
+        <message>
+            <source>Import mail</source>
+            <translation>Importer du courrier</translation>
+        </message>
+        <message>
+            <source>Drop to place it %1</source>
+            <translation>Déposer pour le placer %1</translation>
+        </message>
+        <message>
+            <source>first</source>
+            <translation>en premier</translation>
+        </message>
+        <message>
+            <source>second</source>
+            <translation>en deuxième</translation>
+        </message>
+        <message>
+            <source>third</source>
+            <translation>en troisième</translation>
+        </message>
+        <message>
+            <source>fourth</source>
+            <translation>en quatrième</translation>
+        </message>
+        <message>
+            <source>fifth</source>
+            <translation>en cinquième</translation>
+        </message>
+        <message>
+            <source>Drag to change the order</source>
+            <translation>Faites glisser pour changer l'ordre</translation>
+        </message>
+        <message>
+            <source>Default</source>
+            <translation>Par défaut</translation>
+        </message>
+        <message>
+            <source>Drag to re-order</source>
+            <translation>Faites glisser pour réorganiser</translation>
+        </message>
+        <message>
+            <source>%1 · %2</source>
+            <translation>%1 · %2</translation>
+        </message>
+        <message>
+            <source>Mail, calendar and contacts</source>
+            <translation>Courrier, calendrier et contacts</translation>
         </message>
         <message>
             <source>Mail</source>
             <translation>Courrier</translation>
+        </message>
+        <message>
+            <source>Up to date</source>
+            <translation>À jour</translation>
+        </message>
+        <message>
+            <source>Connecting</source>
+            <translation>Connexion</translation>
+        </message>
+        <message>
+            <source>Offline</source>
+            <translation>Hors connexion</translation>
+        </message>
+        <message>
+            <source>Close</source>
+            <translation>Fermer</translation>
+        </message>
+        <message>
+            <source>Settings for this account</source>
+            <translation>Paramètres de ce compte</translation>
+        </message>
+        <message>
+            <source>Name people see</source>
+            <translation>Nom visible par les autres</translation>
+        </message>
+        <message>
+            <source>Keep mail on this PC from</source>
+            <translation>Garder sur ce PC le courrier depuis</translation>
+        </message>
+        <message>
+            <source>All time</source>
+            <translation>Toujours</translation>
+        </message>
+        <message>
+            <source>The last year</source>
+            <translation>La dernière année</translation>
+        </message>
+        <message>
+            <source>The last 3 months</source>
+            <translation>Les 3 derniers mois</translation>
+        </message>
+        <message>
+            <source>The last month</source>
+            <translation>Le dernier mois</translation>
+        </message>
+        <message>
+            <source>Only what I open</source>
+            <translation>Seulement ce que j'ouvre</translation>
+        </message>
+        <message>
+            <source>Check for new mail</source>
+            <translation>Rechercher de nouveaux messages</translation>
+        </message>
+        <message>
+            <source>As it arrives</source>
+            <translation>Dès son arrivée</translation>
+        </message>
+        <message>
+            <source>Every 15 minutes</source>
+            <translation>Toutes les 15 minutes</translation>
+        </message>
+        <message>
+            <source>Every hour</source>
+            <translation>Toutes les heures</translation>
+        </message>
+        <message>
+            <source>Only when I check</source>
+            <translation>Seulement quand je vérifie</translation>
+        </message>
+        <message>
+            <source>Sync</source>
+            <translation>Synchroniser</translation>
+        </message>
+        <message>
+            <source>Calendar</source>
+            <translation>Calendrier</translation>
+        </message>
+        <message>
+            <source>Contacts</source>
+            <translation>Contacts</translation>
+        </message>
+        <message>
+            <source>Account name in Mail</source>
+            <translation>Nom du compte dans Courrier</translation>
+        </message>
+        <message>
+            <source>Send new mail from this account</source>
+            <translation>Envoyer les nouveaux messages depuis ce compte</translation>
+        </message>
+        <message>
+            <source>Sign in again</source>
+            <translation>Se reconnecter</translation>
+        </message>
+        <message>
+            <source>Remove account</source>
+            <translation>Supprimer le compte</translation>
+        </message>
+        <message>
+            <source>The order here is the order of your accounts in the folder list, the From menu and search results.</source>
+            <translation>L'ordre ici est celui de vos comptes dans la liste des dossiers, le menu De et les résultats de recherche.</translation>
+        </message>
+        <message>
+            <source>Move up</source>
+            <translation>Monter</translation>
+        </message>
+        <message>
+            <source>Move down</source>
+            <translation>Descendre</translation>
+        </message>
+        <message>
+            <source>Move to top</source>
+            <translation>Placer en haut</translation>
+        </message>
+    </context>
+    <context>
+        <name>SettingsPage</name>
+        <message>
+            <source>Accounts</source>
+            <translation>Comptes</translation>
         </message>
         <message>
             <source>Writing and signatures</source>
@@ -3178,16 +3827,8 @@ Objet : %4</translation>
             <translation>Paramètres</translation>
         </message>
         <message>
-            <source>Mail accounts on this PC</source>
-            <translation>Comptes de messagerie sur ce PC</translation>
-        </message>
-        <message>
             <source>Layout, reading and how messages are sorted</source>
             <translation>Disposition, lecture et tri des messages</translation>
-        </message>
-        <message>
-            <source>What goes at the end of what you write</source>
-            <translation>Ce qui figure à la fin de ce que vous écrivez</translation>
         </message>
         <message>
             <source>What senders can learn about you, and what leaves this PC</source>
@@ -3196,46 +3837,6 @@ Objet : %4</translation>
         <message>
             <source>When Mail lets you know</source>
             <translation>Quand Courrier vous prévient</translation>
-        </message>
-        <message>
-            <source>Up to date</source>
-            <translation>À jour</translation>
-        </message>
-        <message>
-            <source>Connecting</source>
-            <translation>Connexion</translation>
-        </message>
-        <message>
-            <source>Offline</source>
-            <translation>Hors connexion</translation>
-        </message>
-        <message>
-            <source>Name people see</source>
-            <translation>Nom affiché</translation>
-        </message>
-        <message>
-            <source>Account name in Mail</source>
-            <translation>Nom du compte dans Courrier</translation>
-        </message>
-        <message>
-            <source>Keep all mail on this PC</source>
-            <translation>Garder tout le courrier sur ce PC</translation>
-        </message>
-        <message>
-            <source>Read and search everything offline. Off keeps only what you open.</source>
-            <translation>Lisez et recherchez tout hors connexion. Désactivé, seuls les messages que vous ouvrez sont gardés.</translation>
-        </message>
-        <message>
-            <source>Sign in again</source>
-            <translation>Se reconnecter</translation>
-        </message>
-        <message>
-            <source>Remove account</source>
-            <translation>Supprimer le compte</translation>
-        </message>
-        <message>
-            <source>Add account</source>
-            <translation>Ajouter un compte</translation>
         </message>
         <message>
             <source>Reading pane</source>
@@ -3276,14 +3877,6 @@ Objet : %4</translation>
         <message>
             <source>The next message opens</source>
             <translation>Le message suivant s'ouvre</translation>
-        </message>
-        <message>
-            <source>Signature for %1</source>
-            <translation>Signature pour %1</translation>
-        </message>
-        <message>
-            <source>For example, your name and phone number</source>
-            <translation>Par exemple, votre nom et votre numéro de téléphone</translation>
         </message>
         <message>
             <source>trackers blocked this week</source>
@@ -3362,10 +3955,6 @@ Objet : %4</translation>
             <translation>Nouveaux messages</translation>
         </message>
         <message>
-            <source>A notification for new mail in your Inbox while Mail is open, with Reply, Mark as read and Archive</source>
-            <translation>Une notification pour chaque nouveau message dans votre boîte de réception quand Courrier est ouvert, avec Répondre, Marquer comme lu et Archiver</translation>
-        </message>
-        <message>
             <source>Remove %1?</source>
             <translation>Supprimer %1 ?</translation>
         </message>
@@ -3380,6 +3969,688 @@ Objet : %4</translation>
         <message>
             <source>Remove</source>
             <translation>Supprimer</translation>
+        </message>
+        <message>
+            <source>A notification for new mail in your Inbox, with Reply, Mark as read and Archive</source>
+            <translation>Une notification pour chaque nouveau message dans votre boîte de réception, avec Répondre, Marquer comme lu et Archiver</translation>
+        </message>
+        <message>
+            <source>While Mail is closed</source>
+            <translation>Quand Courrier est fermé</translation>
+        </message>
+        <message>
+            <source>Mail keeps checking your Inbox after you close it, so new mail still shows up</source>
+            <translation>Courrier continue de vérifier votre boîte de réception après sa fermeture, pour que les nouveaux messages s'affichent quand même</translation>
+        </message>
+        <message>
+            <source>Rules</source>
+            <translation>Règles</translation>
+        </message>
+        <message>
+            <source>Automatic replies</source>
+            <translation>Réponses automatiques</translation>
+        </message>
+        <message>
+            <source>Import and export</source>
+            <translation>Importer et exporter</translation>
+        </message>
+        <message>
+            <source>account add remove sign in default order sync calendar contacts</source>
+            <translation>compte ajouter supprimer connexion par défaut ordre synchronisation calendrier contacts</translation>
+        </message>
+        <message>
+            <source>signature spelling plain rich text</source>
+            <translation>signature orthographe texte brut enrichi</translation>
+        </message>
+        <message>
+            <source>away holiday out of office vacation</source>
+            <translation>absent absence vacances congés hors du bureau</translation>
+        </message>
+        <message>
+            <source>filter sort move folder</source>
+            <translation>filtre trier déplacer dossier</translation>
+        </message>
+        <message>
+            <source>pictures trackers read receipts location</source>
+            <translation>images traqueurs accusés de lecture position</translation>
+        </message>
+        <message>
+            <source>sound alert new mail closed</source>
+            <translation>son alerte nouveau courrier fermé</translation>
+        </message>
+        <message>
+            <source>pst thunderbird evolution mbox backup restore export import contacts calendars vcard ics</source>
+            <translation>pst thunderbird evolution mbox sauvegarde restaurer exporter importer contacts calendriers vcard ics</translation>
+        </message>
+        <message>
+            <source>Appearance</source>
+            <translation>Apparence</translation>
+        </message>
+        <message>
+            <source>reading pane layout conversations density preview</source>
+            <translation>volet de lecture disposition conversations densité aperçu</translation>
+        </message>
+        <message>
+            <source>Find a setting</source>
+            <translation>Rechercher un paramètre</translation>
+        </message>
+        <message>
+            <source>Mail, calendar and contacts accounts on this PC</source>
+            <translation>Comptes de courrier, calendrier et contacts sur ce PC</translation>
+        </message>
+        <message>
+            <source>Signatures for each account, and how new messages start</source>
+            <translation>Signatures de chaque compte, et comment commencent les nouveaux messages</translation>
+        </message>
+        <message>
+            <source>Move mail, contacts and calendars in and out of Wild OS</source>
+            <translation>Faire entrer et sortir courrier, contacts et calendriers de Wild OS</translation>
+        </message>
+        <message>
+            <source>A reply that sends itself while you are away</source>
+            <translation>Une réponse qui s'envoie toute seule pendant votre absence</translation>
+        </message>
+        <message>
+            <source>Sort, tag and tidy mail as it arrives</source>
+            <translation>Trier, étiqueter et ranger le courrier dès son arrivée</translation>
+        </message>
+        <message>
+            <source>Show company logos</source>
+            <translation>Afficher les logos des entreprises</translation>
+        </message>
+        <message>
+            <source>Logos come from each company's own website and are kept on this PC. No other service is asked.</source>
+            <translation>Les logos viennent du site web de chaque entreprise et sont conservés sur ce PC. Aucun autre service n'est sollicité.</translation>
+        </message>
+    </context>
+    <context>
+        <name>SettingsReplies</name>
+        <message>
+            <source>Off</source>
+            <translation>Désactivé</translation>
+        </message>
+        <message>
+            <source>On until you turn it off</source>
+            <translation>Activé jusqu'à ce que vous le désactiviez</translation>
+        </message>
+        <message>
+            <source>Starts %1</source>
+            <translation>Commence le %1</translation>
+        </message>
+        <message>
+            <source>On until %1</source>
+            <translation>Activé jusqu'au %1</translation>
+        </message>
+        <message>
+            <source>Ended %1</source>
+            <translation>Terminé le %1</translation>
+        </message>
+        <message>
+            <source>Saved.</source>
+            <translation>Enregistré.</translation>
+        </message>
+        <message>
+            <source>Account</source>
+            <translation>Compte</translation>
+        </message>
+        <message>
+            <source>When</source>
+            <translation>Quand</translation>
+        </message>
+        <message>
+            <source>Send automatic replies</source>
+            <translation>Envoyer des réponses automatiques</translation>
+        </message>
+        <message>
+            <source>Each person gets the reply once, however many times they write</source>
+            <translation>Chaque personne reçoit la réponse une seule fois, quel que soit le nombre de ses messages</translation>
+        </message>
+        <message>
+            <source>Schedule</source>
+            <translation>Planification</translation>
+        </message>
+        <message>
+            <source>Until I turn it off</source>
+            <translation>Jusqu'à ce que je le désactive</translation>
+        </message>
+        <message>
+            <source>Between two dates</source>
+            <translation>Entre deux dates</translation>
+        </message>
+        <message>
+            <source>Between</source>
+            <comment>dates</comment>
+            <translation>Du</translation>
+        </message>
+        <message>
+            <source>Start</source>
+            <translation>Début</translation>
+        </message>
+        <message>
+            <source>and</source>
+            <comment>dates</comment>
+            <translation>au</translation>
+        </message>
+        <message>
+            <source>End</source>
+            <translation>Fin</translation>
+        </message>
+        <message>
+            <source>Subject</source>
+            <translation>Objet</translation>
+        </message>
+        <message>
+            <source>Automatic reply</source>
+            <translation>Réponse automatique</translation>
+        </message>
+        <message>
+            <source>For example: I'm away until Monday and will reply when I'm back.</source>
+            <translation>Par exemple : Je suis absent jusqu'à lundi et je répondrai à mon retour.</translation>
+        </message>
+        <message>
+            <source>Who gets one</source>
+            <translation>Qui la reçoit</translation>
+        </message>
+        <message>
+            <source>Reply to</source>
+            <translation>Répondre à</translation>
+        </message>
+        <message>
+            <source>Newsletters, receipts and no-reply addresses never get one</source>
+            <translation>Les newsletters, reçus et adresses no-reply n'en reçoivent jamais</translation>
+        </message>
+        <message>
+            <source>Everyone</source>
+            <translation>Tout le monde</translation>
+        </message>
+        <message>
+            <source>My contacts and my organisation</source>
+            <translation>Mes contacts et mon organisation</translation>
+        </message>
+        <message>
+            <source>Only my organisation</source>
+            <translation>Seulement mon organisation</translation>
+        </message>
+        <message>
+            <source>Only my contacts</source>
+            <translation>Seulement mes contacts</translation>
+        </message>
+        <message>
+            <source>Sign in again</source>
+            <translation>Se reconnecter</translation>
+        </message>
+        <message>
+            <source>Save</source>
+            <translation>Enregistrer</translation>
+        </message>
+        <message>
+            <source>Microsoft sends these from its own servers, so they go out when this PC is off.</source>
+            <translation>Microsoft les envoie depuis ses propres serveurs : elles partent donc même quand ce PC est éteint.</translation>
+        </message>
+        <message>
+            <source>Mail sends these itself, so they go out while this PC is on and Mail can reach your email provider.</source>
+            <translation>Courrier les envoie lui-même : elles partent donc tant que ce PC est allumé et que Courrier peut joindre votre fournisseur de messagerie.</translation>
+        </message>
+    </context>
+    <context>
+        <name>SettingsRules</name>
+        <message>
+            <source>From</source>
+            <translation>De</translation>
+        </message>
+        <message>
+            <source>Sent to</source>
+            <translation>Envoyé à</translation>
+        </message>
+        <message>
+            <source>Subject has</source>
+            <translation>L'objet contient</translation>
+        </message>
+        <message>
+            <source>Sent to a mailing list</source>
+            <translation>Envoyé à une liste de diffusion</translation>
+        </message>
+        <message>
+            <source>Has an attachment</source>
+            <translation>Contient une pièce jointe</translation>
+        </message>
+        <message>
+            <source> and </source>
+            <translation> et </translation>
+        </message>
+        <message>
+            <source> or </source>
+            <translation> ou </translation>
+        </message>
+        <message>
+            <source>Mark as read</source>
+            <translation>Marquer comme lu</translation>
+        </message>
+        <message>
+            <source>Flag</source>
+            <translation>Indicateur</translation>
+        </message>
+        <message>
+            <source>Pin to the top</source>
+            <translation>Épingler en haut</translation>
+        </message>
+        <message>
+            <source>Archive</source>
+            <translation>Archiver</translation>
+        </message>
+        <message>
+            <source>Delete</source>
+            <translation>Supprimer</translation>
+        </message>
+        <message>
+            <source>New rule</source>
+            <translation>Nouvelle règle</translation>
+        </message>
+        <message>
+            <source>Run rules now</source>
+            <translation>Appliquer les règles maintenant</translation>
+        </message>
+        <message>
+            <source>Account</source>
+            <translation>Compte</translation>
+        </message>
+        <message>
+            <source>No rules yet. A rule can move mail from someone to a folder, mark it read, flag it, pin it, archive it or delete it.</source>
+            <translation>Aucune règle pour l'instant. Une règle peut déplacer le courrier d'une personne vers un dossier, le marquer comme lu, lui ajouter un indicateur, l'épingler, l'archiver ou le supprimer.</translation>
+        </message>
+        <message>
+            <source>Drag to re-order</source>
+            <translation>Faites glisser pour réorganiser</translation>
+        </message>
+        <message>
+            <source>Rule on</source>
+            <translation>Règle activée</translation>
+        </message>
+        <message>
+            <source>Rule</source>
+            <translation>Règle</translation>
+        </message>
+        <message>
+            <source>On this PC</source>
+            <translation>Sur ce PC</translation>
+        </message>
+        <message>
+            <source>Edit rule</source>
+            <translation>Modifier la règle</translation>
+        </message>
+        <message>
+            <source>More</source>
+            <translation>Plus</translation>
+        </message>
+        <message>
+            <source>Rules run from the top down on mail as it arrives. Drag to change the order. They run on this PC, and catch up when Mail next opens.</source>
+            <translation>Les règles s'appliquent de haut en bas au courrier dès son arrivée. Faites glisser pour changer l'ordre. Elles s'exécutent sur ce PC, et rattrapent leur retard à la prochaine ouverture de Courrier.</translation>
+        </message>
+        <message>
+            <source>Run now</source>
+            <translation>Appliquer maintenant</translation>
+        </message>
+        <message>
+            <source>Move up</source>
+            <translation>Monter</translation>
+        </message>
+        <message>
+            <source>Move down</source>
+            <translation>Descendre</translation>
+        </message>
+        <message>
+            <source>Delete rule</source>
+            <translation>Supprimer la règle</translation>
+        </message>
+    </context>
+    <context>
+        <name>SettingsSignatures</name>
+        <message>
+            <source>Signature</source>
+            <translation>Signature</translation>
+        </message>
+        <message>
+            <source>New signature</source>
+            <translation>Nouvelle signature</translation>
+        </message>
+        <message>
+            <source>Signature %1</source>
+            <translation>Signature %1</translation>
+        </message>
+        <message>
+            <source>No signatures yet.</source>
+            <translation>Aucune signature pour l'instant.</translation>
+        </message>
+        <message>
+            <source>Name</source>
+            <translation>Nom</translation>
+        </message>
+        <message>
+            <source>Delete signature</source>
+            <translation>Supprimer la signature</translation>
+        </message>
+        <message>
+            <source>Bold</source>
+            <translation>Gras</translation>
+        </message>
+        <message>
+            <source>Italic</source>
+            <translation>Italique</translation>
+        </message>
+        <message>
+            <source>Underline</source>
+            <translation>Souligné</translation>
+        </message>
+        <message>
+            <source>Text colour</source>
+            <translation>Couleur du texte</translation>
+        </message>
+        <message>
+            <source>Link</source>
+            <translation>Lien</translation>
+        </message>
+        <message>
+            <source>Picture</source>
+            <translation>Image</translation>
+        </message>
+        <message>
+            <source>For example, your name and phone number</source>
+            <translation>Par exemple, votre nom et votre numéro de téléphone</translation>
+        </message>
+        <message>
+            <source>Add a signature automatically</source>
+            <translation>Ajouter une signature automatiquement</translation>
+        </message>
+        <message>
+            <source>Account</source>
+            <translation>Compte</translation>
+        </message>
+        <message>
+            <source>New messages</source>
+            <translation>Nouveaux messages</translation>
+        </message>
+        <message>
+            <source>Replies and forwards</source>
+            <translation>Réponses et transferts</translation>
+        </message>
+        <message>
+            <source>None</source>
+            <translation>Aucune</translation>
+        </message>
+        <message>
+            <source>Signature for new messages from %1</source>
+            <translation>Signature des nouveaux messages de %1</translation>
+        </message>
+        <message>
+            <source>Signature for replies and forwards from %1</source>
+            <translation>Signature des réponses et transferts de %1</translation>
+        </message>
+        <message>
+            <source>Writing</source>
+            <translation>Rédaction</translation>
+        </message>
+        <message>
+            <source>Check spelling as you type</source>
+            <translation>Vérifier l'orthographe pendant la saisie</translation>
+        </message>
+        <message>
+            <source>Write messages in</source>
+            <translation>Rédiger les messages en</translation>
+        </message>
+        <message>
+            <source>Rich text</source>
+            <translation>Texte enrichi</translation>
+        </message>
+        <message>
+            <source>Plain text</source>
+            <translation>Texte brut</translation>
+        </message>
+        <message>
+            <source>Black</source>
+            <translation>Noir</translation>
+        </message>
+        <message>
+            <source>Grey</source>
+            <translation>Gris</translation>
+        </message>
+        <message>
+            <source>Blue</source>
+            <translation>Bleu</translation>
+        </message>
+        <message>
+            <source>Green</source>
+            <translation>Vert</translation>
+        </message>
+        <message>
+            <source>Orange</source>
+            <translation>Orange</translation>
+        </message>
+        <message>
+            <source>Red</source>
+            <translation>Rouge</translation>
+        </message>
+        <message>
+            <source>Purple</source>
+            <translation>Violet</translation>
+        </message>
+        <message>
+            <source>Insert link</source>
+            <translation>Insérer un lien</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Annuler</translation>
+        </message>
+        <message>
+            <source>Insert</source>
+            <translation>Insérer</translation>
+        </message>
+        <message>
+            <source>Pictures (*.png *.jpg *.jpeg *.gif *.webp)</source>
+            <translation>Images (*.png *.jpg *.jpeg *.gif *.webp)</translation>
+        </message>
+    </context>
+    <context>
+        <name>SettingsTransfer</name>
+        <message>
+            <source>No other mail app with mail in it was found on this PC</source>
+            <translation>Aucune autre application de messagerie contenant du courrier n'a été trouvée sur ce PC</translation>
+        </message>
+        <message>
+            <source>%1 found. Brings its mail folders</source>
+            <translation>%1 trouvé. Récupère ses dossiers de courrier</translation>
+        </message>
+        <message>
+            <source>%1 and %2 found. Brings their mail folders</source>
+            <translation>%1 et %2 trouvés. Récupère leurs dossiers de courrier</translation>
+        </message>
+        <message>
+            <source>Mail carries on working while this runs.</source>
+            <translation>Courrier continue de fonctionner pendant l'opération.</translation>
+        </message>
+        <message>
+            <source>Paused at %1 of %2 messages.</source>
+            <translation>En pause à %1 messages sur %2.</translation>
+        </message>
+        <message>
+            <source>Paused.</source>
+            <translation>En pause.</translation>
+        </message>
+        <message>
+            <source>Counting the messages. %1</source>
+            <translation>Comptage des messages. %1</translation>
+        </message>
+        <message>
+            <source>%1 of %2 messages, into %3. %4</source>
+            <translation>%1 messages sur %2, vers %3. %4</translation>
+        </message>
+        <message>
+            <source>%1 of %2 messages. %3</source>
+            <translation>%1 messages sur %2. %3</translation>
+        </message>
+        <message>
+            <source>%1 of %2 messages saved. %3</source>
+            <translation>%1 messages sur %2 enregistrés. %3</translation>
+        </message>
+        <message>
+            <source>Add an account first. Imported mail goes into one of your accounts, so it is on your other devices too.</source>
+            <translation>Ajoutez d'abord un compte. Le courrier importé va dans l'un de vos comptes, pour être aussi sur vos autres appareils.</translation>
+        </message>
+        <message>
+            <source>Bring mail in</source>
+            <translation>Faire entrer du courrier</translation>
+        </message>
+        <message>
+            <source>Bring mail into</source>
+            <translation>Importer le courrier dans</translation>
+        </message>
+        <message>
+            <source>A folder called Imported in this account, so it reaches your email provider too</source>
+            <translation>Un dossier nommé Importés dans ce compte, pour qu'il arrive aussi chez votre fournisseur de messagerie</translation>
+        </message>
+        <message>
+            <source>From another mail app on this PC</source>
+            <translation>Depuis une autre application de messagerie de ce PC</translation>
+        </message>
+        <message>
+            <source>Choose app</source>
+            <translation>Choisir l'application</translation>
+        </message>
+        <message>
+            <source>From a file</source>
+            <translation>Depuis un fichier</translation>
+        </message>
+        <message>
+            <source>mbox, eml and pst files, or a whole folder of them</source>
+            <translation>Fichiers mbox, eml et pst, ou tout un dossier de ces fichiers</translation>
+        </message>
+        <message>
+            <source>Choose folder</source>
+            <translation>Choisir un dossier</translation>
+        </message>
+        <message>
+            <source>Choose file</source>
+            <translation>Choisir un fichier</translation>
+        </message>
+        <message>
+            <source>Contacts and calendars</source>
+            <translation>Contacts et calendriers</translation>
+        </message>
+        <message>
+            <source>vCard (.vcf) and iCalendar (.ics) files</source>
+            <translation>Fichiers vCard (.vcf) et iCalendar (.ics)</translation>
+        </message>
+        <message>
+            <source>Resume</source>
+            <translation>Reprendre</translation>
+        </message>
+        <message>
+            <source>Pause</source>
+            <translation>Pause</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Annuler</translation>
+        </message>
+        <message>
+            <source>Take mail out</source>
+            <translation>Faire sortir du courrier</translation>
+        </message>
+        <message>
+            <source>Export mail</source>
+            <translation>Exporter le courrier</translation>
+        </message>
+        <message>
+            <source>Choose accounts and folders. Saved as mbox, which every mail app can open</source>
+            <translation>Choisissez des comptes et des dossiers. Enregistré au format mbox, que toutes les applications de messagerie savent ouvrir</translation>
+        </message>
+        <message>
+            <source>Export</source>
+            <translation>Exporter</translation>
+        </message>
+        <message>
+            <source>Export contacts and calendars</source>
+            <translation>Exporter les contacts et les calendriers</translation>
+        </message>
+        <message>
+            <source>vCard and iCalendar files</source>
+            <translation>Fichiers vCard et iCalendar</translation>
+        </message>
+        <message>
+            <source>Back up everything</source>
+            <translation>Tout sauvegarder</translation>
+        </message>
+        <message>
+            <source>One file with mail, contacts, calendars, rules, signatures and settings. Passwords are never included</source>
+            <translation>Un seul fichier avec le courrier, les contacts, les calendriers, les règles, les signatures et les paramètres. Les mots de passe n'y sont jamais inclus</translation>
+        </message>
+        <message>
+            <source>Restore</source>
+            <translation>Restaurer</translation>
+        </message>
+        <message>
+            <source>Back up</source>
+            <translation>Sauvegarder</translation>
+        </message>
+        <message>
+            <source>Mail backup %1</source>
+            <translation>Sauvegarde Courrier %1</translation>
+        </message>
+        <message>
+            <source>Import mail</source>
+            <translation>Importer du courrier</translation>
+        </message>
+        <message>
+            <source>Mail files (*.mbox *.mbx *.eml *.pst *.ost)</source>
+            <translation>Fichiers de courrier (*.mbox *.mbx *.eml *.pst *.ost)</translation>
+        </message>
+        <message>
+            <source>All files (*)</source>
+            <translation>Tous les fichiers (*)</translation>
+        </message>
+        <message>
+            <source>Import a folder of mail</source>
+            <translation>Importer un dossier de courrier</translation>
+        </message>
+        <message>
+            <source>Import contacts and calendars</source>
+            <translation>Importer des contacts et des calendriers</translation>
+        </message>
+        <message>
+            <source>Contacts and calendars (*.vcf *.vcard *.ics)</source>
+            <translation>Contacts et calendriers (*.vcf *.vcard *.ics)</translation>
+        </message>
+        <message>
+            <source>Contacts</source>
+            <translation>Contacts</translation>
+        </message>
+        <message>
+            <source>Mail backups (*.tar.gz)</source>
+            <translation>Sauvegardes Courrier (*.tar.gz)</translation>
+        </message>
+        <message>
+            <source>Restore a backup</source>
+            <translation>Restaurer une sauvegarde</translation>
+        </message>
+        <message>
+            <source>Mail backups (*.tar.gz *.tgz)</source>
+            <translation>Sauvegardes Courrier (*.tar.gz *.tgz)</translation>
+        </message>
+        <message>
+            <source>Each folder is saved as its own mbox file, in a folder named after its account.</source>
+            <translation>Chaque dossier est enregistré dans son propre fichier mbox, dans un dossier portant le nom de son compte.</translation>
+        </message>
+        <message>
+            <source>Every account</source>
+            <translation>Tous les comptes</translation>
+        </message>
+        <message>
+            <source>Every folder of every account</source>
+            <translation>Tous les dossiers de tous les comptes</translation>
+        </message>
+        <message>
+            <source>Choose where to save</source>
+            <translation>Choisir où enregistrer</translation>
         </message>
     </context>
     <context>
@@ -3876,6 +5147,13 @@ Objet : %4</translation>
         <message>
             <source>Create</source>
             <translation>Créer</translation>
+        </message>
+    </context>
+    <context>
+        <name>UndoBar</name>
+        <message>
+            <source>Undo</source>
+            <translation>Annuler</translation>
         </message>
     </context>
     <context>

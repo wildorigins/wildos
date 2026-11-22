@@ -12,6 +12,7 @@ Item {
     required property int index
     required property string key
     required property string from
+    required property string fromAddress
     required property string initials
     required property int avatar
     required property string subject
@@ -218,6 +219,7 @@ Item {
             Layout.alignment: Qt.AlignTop
             initials: row.initials
             colourIndex: row.avatar
+            image: SenderImages.revision >= 0 ? SenderImages.imageFor(row.fromAddress) : ""
         }
 
         ColumnLayout {

@@ -19,6 +19,8 @@
 // preferences kept per person in lpoptions like the default printer, and
 // adding a printer that needs a driver, chosen from the PPDs CUPS knows
 // (CUPS-Get-PPDs) for a device CUPS finds (CUPS-Get-Devices, lpinfo -v).
+// A driver Wild OS does not have yet is fetched from the internet first
+// (printer-driver).
 //
 // Printers and scanners also shows ink and toner levels, from the queue
 // (marker-levels, which CUPS copies from the printer while it prints) or,
@@ -113,6 +115,13 @@ public:
     // uri from `devices`, or built from an address with socket, lpd or ipp.
     Q_INVOKABLE void addWithDriver(const QString &uri, const QString &driver, const QString &name);
     Q_INVOKABLE QString addressUri(const QString &address, const QString &protocol) const;
+    // A driver Wild OS can fetch from the internet for a device's IEEE 1284
+    // device ID (`devices` deviceId): its name, or nothing when there is
+    // none to get or it is installed already.
+    Q_INVOKABLE QString driverToGet(const QString &deviceId) const;
+    // Fetches it as an administrator (printer-driver get), then reloads the
+    // drivers. busy is "driver" meanwhile.
+    Q_INVOKABLE void getDriver(const QString &deviceId, const QString &name);
 
     Q_INVOKABLE void addScanner(const QString &name);
     Q_INVOKABLE void removeScanner(const QString &name);

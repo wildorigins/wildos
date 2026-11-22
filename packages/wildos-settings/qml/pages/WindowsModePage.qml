@@ -255,7 +255,7 @@ PageScroll {
                 title: qsTr("Camera and microphone")
                 description: {
                     switch (page.options.devices) {
-                    case "always": return qsTr("Call apps in Windows mode always get them");
+                    case "always": return qsTr("Windows apps always get them");
                     case "never": return qsTr("Windows apps never get them");
                     default: return qsTr("Ask each time a Windows app wants them, like any other app");
                     }

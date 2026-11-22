@@ -81,12 +81,12 @@ QtObject {
             return qsTr("less than a minute");
         }
         if (minutes < 60) {
-            return Format.plural(minutes, qsTr("minute"), qsTr("minutes"));
+            return Format.count(minutes, qsTr("1 minute"), qsTr("%n minutes", "", minutes));
         }
         const hours = Math.floor(minutes / 60);
         const rest = minutes % 60;
-        const hoursText = Format.plural(hours, qsTr("hour"), qsTr("hours"));
-        return rest > 0 ? qsTr("%1 %2").arg(hoursText).arg(Format.plural(rest, qsTr("minute"), qsTr("minutes"))) : hoursText;
+        const hoursText = Format.count(hours, qsTr("1 hour"), qsTr("%n hours", "", hours));
+        return rest > 0 ? qsTr("%1 %2").arg(hoursText).arg(Format.count(rest, qsTr("1 minute"), qsTr("%n minutes", "", rest))) : hoursText;
     }
 
     function firewallWho(kind) {
@@ -428,8 +428,8 @@ QtObject {
             };
         }
         case "startup": {
-            const took = d.seconds !== undefined ? Format.plural(d.seconds, qsTr("second"), qsTr("seconds")) : "";
-            const waited = d.waited ? Format.plural(d.waited, qsTr("second"), qsTr("seconds")) : "";
+            const took = d.seconds !== undefined ? Format.count(d.seconds, qsTr("1 second"), qsTr("%n seconds", "", d.seconds)) : "";
+            const waited = d.waited ? Format.count(d.waited, qsTr("1 second"), qsTr("%n seconds", "", d.waited)) : "";
             const ready = took.length > 0
                 ? (waited.length > 0 ? qsTr("This PC started in %1, not counting the %2 the disk password screen waited for you. It was ready at %3.").arg(took).arg(waited).arg(at(when))
                    : qsTr("This PC started in %1. It was ready at %2.").arg(took).arg(at(when)))
@@ -589,7 +589,7 @@ QtObject {
             const what = d.disk === "system" ? qsTr("The system disk") : d.disk === "usb" ? qsTr("A USB drive") : qsTr("A disk");
             return {
                 title: qsTr("%1 had trouble reading or writing").arg(what),
-                detail: qsTr("%1, on %2.").arg(Format.plural(n, qsTr("error"), qsTr("errors"))).arg(d.device),
+                detail: qsTr("%1, on %2.").arg(Format.count(n, qsTr("1 error"), qsTr("%n errors", "", n))).arg(d.device),
                 icon: "hard-drive", tone: red, problem: true, group: "other",
                 happened: n > 1 ? qsTr("%1 (%2) couldn't read or write some of its data at %3, %4 times within the hour.").arg(what).arg(d.device).arg(at(when)).arg(n)
                     : qsTr("%1 (%2) couldn't read or write some of its data at %3.").arg(what).arg(d.device).arg(at(when)),

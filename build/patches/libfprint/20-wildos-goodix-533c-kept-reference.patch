@@ -7,9 +7,9 @@ diff -ruN a/libfprint/drivers/goodix53x5/device/base.c b/libfprint/drivers/goodi
  
 +#include <time.h>
 +
-+/* A kept reference is only trusted this long, counting time asleep, since
-+ * the empty-sensor plane drifts with temperature. */
-+#define GOODIX_KEPT_REFERENCE_MAX_AGE_US (10 * 60 * G_USEC_PER_SEC)
++/* Kept until fprintd stops (a reboot): it is only the fallback for a finger
++ * already down at open, and drift is corrected by the in-session refreshes. */
++#define GOODIX_KEPT_REFERENCE_MAX_AGE_US G_MAXINT64
 +
 +static gint64
 +goodix_boottime_us (void)

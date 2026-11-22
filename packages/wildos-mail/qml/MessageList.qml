@@ -114,6 +114,24 @@ Rectangle {
             reuseItems: true
             QQC.ScrollBar.vertical: UI.ScrollBar {}
 
+            // MailMsMotion.dc: a deleted or archived row goes at once and the
+            // rows under it close the gap (160 ms); fading it out instead let
+            // the next rows slide over it, and text overlapped when deleting
+            // quickly. New mail grows in at the top (200 ms). With Reduce
+            // motion these are plain fades of the same length.
+            remove: Transition {
+                PropertyAction { property: "opacity"; value: 0 }
+            }
+            add: Transition {
+                ParallelAnimation {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "scale"; from: UI.Style.reducedMotion ? 1 : 0.98; to: 1; duration: 200; easing.type: Easing.OutCubic }
+                }
+            }
+            displaced: Transition {
+                NumberAnimation { properties: "x,y"; duration: 160; easing.type: Easing.OutCubic }
+            }
+
             Keys.onUpPressed: pane.moveSelection(-1)
             Keys.onDownPressed: pane.moveSelection(1)
             Keys.onDeletePressed: if (MailEngine.selection.length > 0) MailEngine.removeKeys(MailEngine.selection)
@@ -146,6 +164,13 @@ Rectangle {
 
             delegate: MessageRowItem {
                 width: list.width
+                // A row from the pool may still hold where the remove
+                // animation left it.
+                ListView.onReused: {
+                    opacity = 1;
+                    x = 0;
+                    scale = 1;
+                }
                 showFolder: pane.inSearch
                 highlight: pane.inSearch ? MailEngine.searchText : ""
                 onSelected: function (key) {

@@ -1,0 +1,15 @@
+// GameMode runs as the signed-in person and asks polkit each time a game
+// starts and stops to switch the processor to full speed (and, on processors
+// with stacked cache, which cores the game prefers). Debian allows that only
+// for members of a "gamemode" group nobody is in. settings-32bit links this
+// file into /etc/polkit-1/rules.d while Steam and 32-bit apps are on, so
+// games get it without a password, and only on PCs that play them. The GPU
+// helper stays out: GameMode leaves graphics clocks alone unless set up to.
+polkit.addRule(function (action, subject) {
+    if ((action.id == "com.feralinteractive.GameMode.governor-helper" ||
+         action.id == "com.feralinteractive.GameMode.cpu-helper" ||
+         action.id == "com.feralinteractive.GameMode.procsys-helper") &&
+            subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

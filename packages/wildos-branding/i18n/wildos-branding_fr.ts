@@ -754,10 +754,6 @@
             <translation>En cours</translation>
         </message>
         <message>
-            <source>%1 %2 items</source>
-            <translation>%1 %2 éléments</translation>
-        </message>
-        <message>
             <source>Hide</source>
             <translation>Masquer</translation>
         </message>
@@ -812,6 +808,13 @@
         <message>
             <source>Cancel</source>
             <translation>Annuler</translation>
+        </message>
+        <message numerus="yes">
+            <source>%1 %Ln items</source>
+            <translation>
+                <numerusform>%1 %Ln élément</numerusform>
+                <numerusform>%1 %Ln éléments</numerusform>
+            </translation>
         </message>
     </context>
     <context>
@@ -3601,6 +3604,10 @@
         <message>
             <source>Dedicated graphics card</source>
             <translation>Carte graphique dédiée</translation>
+        </message>
+        <message>
+            <source>Add to desktop</source>
+            <translation>Ajouter au bureau</translation>
         </message>
     </context>
     <context>

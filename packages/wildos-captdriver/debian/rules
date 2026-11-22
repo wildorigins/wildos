@@ -1,0 +1,34 @@
+#!/usr/bin/make -f
+
+COMMIT := 62719249ac34633338be54bc74beddd0e7003d38
+TARBALL := captdriver-62719249.tar.gz
+SHA256 := cb5977b0a5360431520c4770ca0bec7f414712717fd720d6feecf0cf71feffb8
+SRC := build/captdriver-$(COMMIT)/src
+DEST := debian/wildos-captdriver
+
+%:
+	dh $@
+
+# GitHub's archive of mounaiban/captdriver at the commit above, checked
+# before it is used. Upstream builds with autotools; the program is nine C
+# files, compiled here directly as src/Makefile.am lists them.
+override_dh_auto_configure:
+	echo "$(SHA256)  $(TARBALL)" | sha256sum -c -
+	rm -rf build && mkdir build
+	tar -xzf $(TARBALL) -C build
+
+override_dh_auto_build:
+	cd $(SRC) && $(CC) $(CPPFLAGS) $(CFLAGS) -std=c99 -D_DEFAULT_SOURCE -Wall $$(cups-config --cflags) \
+		-o rastertocapt rastertocapt.c capt-command.c capt-status.c generic-ops.c printer.c paper.c \
+		hiscoa-common.c hiscoa-compress.c prn_lbp2900.c $(LDFLAGS) $$(cups-config --libs) -lcupsimage
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+	rm -rf build
+
+# CUPS builds the PPDs from the .drv file itself (drv:///captdriver.drv/...).
+override_dh_auto_install:
+	install -D -m755 $(SRC)/rastertocapt $(DEST)/usr/lib/cups/filter/rastertocapt
+	install -D -m644 $(SRC)/canon-lbp.drv $(DEST)/usr/share/cups/drv/captdriver.drv
+	install -D -m644 build/captdriver-$(COMMIT)/COPYING $(DEST)/usr/share/wildos-captdriver/COPYING

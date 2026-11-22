@@ -5,6 +5,7 @@
 #include <QStandardPaths>
 
 #include "googlesignin.h"
+#include "microsoftsignin.h"
 
 namespace
 {
@@ -32,7 +33,7 @@ gchar *getPassword(CamelSession *, CamelService *service, const gchar *, const g
 gboolean authenticateSync(CamelSession *, CamelService *service, const gchar *mechanism, GCancellable *cancellable, GError **error)
 {
     const QString account = Session::accountOf(service);
-    // Google accounts sign in with XOAUTH2, which asks the session for a
+    // Google and Microsoft accounts sign in with XOAUTH2, which asks the session for a
     // token itself; there is no password to hand over.
     if (Session::instance().oauth(account)) {
         return camel_service_authenticate_sync(service, mechanism, cancellable, error) == CAMEL_AUTHENTICATION_ACCEPTED;
@@ -65,7 +66,7 @@ gboolean getOAuth2AccessToken(CamelSession *, CamelService *service, gchar **out
     int expires = 0;
     if (!Session::instance().accessToken(Session::accountOf(service), &token, &expires, &message)) {
         g_set_error_literal(error, CAMEL_SERVICE_ERROR, CAMEL_SERVICE_ERROR_CANT_AUTHENTICATE,
-                            (message.isEmpty() ? QCoreApplication::translate("MailSession", "Google sign-in has expired") : message).toUtf8().constData());
+                            (message.isEmpty() ? QCoreApplication::translate("MailSession", "The sign-in has expired") : message).toUtf8().constData());
         return FALSE;
     }
     if (outToken) {
@@ -130,11 +131,11 @@ QString Session::password(const QString &accountId) const
     return m_passwords.value(accountId);
 }
 
-void Session::setOAuth(const QString &accountId, bool oauth)
+void Session::setOAuth(const QString &accountId, const QString &auth)
 {
     QMutexLocker lock(&m_lock);
-    if (oauth) {
-        m_oauth.insert(accountId);
+    if (auth == QLatin1String("google") || auth == QLatin1String("microsoft")) {
+        m_oauth.insert(accountId, auth);
     } else {
         m_oauth.remove(accountId);
     }
@@ -150,27 +151,48 @@ bool Session::oauth(const QString &accountId) const
 bool Session::accessToken(const QString &accountId, QString *token, int *expiresIn, QString *error)
 {
     QString refresh;
+    QString kind;
     {
         QMutexLocker lock(&m_lock);
         const Token cached = m_tokens.value(accountId);
-        // Reused until a minute before Google says it runs out.
+        // Reused until a minute before the provider says it runs out.
         if (!cached.value.isEmpty() && cached.expires > QDateTime::currentDateTimeUtc().addSecs(60)) {
             *token = cached.value;
             *expiresIn = int(QDateTime::currentDateTimeUtc().secsTo(cached.expires));
             return true;
         }
         refresh = m_passwords.value(accountId);
+        kind = m_oauth.value(accountId);
     }
     if (refresh.isEmpty()) {
         *error = QCoreApplication::translate("MailSession", "Waiting for the password store");
         return false;
     }
-    if (!GoogleSignIn::accessToken(refresh, token, expiresIn, error)) {
+    QString newRefresh;
+    const bool ok = kind == QLatin1String("microsoft") ? MicrosoftSignIn::mailToken(refresh, token, expiresIn, &newRefresh, error)
+                                                       : GoogleSignIn::accessToken(refresh, token, expiresIn, error);
+    if (!ok) {
         return false;
     }
-    QMutexLocker lock(&m_lock);
-    m_tokens.insert(accountId, {*token, QDateTime::currentDateTimeUtc().addSecs(*expiresIn)});
+    std::function<void(const QString &, const QString &)> save;
+    {
+        QMutexLocker lock(&m_lock);
+        m_tokens.insert(accountId, {*token, QDateTime::currentDateTimeUtc().addSecs(*expiresIn)});
+        if (!newRefresh.isEmpty() && newRefresh != refresh && m_passwords.value(accountId) == refresh) {
+            m_passwords.insert(accountId, newRefresh);
+            save = m_saveRefresh;
+        }
+    }
+    if (save) {
+        save(accountId, newRefresh);
+    }
     return true;
+}
+
+void Session::setRefreshSaver(std::function<void(const QString &, const QString &)> saver)
+{
+    QMutexLocker lock(&m_lock);
+    m_saveRefresh = std::move(saver);
 }
 
 QString Session::accountOf(CamelService *service)

@@ -213,24 +213,81 @@ void MessageModel::reset(const QList<MessageRow> &rows)
         return a.date > b.date;
     });
 
-    QList<int> oldVisible = m_visible;
-    QList<MessageRow> oldAll = m_all;
-    m_all = sorted;
-    QList<int> newVisible;
-    std::swap(newVisible, m_visible);
-    applyFilter();
-
-    bool sameKeys = oldVisible.size() == m_visible.size();
-    for (int i = 0; sameKeys && i < m_visible.size(); ++i) {
-        sameKeys = oldAll[oldVisible[i]].key() == m_all[m_visible[i]].key();
+    QStringList oldKeys;
+    for (int v : std::as_const(m_visible)) {
+        oldKeys.append(m_all.at(v).key());
     }
-    if (sameKeys) {
+    const QList<MessageRow> oldAll = m_all;
+    const QList<int> oldVisible = m_visible;
+    m_all = sorted;
+    m_visible.clear();
+    applyFilter();
+    const QList<int> newVisible = m_visible;
+    QStringList newKeys;
+    for (int v : newVisible) {
+        newKeys.append(m_all.at(v).key());
+    }
+    if (oldKeys == newKeys) {
         if (!m_visible.isEmpty()) {
             Q_EMIT dataChanged(index(0), index(m_visible.size() - 1));
         }
-    } else {
+        Q_EMIT countChanged();
+        return;
+    }
+
+    // Only the rows that came or went change in the list, so what is on
+    // screen stays put, keeps its place and selection, and nothing is built
+    // again. A reload that reorders rows (a pin, a changed date) is the one
+    // case the list starts over.
+    const QSet<QString> newSet(newKeys.cbegin(), newKeys.cend());
+    const QSet<QString> oldSet(oldKeys.cbegin(), oldKeys.cend());
+    QStringList oldCommon, newCommon;
+    for (const QString &k : std::as_const(oldKeys)) {
+        if (newSet.contains(k)) {
+            oldCommon.append(k);
+        }
+    }
+    QList<int> commonVisible;
+    for (int j = 0; j < newKeys.size(); ++j) {
+        if (oldSet.contains(newKeys.at(j))) {
+            newCommon.append(newKeys.at(j));
+            commonVisible.append(newVisible.at(j));
+        }
+    }
+    // Another folder or account, or a big change: the list is replaced
+    // outright. Animating hundreds of rows out while others come in would
+    // show both at once.
+    const qsizetype changes = (oldKeys.size() - oldCommon.size()) + (newKeys.size() - newCommon.size());
+    if (oldCommon != newCommon || oldCommon.isEmpty() || changes > 20) {
         beginResetModel();
         endResetModel();
+        Q_EMIT countChanged();
+        return;
+    }
+
+    // Removals first, against the old rows.
+    m_all = oldAll;
+    m_visible = oldVisible;
+    for (int i = m_visible.size() - 1; i >= 0; --i) {
+        if (!newSet.contains(oldKeys.at(i))) {
+            beginRemoveRows({}, i, i);
+            m_visible.removeAt(i);
+            endRemoveRows();
+        }
+    }
+    // The rows left are the same ones in the same order: point them at the
+    // new data, then insert the new rows where they belong.
+    m_all = sorted;
+    m_visible = commonVisible;
+    for (int j = 0; j < newKeys.size(); ++j) {
+        if (!oldSet.contains(newKeys.at(j))) {
+            beginInsertRows({}, j, j);
+            m_visible.insert(j, newVisible.at(j));
+            endInsertRows();
+        }
+    }
+    if (!m_visible.isEmpty()) {
+        Q_EMIT dataChanged(index(0), index(m_visible.size() - 1));
     }
     Q_EMIT countChanged();
 }

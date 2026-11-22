@@ -1,10 +1,25 @@
 #!/bin/sh
 # Brave as Wild OS starts it: videos decode on the graphics chip where it can
 # (VA-API through OpenGL, the path Chromium uses on Wayland), falling back to
-# the processor where it can't. A click of the mouse wheel starts scrolling
-# by moving the mouse, as on Windows (Chromium has it, switched off on
-# Linux). Installed over Brave's own link by a dpkg
+# the processor where it can't. Installed over Brave's own link by a dpkg
 # diversion (wildos-desktop's postinst), so a Brave update keeps it.
+
+# On an NVIDIA card running the open nouveau driver, with no Intel or AMD chip
+# beside it, Chromium's GPU process greys out the window or flickers (a GTX
+# 980 Ti tester, fixed by --disable-gpu). Laptops where nouveau only drives a
+# second card keep acceleration, as Brave draws on the Intel or AMD chip.
+nouveau=
+other=
+for card in /sys/class/drm/card[0-9] /sys/class/drm/card[0-9][0-9]; do
+    [ -e "$card/device/driver" ] || continue
+    case $(basename "$(readlink "$card/device/driver")") in
+        nouveau) nouveau=1 ;;
+        i915|xe|amdgpu|radeon|nvidia) other=1 ;;
+    esac
+done
+
+if [ -n "$nouveau" ] && [ -z "$other" ]; then
+    exec /opt/brave.com/brave/brave-browser --disable-gpu "$@"
+fi
 exec /opt/brave.com/brave/brave-browser \
-    --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL \
-    --enable-blink-features=MiddleClickAutoscroll "$@"
+    --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL "$@"

@@ -16,6 +16,14 @@ Package: src:nvidia-graphics-drivers src:nvidia-graphics-drivers:i386
 Pin: version 550.163.01-*
 Pin-Priority: 500
 
+# Broadcom's own Wi-Fi driver, which Settings installs for Broadcom chips the
+# open drivers don't cover (settings-wifi-driver). Debian 13's version
+# (-26) doesn't build for Linux 7.3; the development branch's (-32, tested
+# on 7.3.4) does. Nothing else comes from there.
+Package: src:broadcom-sta
+Pin: release n=sid
+Pin-Priority: 500
+
 Package: *
 Pin: release n=sid
 Pin-Priority: -1

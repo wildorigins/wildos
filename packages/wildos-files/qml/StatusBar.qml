@@ -10,9 +10,14 @@ Item {
     required property var folder
 
     height: Metrics.statusHeight
+    // This computer lists its six Home folders above the drives the model
+    // holds, and counts both, as Windows does.
+    readonly property int itemCount: folder ? folder.count + (folder.url.toString() === "wildos:computer" ? 6 : 0) : 0
 
+    // one is the whole phrase for 1; many is a qsTr("%Ln items", "", n) numerus
+    // string, so languages with more than two plural forms get theirs.
     function plural(n, one, many) {
-        return n.toLocaleString(Qt.locale(), "f", 0) + " " + (n === 1 ? one : many);
+        return n === 1 ? one : many;
     }
 
     Rectangle {
@@ -27,15 +32,13 @@ Item {
         spacing: 18
 
         UI.Label {
-            // This computer lists its six Home folders above the drives the
-            // model holds, and counts both, as Windows does.
-            text: status.folder ? status.plural(status.folder.count + (status.folder.url.toString() === "wildos:computer" ? 6 : 0), qsTr("item"), qsTr("items")) : ""
+            text: status.folder ? status.plural(status.itemCount, qsTr("1 item"), qsTr("%Ln items", "", status.itemCount)) : ""
             font.pixelSize: UI.Style.px(12)
             color: UI.Style.inkStatus
         }
         UI.Label {
             visible: status.folder && status.folder.selectedCount > 0
-            text: status.folder ? status.plural(status.folder.selectedCount, qsTr("item selected"), qsTr("items selected")) : ""
+            text: status.folder ? status.plural(status.folder.selectedCount, qsTr("1 item selected"), qsTr("%Ln items selected", "", status.folder.selectedCount)) : ""
             font.pixelSize: UI.Style.px(12)
             color: UI.Style.inkStatus
         }

@@ -113,6 +113,30 @@
     <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-graphics-driver</annotate>
   </action>
 
+  <action id="org.wildos.settings.wifi-driver">
+    <description>Install a Wi-Fi driver</description>
+    <message>Download and install Broadcom's driver for your Wi-Fi?</message>
+    <icon_name>network-wireless</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-wifi-driver</annotate>
+  </action>
+
+  <action id="org.wildos.settings.printer-driver">
+    <description>Install a printer driver</description>
+    <message>Download and install this printer's driver?</message>
+    <icon_name>printer</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/printer-driver</annotate>
+  </action>
+
   <action id="org.wildos.settings.fingerprint">
     <description>Choose where fingerprints can be used</description>
     <message>Change where a fingerprint can be used instead of the password?</message>

@@ -1,3 +1,41 @@
+wildos-ui (0.1.25) trixie; urgency=medium
+
+  * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,
+    Filipino, Finnish, Latvian, Lithuanian, Malay, Marathi, Norwegian,
+    Serbian, Slovak, Slovenian, Tamil, Telugu and Thai.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 02:00:00 +0000
+
+wildos-ui (0.1.24) trixie; urgency=medium
+
+  * Add to desktop makes a shortcut that links to the app, so it keeps up
+    with the app's updates instead of keeping the old name or icon.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 22:00:00 +0000
+
+wildos-ui (0.1.23) trixie; urgency=medium
+
+  * Apps can be put on the desktop as shortcuts, for Start's Add to
+    desktop.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 21:00:00 +0000
+
+wildos-ui (0.1.22) trixie; urgency=medium
+
+  * Now also in Arabic, Chinese (Simplified and Traditional), Czech, Greek,
+    Hindi, Hungarian, Indonesian, Japanese, Korean, Brazilian Portuguese,
+    Romanian, Russian, Swedish, Turkish, Ukrainian and Vietnamese.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 20:00:00 +0000
+
+wildos-ui (0.1.21) trixie; urgency=medium
+
+  * Now also in Dutch, German, Spanish, Italian, Portuguese and Polish:
+    the display language chosen in Settings > Time and language applies
+    to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 14:00:00 +0000
+
 wildos-ui (0.1.20) trixie; urgency=medium
 
   * Windows of Wild OS apps are easier to catch for resizing at the

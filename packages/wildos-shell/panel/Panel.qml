@@ -44,6 +44,11 @@ Item {
     readonly property bool docked: !WildOS.TaskbarStyle.floating
     readonly property int pillHeight: docked ? 52 : 62
     readonly property int pillRadius: docked ? 0 : 20
+    // Floating at the top of the screen, the 14 px gap to the screen edge is
+    // above the pills instead of below, so their band moves down.
+    readonly property bool topEdge: containment?.plasmoid?.location === PlasmaCore.Types.TopEdge
+    readonly property int pillTop: topEdge && !docked ? Math.max(0, height - pillHeight) : 0
+    onPillTopChanged: pillTimer.restart()
     // The panel's own height (52 docked, 76 floating) is what keeps
     // maximised windows clear of the taskbar. Settings sets it through
     // Plasma's panel scripting when the style changes; setting it from
@@ -59,7 +64,7 @@ Item {
             return;
         }
         if (docked) {
-            pillRects = [Qt.rect(0, 0, width, pillHeight)];
+            pillRects = [Qt.rect(0, pillTop, width, pillHeight)];
             return;
         }
         const runs = [];
@@ -98,7 +103,7 @@ Item {
             const winmode = i === 0 && runs.length > 2 && r.first === "org.wildos.winmode";
             const left = Math.round(r.left - (last ? 6 : winmode ? -5 : 9));
             const right = Math.round(r.right + (last ? 8 : winmode ? 6 : 9));
-            return Qt.rect(left, 0, right - left, pillHeight);
+            return Qt.rect(left, pillTop, right - left, pillHeight);
         });
     }
 
@@ -206,8 +211,8 @@ Item {
                 color: UI.Style.dark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.7)
             }
 
-            // Docked: the bar fills the bottom of the screen, with a hairline
-            // along its top edge.
+            // Docked: the bar fills its edge of the screen, with a hairline
+            // along the edge that faces the desktop.
             Rectangle {
                 visible: root.docked
                 anchors.fill: parent
@@ -215,6 +220,7 @@ Item {
             }
             Rectangle {
                 visible: root.docked
+                y: root.containment?.plasmoid?.location === PlasmaCore.Types.TopEdge ? parent.height - 1 : 0
                 width: parent.width
                 height: 1
                 color: UI.Style.dark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(46 / 255, 48 / 255, 52 / 255, 0.10)
@@ -572,10 +578,10 @@ Item {
     Item {
         id: containmentParent
         anchors.centerIn: root.usePills ? undefined : (isOpaque ? floatingOpaqueItem : floatingTranslucentItem)
-        // In pill mode the widgets sit in the pills' band at the top of the
-        // panel: 62 px floating, with the 14 px gap to the screen edge below
-        // it, or the whole 52 px docked bar.
-        y: 0
+        // In pill mode the widgets sit in the pills' band: 62 px floating,
+        // with the 14 px gap to the screen edge below it (above it when the
+        // taskbar is at the top), or the whole 52 px docked bar.
+        y: root.usePills ? root.pillTop : 0
         width: root.verticalPanel ? panel.thickness : root.width - fixedLeftFloatingPadding - fixedRightFloatingPadding
         height: root.verticalPanel ? root.height - fixedBottomFloatingPadding - fixedTopFloatingPadding : (root.usePills ? root.pillHeight : panel.thickness)
     }

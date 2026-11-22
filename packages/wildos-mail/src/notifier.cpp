@@ -23,6 +23,10 @@ Notifier::Notifier(QObject *parent)
     connect(this, &Notifier::enabledChanged, this, [this]() {
         QSettings().setValue(QStringLiteral("notifications/mail"), m_enabled);
     });
+    m_background = QSettings().value(QStringLiteral("notifications/background"), true).toBool();
+    connect(this, &Notifier::backgroundChanged, this, [this]() {
+        QSettings().setValue(QStringLiteral("notifications/background"), m_background);
+    });
     connect(MailEngine::instance(), &MailEngine::newMail, this, &Notifier::onNewMail);
     QDBusConnection bus = QDBusConnection::sessionBus();
     bus.connect(service, path, service, QStringLiteral("ActionInvoked"), this, SLOT(onAction(uint, QString)));

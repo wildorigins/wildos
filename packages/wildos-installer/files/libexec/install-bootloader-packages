@@ -44,3 +44,26 @@ chroot "$root" /usr/bin/env -i \
     dpkg --install "${debs[@]}"
 
 rm -rf "$staging"
+
+# Calamares' boot loader step runs this instead of grub-install (bootloader.conf).
+# Some firmware, HP laptops especially, refuses new boot entries or has no room
+# left for them, and grub-install then fails the whole install. Without the
+# entry the computer still starts Wild OS from the fallback path that
+# finalize-target installs. It lives here, not in this package, because the
+# packages step has already removed wildos-installer from the target; the
+# finalize step deletes it again.
+install -d "$root/usr/libexec/wildos-installer"
+cat > "$root/usr/libexec/wildos-installer/grub-install" <<'WRAPPER'
+#!/bin/sh
+grub-install "$@" && exit 0
+case " $* " in
+    *" --target=x86_64-efi "*) ;;
+    *) exit 1 ;;
+esac
+case " $* " in
+    *" --no-nvram "*) exit 1 ;;
+esac
+echo "grub-install could not finish; trying again without a firmware boot entry" >&2
+grub-install --no-nvram "$@"
+WRAPPER
+chmod 0755 "$root/usr/libexec/wildos-installer/grub-install"

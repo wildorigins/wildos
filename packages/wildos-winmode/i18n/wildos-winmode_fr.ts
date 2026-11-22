@@ -726,6 +726,14 @@
             <source>Continue</source>
             <translation>Continuer</translation>
         </message>
+        <message>
+            <source>Windows will be slow on this processor. Programs take longer to open and run.</source>
+            <translation>Windows sera lent sur ce processeur. Les programmes mettront plus de temps à s'ouvrir et à fonctionner.</translation>
+        </message>
+        <message>
+            <source>Set up anyway</source>
+            <translation>Configurer quand même</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>

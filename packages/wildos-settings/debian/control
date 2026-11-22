@@ -77,6 +77,9 @@ Depends:
  libkscreen-bin,
  wildos-branding,
  steam-devices,
+# Games that ask for it get the processor's full speed while they run; its
+# rule follows the Steam and 32-bit apps switch (settings-32bit).
+ gamemode,
  wildos-ui (>= 0.1.16),
  kio6,
  packagekit,
@@ -101,6 +104,11 @@ Recommends:
  flatpak,
  cups,
  cups-filters,
+# printer-driver: USB printers set up when plugged in, and HP's plugin for
+# the firmware some HP LaserJets need.
+ system-config-printer-udev,
+ curl,
+ libnotify-bin,
  xdg-desktop-portal,
  baloo6,
  kactivitymanagerd,

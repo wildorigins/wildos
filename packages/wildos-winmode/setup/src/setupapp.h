@@ -35,6 +35,10 @@ class SetupApp : public QObject
     Q_PROPERTY(QString technology READ technology NOTIFY checksChanged)
     Q_PROPERTY(int cores READ cores NOTIFY checksChanged)
     Q_PROPERTY(bool coresOk READ coresOk NOTIFY checksChanged)
+    // Windows 11 itself runs on two cores, so a smaller processor is a
+    // warning the person can choose past, not a wall.
+    Q_PROPERTY(bool slowAccepted READ slowAccepted WRITE setSlowAccepted NOTIFY checksChanged)
+    Q_PROPERTY(bool canAcceptSlow READ canAcceptSlow NOTIFY checksChanged)
     Q_PROPERTY(QString memoryLabel READ memoryLabel NOTIFY checksChanged)
     // ok, low (works, slowly) or short
     Q_PROPERTY(QString memoryState READ memoryState NOTIFY checksChanged)
@@ -105,6 +109,9 @@ public:
     QString technology() const { return m_technology; }
     int cores() const { return m_cores; }
     bool coresOk() const;
+    bool slowAccepted() const { return m_slowAccepted; }
+    void setSlowAccepted(bool accepted);
+    bool canAcceptSlow() const;
     QString memoryLabel() const { return m_memoryLabel; }
     QString memoryState() const { return m_memoryState; }
     QString freeLabel() const { return m_freeLabel; }
@@ -189,6 +196,7 @@ private:
     QString m_virt = QStringLiteral("off");
     QString m_technology;
     int m_cores = 0;
+    bool m_slowAccepted = false;
     qint64 m_memory = 0;
     QString m_memoryLabel;
     QString m_memoryState = QStringLiteral("ok");

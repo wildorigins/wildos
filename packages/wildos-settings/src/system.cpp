@@ -180,6 +180,7 @@ System::System(QObject *parent)
     {
         KSharedConfigPtr wildos = KSharedConfig::openConfig(QStringLiteral("wildosrc"));
         m_taskbarFloating = wildos->group(QStringLiteral("Taskbar")).readEntry("Style") == QLatin1String("floating");
+        m_taskbarTop = wildos->group(QStringLiteral("Taskbar")).readEntry("Position") == QLatin1String("top");
     }
 
     // The users page and other tools change the picture and name through
@@ -1747,6 +1748,23 @@ const QString placeWinModeScript = QStringLiteral(
     "});");
 }
 
+// Windows 10 offered the top edge too, and some people want the taskbar
+// where a Mac or GNOME puts its bar. Plasma moves the panel and every popup
+// that hangs off it; the rest of Wild OS that has to know (hot corners, the
+// floating style, the underglow) reads Position.
+void System::setTaskbarTop(bool top)
+{
+    KSharedConfigPtr wildos = KSharedConfig::openConfig(QStringLiteral("wildosrc"));
+    wildos->group(QStringLiteral("Taskbar")).writeEntry("Position", top ? QStringLiteral("top") : QStringLiteral("bottom"), KConfig::Notify);
+    wildos->sync();
+    evaluatePlasmaScript(QStringLiteral("panels().forEach(function (p) { if (p.location === 'bottom' || p.location === 'top') p.location = '%1'; });")
+                             .arg(top ? QStringLiteral("top") : QStringLiteral("bottom")));
+    if (top != m_taskbarTop) {
+        m_taskbarTop = top;
+        Q_EMIT taskbarTopChanged();
+    }
+}
+
 // The panel (wildos-shell) watches this key and redraws straight away.
 void System::setTaskbarFloating(bool floating)
 {
@@ -1755,7 +1773,7 @@ void System::setTaskbarFloating(bool floating)
     wildos->sync();
     // The panel's height keeps maximised windows clear of the bar: 52 px
     // docked, 76 floating (62 px pills 14 px above the screen edge).
-    evaluatePlasmaScript(QStringLiteral("panels().forEach(function (p) { if (p.location === 'bottom') p.height = %1; });").arg(floating ? 76 : 52));
+    evaluatePlasmaScript(QStringLiteral("panels().forEach(function (p) { if (p.location === 'bottom' || p.location === 'top') p.height = %1; });").arg(floating ? 76 : 52));
     evaluatePlasmaScript(placeWinModeScript);
     if (floating != m_taskbarFloating) {
         m_taskbarFloating = floating;

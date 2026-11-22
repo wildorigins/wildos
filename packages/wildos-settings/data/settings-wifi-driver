@@ -1,0 +1,140 @@
+#!/bin/sh
+# Broadcom's own Wi-Fi driver (wl, Debian's broadcom-sta-dkms) for the many
+# Broadcom chips the open drivers Wild OS ships don't cover (BCM4360, 4352,
+# 43142, 4313 and others): without it such a PC has no Wi-Fi at all. For
+# Settings > Network and internet. Runs as root through pkexec
+# (org.wildos.settings.wifi-driver).
+#
+#   check    exit 0 when this PC has a Broadcom Wi-Fi chip with no driver,
+#            1 when not
+#   install  install the driver. Exit 4 when it installed but this chip
+#            isn't one it supports (it is taken away again), 5 when it did
+#            not build, 6 when the download failed. With Secure Boot on, the
+#            module is signed with this PC's own key (dkms makes one) and the
+#            key queued for enrolment, as for NVIDIA's driver: the firmware
+#            asks for the code printed here at the next restart, and Wi-Fi
+#            starts then. Without Secure Boot it starts straight away.
+#   remove   remove it; the open drivers are back from the next start-up
+#
+# Settings reads "step <what is happening>", "code <digits>" and "ready"
+# (Wi-Fi is working now) from what this prints. Everything apt and dkms say
+# goes to /var/log/wildos/wifi-driver.log.
+
+set -eu
+export DEBIAN_FRONTEND=noninteractive
+MOK_PUB=/var/lib/dkms/mok.pub
+APT="apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+LOG=/var/log/wildos/wifi-driver.log
+# The open drivers Broadcom's package blocks; whichever half-claimed the
+# chip at start-up has to let go before wl can have it.
+OPEN="b43 b43legacy bcma ssb brcmsmac brcmutil"
+
+step() { echo "step $*"; }
+
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+
+run() { "$@" >> "$LOG" 2>&1; }
+
+secure_boot() {
+    mokutil --sb-state 2>/dev/null | grep -q "SecureBoot enabled"
+}
+
+# A Broadcom network controller (vendor 14e4, class 0280) that no driver
+# has taken, on a PC with no working Wi-Fi. wl claims every chip of that
+# class; those the open drivers handle already have one bound or, behind
+# the bcma bridge, already make a Wi-Fi interface, so they are never
+# offered this.
+chip() {
+    if [ -n "$(ls /sys/class/ieee80211 2>/dev/null)" ]; then
+        return 1
+    fi
+    for dev in /sys/bus/pci/devices/*; do
+        [ "$(cat "$dev/vendor" 2>/dev/null)" = 0x14e4 ] || continue
+        case $(cat "$dev/class" 2>/dev/null) in
+        0x0280*) ;;
+        *) continue ;;
+        esac
+        driver=$(basename "$(readlink "$dev/driver" 2>/dev/null)" 2>/dev/null || true)
+        case $driver in
+        "" | bcma-pci-bridge | ssb) echo "$dev"; return 0 ;;
+        esac
+    done
+    return 1
+}
+
+mkdir -p "$(dirname "$LOG")"
+
+case "${1:-}" in
+check)
+    chip >/dev/null
+    ;;
+install)
+    export WILDOS_RESTORE_LABEL="Before installing the Wi-Fi driver"
+    dev=$(chip) || dev=
+    log "install: start, kernel $(uname -r), chip ${dev:-none}"
+
+    step "Checking for updates"
+    run apt-get -q update || true
+
+    step "Downloading Broadcom's driver"
+    headers="linux-headers-amd64"
+    if apt-cache show "linux-headers-$(uname -r)" >/dev/null 2>&1; then
+        headers="$headers linux-headers-$(uname -r)"
+    fi
+    # shellcheck disable=SC2086
+    run $APT install $headers dkms mokutil || { log "install: headers or dkms did not install"; exit 6; }
+    run $APT install --download-only broadcom-sta-dkms || { log "install: download failed"; exit 6; }
+
+    step "Installing Broadcom's driver"
+    run $APT install broadcom-sta-dkms || true
+    if ! ls "/lib/modules/$(uname -r)/updates/dkms/"wl.ko* >/dev/null 2>&1; then
+        log "install: no wl module was built for $(uname -r), taking it away again"
+        run $APT purge broadcom-sta-dkms || true
+        exit 5
+    fi
+
+    if secure_boot && [ -f "$MOK_PUB" ] && ! mokutil --test-key "$MOK_PUB" 2>/dev/null | grep -q "already enrolled"; then
+        step "Preparing Secure Boot"
+        # Eight digits: typed once into the firmware's own screen, which
+        # shows nothing as you type.
+        code=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ' | cut -c1-8)
+        while [ "${#code}" -lt 8 ]; do code="${code}0"; done
+        printf '%s\n%s\n' "$code" "$code" | mokutil --import "$MOK_PUB" >/dev/null 2>&1
+        log "install: done, key queued, Wi-Fi starts after the restart"
+        echo "code $code"
+        step "Done"
+        exit 0
+    fi
+
+    step "Starting Wi-Fi"
+    for module in $OPEN; do
+        modprobe -r "$module" >/dev/null 2>&1 || true
+    done
+    run modprobe wl || log "install: wl did not load"
+    sleep 2
+    if [ -n "$dev" ] && [ "$(basename "$(readlink "$dev/driver" 2>/dev/null)" 2>/dev/null)" != wl ]; then
+        log "install: wl did not take $dev; not a chip it supports, taking it away again"
+        modprobe -r wl >/dev/null 2>&1 || true
+        run $APT purge broadcom-sta-dkms || true
+        for module in $OPEN; do
+            modprobe "$module" >/dev/null 2>&1 || true
+        done
+        exit 4
+    fi
+    log "install: done, wl is running"
+    echo "ready"
+    step "Done"
+    ;;
+remove)
+    log "remove: start"
+    step "Removing Broadcom's driver"
+    modprobe -r wl >/dev/null 2>&1 || true
+    run $APT purge broadcom-sta-dkms || true
+    log "remove: done"
+    step "Done"
+    ;;
+*)
+    echo "usage: $0 check|install|remove" >&2
+    exit 2
+    ;;
+esac

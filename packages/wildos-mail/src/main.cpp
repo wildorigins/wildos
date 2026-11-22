@@ -13,11 +13,22 @@
 #include <QUrl>
 #include <QUrlQuery>
 
+#include "accounts.h"
 #include "googlesignin.h"
+#include "mailengine.h"
+#include "notifier.h"
 #include "reminders.h"
 
 #include <QCoreApplication>
 #include <QDate>
+#include <sys/types.h>
+#include <cstdlib>
+#include <csignal>
+#include <QTimer>
+#include <QDBusReply>
+#include <QDBusServiceWatcher>
+#include <QGuiApplication>
+#include <QThread>
 #include <QFileInfo>
 #include <QProcess>
 
@@ -28,6 +39,8 @@ const QString objectPath = QStringLiteral("/Mail");
 const QString calendarService = QStringLiteral("org.wildos.Calendar");
 const QString calendarPath = QStringLiteral("/Calendar");
 const QString remindersService = QStringLiteral("org.wildos.CalendarReminders");
+const QString backgroundService = QStringLiteral("org.wildos.MailBackground");
+const QString backgroundPath = QStringLiteral("/MailBackground");
 
 bool registered(const QString &name)
 {
@@ -120,6 +133,16 @@ public Q_SLOTS:
         }
         raise(m_engine);
     }
+    // A new-mail notification's Open, from the copy of Mail that watches
+    // the Inbox while this window is closed.
+    Q_SCRIPTABLE void showMessage(const QString &key)
+    {
+        const auto roots = m_engine->rootObjects();
+        if (!roots.isEmpty() && !key.isEmpty()) {
+            QMetaObject::invokeMethod(roots.constFirst(), "showMessage", Q_ARG(QVariant, key));
+        }
+        raise(m_engine);
+    }
     // wildos-mail --people or --tasks, or a task's reminder: that tab.
     Q_SCRIPTABLE void showSection(const QString &section)
     {
@@ -184,8 +207,109 @@ private:
     QQmlApplicationEngine *m_engine;
 };
 
+// The copy of Mail that runs while its window is closed: it answers only
+// "quit", which Mail sends when its window opens.
+class BackgroundRemote : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.wildos.MailBackground")
+
+public:
+    using QObject::QObject;
+
+public Q_SLOTS:
+    // Mail's window is opening and needs the accounts: let go of the name
+    // at once and leave without waiting for server calls under way (an
+    // IMAP command can take a minute to time out). Camel's caches are
+    // SQLite, which survives a process ending mid-write.
+    Q_SCRIPTABLE void quit()
+    {
+        QDBusConnection::sessionBus().unregisterService(backgroundService);
+        QTimer::singleShot(0, []() {
+            std::_Exit(0);
+        });
+    }
+};
+
 namespace
 {
+// New mail notifications while Mail is closed: on in Settings (both the
+// notification and its "while Mail is closed" switch) and at least one
+// account. A PC with no mail account never runs it.
+bool backgroundWanted()
+{
+    QSettings settings;
+    return settings.value(QStringLiteral("notifications/mail"), true).toBool()
+        && settings.value(QStringLiteral("notifications/background"), true).toBool()
+        && !AccountStore().accounts().isEmpty();
+}
+
+// Only one copy of Mail may have the accounts open at a time: both would
+// write the same mail cache. Mail's window asks the background copy to quit
+// and waits for it to be gone before starting its own.
+void stopBackground()
+{
+    if (!registered(backgroundService)) {
+        return;
+    }
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    const QDBusReply<uint> pid = bus.interface()->servicePid(backgroundService);
+    bus.call(QDBusMessage::createMethodCall(backgroundService, backgroundPath, backgroundService, QStringLiteral("quit")));
+    // Gone means the process has ended, not only that it gave up its name:
+    // two copies must never have the mail cache open at once.
+    if (!pid.isValid() || pid.value() == 0) {
+        return;
+    }
+    const QString proc = QStringLiteral("/proc/%1").arg(pid.value());
+    QElapsedTimer waited;
+    waited.start();
+    while (QFileInfo::exists(proc) && waited.elapsed() < 3000) {
+        QThread::msleep(20);
+    }
+    if (QFileInfo::exists(proc)) {
+        ::kill(pid_t(pid.value()), SIGKILL);
+        while (QFileInfo::exists(proc) && waited.elapsed() < 5000) {
+            QThread::msleep(20);
+        }
+    }
+}
+
+// wildos-mail --background: no window; watches every account's Inbox and
+// shows the same new mail notifications as the open window, from sign-in
+// and whenever Mail's window closes, until the window opens again.
+int runBackground(int argc, char *argv[])
+{
+    // Nothing is drawn; the notification server shows the notifications.
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QGuiApplication app(argc, argv);
+    app.setApplicationName(QStringLiteral("wildos-mail"));
+    app.setOrganizationDomain(QStringLiteral("wildos.io"));
+    app.setDesktopFileName(QStringLiteral("org.wildos.mail"));
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    if (!bus.isConnected() || registered(serviceName) || registered(backgroundService) || !backgroundWanted()) {
+        return 0;
+    }
+    bus.registerObject(backgroundPath, new BackgroundRemote(&app), QDBusConnection::ExportScriptableSlots);
+    if (!bus.registerService(backgroundService)) {
+        return 0;
+    }
+    // Mail's window started some other way: it has the accounts now.
+    QDBusServiceWatcher watcher(serviceName, bus, QDBusServiceWatcher::WatchForRegistration);
+    QObject::connect(&watcher, &QDBusServiceWatcher::serviceRegistered, &app, &QCoreApplication::quit);
+    Notifier notifier;
+    QObject::connect(&notifier, &Notifier::openRequested, &app, [](const QString &key) {
+        QProcess::startDetached(QCoreApplication::applicationFilePath(), {QStringLiteral("--message"), key});
+    });
+    // New mail is noticed in the Inbox view, as in the window.
+    MailEngine::instance()->openFolder({}, QStringLiteral("inbox"));
+    // At sign-in the network is often still coming up and the first tries
+    // fail; look again soon rather than at the next minute's check.
+    QTimer::singleShot(10000, &app, []() {
+        MailEngine::instance()->refresh();
+    });
+    return app.exec();
+}
+
 // wildos-calendar --reminders: no window, just the reminders, from sign-in.
 int runReminders(int argc, char *argv[])
 {
@@ -314,6 +438,9 @@ int main(int argc, char *argv[])
         if (qstrcmp(argv[i], "--reminders") == 0) {
             return runReminders(argc, argv);
         }
+        if (qstrcmp(argv[i], "--background") == 0) {
+            return runBackground(argc, argv);
+        }
         if (qstrcmp(argv[i], "--new-window") == 0) {
             return runCalendar(argc, argv);
         }
@@ -345,6 +472,8 @@ int main(int argc, char *argv[])
     parser.addOption(day);
     parser.addOption(peopleOption);
     parser.addOption(tasksOption);
+    const QCommandLineOption messageOption(QStringLiteral("message"), QStringLiteral("A message to open, from a notification."), QStringLiteral("key"));
+    parser.addOption(messageOption);
     parser.process(app);
     const QString arg = parser.positionalArguments().value(0);
     calendar = calendar || parser.isSet(calendarOption) || parser.isSet(event);
@@ -363,7 +492,11 @@ int main(int argc, char *argv[])
         return 0;
     }
     if (registered(serviceName)) {
-        if (!section.isEmpty()) {
+        if (parser.isSet(messageOption)) {
+            auto message = QDBusMessage::createMethodCall(serviceName, objectPath, serviceName, QStringLiteral("showMessage"));
+            message << parser.value(messageOption);
+            bus.call(message);
+        } else if (!section.isEmpty()) {
             auto message = QDBusMessage::createMethodCall(serviceName, objectPath, serviceName, QStringLiteral("showSection"));
             message << section;
             bus.call(message);
@@ -376,6 +509,8 @@ int main(int argc, char *argv[])
         }
         return 0;
     }
+
+    stopBackground();
 
     QQmlApplicationEngine engine;
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app, []() {
@@ -417,11 +552,20 @@ int main(int argc, char *argv[])
     } else if (!section.isEmpty()) {
         remote->showSection(section);
     }
+    if (parser.isSet(messageOption)) {
+        remote->showMessage(parser.value(messageOption));
+    }
     // Reminders start at sign-in; started here too in case that was missed.
     if (!registered(remindersService)) {
         QProcess::startDetached(QCoreApplication::applicationFilePath(), {QStringLiteral("--reminders")});
     }
-    return app.exec();
+    const int result = app.exec();
+    // The window is closed: new mail notifications carry on without it.
+    bus.unregisterService(serviceName);
+    if (backgroundWanted()) {
+        QProcess::startDetached(QCoreApplication::applicationFilePath(), {QStringLiteral("--background")});
+    }
+    return result;
 }
 
 #include "main.moc"

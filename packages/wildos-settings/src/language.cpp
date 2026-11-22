@@ -219,16 +219,24 @@ bool Language::needsSignOut() const
 
 QVariantList Language::languages() const
 {
-    // A language counts when the desktop shell itself is translated into it.
-    // US English has no translation because it is the language KDE is
-    // written in, so it is added by hand. Its list still falls back to UK
-    // English (see setLanguage), which keeps Wild OS's own wording, while
-    // apps with a US English translation, such as the browser, use it.
+    // A language counts when the desktop shell and Wild OS's own apps are
+    // both translated into it. KDE has about 80 languages to our 43, and the
+    // others gave a desktop half in English. US English has no translation
+    // because it is the language KDE is written in, so it is added by hand.
+    // Its list still falls back to UK English (see setLanguage), which keeps
+    // Wild OS's own wording, while apps with a US English translation, such
+    // as the browser, use it. A language chosen before this rule stays
+    // listed, so the box never shows a bare code.
+    const QString ours = QStringLiteral("/usr/share/wildos/translations/wildos-settings_%1.qm");
     QSet<QString> codes = {fallbackLanguage, QStringLiteral("en_US")};
+    if (!m_language.isEmpty()) {
+        codes.insert(m_language);
+    }
     const auto dirs = QDir(QStringLiteral("/usr/share/locale")).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const QString &code : dirs) {
         if (!code.contains(QLatin1Char('@')) && code != QLatin1String("en")
-            && QFile::exists(QStringLiteral("/usr/share/locale/") + code + QStringLiteral("/LC_MESSAGES/plasmashell.mo"))) {
+            && QFile::exists(QStringLiteral("/usr/share/locale/") + code + QStringLiteral("/LC_MESSAGES/plasmashell.mo"))
+            && QFile::exists(ours.arg(code))) {
             codes.insert(code);
         }
     }

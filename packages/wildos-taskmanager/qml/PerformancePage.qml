@@ -1,3 +1,4 @@
+import QtCore
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -14,6 +15,12 @@ Item {
 
     property string current: "cpu"
     property bool eachCore: false
+
+    // Overall or Each core stays as last chosen, as in Windows' Task Manager.
+    Settings {
+        category: "Performance"
+        property alias eachCore: page.eachCore
+    }
     // Read again on every sample; the revision only changes when there is
     // a new one.
     readonly property var info: SystemStats.revision >= 0 ? SystemStats.details(current) : ({})

@@ -91,6 +91,31 @@ Item {
         onTriggered: authenticator.startAuthenticating()
     }
 
+    function showHideKeyboard() {
+        if (inputPanel.keyboardActive) {
+            mainBlock.mainPasswordBox.forceActiveFocus();
+            inputPanel.showHide();
+        } else {
+            showKeyboard();
+        }
+    }
+
+    function showKeyboard() {
+        // KWin brings its keyboard up when a text box starts taking input;
+        // Qt's show does nothing over Wayland. So the password box gives up
+        // focus and takes it again, which also sends the keys typed on the
+        // keyboard to it. Taken back at once, Qt would tell KWin nothing.
+        // Done even when KWin says the keyboard is up: at locking that can
+        // still be the desktop's, which doesn't show over this screen.
+        mainBlock.mainPasswordBox.focus = false;
+        Qt.callLater(() => {
+            mainBlock.mainPasswordBox.forceActiveFocus();
+            if (inputPanel.state !== "visible") {
+                inputPanel.showHide();
+            }
+        });
+    }
+
     function showMessage(msg) {
         if (!msg)
             return;
@@ -199,7 +224,14 @@ Item {
 
         property bool uiVisible: false
         property bool seenPositionChange: false
-        property bool blockUI: containsMouse && (mainStack.depth > 1 || mainBlock.mainPasswordBox.text.length > 0 || inputPanel.keyboardActive)
+        property bool blockUI: inputPanel.keyboardActive || (containsMouse && (mainStack.depth > 1 || mainBlock.mainPasswordBox.text.length > 0))
+        // Breeze's loader lifts the sign-in block by the keyboard's height,
+        // which Qt only knows over the older text input protocol. When it
+        // doesn't, the password box rises above the top half of the screen,
+        // which the on-screen keyboard stays below.
+        property real keyboardLift: inputPanel.keyboardActive && inputPanel.item && inputPanel.item.height <= 0
+            ? Math.min(0, Math.round(height / 2) - mainBlock.visibleBoundary) : 0
+        Behavior on keyboardLift { NumberAnimation { duration: UI.Style.motionNormal; easing.type: Easing.OutCubic } }
 
         x: parent.x
         y: parent.y
@@ -229,8 +261,19 @@ Item {
                 fadeoutTimer.restart();
             }
         }
-        onExited: {
-            uiVisible = false;
+        // Typing on the on-screen keyboard takes the pointer off this window,
+        // and the password box has to stay. The keyboard can open under the
+        // pointer a moment before KWin says it is up, so that is checked a
+        // little later.
+        onExited: exitCheck.restart()
+        Timer {
+            id: exitCheck
+            interval: 300
+            onTriggered: {
+                if (!lockScreenRoot.containsMouse && !inputPanel.keyboardActive) {
+                    lockScreenRoot.uiVisible = false;
+                }
+            }
         }
         Keys.onEscapePressed: {
             // Escape asks kscreenlocker to turn the screen off, so the prompt
@@ -291,7 +334,9 @@ Item {
             id: clock
             visible: !lockScreenUi.hasConfig || config.alwaysShowClock !== false
             anchors.horizontalCenter: parent.horizontalCenter
-            y: Math.round(lockScreenRoot.height * 96 / 900) + mainStack.y
+            y: Math.round(lockScreenRoot.height * 96 / 900) + mainStack.y + lockScreenRoot.keyboardLift
+            opacity: y < 0 ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: UI.Style.motionNormal } }
         }
 
         LockNotices {
@@ -313,9 +358,14 @@ Item {
             Behavior on opacity { NumberAnimation { duration: UI.Style.motionSlow; easing.type: UI.Style.easeStandard } }
             // The sign-in block rises the last few pixels as it fades in, and
             // sinks as it fades away again.
-            transform: Translate {
-                y: (1 - mainStack.opacity) * UI.Style.travelMedium
-            }
+            transform: [
+                Translate {
+                    y: (1 - mainStack.opacity) * UI.Style.travelMedium
+                },
+                Translate {
+                    y: lockScreenRoot.keyboardLift
+                }
+            ]
 
             initialItem: MainBlock {
                 id: mainBlock
@@ -455,12 +505,7 @@ Item {
                 iconName: "accessibility"
                 label: inputPanel.keyboardActive ? qsTr("Hide on-screen keyboard") : qsTr("Show on-screen keyboard")
                 focusPolicy: Qt.TabFocus
-                onClicked: {
-                    // Keep focus in the password field, otherwise keys typed on
-                    // the virtual keyboard go nowhere.
-                    mainBlock.mainPasswordBox.forceActiveFocus();
-                    inputPanel.showHide();
-                }
+                onClicked: lockScreenUi.showHideKeyboard()
             }
 
             RoundButton {
@@ -527,8 +572,7 @@ Item {
         onKeyboardRequested: {
             if (inputPanel.status !== Loader.Ready)
                 return;
-            mainBlock.mainPasswordBox.forceActiveFocus();
-            inputPanel.showHide();
+            lockScreenUi.showHideKeyboard();
         }
     }
 
@@ -537,9 +581,8 @@ Item {
         running: access.keyboardOn
         interval: 300
         onTriggered: {
-            if (inputPanel.status === Loader.Ready && !inputPanel.keyboardActive) {
-                mainBlock.mainPasswordBox.forceActiveFocus();
-                inputPanel.showHide();
+            if (inputPanel.status === Loader.Ready) {
+                lockScreenUi.showKeyboard();
             }
         }
     }

@@ -205,6 +205,18 @@ if [ -n "${WILDOS_REVISION:-}" ]; then
             -e "0,/^ -- /s/^\( -- .*>\)  .*/\1  $stamp/" "$changelog"
     done
 fi
+# wildos-shell's KWin effects load only into the exact KWin they were built
+# against, and the builder image keeps the KWin it was made with. So KWin
+# is brought up to Debian's current version first: otherwise a Debian KWin
+# update left wildos-shell depending on the old one, which held KWin back on
+# every PC and stopped the image from installing.
+if [ ! -e "$WORK/pkgsrc/wildos-shell/PUBLISHED" ]; then
+    apt-get update -qq
+    kwin_bins=$(dpkg-query -W -f='${binary:Package} ${source:Package}\n' | awk '$2 == "kwin" { print $1 }')
+    # shellcheck disable=SC2086
+    [ -z "$kwin_bins" ] || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --only-upgrade $kwin_bins >/dev/null
+    log "KWin for wildos-shell: $(dpkg-query -W -f='${Version}' libkwin6 2>/dev/null)"
+fi
 if [ "$INCREMENTAL" = 1 ]; then
     inc_build_packages
 else
@@ -487,9 +499,55 @@ done
         # alone would fill that and push out everything else's), so a patch
         # change recompiles only the files it touches rather than all of
         # LibreOffice.
-        CCACHE_DIR=/ccache/libreoffice CCACHE_MAXSIZE=40G \
-        DEB_BUILD_PROFILES="$profiles" DEB_BUILD_OPTIONS="nocheck nodoc noautodbgsym parallel=$BUILD_THREADS" \
-            dpkg-buildpackage -us -uc -B -R'debian/rules BUILD_NOGUI_PACKAGES=n' >/dev/null
+        lo_build() {
+            CCACHE_DIR=/ccache/libreoffice CCACHE_MAXSIZE=40G \
+            DEB_BUILD_PROFILES="$profiles" DEB_BUILD_OPTIONS="nocheck nodoc noautodbgsym parallel=$BUILD_THREADS" \
+                dpkg-buildpackage -us -uc -B "$@" -R'debian/rules BUILD_NOGUI_PACKAGES=n' >/dev/null
+        }
+        # The built tree is kept in the work volume (lo-tree) with a list of
+        # its source files' checksums. Debian's next security update then
+        # changes only the files it touches in that tree and runs make
+        # there, which rebuilds what depends on them instead of configuring,
+        # compiling (even from the compiler cache), linking and packaging
+        # all of LibreOffice again. Anything that goes wrong on the way falls
+        # back to building the fresh source in full. The tree stays at the
+        # same depth under /work, so the compiler cache (CCACHE_BASEDIR=/work)
+        # matches either way.
+        tree=$WORK/lo-tree
+        name=$(basename "$PWD")
+        find . -type f ! -path './debian/stampdir/*' -print0 | sort -z | xargs -0 md5sum > "$WORK/lo-src.md5"
+        incremental=0
+        if [ -f "$tree/source.md5" ] && [ -d "$tree/$name/instdir" ]; then
+            log "Updating the kept LibreOffice build to $version"
+            fresh=$PWD
+            comm -23 <(sed 's/^[0-9a-f]*  //' "$tree/source.md5" | sort) <(sed 's/^[0-9a-f]*  //' "$WORK/lo-src.md5" | sort) \
+                | while IFS= read -r f; do rm -f "$tree/$name/$f"; done
+            comm -13 <(sort "$tree/source.md5") <(sort "$WORK/lo-src.md5") | sed 's/^[0-9a-f]*  //' > "$WORK/lo-changed"
+            # Copied with a new modification time, so make sees each as changed.
+            while IFS= read -r f; do
+                mkdir -p "$tree/$name/$(dirname "$f")"
+                cp --preserve=mode "$fresh/$f" "$tree/$name/$f"
+            done < "$WORK/lo-changed"
+            log "$(wc -l < "$WORK/lo-changed") LibreOffice source files changed"
+            cd "$tree/$name"
+            # Debian's rules skip any step whose stamp is there; all but the
+            # first (links and permissions) run again.
+            find debian/stampdir -type f ! -name prepare -delete
+            rm -f ../*.deb ../*.ddeb ../*.changes ../*.buildinfo
+            if lo_build -nc; then
+                incremental=1
+            else
+                echo "WARNING: the incremental LibreOffice build failed; building it in full" >&2
+                cd "$fresh"
+            fi
+        fi
+        if [ "$incremental" = 0 ]; then
+            rm -rf "$tree" && mkdir -p "$tree"
+            mv "$PWD" "$tree/$name"
+            cd "$tree/$name"
+            lo_build
+        fi
+        cp "$WORK/lo-src.md5" "$tree/source.md5"
         # Filled under another name and renamed when complete, so a build
         # that stops half way is not taken for a finished one next time.
         part="$cached.part"
@@ -885,6 +943,48 @@ STANZA
     fi
     cp "$cached"/*.deb "$WORK/repo/"
 )
+# Debian's evolution-ews-core holds evolution-data-server's Microsoft 365
+# calendar, contacts and task list backends, which Mail's Outlook and
+# Microsoft 365 accounts use. It depends on the whole evolution-data-server
+# (GTK, WebKitGTK, gnome-keyring), so it is republished +wildos2 depending
+# on evolution-data-server-core instead, which has everything it loads into.
+#
+# The backend also asks Microsoft for Evolution's whole list of permissions
+# each time it renews its sign-in: mail through Graph, sending as the person,
+# other people's profiles and shared mailboxes, none of which Wild OS uses
+# (mail goes over IMAP and SMTP). Microsoft refuses a renewal that asks for
+# more than the person allowed, so Mail's sign-in would have to ask for all
+# of it. The list is cut to calendars, contacts, task lists, mailbox
+# settings and mail folder names (Mail.ReadBasic, which the backend checks
+# the account with): the string ends early, at a NUL written over it, and the bytes
+# after stay as they were so nothing else the linker merged into its tail
+# changes.
+(
+    cd "$WORK"
+    apt-get download -qq evolution-ews-core
+    deb=$(ls evolution-ews-core_*.deb)
+    rm -rf ews-repack && dpkg-deb -R "$deb" ews-repack
+    control=ews-repack/DEBIAN/control
+    sed -i 's/^Version: \(.*\)$/Version: \1+wildos2/' "$control"
+    sed -i '/^Depends: /s/evolution-data-server (/evolution-data-server-core (/g' "$control"
+    if ! grep -q '^Depends: .*evolution-data-server-core (>= ' "$control" || grep -q '^Depends: .*evolution-data-server (' "$control"; then
+        echo "ERROR: evolution-ews-core's control file changed shape; update the repack" >&2
+        exit 1
+    fi
+    lib=usr/lib/evolution-ews/libevolution-microsoft365.so
+    EWS_SCOPE_OLD='Calendars.ReadWrite Calendars.ReadWrite.Shared Contacts.ReadWrite Contacts.ReadWrite.Shared Mail.ReadWrite Mail.ReadWrite.Shared Mail.Send Mail.Send.Shared ' \
+    EWS_SCOPE_NEW='Calendars.ReadWrite Contacts.ReadWrite Mail.ReadBasic MailboxSettings.Read offline_access Tasks.ReadWrite User.Read' \
+        perl -0777 -i -pe '
+            my ($old, $new) = ($ENV{EWS_SCOPE_OLD}, $ENV{EWS_SCOPE_NEW});
+            my $n = () = /\Q$old\E/g;
+            die "scope found $n times\n" unless $n == 1;
+            my $put = $new . "\0" . substr($old, length($new) + 1);
+            s/\Q$old\E/$put/;
+        ' "ews-repack/$lib" || { echo "ERROR: evolution-ews-core's Microsoft 365 permissions changed; update the repack" >&2; exit 1; }
+    (cd ews-repack && find usr -type f -exec md5sum {} + > DEBIAN/md5sums)
+    dpkg-deb -b ews-repack "$WORK/repo/" >/dev/null
+    rm -rf ews-repack "$deb"
+)
 # Six Kicksecure packages hard-depend on a compiler toolchain (gcc, make,
 # binutils, the C library headers, dkms, and equivs with debhelper), about
 # 260 MB of the image that nothing on a Wild OS computer uses. They are
@@ -913,167 +1013,184 @@ APT::Architecture "amd64";
 APT::Sandbox::User "root";
 EOF
 ks_apt() { APT_CONFIG=$KS_APT/apt.conf "$@"; }
-ks_apt apt-get update -qq
-REPACK=$WORK/ks-repack
-repack_fail() {
-    echo "ERROR: Kicksecure's $1 changed shape; update its repack in build.sh" >&2
-    exit 1
-}
-# Unpacks Kicksecure's newest <package> into $REPACK/pkg with the named
-# dependencies taken out, each of which has to be there.
-repack_open() {
-    local name=$1 version control deps dep kept
-    shift
-    version=$(ks_apt apt-cache policy "$name" | sed -n 's/^  Candidate: //p')
-    [ -n "$version" ] && [ "$version" != "(none)" ] || { echo "ERROR: Kicksecure no longer publishes $name; drop its repack" >&2; exit 1; }
-    rm -rf "$REPACK" && mkdir -p "$REPACK"
-    (cd "$REPACK" && ks_apt apt-get download -qq "$name=$version")
-    dpkg-deb -R "$REPACK/${name}_"*.deb "$REPACK/pkg"
-    control=$REPACK/pkg/DEBIAN/control
-    # The edit below works on a Depends written on one line.
-    [ "$(grep -c '^Depends: ' "$control")" = 1 ] || repack_fail "$name"
-    ! sed -n '/^Depends: /{n;p}' "$control" | grep -q '^[[:space:]]' || repack_fail "$name"
-    deps=$(sed -n 's/^Depends: //p' "$control" | sed 's/, */\n/g')
-    for dep in "$@"; do
-        grep -qxF "$dep" <<<"$deps" || repack_fail "$name"
-    done
-    kept=$(grep -vxF -f <(printf '%s\n' "$@") <<<"$deps" | paste -sd, | sed 's/,/, /g')
-    # REPACK_REVISION goes up when a repack changes while Kicksecure's version
-    # stays the same, so machines take the new one.
-    sed -i -e "s/^Depends: .*/Depends: $kept/" -e "s/^Version: \(.*\)\$/Version: \1+wildos${REPACK_REVISION:-1}/" "$control"
-}
-# Adds programs compiled into $REPACK/pkg to the package: it becomes amd64
-# and depends on the libraries they link.
-repack_ship() {
-    local pkg=$REPACK/pkg control f size linked=() libs=
-    control=$pkg/DEBIAN/control
-    grep -qx 'Architecture: all' "$control" || repack_fail "$(sed -n 's/^Package: //p' "$control")"
-    size=$(sed -n 's/^Installed-Size: //p' "$control")
-    for f in "$@"; do
-        chmod 0755 "$pkg/$f"
-        size=$((size + ($(stat -c %s "$pkg/$f") + 1023) / 1024))
-        (cd "$pkg" && md5sum "$f" >> DEBIAN/md5sums)
-        # A static program (emerg-shutdown) links nothing to depend on.
-        objdump -p "$pkg/$f" | grep -q NEEDED && linked+=("$pkg/$f")
-    done
-    if [ ${#linked[@]} -gt 0 ]; then
-        # dpkg-shlibdeps reads the package name from a debian/control.
-        mkdir -p "$REPACK/shlibs/debian"
-        printf 'Source: shlibs\n\nPackage: shlibs\nArchitecture: any\n' > "$REPACK/shlibs/debian/control"
-        libs=$(cd "$REPACK/shlibs" && dpkg-shlibdeps -O "${linked[@]}" | sed -n 's/^shlibs:Depends=//p')
+# A package build doesn't need Kicksecure's server. When it cannot be
+# reached a publish keeps the repacks already published (publish-local copies
+# every published package this build has no file for), and Kicksecure's
+# changes reach computers with the next publish that can reach it. An ISO
+# needs the server for Kicksecure's other packages anyway, so it stops.
+ks_online=1
+if ! ks_apt apt-get update -qq || ! ks_apt apt-cache policy security-misc-shared | grep -q 'Candidate: [0-9]'; then
+    if [ "$PACKAGES_ONLY" = 1 ]; then
+        echo "WARNING: deb.kicksecure.com cannot be reached; the published Kicksecure repacks stay as they are" >&2
+        ks_online=0
+    else
+        echo "ERROR: deb.kicksecure.com cannot be reached" >&2
+        exit 1
     fi
-    sed -i -e 's/^Architecture: all$/Architecture: amd64/' -e "s/^Installed-Size: .*/Installed-Size: $size/" "$control"
-    [ -z "$libs" ] || sed -i "s/^Depends: .*/&, $libs/" "$control"
-}
-repack_close() {
-    dpkg-deb -b "$REPACK/pkg" "$WORK/repo/" >/dev/null
-    rm -rf "$REPACK"
-}
+fi
+ks_repacks() {
+    REPACK=$WORK/ks-repack
+    repack_fail() {
+        echo "ERROR: Kicksecure's $1 changed shape; update its repack in build.sh" >&2
+        exit 1
+    }
+    # Unpacks Kicksecure's newest <package> into $REPACK/pkg with the named
+    # dependencies taken out, each of which has to be there.
+    repack_open() {
+        local name=$1 version control deps dep kept
+        shift
+        version=$(ks_apt apt-cache policy "$name" | sed -n 's/^  Candidate: //p')
+        [ -n "$version" ] && [ "$version" != "(none)" ] || { echo "ERROR: Kicksecure no longer publishes $name; drop its repack" >&2; exit 1; }
+        rm -rf "$REPACK" && mkdir -p "$REPACK"
+        (cd "$REPACK" && ks_apt apt-get download -qq "$name=$version")
+        dpkg-deb -R "$REPACK/${name}_"*.deb "$REPACK/pkg"
+        control=$REPACK/pkg/DEBIAN/control
+        # The edit below works on a Depends written on one line.
+        [ "$(grep -c '^Depends: ' "$control")" = 1 ] || repack_fail "$name"
+        ! sed -n '/^Depends: /{n;p}' "$control" | grep -q '^[[:space:]]' || repack_fail "$name"
+        deps=$(sed -n 's/^Depends: //p' "$control" | sed 's/, */\n/g')
+        for dep in "$@"; do
+            grep -qxF "$dep" <<<"$deps" || repack_fail "$name"
+        done
+        kept=$(grep -vxF -f <(printf '%s\n' "$@") <<<"$deps" | paste -sd, | sed 's/,/, /g')
+        # REPACK_REVISION goes up when a repack changes while Kicksecure's version
+        # stays the same, so machines take the new one.
+        sed -i -e "s/^Depends: .*/Depends: $kept/" -e "s/^Version: \(.*\)\$/Version: \1+wildos${REPACK_REVISION:-1}/" "$control"
+    }
+    # Adds programs compiled into $REPACK/pkg to the package: it becomes amd64
+    # and depends on the libraries they link.
+    repack_ship() {
+        local pkg=$REPACK/pkg control f size linked=() libs=
+        control=$pkg/DEBIAN/control
+        grep -qx 'Architecture: all' "$control" || repack_fail "$(sed -n 's/^Package: //p' "$control")"
+        size=$(sed -n 's/^Installed-Size: //p' "$control")
+        for f in "$@"; do
+            chmod 0755 "$pkg/$f"
+            size=$((size + ($(stat -c %s "$pkg/$f") + 1023) / 1024))
+            (cd "$pkg" && md5sum "$f" >> DEBIAN/md5sums)
+            # A static program (emerg-shutdown) links nothing to depend on.
+            objdump -p "$pkg/$f" | grep -q NEEDED && linked+=("$pkg/$f")
+        done
+        if [ ${#linked[@]} -gt 0 ]; then
+            # dpkg-shlibdeps reads the package name from a debian/control.
+            mkdir -p "$REPACK/shlibs/debian"
+            printf 'Source: shlibs\n\nPackage: shlibs\nArchitecture: any\n' > "$REPACK/shlibs/debian/control"
+            libs=$(cd "$REPACK/shlibs" && dpkg-shlibdeps -O "${linked[@]}" | sed -n 's/^shlibs:Depends=//p')
+        fi
+        sed -i -e 's/^Architecture: all$/Architecture: amd64/' -e "s/^Installed-Size: .*/Installed-Size: $size/" "$control"
+        [ -z "$libs" ] || sed -i "s/^Depends: .*/&, $libs/" "$control"
+    }
+    repack_close() {
+        dpkg-deb -b "$REPACK/pkg" "$WORK/repo/" >/dev/null
+        rm -rf "$REPACK"
+    }
 
-# security-misc-shared compiled emerg-shutdown (powers off at once when the
-# boot drive is pulled out) and fm-shim-backend (its org.freedesktop.FileManager1
-# service) in its postinst. emerg-shutdown would also compile at run time,
-# but only when its program is missing.
-#
-# Its preinst also stops an install or upgrade when no account is in the sudo
-# or console groups, to keep someone from locking themselves out. Wild OS makes
-# and manages the accounts (Settings keeps an administrator in sudo, and every
-# account that signs in is in console), so the check can only block updates,
-# as it did on a computer still at first-run setup.
-REPACK_REVISION=2 repack_open security-misc-shared build-essential libdbus-1-dev libsystemd-dev pkgconf
-(
-    cd "$REPACK/pkg"
-    [ "$(grep -cxE '   (sudo|console)_users_check' DEBIAN/preinst)" = 2 ] || repack_fail security-misc-shared
-    sed -i -E 's/^   (sudo|console)_users_check$/   true/' DEBIAN/preinst
-    [ "$(grep -cxE '        build_(fm_shim_backend|emerg_shutdown)' DEBIAN/postinst)" = 2 ] || repack_fail security-misc-shared
-    sed -i -E '/^        build_(fm_shim_backend|emerg_shutdown)$/d' DEBIAN/postinst
-    for program in emerg-shutdown fm-shim-backend; do
-        bash "usr/libexec/security-misc/compile-$program" "usr/src/security-misc/$program.c" "usr/bin/$program"
-    done
-)
-repack_ship usr/bin/emerg-shutdown usr/bin/fm-shim-backend
-repack_close
-
-# sdwdate, the time sync, built sclockadj (moves the clock gradually) with
-# make and gcc in its postinst. It also took the place of every other time
-# service (time-daemon), which kept systemd-timesyncd from being installed
-# for the time server choice in Settings > Date and time. Only one of the
-# two ever runs: wildos-base's drop-ins start each by /etc/wildos/time-server.
-REPACK_REVISION=2 repack_open sdwdate gcc libc6-dev
-(
-    cd "$REPACK/pkg"
-    [ "$(grep -cxE '(Provides|Conflicts): time-daemon' DEBIAN/control)" = 2 ] || repack_fail sdwdate
-    sed -i -E '/^(Provides|Conflicts): time-daemon$/d' DEBIAN/control
-    # Its units also kept systemd-timesyncd from ever starting.
-    block=usr/lib/systemd/system/systemd-timesyncd.service.d
-    [ -f "$block/40_sdwdate.conf" ] || repack_fail sdwdate
-    rm "$block/40_sdwdate.conf" && rmdir "$block"
-    sed -i "\|  $block/40_sdwdate.conf\$|d" DEBIAN/md5sums
-    for unit in usr/lib/systemd/system/sdwdate.service usr/lib/systemd/system/sdwdate-start-anondate-set-file-watcher.service; do
-        [ "$(grep -cxF 'Conflicts=systemd-timesyncd.service' "$unit")" = 1 ] || repack_fail sdwdate
-        sed -i '/^Conflicts=systemd-timesyncd.service$/d' "$unit"
-        sed -i "\|  $unit\$|d" DEBIAN/md5sums
-        md5sum "$unit" >> DEBIAN/md5sums
-    done
-    start='       ## Build sclockadj program.'
-    end='       popd >/dev/null'
-    [ "$(grep -cxF "$start" DEBIAN/postinst)" = 1 ] && [ "$(grep -cxF "$end" DEBIAN/postinst)" = 1 ] || repack_fail sdwdate
-    sed -i "\|^$start\$|,\|^$end\$|d" DEBIAN/postinst
-    ! grep -qwE 'make|gcc' DEBIAN/postinst || repack_fail sdwdate
-    make -s -C usr/src/sdwdate
-    mv usr/src/sdwdate/sclockadj usr/libexec/sdwdate/sclockadj
-)
-repack_ship usr/libexec/sdwdate/sclockadj
-repack_close
-
-# usability-misc depends on dkms so modules (VirtualBox's, for Kicksecure)
-# can be built; nothing in it builds one.
-repack_open usability-misc dkms
-! grep -qE 'dkms|gcc' "$REPACK"/pkg/DEBIAN/p* || repack_fail usability-misc
-repack_close
-
-# dist-base-files depends on dpkg-dev (which brings make and binutils) for
-# dpkg-parsechangelog, which its postinst runs once to record its version
-# and carries on without.
-repack_open dist-base-files dpkg-dev
-[ "$(grep -c 'dpkg-parsechangelog .*|| true$' "$REPACK/pkg/DEBIAN/postinst")" = 1 ] || repack_fail dist-base-files
-! grep -qE 'dpkg-(parsechangelog|architecture|buildflags|vendor|source)' "$REPACK"/pkg/DEBIAN/{preinst,prerm,postrm} 2>/dev/null \
-    || repack_fail dist-base-files
-repack_close
-
-# helper-scripts and dist-general-cli depend on equivs, which builds
-# placeholder packages and brings debhelper, autotools, libtool and gcc. Its
-# only user is helper-scripts' dummy-dependency command, which Kicksecure's
-# release upgrade runs on Qubes alone; nothing on Wild OS runs it.
-for name in helper-scripts dist-general-cli; do
-    repack_open "$name" equivs
-    ! grep -rlw 'equivs' "$REPACK/pkg" --exclude=control --exclude=md5sums --exclude-dir=doc \
-        | grep -vx "$REPACK/pkg/usr/bin/dummy-dependency" | grep -q . || repack_fail "$name"
+    # security-misc-shared compiled emerg-shutdown (powers off at once when the
+    # boot drive is pulled out) and fm-shim-backend (its org.freedesktop.FileManager1
+    # service) in its postinst. emerg-shutdown would also compile at run time,
+    # but only when its program is missing.
+    #
+    # Its preinst also stops an install or upgrade when no account is in the sudo
+    # or console groups, to keep someone from locking themselves out. Wild OS makes
+    # and manages the accounts (Settings keeps an administrator in sudo, and every
+    # account that signs in is in console), so the check can only block updates,
+    # as it did on a computer still at first-run setup.
+    REPACK_REVISION=2 repack_open security-misc-shared build-essential libdbus-1-dev libsystemd-dev pkgconf
+    (
+        cd "$REPACK/pkg"
+        [ "$(grep -cxE '   (sudo|console)_users_check' DEBIAN/preinst)" = 2 ] || repack_fail security-misc-shared
+        sed -i -E 's/^   (sudo|console)_users_check$/   true/' DEBIAN/preinst
+        [ "$(grep -cxE '        build_(fm_shim_backend|emerg_shutdown)' DEBIAN/postinst)" = 2 ] || repack_fail security-misc-shared
+        sed -i -E '/^        build_(fm_shim_backend|emerg_shutdown)$/d' DEBIAN/postinst
+        for program in emerg-shutdown fm-shim-backend; do
+            bash "usr/libexec/security-misc/compile-$program" "usr/src/security-misc/$program.c" "usr/bin/$program"
+        done
+    )
+    repack_ship usr/bin/emerg-shutdown usr/bin/fm-shim-backend
     repack_close
-done
-# anon-apt-sources-list is where Debian's own packages come from, and
-# Kicksecure sends all of it through Tor: a few hundred kB a second, so a
-# large install (NVIDIA's driver, a Store app from Debian) took half an hour,
-# looked like a hang and kept every update waiting behind it. Wild OS
-# fetches them straight from the same servers, checked against Debian's
-# signatures as before. The Tor and onion entries stay in the file, switched
-# off, for anyone who wants them: set Enabled on those and off on these.
-REPACK_REVISION=1 repack_open anon-apt-sources-list
-(
-    cd "$REPACK/pkg"
-    sources=etc/apt/sources.list.d/debian.sources
-    marker='######## DISABLED BY DEFAULT SOURCES ########'
-    [ "$(grep -cxF "$marker" "$sources")" = 1 ] || repack_fail anon-apt-sources-list
-    [ "$(sed "/^$marker\$/q" "$sources" | grep -c '^URIs: tor+https://deb\.debian\.org/')" = 2 ] || repack_fail anon-apt-sources-list
-    sed -i "1,/^$marker\$/s|^URIs: tor+https://deb\.debian\.org/|URIs: https://deb.debian.org/|" "$sources"
-    ! sed "/^$marker\$/q" "$sources" | grep -q 'tor+' || repack_fail anon-apt-sources-list
-    if grep -q "  $sources\$" DEBIAN/md5sums; then
-        sed -i "\|  $sources\$|d" DEBIAN/md5sums
-        md5sum "$sources" >> DEBIAN/md5sums
-    fi
-)
-repack_close
 
+    # sdwdate, the time sync, built sclockadj (moves the clock gradually) with
+    # make and gcc in its postinst. It also took the place of every other time
+    # service (time-daemon), which kept systemd-timesyncd from being installed
+    # for the time server choice in Settings > Date and time. Only one of the
+    # two ever runs: wildos-base's drop-ins start each by /etc/wildos/time-server.
+    REPACK_REVISION=2 repack_open sdwdate gcc libc6-dev
+    (
+        cd "$REPACK/pkg"
+        [ "$(grep -cxE '(Provides|Conflicts): time-daemon' DEBIAN/control)" = 2 ] || repack_fail sdwdate
+        sed -i -E '/^(Provides|Conflicts): time-daemon$/d' DEBIAN/control
+        # Its units also kept systemd-timesyncd from ever starting.
+        block=usr/lib/systemd/system/systemd-timesyncd.service.d
+        [ -f "$block/40_sdwdate.conf" ] || repack_fail sdwdate
+        rm "$block/40_sdwdate.conf" && rmdir "$block"
+        sed -i "\|  $block/40_sdwdate.conf\$|d" DEBIAN/md5sums
+        for unit in usr/lib/systemd/system/sdwdate.service usr/lib/systemd/system/sdwdate-start-anondate-set-file-watcher.service; do
+            [ "$(grep -cxF 'Conflicts=systemd-timesyncd.service' "$unit")" = 1 ] || repack_fail sdwdate
+            sed -i '/^Conflicts=systemd-timesyncd.service$/d' "$unit"
+            sed -i "\|  $unit\$|d" DEBIAN/md5sums
+            md5sum "$unit" >> DEBIAN/md5sums
+        done
+        start='       ## Build sclockadj program.'
+        end='       popd >/dev/null'
+        [ "$(grep -cxF "$start" DEBIAN/postinst)" = 1 ] && [ "$(grep -cxF "$end" DEBIAN/postinst)" = 1 ] || repack_fail sdwdate
+        sed -i "\|^$start\$|,\|^$end\$|d" DEBIAN/postinst
+        ! grep -qwE 'make|gcc' DEBIAN/postinst || repack_fail sdwdate
+        make -s -C usr/src/sdwdate
+        mv usr/src/sdwdate/sclockadj usr/libexec/sdwdate/sclockadj
+    )
+    repack_ship usr/libexec/sdwdate/sclockadj
+    repack_close
+
+    # usability-misc depends on dkms so modules (VirtualBox's, for Kicksecure)
+    # can be built; nothing in it builds one.
+    repack_open usability-misc dkms
+    ! grep -qE 'dkms|gcc' "$REPACK"/pkg/DEBIAN/p* || repack_fail usability-misc
+    repack_close
+
+    # dist-base-files depends on dpkg-dev (which brings make and binutils) for
+    # dpkg-parsechangelog, which its postinst runs once to record its version
+    # and carries on without.
+    repack_open dist-base-files dpkg-dev
+    [ "$(grep -c 'dpkg-parsechangelog .*|| true$' "$REPACK/pkg/DEBIAN/postinst")" = 1 ] || repack_fail dist-base-files
+    ! grep -qE 'dpkg-(parsechangelog|architecture|buildflags|vendor|source)' "$REPACK"/pkg/DEBIAN/{preinst,prerm,postrm} 2>/dev/null \
+        || repack_fail dist-base-files
+    repack_close
+
+    # helper-scripts and dist-general-cli depend on equivs, which builds
+    # placeholder packages and brings debhelper, autotools, libtool and gcc. Its
+    # only user is helper-scripts' dummy-dependency command, which Kicksecure's
+    # release upgrade runs on Qubes alone; nothing on Wild OS runs it.
+    for name in helper-scripts dist-general-cli; do
+        repack_open "$name" equivs
+        ! grep -rlw 'equivs' "$REPACK/pkg" --exclude=control --exclude=md5sums --exclude-dir=doc \
+            | grep -vx "$REPACK/pkg/usr/bin/dummy-dependency" | grep -q . || repack_fail "$name"
+        repack_close
+    done
+    # anon-apt-sources-list is where Debian's own packages come from, and
+    # Kicksecure sends all of it through Tor: a few hundred kB a second, so a
+    # large install (NVIDIA's driver, a Store app from Debian) took half an hour,
+    # looked like a hang and kept every update waiting behind it. Wild OS
+    # fetches them straight from the same servers, checked against Debian's
+    # signatures as before. The Tor and onion entries stay in the file, switched
+    # off, for anyone who wants them: set Enabled on those and off on these.
+    REPACK_REVISION=1 repack_open anon-apt-sources-list
+    (
+        cd "$REPACK/pkg"
+        sources=etc/apt/sources.list.d/debian.sources
+        marker='######## DISABLED BY DEFAULT SOURCES ########'
+        [ "$(grep -cxF "$marker" "$sources")" = 1 ] || repack_fail anon-apt-sources-list
+        [ "$(sed "/^$marker\$/q" "$sources" | grep -c '^URIs: tor+https://deb\.debian\.org/')" = 2 ] || repack_fail anon-apt-sources-list
+        sed -i "1,/^$marker\$/s|^URIs: tor+https://deb\.debian\.org/|URIs: https://deb.debian.org/|" "$sources"
+        ! sed "/^$marker\$/q" "$sources" | grep -q 'tor+' || repack_fail anon-apt-sources-list
+        if grep -q "  $sources\$" DEBIAN/md5sums; then
+            sed -i "\|  $sources\$|d" DEBIAN/md5sums
+            md5sum "$sources" >> DEBIAN/md5sums
+        fi
+    )
+    repack_close
+
+}
+[ "$ks_online" = 0 ] || ks_repacks
 rm -rf "$KS_APT"
 (cd "$WORK/repo" && apt-ftparchive packages . > Packages)
 ls -1 "$WORK/repo"/*.deb

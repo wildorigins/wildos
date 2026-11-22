@@ -13,6 +13,13 @@ over the bulk endpoint, then shown. Writing over a slot without setting it up
 again is quicker (20 frames a second against 13 on a Kraken Z, firmware
 5.11.0) and the cooler acknowledges every frame, but the picture rolls: do
 not bring that shortcut back without watching a real screen.
+
+Every command waits for its own reply. The cooler answers a command with
+the command's first byte plus one and the same second byte (0x74 0x01 gets
+0x75 0x01), and sends status reports of its own in between. liquidctl's
+helpers take whatever comes next, so one unread reply put every later read
+a step behind: readings came back as zeros while faces streamed, and the
+screen was switched before the cooler said it had stored the picture.
 """
 
 from __future__ import annotations
@@ -40,6 +47,9 @@ _TRANSFER_HEADER = bytes([0x12, 0xFA, 0x01, 0xE8, 0xAB, 0xCD, 0xEF, 0x98, 0x76, 
 _KIND_PICTURE = 0x02
 _SHOW_PICTURE = 0x04
 _SHOW_LIQUID = 0x02
+# Replies looked through for the one a command wants; the cooler's status
+# reports come between them.
+_REPLY_ATTEMPTS = 24
 class CoolerError(Exception):
     pass
 
@@ -118,13 +128,13 @@ class Kraken:
         return self._dev.bulk_device is not None
 
     def readings(self) -> Readings:
-        got = {name: value for name, value, _unit in self._dev.get_status()}
+        msg = self._request([0x74, 0x01])
         return Readings(
-            liquid=float(got.get("Liquid temperature", 0.0)),
-            pump_rpm=int(got.get("Pump speed", 0)),
-            pump_duty=int(round(float(got.get("Pump duty", 0)))),
-            fan_rpm=int(got.get("Fan speed", 0)),
-            fan_duty=int(round(float(got.get("Fan duty", 0)))),
+            liquid=msg[15] + msg[16] / 10,
+            pump_rpm=msg[18] << 8 | msg[17],
+            pump_duty=msg[19],
+            fan_rpm=msg[24] << 8 | msg[23],
+            fan_duty=msg[25],
         )
 
     def set_curve(self, channel: str, points: list[tuple[int, int]]):
@@ -144,20 +154,40 @@ class Kraken:
         self.rotation = degrees
 
     def show_liquid(self):
-        """The cooler's own liquid temperature screen, which needs no PC."""
-        self._switch(0, _SHOW_LIQUID)
+        """The cooler's own liquid temperature screen, which needs no PC.
+        The picture slots are emptied too, so no frame of ours stays in the
+        cooler's memory: after a session of faces, a restart used to leave
+        the last frame frozen on the screen and the cooler unseen by any
+        system until the power was cut."""
+        if not self._switch(0, _SHOW_LIQUID):
+            log.warning("the cooler did not confirm its liquid screen")
+        if self._ring_ready:
+            for slot in range(SLOTS):
+                self._delete(slot)
         self._ring_ready = False
 
     # Frames
 
+    def _request(self, command: list[int]) -> list[int]:
+        """Sends one command and returns its own reply, skipping the status
+        reports and anything left over from before."""
+        self._dev.device.clear_enqueued_reports()
+        self._dev._write(command)
+        want = (command[0] + 1, command[1])
+        for _ in range(_REPLY_ATTEMPTS):
+            msg = self._dev._read()
+            if len(msg) > 1 and (msg[0], msg[1]) == want:
+                return msg
+        raise CoolerError("the cooler did not answer %02x %02x" % (command[0], command[1]))
+
     def _ack(self, command: list[int]) -> bool:
-        return self._dev._write_then_read(command)[14] == 0x01
+        return self._request(command)[14] == 0x01
 
     def _switch(self, slot: int, mode: int) -> bool:
         return self._ack([0x38, 0x01, mode, slot])
 
     def _delete(self, slot: int) -> bool:
-        return bool(self._dev._delete_bucket(slot))
+        return self._ack([0x32, 0x02, slot])
 
     def _setup(self, slot: int) -> bool:
         place = (slot * self._slot_units).to_bytes(2, "little")
@@ -187,22 +217,17 @@ class Kraken:
             self.start_frames()
         slot = self._next_slot
         self._next_slot = (slot + 1) % SLOTS
-        try:
-            self._dev._write_then_read([0x36, 0x03])
-            self._delete(slot)
-            if not self._setup(slot):
-                return False
-            self._dev._write_then_read([0x36, 0x01, slot])
-            self._bulk(_TRANSFER_HEADER + bytes([_KIND_PICTURE, 0, 0, 0]) + len(pixels).to_bytes(4, "little"))
-            self._bulk(pixels)
-            self._dev._write([0x36, 0x02])
-            return self._switch(slot, _SHOW_PICTURE)
-        except AssertionError:
-            # liquidctl gives up when the reply it wants is crowded out by
-            # the cooler's own status reports. The cooler is fine: drop what
-            # is queued and carry on with the next frame.
-            self._dev.device.clear_enqueued_reports()
+        self._request([0x36, 0x03])
+        self._delete(slot)
+        if not self._setup(slot):
             return False
+        self._request([0x36, 0x01, slot])
+        self._bulk(_TRANSFER_HEADER + bytes([_KIND_PICTURE, 0, 0, 0]) + len(pixels).to_bytes(4, "little"))
+        self._bulk(pixels)
+        # Only once the cooler says the picture is stored is it shown.
+        if not self._ack([0x36, 0x02]):
+            return False
+        return self._switch(slot, _SHOW_PICTURE)
 
 
 def _self_test(seconds: float):

@@ -1,13 +1,21 @@
 #include "calendarengine.h"
 #include "formats.h"
+#include "microsoftsignin.h"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QJSEngine>
 #include <QPointer>
 #include <QSettings>
 #include <QThreadPool>
+#include <QRegularExpression>
 #include <QUrl>
+#include <QUuid>
 
 #include <algorithm>
+
+#include <libebackend/libebackend.h>
 
 Q_LOGGING_CATEGORY(calendarLog, "wildos.calendar", QtInfoMsg)
 
@@ -1717,6 +1725,167 @@ void CalendarEngine::addGoogleAccount(const QString &email, const QString &refre
     });
 }
 
+// The Microsoft 365 module's sign-in service and settings live in the
+// calendar service's own module, loaded here too so Mail can set up an
+// account for it and hand it the token. Its other types (the account
+// backend) are only registered, never run, in Mail.
+static bool loadMicrosoftModule()
+{
+    static const bool loaded = []() {
+        const char *path = "/usr/lib/evolution-data-server/registry-modules/module-microsoft365-backend.so";
+        if (!g_file_test(path, G_FILE_TEST_EXISTS)) {
+            return false;
+        }
+        // Kept for the life of Mail: its types stay registered.
+        return e_module_load_file(path) != nullptr;
+    }();
+    return loaded;
+}
+
+void CalendarEngine::addMicrosoftAccount(const QString &email, const QString &refreshToken)
+{
+    if (!m_registry) {
+        Q_EMIT accountFailed(tr("The calendar service isn't running."));
+        return;
+    }
+    if (!loadMicrosoftModule()) {
+        Q_EMIT accountFailed(tr("Microsoft calendars aren't available on this PC. Install the latest updates and try again."));
+        return;
+    }
+    // evolution-data-server keeps one list of sign-in services, filled from
+    // the loaded modules when it is first made. Anything in Mail may have
+    // made it before the Microsoft module was loaded, so the module's
+    // service is added to it here if it isn't there yet. Making the service
+    // also registers its settings ("Microsoft365 Backend") with the source.
+    {
+        EOAuth2Services *services = e_oauth2_services_new();
+        bool listed = false;
+        GSList *list = e_oauth2_services_list(services);
+        for (GSList *l = list; l; l = l->next) {
+            listed = listed || g_strcmp0(e_oauth2_service_get_name(E_OAUTH2_SERVICE(l->data)), "Microsoft365") == 0;
+        }
+        g_slist_free_full(list, g_object_unref);
+        const GType type = g_type_from_name("EOAuth2ServiceMicrosoft365");
+        if (!listed && type) {
+            // It adds itself to the list, which keeps it.
+            g_object_unref(g_object_new(type, "extensible", services, nullptr));
+        }
+        g_object_unref(services);
+    }
+    // One account per address: an earlier try at it goes, so adding it
+    // again starts clean instead of leaving a second copy beside it.
+    GList *existing = e_source_registry_list_sources(m_registry, E_SOURCE_EXTENSION_COLLECTION);
+    for (GList *l = existing; l; l = l->next) {
+        auto *s = E_SOURCE(l->data);
+        auto *c = E_SOURCE_COLLECTION(e_source_get_extension(s, E_SOURCE_EXTENSION_COLLECTION));
+        if (g_strcmp0(e_source_backend_get_backend_name(E_SOURCE_BACKEND(c)), "microsoft365") == 0
+            && str(e_source_collection_get_identity(c)).compare(email, Qt::CaseInsensitive) == 0 && e_source_get_removable(s)) {
+            e_source_remove(s, nullptr, nullptr, nullptr);
+        }
+    }
+    g_list_free_full(existing, g_object_unref);
+
+    ESource *source = newCollection(email, QStringLiteral("microsoft365"), email);
+    auto *auth = E_SOURCE_AUTHENTICATION(e_source_get_extension(source, E_SOURCE_EXTENSION_AUTHENTICATION));
+    e_source_authentication_set_user(auth, email.toUtf8().constData());
+    // What Evolution's own Microsoft 365 setup writes.
+    e_source_authentication_set_host(auth, "graph.microsoft.com");
+    e_source_authentication_set_port(auth, 442);
+    e_source_authentication_set_method(auth, "Microsoft365");
+    gpointer camel = e_source_get_extension(source, e_source_camel_get_extension_name("microsoft365"));
+    CamelSettings *settings = camel ? e_source_camel_get_settings(E_SOURCE_CAMEL(camel)) : nullptr;
+    if (!settings || !g_object_class_find_property(G_OBJECT_GET_CLASS(settings), "oauth2-client-id")) {
+        g_object_unref(source);
+        Q_EMIT accountFailed(tr("Microsoft calendars aren't available on this PC. Install the latest updates and try again."));
+        return;
+    }
+    // Wild OS Mail's app, so Microsoft's page and the person's account list
+    // name Wild OS Mail, and one sign-in covers mail and calendars.
+    g_object_set(settings,
+                 "email", email.toUtf8().constData(),
+                 "user", email.toUtf8().constData(),
+                 "override-oauth2", TRUE,
+                 "oauth2-client-id", MicrosoftSignIn::clientId().toUtf8().constData(),
+                 "oauth2-tenant", MicrosoftSignIn::tenant().toUtf8().constData(),
+                 "oauth2-redirect-uri", MicrosoftSignIn::redirectUri().toUtf8().constData(),
+                 nullptr);
+    const QString uid = str(e_source_get_uid(source));
+    ESourceRegistry *registry = m_registry;
+    g_object_ref(registry);
+    g_object_ref(source);
+    auto error = std::make_shared<QString>();
+    run([registry, source, refreshToken, error]() {
+        EOAuth2Services *services = e_oauth2_services_new();
+        EOAuth2Service *service = e_oauth2_services_find(services, source);
+        GError *err = nullptr;
+        if (!service) {
+            *error = CalendarEngine::tr("no Microsoft sign-in in the calendar service");
+        } else if (!e_oauth2_service_refresh_and_store_token_sync(service, source, refreshToken.toUtf8().constData(), &refSource, registry, nullptr, &err)) {
+            *error = str(err ? err->message : "");
+        }
+        g_clear_error(&err);
+        g_clear_object(&service);
+        g_object_unref(services);
+        g_object_unref(registry);
+    }, [this, source, uid, error]() {
+        if (!error->isEmpty()) {
+            g_object_unref(source);
+            qCWarning(calendarLog) << "Microsoft token for calendar not stored:" << *error;
+            Q_EMIT accountFailed(tr("Microsoft didn't let Calendar in. %1").arg(*error));
+            return;
+        }
+        createSources({source}, [this, uid](bool ok, const QString &e) {
+            if (ok) {
+                Q_EMIT accountAdded(uid);
+            } else {
+                Q_EMIT accountFailed(tr("The account wasn't added. %1").arg(e));
+            }
+        });
+    });
+}
+
+QVariantMap CalendarEngine::accountParts(const QString &email) const
+{
+    QVariantMap parts{{QStringLiteral("exists"), false}, {QStringLiteral("calendar"), false}, {QStringLiteral("contacts"), false}};
+    if (!m_registry) {
+        return parts;
+    }
+    GList *list = e_source_registry_list_sources(m_registry, E_SOURCE_EXTENSION_COLLECTION);
+    for (GList *l = list; l; l = l->next) {
+        auto *c = E_SOURCE_COLLECTION(e_source_get_extension(E_SOURCE(l->data), E_SOURCE_EXTENSION_COLLECTION));
+        if (str(e_source_collection_get_identity(c)).compare(email, Qt::CaseInsensitive) == 0) {
+            parts = {{QStringLiteral("exists"), true},
+                     {QStringLiteral("calendar"), bool(e_source_collection_get_calendar_enabled(c))},
+                     {QStringLiteral("contacts"), bool(e_source_collection_get_contacts_enabled(c))}};
+            break;
+        }
+    }
+    g_list_free_full(list, g_object_unref);
+    return parts;
+}
+
+void CalendarEngine::setAccountPart(const QString &email, const QString &part, bool on)
+{
+    if (!m_registry) {
+        return;
+    }
+    GList *list = e_source_registry_list_sources(m_registry, E_SOURCE_EXTENSION_COLLECTION);
+    for (GList *l = list; l; l = l->next) {
+        auto *source = E_SOURCE(l->data);
+        auto *c = E_SOURCE_COLLECTION(e_source_get_extension(source, E_SOURCE_EXTENSION_COLLECTION));
+        if (str(e_source_collection_get_identity(c)).compare(email, Qt::CaseInsensitive) != 0) {
+            continue;
+        }
+        if (part == QLatin1String("calendar")) {
+            e_source_collection_set_calendar_enabled(c, on);
+        } else {
+            e_source_collection_set_contacts_enabled(c, on);
+        }
+        e_source_write(source, nullptr, nullptr, nullptr);
+    }
+    g_list_free_full(list, g_object_unref);
+}
+
 void CalendarEngine::addCalDavAccount(const QString &name, const QString &address, const QString &user, const QString &password)
 {
     const QUrl url = QUrl::fromUserInput(address.trimmed());
@@ -2154,5 +2323,267 @@ void CalendarEngine::removeInvitation(const QString &ics)
     }, [this]() {
         scheduleReload();
         Q_EMIT notice(tr("Taken out of your calendar"));
+    });
+}
+
+namespace
+{
+// Calendars of people's own events: web calendars (holidays among them)
+// come back from their address, and birthdays from the contacts.
+bool ownEvents(ESource *source)
+{
+    const QString backend = backendOf(source);
+    return backend != QLatin1String("webcal") && backend != QLatin1String("contacts") && backend != QLatin1String("weather");
+}
+
+void collectZone(ICalParameter *param, gpointer data)
+{
+    if (const gchar *tzid = i_cal_parameter_get_tzid(param)) {
+        static_cast<QSet<QByteArray> *>(data)->insert(QByteArray(tzid));
+    }
+}
+
+QString safeFileName(QString name)
+{
+    name.replace(QRegularExpression(QStringLiteral("[/\\\\:*?\"<>|]")), QStringLiteral(" "));
+    name = name.simplified();
+    return name.isEmpty() ? CalendarEngine::tr("Calendar") : name;
+}
+
+// One calendar as an .ics file, with the time zones its events use, as
+// every calendar app reads them; how many events, or -1.
+int writeCalendar(ECalClient *client, const QString &path, QString *error)
+{
+    GSList *objects = nullptr;
+    GError *err = nullptr;
+    if (!e_cal_client_get_object_list_sync(client, "#t", &objects, nullptr, &err)) {
+        *error = str(err ? err->message : "");
+        g_clear_error(&err);
+        return -1;
+    }
+    QByteArray body;
+    QSet<QByteArray> zones;
+    int count = 0;
+    for (GSList *l = objects; l; l = l->next) {
+        auto *icomp = static_cast<ICalComponent *>(l->data);
+        i_cal_component_foreach_tzid(icomp, collectZone, &zones);
+        body += takeStr(i_cal_component_as_ical_string(icomp)).toUtf8();
+        ICalProperty *rid = i_cal_component_get_first_property(icomp, I_CAL_RECURRENCEID_PROPERTY);
+        if (rid) {
+            g_object_unref(rid);
+        } else {
+            ++count;
+        }
+    }
+    g_slist_free_full(objects, g_object_unref);
+    QByteArray head = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Wild OS//Mail//EN\r\n";
+    for (const QByteArray &tzid : std::as_const(zones)) {
+        ICalTimezone *zone = nullptr;
+        if (e_cal_client_get_timezone_sync(client, tzid.constData(), &zone, nullptr, nullptr) && zone) {
+            if (ICalComponent *vtz = i_cal_timezone_get_component(zone)) {
+                head += takeStr(i_cal_component_as_ical_string(vtz)).toUtf8();
+                g_object_unref(vtz);
+            }
+        }
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        *error = CalendarEngine::tr("Mail couldn't write to %1.").arg(QFileInfo(path).absolutePath());
+        return -1;
+    }
+    file.write(head);
+    file.write(body);
+    file.write("END:VCALENDAR\r\n");
+    return count;
+}
+
+// Every event of an .ics file into the calendar: its time zones first, then
+// whole events before the changed single dates of repeating ones, which
+// need their series in place. An event whose UID is already there is left
+// alone, so importing the same file twice adds nothing.
+int readCalendar(ECalClient *client, const QString &path, QString *error)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        *error = CalendarEngine::tr("The file couldn't be read.");
+        return -1;
+    }
+    ICalComponent *cal = i_cal_component_new_from_string(file.readAll().constData());
+    if (!cal) {
+        *error = CalendarEngine::tr("That isn't a calendar file Mail can read.");
+        return -1;
+    }
+    QList<ICalComponent *> events;
+    if (i_cal_component_isa(cal) == I_CAL_VEVENT_COMPONENT) {
+        events << i_cal_component_clone(cal);
+    } else {
+        for (ICalComponent *tz = i_cal_component_get_first_component(cal, I_CAL_VTIMEZONE_COMPONENT); tz;
+             tz = i_cal_component_get_next_component(cal, I_CAL_VTIMEZONE_COMPONENT)) {
+            // A copy: the zone takes over the component it's given.
+            ICalComponent *own = i_cal_component_clone(tz);
+            ICalTimezone *zone = i_cal_timezone_new();
+            if (i_cal_timezone_set_component(zone, own)) {
+                e_cal_client_add_timezone_sync(client, zone, nullptr, nullptr);
+            }
+            g_object_unref(own);
+            g_object_unref(zone);
+            g_object_unref(tz);
+        }
+        for (ICalComponent *ev = i_cal_component_get_first_component(cal, I_CAL_VEVENT_COMPONENT); ev;
+             ev = i_cal_component_get_next_component(cal, I_CAL_VEVENT_COMPONENT)) {
+            events << i_cal_component_clone(ev);
+            g_object_unref(ev);
+        }
+    }
+    g_object_unref(cal);
+    auto detached = [](ICalComponent *c) {
+        ICalProperty *rid = i_cal_component_get_first_property(c, I_CAL_RECURRENCEID_PROPERTY);
+        const bool found = rid != nullptr;
+        g_clear_object(&rid);
+        return found;
+    };
+    std::stable_partition(events.begin(), events.end(), [&](ICalComponent *c) {
+        return !detached(c);
+    });
+    int added = 0;
+    for (ICalComponent *ev : std::as_const(events)) {
+        if (str(i_cal_component_get_uid(ev)).isEmpty()) {
+            i_cal_component_set_uid(ev, QUuid::createUuid().toString(QUuid::WithoutBraces).toUtf8().constData());
+        }
+        GError *err = nullptr;
+        bool ok = false;
+        if (detached(ev)) {
+            ok = e_cal_client_modify_object_sync(client, ev, E_CAL_OBJ_MOD_THIS, E_CAL_OPERATION_FLAG_NONE, nullptr, &err);
+        } else {
+            ok = e_cal_client_create_object_sync(client, ev, E_CAL_OPERATION_FLAG_NONE, nullptr, nullptr, &err);
+        }
+        if (ok) {
+            ++added;
+        } else if (!g_error_matches(err, E_CAL_CLIENT_ERROR, E_CAL_CLIENT_ERROR_OBJECT_ID_ALREADY_EXISTS)) {
+            qCWarning(calendarLog) << "couldn't import an event" << (err ? err->message : "");
+        }
+        g_clear_error(&err);
+        g_object_unref(ev);
+    }
+    return added;
+}
+}
+
+int CalendarEngine::writeAll(const QString &folder, QString *error)
+{
+    GError *err = nullptr;
+    ESourceRegistry *registry = e_source_registry_new_sync(nullptr, &err);
+    if (!registry) {
+        *error = str(err ? err->message : "");
+        g_clear_error(&err);
+        return -1;
+    }
+    QDir().mkpath(folder);
+    int total = 0;
+    QSet<QString> used;
+    GList *sources = e_source_registry_list_enabled(registry, E_SOURCE_EXTENSION_CALENDAR);
+    for (GList *l = sources; l; l = l->next) {
+        auto *source = E_SOURCE(l->data);
+        if (!ownEvents(source)) {
+            continue;
+        }
+        EClient *client = e_cal_client_connect_sync(source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 30, nullptr, nullptr);
+        if (!client) {
+            continue;
+        }
+        const QString uid = str(e_source_get_uid(source));
+        const QString base = safeFileName(uid == QLatin1String("system-calendar") ? tr("Calendar") : str(e_source_get_display_name(source)));
+        // Two calendars of the same name (one per account) keep a file each.
+        QString name = base;
+        for (int n = 2; used.contains(name.toLower()); ++n) {
+            name = QStringLiteral("%1 (%2)").arg(base).arg(n);
+        }
+        used.insert(name.toLower());
+        const int count = writeCalendar(E_CAL_CLIENT(client), folder + QLatin1Char('/') + name + QStringLiteral(".ics"), error);
+        g_object_unref(client);
+        if (count < 0) {
+            total = -1;
+            break;
+        }
+        total += count;
+    }
+    g_list_free_full(sources, g_object_unref);
+    g_object_unref(registry);
+    return total;
+}
+
+int CalendarEngine::readInto(const QString &path, const QString &calendarName, const QString &fallbackUid, QString *error)
+{
+    GError *err = nullptr;
+    ESourceRegistry *registry = e_source_registry_new_sync(nullptr, &err);
+    if (!registry) {
+        *error = str(err ? err->message : "");
+        g_clear_error(&err);
+        return -1;
+    }
+    ESource *target = nullptr;
+    if (!calendarName.isEmpty()) {
+        GList *sources = e_source_registry_list_enabled(registry, E_SOURCE_EXTENSION_CALENDAR);
+        for (GList *l = sources; l && !target; l = l->next) {
+            auto *source = E_SOURCE(l->data);
+            const QString uid = str(e_source_get_uid(source));
+            const QString name = uid == QLatin1String("system-calendar") ? tr("Calendar") : str(e_source_get_display_name(source));
+            if (ownEvents(source) && name.compare(calendarName, Qt::CaseInsensitive) == 0) {
+                target = E_SOURCE(g_object_ref(source));
+            }
+        }
+        g_list_free_full(sources, g_object_unref);
+    }
+    if (!target && !fallbackUid.isEmpty()) {
+        target = e_source_registry_ref_source(registry, fallbackUid.toUtf8().constData());
+    }
+    if (!target) {
+        target = e_source_registry_ref_default_calendar(registry);
+    }
+    g_object_unref(registry);
+    EClient *client = target ? e_cal_client_connect_sync(target, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, 30, nullptr, &err) : nullptr;
+    g_clear_object(&target);
+    if (!client || e_client_is_readonly(client)) {
+        *error = err ? str(err->message) : tr("The calendar can't be changed.");
+        g_clear_error(&err);
+        g_clear_object(&client);
+        return -1;
+    }
+    const int added = readCalendar(E_CAL_CLIENT(client), path, error);
+    g_object_unref(client);
+    return added;
+}
+
+void CalendarEngine::exportTo(const QUrl &folder)
+{
+    const QString dir = folder.toLocalFile();
+    auto count = std::make_shared<int>(0);
+    auto error = std::make_shared<QString>();
+    run([dir, count, error]() {
+        *count = writeAll(dir, error.get());
+    }, [this, dir, count, error]() {
+        if (*count < 0) {
+            Q_EMIT notice(tr("The calendars weren't saved. %1").arg(*error));
+        } else {
+            Q_EMIT notice(*count == 1 ? tr("1 event saved to %1").arg(dir) : tr("%1 events saved to %2").arg(*count).arg(dir));
+        }
+    });
+}
+
+void CalendarEngine::importFrom(const QUrl &file, const QString &calendarUid)
+{
+    const QString path = file.toLocalFile();
+    const QString target = calendarUid.isEmpty() ? defaultCalendar() : calendarUid;
+    auto count = std::make_shared<int>(0);
+    auto error = std::make_shared<QString>();
+    run([path, target, count, error]() {
+        *count = readInto(path, {}, target, error.get());
+    }, [this, count, error]() {
+        if (*count < 0) {
+            Q_EMIT notice(tr("The events weren't imported. %1").arg(*error));
+            return;
+        }
+        scheduleReload();
+        Q_EMIT notice(*count == 1 ? tr("1 event imported") : tr("%1 events imported").arg(*count));
     });
 }

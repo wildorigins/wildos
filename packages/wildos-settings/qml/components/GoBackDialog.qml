@@ -53,7 +53,7 @@ RecoveryDialog {
         }
         const shown = apps.slice(0, 3);
         const more = apps.length - shown.length;
-        const names = more > 0 ? qsTr("%1 and %2").arg(shown.join(", ")).arg(Format.plural(more, qsTr("more app"), qsTr("more apps")))
+        const names = more > 0 ? qsTr("%1 and %2").arg(shown.join(", ")).arg(Format.count(more, qsTr("1 more app"), qsTr("%n more apps", "", more)))
             : shown.length === 1 ? shown[0] : qsTr("%1 and %2").arg(shown.slice(0, -1).join(", ")).arg(shown[shown.length - 1]);
         return apps.length === 1 ? qsTr("%1, to its earlier version").arg(names) : qsTr("%1, to their earlier versions").arg(names);
     }

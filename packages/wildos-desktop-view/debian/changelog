@@ -1,3 +1,35 @@
+wildos-desktop-view (0.1.16) trixie; urgency=medium
+
+  * With widgets on the desktop switched on, the weather widget and the rest
+    of the widgets KDE makes can be added.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 11:00:00 +0000
+
+wildos-desktop-view (0.1.15) trixie; urgency=medium
+
+  * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,
+    Filipino, Finnish, Latvian, Lithuanian, Malay, Marathi, Norwegian,
+    Serbian, Slovak, Slovenian, Tamil, Telugu and Thai.
+
+ -- Wild OS Developers <dev@wildos.io>  Fri, 20 Nov 2026 02:00:00 +0000
+
+wildos-desktop-view (0.1.14) trixie; urgency=medium
+
+  * Now also in Arabic, Chinese (Simplified and Traditional), Czech, Greek,
+    Hindi, Hungarian, Indonesian, Japanese, Korean, Brazilian Portuguese,
+    Romanian, Russian, Swedish, Turkish, Ukrainian and Vietnamese.
+  * Item counts in Properties read correctly in every language.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 20:00:00 +0000
+
+wildos-desktop-view (0.1.13) trixie; urgency=medium
+
+  * Now also in Dutch, German, Spanish, Italian, Portuguese and Polish:
+    the display language chosen in Settings > Time and language applies
+    to this app.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 19 Nov 2026 14:00:00 +0000
+
 wildos-desktop-view (0.1.12) trixie; urgency=medium
 
   * New > Slides presentation on the desktop makes a .pptx that opens in

@@ -93,7 +93,7 @@ void Config::read()
     m_launchColumns = std::clamp(g.readEntry("LaunchColumns", 120), 20, 400);
     m_launchRows = std::clamp(g.readEntry("LaunchRows", 30), 5, 200);
     m_launchMaximised = g.readEntry("LaunchMaximised", false);
-    // Selecting copies unless switched off: the quickest
+    // Selecting copies unless switched off (Dan, 14 Nov 2026): the quickest
     // way to get a long link or an error out of the terminal.
     m_copyOnSelect = g.readEntry("CopyOnSelect", true);
     m_pasteOnRightClick = g.readEntry("PasteOnRightClick", false);

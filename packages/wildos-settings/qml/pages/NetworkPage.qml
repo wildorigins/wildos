@@ -53,6 +53,8 @@ PageScroll {
             : qsTr("Turn on Wi-Fi to see networks nearby.")
     }
 
+    WifiDriverCard {}
+
     UI.Card {
         Layout.fillWidth: true
 

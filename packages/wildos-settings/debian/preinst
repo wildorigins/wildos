@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+maliit_triplet() {
+    case $(dpkg --print-architecture) in
+    arm64) echo aarch64-linux-gnu ;;
+    *) echo x86_64-linux-gnu ;;
+    esac
+}
+
 # KDE's systemsettings and kcmshell6 move aside so the redirect to Wild OS
 # Settings can take their names (see kde-settings-redirect).
 if [ "$1" = "install" ] || [ "$1" = "upgrade" ]; then
@@ -15,6 +22,9 @@ if [ "$1" = "install" ] || [ "$1" = "upgrade" ]; then
         dpkg-divert --package wildos-settings --add --rename \
             --divert "/usr/share/wildos/steam-devices/$rule" "/usr/lib/udev/rules.d/$rule" >/dev/null
     done
+    # The on-screen keyboard's language key (data/maliit/LanguageKey.qml).
+    key=/usr/lib/$(maliit_triplet)/maliit/keyboard2/qml/keys/LanguageKey.qml
+    dpkg-divert --package wildos-settings --add --rename --divert "$key.maliit" "$key" >/dev/null
 fi
 
 #DEBHELPER#

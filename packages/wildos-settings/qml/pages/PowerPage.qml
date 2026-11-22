@@ -64,9 +64,9 @@ PageScroll {
 
     function timeouts(current) {
         const minutes = [1, 2, 3, 5, 10, 15, 20, 25, 30, 45, 60, 120, 180, 240, 300];
-        const list = minutes.map(m => ({ value: m * 60, text: m < 60 ? Format.plural(m, qsTr("minute"), qsTr("minutes")) : Format.plural(m / 60, qsTr("hour"), qsTr("hours")) }));
+        const list = minutes.map(m => ({ value: m * 60, text: m < 60 ? Format.count(m, qsTr("1 minute"), qsTr("%n minutes", "", m)) : Format.count(m / 60, qsTr("1 hour"), qsTr("%n hours", "", m / 60)) }));
         if (current > 0 && !list.some(o => o.value === current)) {
-            list.push({ value: current, text: Format.plural(Math.round(current / 60), qsTr("minute"), qsTr("minutes")) });
+            list.push({ value: current, text: Format.count(Math.round(current / 60), qsTr("1 minute"), qsTr("%n minutes", "", Math.round(current / 60))) });
             list.sort((a, b) => a.value - b.value);
         }
         return [{ value: 0, text: qsTr("Never") }].concat(list);
@@ -82,7 +82,7 @@ PageScroll {
         const minutes = Math.round(msec / 60000);
         const h = Math.floor(minutes / 60);
         const m = minutes % 60;
-        return h > 0 ? Format.plural(h, qsTr("hour"), qsTr("hours")) + (m > 0 ? " " + Format.plural(m, qsTr("minute"), qsTr("minutes")) : "") : Format.plural(m, qsTr("minute"), qsTr("minutes"));
+        return h > 0 ? Format.count(h, qsTr("1 hour"), qsTr("%n hours", "", h)) + (m > 0 ? " " + Format.count(m, qsTr("1 minute"), qsTr("%n minutes", "", m)) : "") : Format.count(m, qsTr("1 minute"), qsTr("%n minutes", "", m));
     }
 
     StatusCard {

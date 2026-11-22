@@ -145,7 +145,7 @@ ColumnLayout {
         // KIO names the job with one word ("Copying", "Moving"); the count
         // makes it the design's "Copying 214 items".
         if (totalItems > 1 && verb.indexOf(" ") < 0) {
-            return qsTr("%1 %2 items").arg(verb).arg(totalItems.toLocaleString(Qt.locale(), "f", 0));
+            return qsTr("%1 %Ln items", "", totalItems).arg(verb);
         }
         return verb;
     }

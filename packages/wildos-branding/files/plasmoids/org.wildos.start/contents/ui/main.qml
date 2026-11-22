@@ -295,7 +295,8 @@ PlasmoidItem {
     }
 
     // The Windows set of app commands (MenusShell.dc "Start, app"): pin to
-    // the taskbar, pin or unpin from Start, move a pinned app to the front,
+    // the taskbar, add to the desktop (Windows does that by dragging the app
+    // out of Start, which people look for in the menu), pin or unpin from Start, move a pinned app to the front,
     // then its permissions and uninstall through the Store, last and red.
     // pinnedIndex is the app's place among the pins when the menu was
     // opened on a pinned tile.
@@ -325,6 +326,9 @@ PlasmoidItem {
             } else {
                 commands.push({ text: qsTr("Pin to taskbar"), icon: "menu-pin", run: () => taskbar.configuration.launchers = launchers.concat(url) });
             }
+        }
+        if (favoriteId.endsWith(".desktop")) {
+            commands.push({ text: qsTr("Add to desktop"), icon: "desktop", run: () => UI.System.addToDesktop(favoriteId) });
         }
         if (favoriteId.length > 0) {
             if (favourites.isFavorite(favoriteId)) {

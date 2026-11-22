@@ -1,0 +1,6 @@
+# system-config-printer's 70-printers.rules sets a printer up when it is
+# plugged in. With USB protection on, a printer is held back until it is
+# allowed from the shield on the taskbar, and by then that has passed: the
+# printer has no interfaces until it is allowed. Its printer interface
+# appearing starts the same setup.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ENV{INTERFACE}=="7/1/*", ENV{INTERFACE}!="7/1/4", IMPORT{parent}="BUSNUM", IMPORT{parent}="DEVNUM", ENV{BUSNUM}=="?*", ENV{DEVNUM}=="?*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="configure-printer@usb-$env{BUSNUM}-$env{DEVNUM}.service"

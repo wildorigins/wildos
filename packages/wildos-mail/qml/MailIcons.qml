@@ -12,6 +12,10 @@ QtObject {
 
     readonly property var paths: ({
         "inbox": "M3 13l3-8h12l3 8v6H3zM3 13h5l1 3h6l1-3h5",
+        // The handle that drags an account or rule into order.
+        "grip": "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01",
+        "arrow-up": "M12 19V5M5 12l7-7 7 7",
+        "edit": "M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4",
         "sent": "M21 3L10 14M21 3l-7 18-4-7-7-4z",
         "drafts": "M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h4",
         "archive": "M3 4h18v4H3zM5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4",

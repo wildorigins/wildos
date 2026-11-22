@@ -211,7 +211,8 @@ Item {
                     }
                     UI.Label {
                         Layout.fillWidth: true
-                        text: qsTr("Show the contacts, calendar and tasks for %1 here too. Google asks once to allow it.").arg(modelData.email)
+                        text: modelData.auth === "microsoft" ? qsTr("Show the contacts, calendar and tasks for %1 here too.").arg(modelData.email)
+                                                             : qsTr("Show the contacts, calendar and tasks for %1 here too. Google asks once to allow it.").arg(modelData.email)
                         size: 13
                         elide: Text.ElideRight
                     }
