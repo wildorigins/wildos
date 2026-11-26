@@ -419,14 +419,18 @@ ColumnLayout {
                         width: parent.width
                         height: card.dayRow
                         radius: height / 2
-                        color: cell.modelData.isToday ? (cell.pressed ? UI.Style.accentPressed : cell.containsMouse ? UI.Style.accentHover : UI.Style.accent)
-                            : cell.pressed ? UI.Style.surfacePressed
-                            : cell.containsMouse ? UI.Style.surfaceHover : "transparent"
-                        border.width: cell.picked ? 2 : 0
-                        border.color: UI.Style.accent
+                        // Fades in on hover and clears at once, so moving along a list
+                        // never lights two items. It comes before the colour so it sees
+                        // the change in hover first.
                         Behavior on color {
+                            enabled: cell.containsMouse
                             ColorAnimation { duration: UI.Style.hoverDuration }
                         }
+                        color: cell.modelData.isToday ? (cell.pressed ? UI.Style.accentPressed : cell.containsMouse ? UI.Style.accentHover : UI.Style.accent)
+                            : cell.pressed ? UI.Style.surfacePressed
+                            : cell.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
+                        border.width: cell.picked ? 2 : 0
+                        border.color: UI.Style.accent
                     }
 
                     UI.Label {
@@ -490,14 +494,18 @@ ColumnLayout {
                         width: parent.width
                         height: card.dayRow
                         radius: height / 2
-                        color: choice.modelData.now ? (choice.pressed ? UI.Style.accentPressed : choice.containsMouse ? UI.Style.accentHover : UI.Style.accent)
-                            : choice.pressed ? UI.Style.surfacePressed
-                            : choice.containsMouse ? UI.Style.surfaceHover : "transparent"
-                        border.width: choice.modelData.shown && !choice.modelData.now ? 2 : 0
-                        border.color: UI.Style.accent
+                        // Fades in on hover and clears at once, so moving along a list
+                        // never lights two items. It comes before the colour so it sees
+                        // the change in hover first.
                         Behavior on color {
+                            enabled: choice.containsMouse
                             ColorAnimation { duration: UI.Style.hoverDuration }
                         }
+                        color: choice.modelData.now ? (choice.pressed ? UI.Style.accentPressed : choice.containsMouse ? UI.Style.accentHover : UI.Style.accent)
+                            : choice.pressed ? UI.Style.surfacePressed
+                            : choice.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
+                        border.width: choice.modelData.shown && !choice.modelData.now ? 2 : 0
+                        border.color: UI.Style.accent
 
                         UI.FocusRing {
                             visible: choice.keyHere

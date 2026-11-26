@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Jätka</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Otsi keeli</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Otsi linna või riigi järgi</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

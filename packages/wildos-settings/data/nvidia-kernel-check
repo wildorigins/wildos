@@ -1,0 +1,68 @@
+#!/bin/sh
+# Keeps NVIDIA's driver (installed from Settings > Display > Graphics
+# driver) built for every Linux kernel. dkms builds it when a kernel and
+# its headers arrive, but on one laptop the 7.3 update came and the module
+# never did: the next start-up had no driver for the card at all, as the
+# open one is switched off while NVIDIA's is installed.
+#
+#   nvidia-kernel-check [VERSION]      after a kernel installs
+#   nvidia-kernel-check --boot         at start-up, for the running kernel
+#
+# Run by the kernel's postinst hook (/etc/kernel/postinst.d, VERSION is the
+# new kernel) and at start-up before the sign-in screen for the running one
+# (wildos-nvidia-kernel-check.service). Does nothing without NVIDIA's driver
+# or when the module is there; otherwise builds it, fetching the kernel's
+# headers first if they are missing. What happens goes to the graphics
+# driver log.
+
+set -u
+boot=
+if [ "${1:-}" = --boot ]; then
+    boot=1
+    shift
+fi
+kver=${1:-$(uname -r)}
+LOG=/var/log/wildos/graphics-driver.log
+
+[ -e /var/lib/dpkg/info/nvidia-kernel-dkms.list ] || exit 0
+
+have() {
+    ls "/lib/modules/$kver/updates/dkms/"nvidia-current.ko* >/dev/null 2>&1
+}
+log() {
+    mkdir -p "$(dirname "$LOG")"
+    echo "$(date '+%F %T') kernel-check: $*" >> "$LOG"
+}
+
+have && exit 0
+log "no NVIDIA module for $kver, building it"
+
+# Inside a package's install dpkg holds its lock, so apt cannot run; the
+# start-up check fetches them instead.
+if [ ! -e "/lib/modules/$kver/build" ] && [ -z "${DPKG_MAINTSCRIPT_PACKAGE:-}" ]; then
+    log "headers for $kver are missing, installing them"
+    DEBIAN_FRONTEND=noninteractive apt-get -y -q install "linux-headers-$kver" >> "$LOG" 2>&1 ||
+        log "headers for $kver did not install"
+fi
+dkms autoinstall -k "$kver" >> "$LOG" 2>&1 || true
+# autoinstall skips a module dkms no longer has on its books, or believes is
+# installed when the file is gone, so the source in /usr/src is built again,
+# forced, when that came to nothing.
+if ! have; then
+    for src in /usr/src/nvidia-current-*; do
+        [ -e "$src/dkms.conf" ] || continue
+        dkms install --force -m nvidia-current -v "${src#/usr/src/nvidia-current-}" -k "$kver" >> "$LOG" 2>&1 || true
+    done
+fi
+
+if have; then
+    log "built for $kver"
+    # The display part loads before the sign-in screen as usual
+    # (wildos-nvidia-drm.service), which ran before this and found nothing.
+    if [ -n "$boot" ]; then
+        modprobe nvidia-drm >> "$LOG" 2>&1 || log "nvidia-drm did not load"
+    fi
+    exit 0
+fi
+log "could not build NVIDIA's driver for $kver"
+exit 1

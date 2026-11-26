@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>Tamam</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Klavyeleriniz arasında Vietnamca (Telex) gibi bir yazma yöntemi varken kullanılamaz</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamca (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamca (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Parolanız bekleniyor</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Güncelleştirmeler denetleniyor</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>İndiriliyor</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Yükleniyor</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Parola girilmediği için hiçbir şey indirilmedi.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Yazma yöntemi indirilemedi. İnternet bağlantısını denetleyip yeniden deneyin.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>İptal</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Vietnamca yazmak için indirme gerekiyor</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Bu bir dakika sürer.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS yazma yöntemini bir kez indirir, ardından Windows tuşu + Boşluk ile ona geçersiniz.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>İndir</translation>
         </message>
     </context>
     <context>

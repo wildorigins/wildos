@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Teruskan</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Cari bahasa</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Cari mengikut bandar atau negara</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

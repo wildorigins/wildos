@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Продовжити</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Пошук мов</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Пошук за містом або країною</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

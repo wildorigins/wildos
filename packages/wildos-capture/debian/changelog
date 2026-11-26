@@ -1,3 +1,10 @@
+wildos-capture (0.1.11) trixie; urgency=medium
+
+  * In light mode a hover highlight fades out cleanly instead of leaving
+    a grey shadow behind as it goes.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:02:08 +0000
+
 wildos-capture (0.1.10) trixie; urgency=medium
 
   * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,

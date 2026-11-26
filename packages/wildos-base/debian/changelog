@@ -1,3 +1,25 @@
+wildos-base (0.1.21) trixie; urgency=medium
+
+  * ThinkPad T460s laptops wake from sleep: the IOMMU, which this model's
+    firmware can't bring back after deep sleep, is off on them.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 09:56:24 +0000
+
+wildos-base (0.1.20) trixie; urgency=medium
+
+  * Brave's repository is set up with Wild OS's own copy of its key, so
+    Brave gets its updates and can be installed again after removing it.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 21:40:00 +0000
+
+wildos-base (0.1.19) trixie; urgency=medium
+
+  * 6th generation Intel processors (Skylake) keep AVX at Standard
+    protection. It was switched off on them, which crashed some apps and
+    slowed video.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 13:54:37 +0000
+
 wildos-base (0.1.18) trixie; urgency=medium
 
   * Broadcom's own Wi-Fi driver can be installed from Debian's development

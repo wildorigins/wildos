@@ -4,47 +4,98 @@ import QtQuick
 import "code/helpers.js" as Helpers
 import WildOS.UI as UI
 
-// One pinned app: a 42px icon over a 12px label in a 92px cell. In a grid
-// that can be rearranged it is dragged to another tile's place; a line on
-// that tile shows which side it will land.
+// One pinned app, or a folder of them: a 42px icon over a 12px label in a
+// 92px cell. A folder's icon is its first four apps, small, on a tile, as
+// on Windows 11. In a grid that can be rearranged it is dragged to another
+// tile's place, where a line shows which side it will land, or onto the
+// middle of another tile, which lights up, to put the two in a folder.
 Item {
     id: tile
 
     required property int index
-    required property var model
+    // An entry from HomeView.tiles: { kind: "app", row } or
+    // { kind: "folder", folder, name, rows }.
+    required property var modelData
     required property NavGrid grid
+    required property var home
 
-    readonly property string label: Helpers.appName(model.favoriteId, model.display)
+    readonly property bool isFolder: modelData.kind === "folder"
+    // The app's row in the pinned apps model, for its icon, name and menu.
+    readonly property var app: isFolder ? null : home.appData(modelData.row)
+    readonly property var icon: isFolder ? "folder" : (app ? app.decoration : "")
+    readonly property string label: isFolder ? modelData.name
+        : Helpers.appName(String(app ? app.favoriteId : ""), String(app ? app.display : ""))
 
     width: grid.cellWidth - grid.gap
     height: grid.rowHeight
 
     readonly property bool dragged: grid.dragFrom === index
-    readonly property bool dropHere: grid.dragFrom >= 0 && grid.dragTo === index && !dragged
+    readonly property bool dropHere: grid.dragFrom >= 0 && grid.dragTo === index && !dragged && grid.dragOnto < 0
+    readonly property bool dropOnto: grid.dragOnto === index
 
     opacity: dragged ? 0.4 : 1
 
     Accessible.role: Accessible.Button
-    Accessible.name: label
+    Accessible.name: isFolder ? qsTr("Folder %1").arg(label) : label
 
     Rectangle {
         anchors.fill: parent
         radius: Style.radiusItem
-        color: mouse.pressed ? UI.Style.surfacePressed : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: mouse.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: tile.dropOnto ? Style.accentTint
+            : mouse.pressed ? UI.Style.surfacePressed : mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
+        border.width: tile.dropOnto ? 1 : 0
+        border.color: UI.Style.accentBorderStrong
     }
 
     Column {
         anchors.centerIn: parent
         spacing: 8
 
-        AppIcon {
+        Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 42
             height: 42
-            source: tile.model.decoration
+
+            AppIcon {
+                anchors.fill: parent
+                visible: !tile.isFolder
+                source: tile.icon
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                visible: tile.isFolder
+                radius: 8
+                color: UI.Style.surfaceHover
+                border.width: 1
+                border.color: UI.Style.contrastDivider
+
+                Grid {
+                    anchors.centerIn: parent
+                    columns: 2
+                    spacing: 3
+
+                    Repeater {
+                        model: tile.isFolder ? tile.modelData.rows.slice(0, 4) : []
+                        delegate: AppIcon {
+                            required property int modelData
+                            width: 16
+                            height: 16
+                            source: {
+                                const data = tile.home.appData(modelData);
+                                return data ? data.decoration : "";
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         UI.Label {
@@ -81,7 +132,7 @@ Item {
             if (tile.grid.dragFrom < 0
                     && Math.abs(event.x - pressedAt.x) + Math.abs(event.y - pressedAt.y) > Qt.styleHints.startDragDistance) {
                 wasDragged = true;
-                tile.grid.dragStart(tile.index, tile.model.decoration);
+                tile.grid.dragStart(tile.index, tile.icon);
             }
             if (tile.grid.dragFrom >= 0) {
                 const at = mapToItem(tile.grid.contentItem, event.x, event.y);

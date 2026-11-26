@@ -21,7 +21,7 @@ def host_facts():
     """What decides whether this PC can run it in Windows mode: memory,
     the edition Windows mode has, and whether it is set up. Asked of the
     Windows mode agent when it is installed; nothing is started for it."""
-    facts = {"memory": 0, "edition": None, "installed": bool(shutil.which("wildos-winmode")), "state": ""}
+    facts = {"memory": 0, "edition": None, "installed": bool(shutil.which("wildos-winmode")), "state": "unknown"}
     try:
         with open("/proc/meminfo") as f:
             for line in f:

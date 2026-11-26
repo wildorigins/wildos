@@ -1,3 +1,44 @@
+wildos-rdp (0.1.21) trixie; urgency=medium
+
+  * A Windows app that goes full screen (a remote control viewer, a video,
+    a game) now fills its screen as a full screen window, instead of
+    showing in a corner with white round it and staying above every other
+    window until it was made smaller again (issue 92).
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 20:00:00 +0000
+
+wildos-rdp (0.1.20) trixie; urgency=medium
+
+  * Windows apps keep clear of the taskbar from the moment they open: an
+    app that fills the screen by itself, or sizes itself to fit it, is no
+    longer cut off along the bottom, and the space follows the taskbar
+    when it is moved or resized or a screen is plugged in (issue 92).
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 20:00:00 +0000
+
+wildos-rdp (0.1.19) trixie; urgency=medium
+
+  * A Windows app dragged to the top of the screen to maximise it now
+    fills the window, as it does with its own maximise button, and can be
+    minimised again afterwards (issue 92).
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 19:00:00 +0000
+
+wildos-rdp (0.1.18) trixie; urgency=medium
+
+  * A see-through window that Windows lets clicks pass through does the
+    same in Windows mode, so an app's overlay no longer stops every other
+    window taking clicks (issue 92).
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 15:50:00 +0000
+
+wildos-rdp (0.1.17) trixie; urgency=medium
+
+  * Windows apps redraw a ticked box or changed button straight away, not
+    only after switching to another app and back (issue 92).
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 14:45:00 +0000
+
 wildos-rdp (0.1.16) trixie; urgency=medium
 
   * Opens the whole Windows desktop too, so FreeRDP is no longer needed.

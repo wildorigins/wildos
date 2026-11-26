@@ -1,3 +1,124 @@
+wildos-settings (0.1.101) trixie; urgency=medium
+
+  * The window menu's Configure special window and application settings
+    open the window rules page instead of an empty Settings window.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 18:12:28 +0000
+
+wildos-settings (0.1.100) trixie; urgency=medium
+
+  * In light mode a hover highlight fades in cleanly, without a grey
+    flicker as it starts.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:24:59 +0000
+
+wildos-settings (0.1.99) trixie; urgency=medium
+
+  * The night light strength shows its percentage as you drag the slider.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 09:58:40 +0000
+
+wildos-settings (0.1.98) trixie; urgency=medium
+
+  * Drivers come from the internet by themselves, as on Windows: firmware
+    a device asks for and doesn't have (laptop speakers on Cirrus amps,
+    USB Wi-Fi adapters, Surface Wi-Fi and more) is installed a minute
+    after start-up or when the device is plugged in, then you're asked to
+    restart.
+  * An NVIDIA card NVIDIA's driver supports, still on the basic driver,
+    and Broadcom Wi-Fi with no driver now get one notification that opens
+    the place in Settings to install it.
+
+ -- Wild OS Developers <dev@wildos.io>  Wed, 25 Nov 2026 08:35:00 +0000
+
+wildos-settings (0.1.97) trixie; urgency=medium
+
+  * Vietnamese Telex and VNI type with Lotus, which types straight into
+    the app with no underlined word. PCs with Bamboo move to it on update.
+  * Engines and settings you choose in Fcitx yourself are kept: Wild OS no
+    longer switches Fcitx back to its own engine at start-up or rewrites
+    your Fcitx profile.
+  * Electron apps take Vietnamese typing without setting each one up:
+    Fcitx's GTK module comes with Lotus.
+  * Removing the last typing method gives the on-screen keyboard back
+    again; since 935 it stayed with Fcitx when there was none before.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 09:45:50 +0000
+
+wildos-settings (0.1.96) trixie; urgency=medium
+
+  * Wild OS no longer connects your own Fcitx set-up to the desktop by
+    itself. 0.1.95 did, once, and that changed how some set-ups (Ngo Sen
+    started on its own) reach web browsers.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 16:34:55 +0000
+
+wildos-settings (0.1.95) trixie; urgency=medium
+
+  * Vietnamese typing you set up yourself (Ngo Sen, Unikey) works again.
+    Since build 922 Wild OS switched Fcitx off at sign-in, and took its
+    switching keys and tray icon, whenever none of its own typing methods
+    was in use. It now only undoes what it set up, puts Fcitx back once for
+    anyone it was taken from, and keeps its Fcitx settings to people using
+    its own typing methods.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 16:19:45 +0000
+
+wildos-settings (0.1.94) trixie; urgency=medium
+
+  * The firewall knows LocalSend by name, in "What the firewall blocked"
+    and when you let an app in.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:59:31 +0000
+
+wildos-settings (0.1.93) trixie; urgency=medium
+
+  * Moving the pointer along a list or menu lights one row at a time; the
+    row it leaves clears at once instead of fading out beside the next.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:52:08 +0000
+
+wildos-settings (0.1.92) trixie; urgency=medium
+
+  * A laptop's touchscreen and other built-in USB parts work on the lock
+    screen after waking from sleep, with "Ignore new USB devices while
+    locked" on.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:14:05 +0000
+
+wildos-settings (0.1.91) trixie; urgency=medium
+
+  * Vietnamese typing (Telex and VNI) no longer underlines each word as you
+    type it.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 14:28:23 +0000
+
+wildos-settings (0.1.90) trixie; urgency=medium
+
+  * Vietnamese (Telex) and Vietnamese (VNI) keyboards in Settings >
+    Devices > Keyboard. The typing method downloads the first time one is
+    added, and Windows key + Space switches to it like any other layout.
+  * A second keyboard layout no longer disappears at every sign-in when
+    Fcitx 5 is installed.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 08:47:37 +0000
+
+wildos-settings (0.1.89) trixie; urgency=medium
+
+  * Installing NVIDIA's or Broadcom's driver carries on to the end if
+    Settings is closed while it runs, instead of stopping halfway and
+    leaving the driver half installed.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 14:55:00 +0000
+
+wildos-settings (0.1.88) trixie; urgency=medium
+
+  * NVIDIA's driver is rebuilt for each new Linux kernel when an update left
+    it out: after the kernel installs, and at start-up before the sign-in
+    screen, so the card is never left with no driver.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 14:30:00 +0000
+
 wildos-settings (0.1.87) trixie; urgency=medium
 
   * Updates no longer lists an update that could not install under an older

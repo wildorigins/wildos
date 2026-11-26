@@ -1,5 +1,7 @@
 #include "accesscore.h"
 
+#include "typingmethods.h"
+
 #include <KConfig>
 #include <KConfigGroup>
 #include <KDesktopFile>
@@ -524,7 +526,8 @@ QString keyboardDesktopFile()
 bool onScreenKeyboard()
 {
     const KConfigGroup wayland = fresh(QStringLiteral("kwinrc"))->group(QStringLiteral("Wayland"));
-    if (wayland.readPathEntry("InputMethod", QString()).isEmpty()) {
+    const QString inputMethod = wayland.readPathEntry("InputMethod", QString());
+    if (inputMethod.isEmpty() || inputMethod == TypingMethods::fcitxDesktopFile()) {
         return false;
     }
     const QVariant live = getProperty(kwinService, QStringLiteral("/VirtualKeyboard"), QStringLiteral("org.kde.kwin.VirtualKeyboard"), QStringLiteral("enabled"));
@@ -534,7 +537,11 @@ bool onScreenKeyboard()
 void setOnScreenKeyboard(bool on, QObject *context, const std::function<void()> &done)
 {
     const QString desktopFile = keyboardDesktopFile();
-    if (on && desktopFile.isEmpty()) {
+    // KWin runs one input method: while a typing method has it (Vietnamese
+    // Telex, say), the on-screen keyboard waits until that is removed.
+    const bool typing = fresh(QStringLiteral("kwinrc"))->group(QStringLiteral("Wayland")).readPathEntry("InputMethod", QString())
+        == TypingMethods::fcitxDesktopFile();
+    if ((on && desktopFile.isEmpty()) || typing) {
         if (done) {
             done();
         }

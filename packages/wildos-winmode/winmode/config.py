@@ -40,6 +40,9 @@ DEFAULTS = {
     "guest_exe": DATA + "/guest/wild-guest.exe",
 }
 
+# The folders Settings offers to share, in the order it lists them.
+FOLDER_CHOICES = ("Documents", "Downloads", "Pictures", "Desktop", "Music", "Videos")
+
 OPTION_KEYS = {"when_idle": ("keep", "save", "automatic")}
 
 

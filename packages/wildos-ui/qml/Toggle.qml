@@ -45,12 +45,16 @@ T.Switch {
         width: 42
         height: 24
         radius: 12
-        color: control.checked ? (control.lit ? Style.accentHover : Style.accent) : control.lit ? Style.surfaceHover : "transparent"
-        border.width: control.checked ? 0 : 1.5
-        border.color: Style.toggleOffBorder
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: control.lit
             ColorAnimation { duration: Style.hoverDuration }
         }
+        color: control.checked ? (control.lit ? Style.accentHover : Style.accent) : control.lit ? Style.surfaceHover : Style.surfaceHoverClear
+        border.width: control.checked ? 0 : 1.5
+        border.color: Style.toggleOffBorder
 
         Rectangle {
             readonly property real grow: control.down ? 3 : 0

@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>కొనసాగించు</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>భాషలను వెతకండి</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>నగరం లేదా దేశం ద్వారా వెతకండి</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

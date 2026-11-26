@@ -699,6 +699,75 @@ class Desktop(unittest.TestCase):
         self.assertIn("'DevicePasswordLessBuildVersion' 0", tune)
 
 
+class SharedFolders(unittest.TestCase):
+    """Settings' folders Windows apps can see (issue 93): the choice was
+    refused, so the dialog came back empty and nothing changed."""
+
+    def agent(self, home):
+        from winmode import agent, config
+        a = agent.Agent.__new__(agent.Agent)
+        a.host, a.options = {"folders": ["Documents", "Downloads", "Pictures", "Desktop"]}, {}
+        a.changed = lambda: None
+        data = os.path.join(home, "data")
+        a.drive_folder = lambda: paths.drive_folder(a.shared_folders(), data, home, os.path.join(home, ".config"))
+        self.cfg = os.path.join(home, "winmode.json")
+        self._old = config.user_config_file
+        config.user_config_file = lambda: self.cfg
+        self.addCleanup(setattr, config, "user_config_file", self._old)
+        return a, os.path.join(data, "drive")
+
+    def test_settings_shows_what_setup_shared(self):
+        with tempfile.TemporaryDirectory() as home:
+            a, _ = self.agent(home)
+            self.assertEqual(a.shared_folders(), ["Documents", "Downloads", "Pictures", "Desktop"])
+
+    def test_a_new_choice_is_kept_and_reaches_the_drive(self):
+        with tempfile.TemporaryDirectory() as home:
+            for name in ("Documents", "Downloads", "Pictures", "Desktop", "Music", "Videos"):
+                os.makedirs(os.path.join(home, name))
+            a, drive = self.agent(home)
+            self.assertEqual(a.m_set_option(None, "folders", "Videos,Documents,Music", None), "")
+            self.assertEqual(a.shared_folders(), ["Documents", "Music", "Videos"])
+            self.assertEqual(sorted(os.listdir(drive)), ["Documents", "Music", "Videos"])
+            self.assertEqual(json.loads(read(self.cfg))["folders"], ["Documents", "Music", "Videos"])
+
+    def test_sharing_nothing_is_a_choice(self):
+        with tempfile.TemporaryDirectory() as home:
+            a, drive = self.agent(home)
+            self.assertEqual(a.m_set_option(None, "folders", "", None), "")
+            self.assertEqual(a.shared_folders(), [])
+            self.assertEqual(os.listdir(drive), [])
+
+    def test_only_the_offered_folders(self):
+        with tempfile.TemporaryDirectory() as home:
+            a, _ = self.agent(home)
+            self.assertNotEqual(a.m_set_option(None, "folders", "Documents,../..", None), "")
+            self.assertNotIn("folders", a.options)
+
+
+class WindowsAppProblems(unittest.TestCase):
+    """Windows' records of hung and crashed apps reach the log (issue 93)."""
+
+    def test_hangs_and_crashes_are_described(self):
+        from winmode import system
+        latest, lines = system.app_problem_lines(
+            "1795458000000|1002|EXCEL.EXE|\r\n1795458060000|1000|POWERPNT.EXE|mso20win32client.dll\r\njunk\r\n")
+        self.assertEqual(latest, 1795458060000)
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(lines[0].startswith("Windows: EXCEL.EXE stopped responding at "))
+        self.assertTrue(lines[1].endswith(" in mso20win32client.dll"))
+
+    def test_nothing_new(self):
+        from winmode import system
+        self.assertEqual(system.app_problem_lines(""), (0, []))
+
+    def test_the_script_takes_only_a_number(self):
+        from winmode import system
+        self.assertIn("FromUnixTimeMilliseconds(1795458000000)", system.app_problems_script("1795458000000"))
+        with self.assertRaises(ValueError):
+            system.app_problems_script("1; Remove-Item C:\\")
+
+
 class PcShutdown(unittest.TestCase):
     def svc(self, windows=(), restart=False):
         from types import SimpleNamespace
@@ -797,7 +866,7 @@ class Upkeep(unittest.TestCase):
                               run_upkeep=lambda name, script, version: ran.append((name, version)))
         with tempfile.TemporaryDirectory() as d:
             os.makedirs(os.path.join(d, "guest"))
-            for name, version in (("opengl", "3"), ("tune", "2")):
+            for name, version in (("prompts", "1"), ("opengl", "3"), ("tune", "2")):
                 with open(os.path.join(d, "guest", name + ".ps1"), "w", encoding="utf-8") as f:
                     f.write(f"param()\n$version = '{version}'\n")
             with mock.patch.object(system.config, "DATA", d):
@@ -805,11 +874,15 @@ class Upkeep(unittest.TestCase):
         return ran
 
     def test_a_windows_set_up_before_tune_is_left_alone(self):
-        self.assertEqual(self.run_upkeep_with({"opengl": "3"}), [])
+        self.assertEqual(self.run_upkeep_with({"prompts": "1", "opengl": "3"}), [])
 
     def test_a_windows_set_up_with_tune_gets_newer_versions(self):
-        self.assertEqual(self.run_upkeep_with({"opengl": "3", "tune": "1"}), [("tune", "2")])
-        self.assertEqual(self.run_upkeep_with({"opengl": "3", "tune": "2"}), [])
+        self.assertEqual(self.run_upkeep_with({"prompts": "1", "opengl": "3", "tune": "1"}), [("tune", "2")])
+        self.assertEqual(self.run_upkeep_with({"prompts": "1", "opengl": "3", "tune": "2"}), [])
+
+    def test_every_windows_gets_prompts_beside_the_app(self):
+        self.assertEqual(self.run_upkeep_with({"opengl": "3"}), [("prompts", "1")])
+        self.assertEqual(self.run_upkeep_with({}), [("prompts", "1")])
 
 
 class Theme(unittest.TestCase):
@@ -905,6 +978,27 @@ class Router(unittest.TestCase):
         self.assertEqual(compat.decide(info, None, dict(host, edition="home"))["action"], "home")
         self.assertEqual(compat.decide(info, None, dict(host, memory=4 * 1024 ** 3))["action"], "cannot")
         self.assertEqual(compat.decide(info, None, dict(host, state="none"))["action"], "setup")
+        self.assertEqual(compat.decide(info, None, dict(host, state="failed"))["action"], "setup")
+        # Windows mode too busy to answer is not Windows mode not set up.
+        self.assertEqual(compat.decide(info, None, dict(host, state="unknown"))["action"], "windows-mode")
+        self.assertEqual(compat.decide(info, None, dict(host, state=""))["action"], "windows-mode")
+        self.assertEqual(compat.decide(info, None, dict(host, installed=False, state="unknown"))["action"], "setup")
+
+    def test_empty_files_are_identified(self):
+        path = os.path.join(self.dir, "empty.exe")
+        open(path, "wb").close()
+        self.assertEqual(compat.identify(path, check_signature=False)["kind"], "not-windows")
+
+    def test_native_programs_still_say_whether_windows_mode_can_take_them(self):
+        info = compat.identify(self.program("WhatsApp Installer.exe", "WhatsApp", "WhatsApp LLC"), check_signature=False)
+        e = compat.lookup(info, self.entries)
+        self.assertEqual(e["engine"], "native")
+        host = {"memory": 16 * 1024 ** 3, "installed": True, "state": "ready"}
+        d = compat.decide(info, e, host)
+        self.assertEqual(d["action"], "native")
+        self.assertEqual(d["windows"], "windows-mode")
+        self.assertEqual(compat.decide(info, e, dict(host, state="none"))["windows"], "setup")
+        self.assertEqual(compat.decide(info, e, dict(host, edition="home"))["windows"], "home")
 
     def test_not_a_program(self):
         p = os.path.join(self.dir, "notes.exe")

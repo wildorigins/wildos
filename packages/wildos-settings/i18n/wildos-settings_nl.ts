@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Niet beschikbaar zolang een invoermethode zoals Vietnamees (Telex) bij je toetsenborden staat</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamees (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamees (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Wachten op je wachtwoord</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Controleren op updates</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Downloaden</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Installeren</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Er is niets gedownload omdat het wachtwoord niet is opgegeven.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>De invoermethode kan niet worden gedownload. Controleer de internetverbinding en probeer het opnieuw.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>Annuleren</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Voor Vietnamees typen is een download nodig</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Dit duurt een minuut.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS downloadt de invoermethode één keer, daarna schakel je ernaar over met Windows-toets + spatiebalk.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Downloaden</translation>
         </message>
     </context>
     <context>

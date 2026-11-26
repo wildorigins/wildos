@@ -104,7 +104,7 @@ MouseArea {
         color: button.pressed ? Style.pressed
              : button.launcher.expanded ? Style.accentTint
              : button.containsMouse ? Style.hover
-             : "transparent"
+             : UI.Style.surfaceHoverClear
         Behavior on color {
             ColorAnimation { duration: Style.hoverDuration }
         }

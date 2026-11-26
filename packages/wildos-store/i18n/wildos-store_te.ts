@@ -876,6 +876,10 @@ Keep everything you do.</source>
             <source>App ID %1</source>
             <translation>యాప్ ID %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>మరొక ఇన్‌స్టాల్ పూర్తి కావడానికి వేచి ఉంది</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Keep everything you do.</source>
         <message>
             <source>About %1 hours left</source>
             <translation>సుమారు %1 గంటలు మిగిలి ఉన్నాయి</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>మరొక ఇన్‌స్టాల్ పూర్తి కావడానికి వేచి ఉంది</translation>
         </message>
     </context>
     <context>

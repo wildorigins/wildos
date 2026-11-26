@@ -22,12 +22,16 @@ T.AbstractButton {
 
     background: Rectangle {
         radius: 7
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
+        Behavior on color {
+            enabled: button.hovered
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
         color: button.flashing ? UI.Style.accentAlpha(0.16, 0.12) : button.down ? UI.Style.surfacePressed : button.hovered ? UI.Style.surfaceHover : UI.Style.tone(0.05)
         border.width: 1
         border.color: button.flashing ? UI.Style.accent : UI.Style.borderSubtle
-        Behavior on color {
-            ColorAnimation { duration: UI.Style.hoverDuration }
-        }
 
         UI.FocusRing {
             visible: button.visualFocus

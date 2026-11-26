@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>続行</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>言語を検索</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>都市または国で検索</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

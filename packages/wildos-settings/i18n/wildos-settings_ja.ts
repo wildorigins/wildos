@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>ベトナム語 (Telex) などの入力方式がキーボードの一覧にある間は使用できません</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>ベトナム語 (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>ベトナム語 (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>パスワードを待っています</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>更新プログラムを確認しています</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>ダウンロードしています</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>インストールしています</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>パスワードが入力されなかったため、何もダウンロードされませんでした。</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>入力方式をダウンロードできませんでした。インターネット接続を確認して、もう一度お試しください。</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>キャンセル</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>ベトナム語の入力にはダウンロードが必要です</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>1 分ほどかかります。</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS は入力方式を一度だけダウンロードします。その後は Windows キー + Space で切り替えられます。</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>ダウンロード</translation>
         </message>
     </context>
     <context>

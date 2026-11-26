@@ -19,7 +19,10 @@ public:
                 return;
             }
             const KFileItem item(url);
-            auto job = KIO::filePreview(KFileItemList{item}, size.isValid() ? size : QSize(256, 256));
+            // Without a list KIO only runs its image and folder thumbnailers,
+            // so videos, songs and documents kept their plain icons.
+            static const QStringList plugins = KIO::PreviewJob::defaultPlugins();
+            auto job = KIO::filePreview(KFileItemList{item}, size.isValid() ? size : QSize(256, 256), &plugins);
             job->setScaleType(KIO::PreviewJob::ScaledAndCached);
             job->setIgnoreMaximumSize(false);
             m_job = job;

@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Nadaljuj</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Iskanje jezikov</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Iskanje po mestu ali državi</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

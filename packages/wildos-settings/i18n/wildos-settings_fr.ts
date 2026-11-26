@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Non disponible tant qu'une méthode de saisie comme Vietnamien (Telex) figure dans vos claviers</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamien (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamien (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>En attente de votre mot de passe</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Recherche de mises à jour</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Téléchargement</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Installation</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Rien n'a été téléchargé, car le mot de passe n'a pas été fourni.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Impossible de télécharger la méthode de saisie. Vérifiez la connexion Internet, puis réessayez.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>See and change shortcuts, and add your own</source>
             <translation>Afficher et modifier les raccourcis, et ajouter les vôtres</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>La saisie en vietnamien nécessite un téléchargement</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Cela prend une minute.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS télécharge la méthode de saisie une seule fois, puis Touche Windows + Espace permet d'y basculer.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Télécharger</translation>
         </message>
     </context>
     <context>

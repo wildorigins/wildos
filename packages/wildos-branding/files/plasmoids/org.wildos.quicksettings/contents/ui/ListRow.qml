@@ -27,14 +27,18 @@ FocusScope {
     Rectangle {
         anchors.fill: parent
         radius: UI.Style.radiusMd
-        color: row.active ? UI.Style.accentSoft
-            : head.down ? UI.Style.surfacePressed
-            : head.hovered || row.expanded ? UI.Style.surfaceHover : "transparent"
-        border.width: row.active ? 1 : 0
-        border.color: UI.Style.accentBorder
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: head.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: row.active ? UI.Style.accentSoft
+            : head.down ? UI.Style.surfacePressed
+            : head.hovered || row.expanded ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
+        border.width: row.active ? 1 : 0
+        border.color: UI.Style.accentBorder
     }
 
     T.AbstractButton {

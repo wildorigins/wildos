@@ -107,10 +107,14 @@ MouseArea {
         width: icon.fillWidth
         height: icon.fillHeight
         radius: 8
-        color: icon.pressed ? UI.Style.surfacePressed : icon.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: icon.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: icon.pressed ? UI.Style.surfacePressed : icon.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
         UI.FocusRing {
             visible: icon.showFocus

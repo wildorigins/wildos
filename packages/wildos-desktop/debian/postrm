@@ -26,6 +26,8 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     rmdir /usr/share/wildos/diverted 2>/dev/null || true
     # Written by wildos-strings, so dpkg does not know about them.
     rm -rf /usr/share/wildos/locale
+    # Written by brave-gpu-policy.
+    rm -f /etc/brave/policies/managed/wildos-graphics.json /etc/opt/chrome/policies/managed/wildos-graphics.json /etc/chromium/policies/managed/wildos-graphics.json
 fi
 
 #DEBHELPER#

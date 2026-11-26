@@ -18,6 +18,20 @@ Item {
     required property bool terminal
 
     readonly property int columns: 8
+    // Recently used as it was when the panel opened. Updated live, a pick
+    // could add a row to it and push the whole grid down while the panel's
+    // picture stood in, which read as a flicker; Windows also only shows
+    // new picks the next time its panel opens.
+    property var recentAtOpen: []
+    Component.onCompleted: recentAtOpen = PanelApp.recentEmoji.slice()
+    Connections {
+        target: PanelApp
+        function onShownChanged() {
+            if (PanelApp.shown) {
+                page.recentAtOpen = PanelApp.recentEmoji.slice();
+            }
+        }
+    }
     property int cursor: -1
     readonly property string query: search.text.trim()
 
@@ -97,7 +111,7 @@ Item {
                 add(qsTr("Results"), hits);
             }
         } else if (emoji) {
-            add(qsTr("Recently used"), EmojiData.find(PanelApp.recentEmoji));
+            add(qsTr("Recently used"), EmojiData.find(page.recentAtOpen));
             const groups = EmojiData.groups;
             for (const g of groups) {
                 add(qsTr(g.name), g.emoji);
@@ -337,7 +351,7 @@ Item {
                 tip: qsTr("Recently used")
                 iconName: "clock"
                 iconSize: 16
-                enabled: PanelApp.recentEmoji.length > 0
+                enabled: page.recentAtOpen.length > 0
                 onClicked: page.jumpTo(qsTr("Recently used"))
             }
 

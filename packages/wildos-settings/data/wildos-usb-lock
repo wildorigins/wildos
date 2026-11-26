@@ -12,7 +12,8 @@ Devices already connected keep working throughout. One that drops off and
 comes back by itself while the PC is locked (a keyboard's receiver waking
 up with the PC, a hub resetting) is let back in when it matches a device
 that was there when the screen locked: same id, serial number, name and
-port.
+port. Devices on the PC's internal ports (a laptop's touchscreen) are
+always let back in.
 
 At sign-in the policy goes back to what it was, and each device that
 arrived during the lock is reconnected on its port, so USBGuard decides on
@@ -74,6 +75,15 @@ def field(rule, name):
 
 def identity(rule):
     return (field(rule, "id"), field(rule, "serial"), field(rule, "name"), field(rule, "via-port"))
+
+
+def internal(rule):
+    """On a port the firmware marks as wired in or not reachable from
+    outside: a laptop's touchscreen, fingerprint reader, camera or Bluetooth.
+    These drop off and come back on every wake from sleep, sometimes too
+    late to be among the devices noted at the lock, and nobody can plug
+    anything into those ports without opening the PC."""
+    return field(rule, "with-connect-type") in ("hardwired", "not used")
 
 
 def devices():
@@ -200,7 +210,7 @@ class Watcher:
         for num, target, rule in devices() or []:
             if target == "allow":
                 continue
-            if identity(rule) in self.known:
+            if identity(rule) in self.known or internal(rule):
                 usbguard("allow-device", num)
             else:
                 self.arrived.add(field(rule, "via-port"))

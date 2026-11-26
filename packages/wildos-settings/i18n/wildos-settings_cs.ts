@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Není k dispozici, dokud je mezi vašimi klávesnicemi metoda psaní, například vietnamština (Telex)</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7330,6 +7334,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamština (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamština (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Čeká se na vaše heslo</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Hledání aktualizací</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Stahování</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Instalace</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Nic se nestáhlo, protože nebylo zadáno heslo.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Metodu psaní se nepodařilo stáhnout. Zkontrolujte připojení k internetu a zkuste to znovu.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7645,6 +7684,22 @@
         <message>
             <source>Cancel</source>
             <translation>Zrušit</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Psaní vietnamsky vyžaduje stažení</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Trvá to asi minutu.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS metodu psaní stáhne jen jednou, potom na ni přepnete klávesou Windows + Mezerník.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Stáhnout</translation>
         </message>
     </context>
     <context>

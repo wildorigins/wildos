@@ -1,0 +1,12 @@
+[Unit]
+Description=Check for drivers this PC's hardware needs
+Documentation=file:///usr/libexec/wildos/driver-check
+
+[Timer]
+# After start-up has settled, then now and again so an offer reaches
+# whoever signs in later.
+OnBootSec=1min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target

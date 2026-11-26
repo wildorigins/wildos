@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Icon": "view-list-text",
+        "Id": "org.wildos.ksysguard.colourtext",
+        "License": "LGPLv2+",
+        "Name": "Coloured Text",
+        "Version": "1.0"
+    },
+    "X-KDE-ParentApp": "org.kde.plasmashell"
+}

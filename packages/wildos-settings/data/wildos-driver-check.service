@@ -1,0 +1,16 @@
+[Unit]
+Description=Get drivers this PC's hardware needs from the internet
+Documentation=file:///usr/libexec/wildos/driver-check
+ConditionKernelCommandLine=!wildos.mode=recovery
+ConditionKernelCommandLine=!wildos.snapshot
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# A plugged-in device asks for its firmware just after udev starts this.
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/libexec/wildos/driver-check scan
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=30min

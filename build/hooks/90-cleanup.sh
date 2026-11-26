@@ -5,8 +5,8 @@ if [ -f /etc/apt/sources.list.d/debian.sources ]; then
     # Kicksecure ships its own Debian sources file, so ours would duplicate it.
     sed -i -e '/deb\.debian\.org/d' -e '/security\.debian\.org/d' /etc/apt/sources.list
 fi
-# The browsers' build-time sources are replaced by their permanent ones: Brave
-# writes brave-browser.sources itself, wildos-base ships mullvad.sources.
+# The browsers' build-time sources are replaced by their permanent ones,
+# brave.sources and mullvad.sources from wildos-base.
 sed -i -e '/brave-browser-apt-release/d' -e '/repository\.mullvad\.net/d' /etc/apt/sources.list
 sed -i '/^\s*$/d' /etc/apt/sources.list
 

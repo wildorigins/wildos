@@ -70,10 +70,14 @@ MouseArea {
         width: 32
         height: 40
         radius: 8
-        color: chip.pressed ? UI.Style.surfacePressed : chip.security.expanded ? UI.Style.surfaceSelected : chip.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: chip.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: chip.pressed ? UI.Style.surfacePressed : chip.security.expanded ? UI.Style.surfaceSelected : chip.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
     }
 
     ShieldGlyph {

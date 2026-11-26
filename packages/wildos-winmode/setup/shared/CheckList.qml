@@ -71,8 +71,12 @@ ColumnLayout {
 
             Check {
                 title: qsTr("Virtualisation")
-                state: Setup.checking && Setup.technology.length === 0 ? "checking" : Setup.virtualisation === "ok" ? "ok" : "warning"
+                readonly property bool nested: Setup.virtualisation === "ok" && Setup.nested
+                state: Setup.checking && Setup.technology.length === 0 ? "checking" : Setup.virtualisation === "ok" && !nested ? "ok" : "warning"
                 detail: {
+                    if (nested) {
+                        return qsTr("Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow");
+                    }
                     switch (Setup.virtualisation) {
                     case "ok": return qsTr("Switched on in this PC's firmware");
                     case "unsupported": return qsTr("This processor doesn't have it, so Windows mode can't run here");
@@ -81,7 +85,7 @@ ColumnLayout {
                                                                : qsTr("Switched off. Switch it on in this PC's firmware settings");
                     }
                 }
-                value: Setup.virtualisation === "ok" ? Setup.technology : Setup.virtualisation === "off" ? qsTr("Off") : ""
+                value: nested ? qsTr("Virtual machine") : Setup.virtualisation === "ok" ? Setup.technology : Setup.virtualisation === "off" ? qsTr("Off") : ""
             }
 
             Check {

@@ -41,6 +41,9 @@ class FolderModel : public QAbstractListModel
     Q_PROPERTY(QString errorText READ errorText NOTIFY errorChanged)
     // What the system reported, when errorText is only a general sentence.
     Q_PROPERTY(QString errorDetail READ errorDetail NOTIFY errorChanged)
+    // A system folder the account may not read, which an administrator can
+    // open after typing their password, as Continue does on Windows.
+    Q_PROPERTY(bool canOpenAsAdmin READ canOpenAsAdmin NOTIFY errorChanged)
     Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY historyChanged)
     Q_PROPERTY(bool canGoForward READ canGoForward NOTIFY historyChanged)
     Q_PROPERTY(bool canGoUp READ canGoUp NOTIFY urlChanged)
@@ -102,6 +105,7 @@ public:
     bool loading() const { return m_loading; }
     QString errorText() const { return m_error; }
     QString errorDetail() const { return m_errorDetail; }
+    bool canOpenAsAdmin() const { return m_denied; }
     bool canGoBack() const { return !m_back.isEmpty(); }
     bool canGoForward() const { return !m_forward.isEmpty(); }
     bool canGoUp() const;
@@ -123,6 +127,7 @@ public:
     void setViewMode(const QString &mode);
 
     Q_INVOKABLE void openUrl(const QUrl &url);
+    Q_INVOKABLE void openAsAdmin();
     // Address bar input: a path, ~, a place name or a URL. False when
     // nothing by that name exists.
     Q_INVOKABLE bool openText(const QString &text);
@@ -221,7 +226,7 @@ private:
     void startSearch();
     void stopSearch();
     void setLoading(bool on);
-    void setError(const QString &text, const QString &detail = QString());
+    void setError(const QString &text, const QString &detail = QString(), bool denied = false);
 
     void onNewItems(const KFileItemList &items);
     void onItemsDeleted(const KFileItemList &items);
@@ -246,6 +251,7 @@ private:
     bool m_listed = false;
     QString m_error;
     QString m_errorDetail;
+    bool m_denied = false;
     QString m_searchText;
     QPointer<KIO::ListJob> m_searchJob;
     QTimer m_searchDelay;

@@ -32,10 +32,14 @@ Item {
         anchors.leftMargin: 8
         anchors.rightMargin: 8
         radius: UI.Style.radiusSm
-        color: row.current ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: mouse.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: row.current ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
         Rectangle {
             visible: !row.current

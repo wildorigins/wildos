@@ -876,6 +876,10 @@ Keep everything you do.</source>
             <source>App ID %1</source>
             <translation>앱 ID %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>다른 설치가 끝나기를 기다리는 중</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Keep everything you do.</source>
         <message>
             <source>About %1 hours left</source>
             <translation>약 %1시간 남음</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>다른 설치가 끝나기를 기다리는 중</translation>
         </message>
     </context>
     <context>

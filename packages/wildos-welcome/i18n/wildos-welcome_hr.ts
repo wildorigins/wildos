@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Nastavi</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Pretraži jezike</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Pretraži po gradu ili državi</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

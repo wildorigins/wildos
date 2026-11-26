@@ -85,7 +85,7 @@ MouseArea {
                 radius: lit ? 10 : UI.Style.radiusSm
                 color: {
                     const c = modelData.color;
-                    const base = lit ? Qt.rgba(c.r, c.g, c.b, 0.20) : "transparent";
+                    const base = lit ? Qt.rgba(c.r, c.g, c.b, 0.20) : UI.Style.surfaceHoverClear;
                     if (light.pressed) {
                         return lit ? Qt.rgba(c.r, c.g, c.b, 0.34) : UI.Style.surfacePressed;
                     }

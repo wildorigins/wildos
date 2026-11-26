@@ -1244,10 +1244,10 @@ void Printers::addWithDriver(const QString &uri, const QString &driver, const QS
     const bool knownDriver = std::any_of(m_drivers.cbegin(), m_drivers.cend(), [&driver](const Driver &d) {
         return d.ppd == driver;
     });
-    const QUrl url(uri);
-    static const QRegularExpression scheme(QStringLiteral("^[a-z][a-z0-9+.-]*$"));
-    if (!knownDriver || !url.isValid() || !scheme.match(url.scheme()).hasMatch() || uri.contains(QLatin1Char('\n')) || uri.startsWith(QLatin1Char('-'))
-        || driver.startsWith(QLatin1Char('-'))) {
+    // Checked as text: QUrl refuses a dnssd:// address because its host is
+    // the printer's percent-encoded name ("Canon%20MX470%20series._ipp...").
+    static const QRegularExpression deviceUri(QStringLiteral("^[a-z][a-z0-9+.-]*:/*[^\\s/][^\\s]*$"));
+    if (!knownDriver || !deviceUri.match(uri).hasMatch() || driver.startsWith(QLatin1Char('-'))) {
         Q_EMIT failed(Printers::tr("The printer was not added"), Printers::tr("Choose the printer and its driver again."));
         return;
     }

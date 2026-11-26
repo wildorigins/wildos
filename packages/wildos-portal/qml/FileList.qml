@@ -287,11 +287,15 @@ FocusScope {
             Rectangle {
                 anchors.fill: parent
                 radius: UI.Style.radiusXs
-                color: rowMouse.pressed ? UI.Style.surfacePressed : row.selected ? UI.Style.accentSelected
-                    : rowMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
                 Behavior on color {
+                    enabled: rowMouse.containsMouse
                     ColorAnimation { duration: UI.Style.hoverDuration }
                 }
+                color: rowMouse.pressed ? UI.Style.surfacePressed : row.selected ? UI.Style.accentSelected
+                    : rowMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                 border.width: list.activeFocus && list.folder.currentIndex === row.index ? 1 : 0
                 border.color: UI.Style.accentBorderStrong
             }
@@ -473,11 +477,15 @@ FocusScope {
             Rectangle {
                 anchors.fill: parent
                 radius: 8
-                color: tileMouse.pressed ? UI.Style.surfacePressed : tile.selected ? UI.Style.accentSelected
-                    : tileMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
                 Behavior on color {
+                    enabled: tileMouse.containsMouse
                     ColorAnimation { duration: UI.Style.hoverDuration }
                 }
+                color: tileMouse.pressed ? UI.Style.surfacePressed : tile.selected ? UI.Style.accentSelected
+                    : tileMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                 border.width: 1
                 border.color: tile.selected ? UI.Style.accentBorderStrong
                     : list.activeFocus && list.folder.currentIndex === tile.index ? UI.Style.accentBorderStrong : "transparent"

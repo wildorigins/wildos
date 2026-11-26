@@ -402,6 +402,49 @@ done
     fi
     cp "$cached"/*.deb "$WORK/repo/"
 )
+# QTermWidget, the terminal inside Wild OS Terminal, with the patches from
+# build/patches/qtermwidget (the cursor follows a word an input method such
+# as Vietnamese Telex is still composing). Cached like Calamares.
+(
+    cd "$WORK"
+    version=$(apt-cache policy libqtermwidget6-2 | sed -n 's/^  Candidate: //p')
+    if [ -z "$version" ] || [ "$version" = "(none)" ]; then
+        apt-get update -qq
+        version=$(apt-cache policy libqtermwidget6-2 | sed -n 's/^  Candidate: //p')
+    fi
+    stamp=$(cat "$SRC"/build/patches/qtermwidget/*.patch | sha256sum | cut -c1-12)
+    cached="$REBUILDS/qtermwidget/$version$(wildos_suffix qtermwidget)-$stamp"
+    if [ ! -d "$cached" ]; then
+        log "Building patched QTermWidget $version"
+        echo "deb-src http://deb.debian.org/debian $SUITE main" > /etc/apt/sources.list.d/wildos-src.list
+        apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive apt-get build-dep -y -qq "qtermwidget=$version" >/dev/null
+        rm -rf qtermwidget-src && mkdir qtermwidget-src && cd qtermwidget-src
+        apt-get source -qq "qtermwidget=$version" >/dev/null
+        cd qtermwidget-*/
+        mkdir -p debian/patches
+        for patch in "$SRC"/build/patches/qtermwidget/*.patch; do
+            cp "$patch" debian/patches/
+            basename "$patch" >> debian/patches/series
+        done
+        {
+            printf 'qtermwidget (%s%s) %s; urgency=medium\n\n' "$version" "$(wildos_suffix qtermwidget)" "$SUITE"
+            printf '  * Wild OS patches: %s\n\n' "$(cd "$SRC/build/patches/qtermwidget" && ls *.patch | tr '\n' ' ')"
+            printf ' -- Wild OS Developers <dev@wildos.io>  %s\n\n' "$(date -R)"
+            cat debian/changelog
+        } > debian/changelog.new
+        mv debian/changelog.new debian/changelog
+        DEB_BUILD_OPTIONS="nocheck parallel=$BUILD_THREADS" dpkg-buildpackage -us -uc -b >/dev/null
+        fill="$cached.part.$BASHPID"
+        rm -rf "$fill" && mkdir -p "$fill"
+        cp ../*+wildos[0-9]*_*.deb "$fill/"
+        rm -f "$fill"/*dbgsym*
+        cd "$WORK" && rm -rf qtermwidget-src
+        # Another build may have made the same one meanwhile; either copy is good.
+        mv -T "$fill" "$cached" 2>/dev/null || rm -rf "$fill"
+    fi
+    cp "$cached"/*.deb "$WORK/repo/"
+)
 # KIO, the file library every KDE app copies and moves files with, with the
 # patches from build/patches/kio: a name clash asks in the Wild OS clash
 # dialog (wildos-portal) instead of KIO's own. All of KIO's packages are
@@ -631,6 +674,97 @@ COPYRIGHT
         rm -f "$fill"/*dbgsym* "$fill"/*-tests_*
         cd "$WORK" && rm -rf libfprint-src
         # Another build may have made the same one meanwhile; either copy is good.
+        mv -T "$fill" "$cached" 2>/dev/null || rm -rf "$fill"
+    fi
+    cp "$cached"/*.deb "$WORK/repo/"
+)
+# FreeRDP, which Windows mode's own client (wildos-rdp) is built on, from
+# trixie-backports with the patch from build/patches/freerdp3: 3.33 stopped
+# treating a link to a folder as a folder, and Windows mode's shared drive
+# (Z:) is a folder of links, so none of its folders opened in Windows.
+# Upstream's own fix; drop this once backports carries a release with it.
+# Republished +wildos1 like KIO, since its packages require each other's
+# exact version. Cached like Calamares.
+(
+    cd "$WORK"
+    grep -rqs "$SUITE-backports" /etc/apt/sources.list /etc/apt/sources.list.d/ || echo "deb http://deb.debian.org/debian $SUITE-backports main" > /etc/apt/sources.list.d/wildos-backports.list
+    version=$(apt-cache madison libwinpr3-3 | awk -v s="$SUITE-backports" '$0 ~ s && /Packages/ {print $3; exit}')
+    if [ -z "$version" ]; then
+        apt-get update -qq
+        version=$(apt-cache madison libwinpr3-3 | awk -v s="$SUITE-backports" '$0 ~ s && /Packages/ {print $3; exit}')
+    fi
+    [ -n "$version" ] || { echo "no FreeRDP in $SUITE-backports" >&2; exit 1; }
+    stamp=$(cat "$SRC"/build/patches/freerdp3/*.patch | sha256sum | cut -c1-12)
+    cached="$REBUILDS/freerdp3/$version$(wildos_suffix freerdp3)-$stamp"
+    if [ ! -d "$cached" ]; then
+        log "Building patched FreeRDP $version"
+        echo "deb-src http://deb.debian.org/debian $SUITE-backports main" > /etc/apt/sources.list.d/wildos-src.list
+        apt-get update -qq
+        DEBIAN_FRONTEND=noninteractive apt-get build-dep -y -qq -t "$SUITE-backports" "freerdp3=$version" >/dev/null
+        rm -rf freerdp3-src && mkdir freerdp3-src && cd freerdp3-src
+        apt-get source -qq "freerdp3=$version" >/dev/null
+        cd freerdp3-*/
+        mkdir -p debian/patches
+        for patch in "$SRC"/build/patches/freerdp3/*.patch; do
+            cp "$patch" debian/patches/
+            basename "$patch" >> debian/patches/series
+        done
+        {
+            printf 'freerdp3 (%s%s) %s-backports; urgency=medium\n\n' "$version" "$(wildos_suffix freerdp3)" "$SUITE"
+            printf '  * Wild OS patches: %s\n\n' "$(cd "$SRC/build/patches/freerdp3" && ls *.patch | tr '\n' ' ')"
+            printf ' -- Wild OS Developers <dev@wildos.io>  %s\n\n' "$(date -R)"
+            cat debian/changelog
+        } > debian/changelog.new
+        mv debian/changelog.new debian/changelog
+        DEB_BUILD_OPTIONS="nocheck nodoc parallel=$BUILD_THREADS" dpkg-buildpackage -us -uc -b >/dev/null
+        fill="$cached.part.$BASHPID"
+        rm -rf "$fill" && mkdir -p "$fill"
+        cp ../*+wildos[0-9]*_*.deb "$fill/"
+        rm -f "$fill"/*dbgsym*
+        cd "$WORK" && rm -rf freerdp3-src
+        mv -T "$fill" "$cached" 2>/dev/null || rm -rf "$fill"
+    fi
+    cp "$cached"/*.deb "$WORK/repo/"
+)
+# Lotus (fcitx5-lotus), the Vietnamese typing engine behind Settings' Telex
+# and VNI. Debian doesn't carry it, so it is built from the upstream release
+# named in build/patches/fcitx5-lotus/source, checked against the SHA-256
+# there, with upstream's own Debian packaging and the patches beside it. Its
+# own test suite runs once, when the rebuild is made. Cached like Calamares.
+(
+    cd "$WORK"
+    package=fcitx5-lotus
+    read -r tag url sum < <(grep -v '^#' "$SRC/build/patches/fcitx5-lotus/source")
+    version=${tag#v}-1
+    stamp=$(cat "$SRC"/build/patches/fcitx5-lotus/*.patch | sha256sum | cut -c1-12)
+    cached="$REBUILDS/fcitx5-lotus/$version$(wildos_suffix fcitx5-lotus)-$stamp"
+    if [ ! -d "$cached" ]; then
+        log "Building Lotus $version"
+        rm -rf lotus-src && mkdir lotus-src && cd lotus-src
+        python3 -I -c 'import sys, urllib.request, shutil
+with urllib.request.urlopen(sys.argv[1], timeout=120) as r, open(sys.argv[2], "wb") as f:
+    shutil.copyfileobj(r, f, 1 << 20)' "$url" lotus.tar.gz
+        echo "$sum  lotus.tar.gz" | sha256sum -c --quiet
+        tar xzf lotus.tar.gz
+        cd fcitx5-lotus-"${tag#v}"/
+        for patch in "$SRC"/build/patches/fcitx5-lotus/*.patch; do
+            patch -p1 --quiet < "$patch"
+        done
+        cp -r packaging/debian debian
+        DEBIAN_FRONTEND=noninteractive apt-get build-dep -y -qq ./ >/dev/null
+        {
+            printf '%s (%s%s) %s; urgency=medium\n\n' "$package" "$version" "$(wildos_suffix fcitx5-lotus)" "$SUITE"
+            printf '  * Wild OS build of upstream %s, patches: %s\n\n' "$tag" "$(cd "$SRC/build/patches/fcitx5-lotus" && ls *.patch | tr '\n' ' ')"
+            printf ' -- Wild OS Developers <dev@wildos.io>  %s\n\n' "$(date -R)"
+            cat debian/changelog
+        } > debian/changelog.new
+        mv debian/changelog.new debian/changelog
+        DEB_BUILD_OPTIONS="nodoc parallel=$BUILD_THREADS" dpkg-buildpackage -us -uc -b >/dev/null
+        fill="$cached.part.$BASHPID"
+        rm -rf "$fill" && mkdir -p "$fill"
+        cp ../*+wildos[0-9]*_*.deb "$fill/"
+        rm -f "$fill"/*dbgsym*
+        cd "$WORK" && rm -rf lotus-src
         mv -T "$fill" "$cached" 2>/dev/null || rm -rf "$fill"
     fi
     cp "$cached"/*.deb "$WORK/repo/"
@@ -1095,13 +1229,23 @@ ks_repacks() {
     # and manages the accounts (Settings keeps an administrator in sudo, and every
     # account that signs in is in console), so the check can only block updates,
     # as it did on a computer still at first-run setup.
-    REPACK_REVISION=2 repack_open security-misc-shared build-essential libdbus-1-dev libsystemd-dev pkgconf
+    #
+    # build/patches/security-misc keeps emerg-shutdown from powering off when
+    # a burst of device events overflows its socket (start-up, sign-in), which
+    # cut the power on some laptops every start (#102).
+    REPACK_REVISION=3 repack_open security-misc-shared build-essential libdbus-1-dev libsystemd-dev pkgconf
     (
         cd "$REPACK/pkg"
         [ "$(grep -cxE '   (sudo|console)_users_check' DEBIAN/preinst)" = 2 ] || repack_fail security-misc-shared
         sed -i -E 's/^   (sudo|console)_users_check$/   true/' DEBIAN/preinst
         [ "$(grep -cxE '        build_(fm_shim_backend|emerg_shutdown)' DEBIAN/postinst)" = 2 ] || repack_fail security-misc-shared
         sed -i -E '/^        build_(fm_shim_backend|emerg_shutdown)$/d' DEBIAN/postinst
+        for patch in "$SRC"/build/patches/security-misc/*.patch; do
+            patch -s -p1 -d usr/src/security-misc < "$patch" || repack_fail security-misc-shared
+        done
+        grep -q ' usr/src/security-misc/emerg-shutdown\.c$' DEBIAN/md5sums || repack_fail security-misc-shared
+        sed -i '\| usr/src/security-misc/emerg-shutdown\.c$|d' DEBIAN/md5sums
+        md5sum usr/src/security-misc/emerg-shutdown.c >> DEBIAN/md5sums
         for program in emerg-shutdown fm-shim-backend; do
             bash "usr/libexec/security-misc/compile-$program" "usr/src/security-misc/$program.c" "usr/bin/$program"
         done
@@ -1216,9 +1360,10 @@ fi
 install -Dm644 "$SRC/build/keys/kicksecure.asc" "$KICKSECURE_KEY"
 
 # The browsers come from their makers' own repositories. Paths match what the
-# installed system uses: brave-keyring owns Brave's key and Brave's package
-# writes its own apt source; wildos-base ships Mullvad's source and key.
-BRAVE_KEY=/usr/share/keyrings/brave-browser-archive-keyring.gpg
+# installed system uses: wildos-base ships both browsers' sources and keys
+# (Brave's own key file goes with brave-keyring, and its package adds no
+# source on a PC without cron).
+BRAVE_KEY=/usr/share/keyrings/wildos-brave-keyring.gpg
 MULLVAD_KEY=/usr/share/keyrings/mullvad-keyring.asc
 install -Dm644 "$SRC/build/keys/brave-browser.gpg" "$BRAVE_KEY"
 install -Dm644 "$SRC/build/keys/mullvad.asc" "$MULLVAD_KEY"

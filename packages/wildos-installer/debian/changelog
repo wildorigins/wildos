@@ -1,3 +1,11 @@
+wildos-installer (0.1.13) trixie; urgency=medium
+
+  * When another system is on the PC (Windows or another Linux), the
+    start-up menu shows at every start with a countdown to Wild OS,
+    instead of only while Space is held.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 13:17:03 +0000
+
 wildos-installer (0.1.12) trixie; urgency=medium
 
   * The install no longer fails at the boot loader on computers whose

@@ -876,6 +876,10 @@ Keep everything you do.</source>
             <source>App ID %1</source>
             <translation>Ідентифікатор програми: %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Очікування завершення іншого встановлення</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Keep everything you do.</source>
         <message>
             <source>About %1 hours left</source>
             <translation>Залишилося приблизно %1 год</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Очікування завершення іншого встановлення</translation>
         </message>
     </context>
     <context>

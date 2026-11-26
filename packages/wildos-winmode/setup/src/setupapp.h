@@ -33,6 +33,9 @@ class SetupApp : public QObject
     // ok, off, unsupported or noaccess
     Q_PROPERTY(QString virtualisation READ virtualisation NOTIFY checksChanged)
     Q_PROPERTY(QString technology READ technology NOTIFY checksChanged)
+    // Wild OS is in a virtual machine: a warning that can be chosen past,
+    // like a small processor.
+    Q_PROPERTY(bool nested READ nested NOTIFY checksChanged)
     Q_PROPERTY(int cores READ cores NOTIFY checksChanged)
     Q_PROPERTY(bool coresOk READ coresOk NOTIFY checksChanged)
     // Windows 11 itself runs on two cores, so a smaller processor is a
@@ -107,6 +110,7 @@ public:
     bool checking() const { return m_pending > 0; }
     QString virtualisation() const { return m_virt; }
     QString technology() const { return m_technology; }
+    bool nested() const { return m_nested; }
     int cores() const { return m_cores; }
     bool coresOk() const;
     bool slowAccepted() const { return m_slowAccepted; }
@@ -194,6 +198,7 @@ private:
     bool m_canned = false;
     int m_pending = 0;
     QString m_virt = QStringLiteral("off");
+    bool m_nested = false;
     QString m_technology;
     int m_cores = 0;
     bool m_slowAccepted = false;

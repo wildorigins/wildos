@@ -349,6 +349,7 @@ class FakeService:
     def __init__(self):
         self.state = {}
         self.claims = None
+        self.saving = False
 
     def claim(self, sender):
         return self.claims
@@ -406,6 +407,19 @@ class Manager(unittest.TestCase):
         snapshot, _ = m.reconcile(set(), {}, False)
         self.assertEqual(self.calls, [("detach-device-alias", "wildos-windows", "ua-wildos-usb-1-12", "--live")])
         self.assertEqual(snapshot["devices"][0]["state"], "wildos")
+
+    def test_devices_come_back_before_windows_is_saved(self):
+        self.live = "<domain><devices>" + usb.hostdev_xml(self.devices[0]) + "</devices></domain>"
+        service = FakeService()
+        m = usb.UsbManager(service)
+        m.give_back_for_save()
+        self.assertEqual(self.calls, [("detach-device-alias", "wildos-windows", "ua-wildos-usb-1-12", "--live")])
+        # Nor given again while the save is being written.
+        self.calls.clear()
+        self.live = "<domain><devices/></domain>"
+        service.saving = True
+        m.reconcile({"0529:0001:x"}, {}, False)
+        self.assertEqual(self.calls, [])
 
     def test_nothing_while_setting_up_or_off(self):
         m = usb.UsbManager(FakeService())

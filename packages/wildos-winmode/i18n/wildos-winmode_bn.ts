@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>আপনার কাছে থাকা Windows 11 ফাইল ব্যবহার করুন</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS একটি ভার্চুয়াল মেশিনে চলছে, তাই Windows আরেকটি ভার্চুয়াল মেশিনের ভিতরে চলবে এবং খুব ধীর হবে</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>ভার্চুয়াল মেশিন</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>তবুও সেট আপ করুন</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>ভার্চুয়াল মেশিনে সেটআপে কয়েক ঘণ্টা লাগতে পারে এবং Windows অ্যাপ খুব ধীরে চলে। Windows মোড পিসিতেই ইনস্টল করা Wild OS-এর জন্য তৈরি।</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows মোড পিসিতেই ইনস্টল করা Wild OS-এর জন্য তৈরি, ভার্চুয়াল মেশিনের জন্য নয়।</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Windows মোড সেট আপ হচ্ছে</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>এতে প্রায় 25 মিনিট লাগে। এই উইন্ডো বন্ধ করে আপনার পিসি ব্যবহার করতে থাকুন; প্রস্তুত হলে আমরা জানিয়ে দেব।</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>বন্ধ করুন</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>বেশিরভাগ পিসিতে এতে এক ঘণ্টার কম লাগে, পুরনো পিসিতে আরও বেশি। এই উইন্ডো বন্ধ করে আপনার পিসি ব্যবহার করতে থাকুন; প্রস্তুত হলে আমরা জানিয়ে দেব।</translation>
         </message>
     </context>
     <context>

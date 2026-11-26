@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>ठीक है</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>जब तक वियतनामी (Telex) जैसी कोई टाइपिंग विधि आपके कीबोर्ड में है, तब तक उपलब्ध नहीं है</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>वियतनामी (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>वियतनामी (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>आपके पासवर्ड की प्रतीक्षा है</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>अपडेट की जाँच हो रही है</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>डाउनलोड हो रहा है</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>इंस्टॉल हो रहा है</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>कुछ भी डाउनलोड नहीं हुआ, क्योंकि पासवर्ड नहीं दिया गया।</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>टाइपिंग विधि डाउनलोड नहीं हो सकी। इंटरनेट कनेक्शन जाँचें और दोबारा कोशिश करें।</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>रद्द करें</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>वियतनामी टाइपिंग के लिए डाउनलोड ज़रूरी है</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>इसमें एक मिनट लगता है।</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS टाइपिंग विधि को एक बार डाउनलोड करता है, फिर Windows कुंजी + Space से उस पर स्विच किया जा सकता है।</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>डाउनलोड करें</translation>
         </message>
     </context>
     <context>

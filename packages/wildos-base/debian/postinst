@@ -34,7 +34,29 @@ disarm_hidden_scripts() {
     done
 }
 
+# wildos-base's brave.sources is the one source for Brave's repository. A
+# second one with another key file (Brave's install guide adds
+# brave-browser-release.sources) makes apt refuse every source with
+# "Conflicting values set for option Signed-By", so updates would stop.
+# Other Brave entries are switched off, not deleted: a .list line is
+# commented out, a .sources file renamed so apt skips it.
+retire_other_brave_sources() {
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+        [ -f "$f" ] || continue
+        if grep -q '^[[:space:]]*deb[^#]*brave-browser-apt-release\.s3\.brave\.com' "$f"; then
+            sed -i 's|^\([[:space:]]*deb[^#]*brave-browser-apt-release\.s3\.brave\.com.*\)$|# Wild OS: brave.sources has this now. \1|' "$f"
+        fi
+    done
+    for f in /etc/apt/sources.list.d/*.sources; do
+        [ -f "$f" ] && [ "$f" != /etc/apt/sources.list.d/brave.sources ] || continue
+        if grep -qi '^URIs:.*brave-browser-apt-release\.s3\.brave\.com' "$f"; then
+            mv -f "$f" "$f.wildos-off"
+        fi
+    done
+}
+
 if [ "$1" = "configure" ]; then
+    retire_other_brave_sources
     # base-files owns /usr/lib/os-release. A diversion keeps its copy on disk
     # under another name, so base-files upgrades never overwrite the Wild OS
     # identity.

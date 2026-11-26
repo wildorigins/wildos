@@ -38,13 +38,17 @@ Rectangle {
                 width: 52
                 height: 52
                 radius: UI.Style.radiusSm
-                color: active ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
+                Behavior on color {
+                    enabled: mouse.containsMouse
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
+                color: active ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                 Accessible.role: Accessible.PageTab
                 Accessible.name: modelData.name
                 Accessible.selected: active
-                Behavior on color {
-                    ColorAnimation { duration: UI.Style.hoverDuration }
-                }
                 activeFocusOnTab: true
                 Keys.onPressed: function (event) {
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {

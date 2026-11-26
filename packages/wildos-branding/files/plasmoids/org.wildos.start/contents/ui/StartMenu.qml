@@ -60,6 +60,7 @@ FocusScope {
         home.pinnedGrid.currentIndex = -1;
         home.recentGrid.currentIndex = -1;
         home.showAllRecents = false;
+        home.closeFolder();
         allApps.picking = false;
         allApps.list.currentIndex = -1;
         allApps.list.positionViewAtBeginning();
@@ -302,7 +303,9 @@ FocusScope {
     // so people can start typing the moment Start opens.
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
-            if (searching) {
+            if (home.folderOpen) {
+                home.closeFolder();
+            } else if (searching) {
                 searchBox.clear();
                 searchBox.input.forceActiveFocus();
             } else if (view === "apps" && allApps.picking) {

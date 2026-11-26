@@ -1,0 +1,8 @@
+#!/bin/sh
+# A new Linux kernel is in: make sure NVIDIA's driver is built for it before
+# the computer starts on it (nvidia-kernel-check). Runs after dkms's own
+# hook, which sorts before this one.
+if [ -x /usr/libexec/wildos/nvidia-kernel-check ]; then
+    /usr/libexec/wildos/nvidia-kernel-check "$1" || true
+fi
+exit 0

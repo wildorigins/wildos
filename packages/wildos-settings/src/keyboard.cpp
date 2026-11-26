@@ -1,5 +1,7 @@
 #include "keyboard.h"
 
+#include "typingmethods.h"
+
 #include <KConfigGroup>
 #include <KSharedConfig>
 
@@ -10,6 +12,7 @@
 #include <QDBusPendingReply>
 #include <QFile>
 #include <QLocale>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QXmlStreamReader>
 
@@ -110,6 +113,7 @@ void Keyboard::reload()
     const bool own = layout.readEntry("Use", false);
     QStringList layouts = splitList(layout.readEntry("LayoutList", QString()));
     QStringList variants = splitList(layout.readEntry("VariantList", QString()));
+    QStringList methods = splitList(layout.readEntry(TypingMethods::configKey(), QString()));
     m_options = layout.readEntry("Options", QString()).split(QLatin1Char(','), Qt::SkipEmptyParts);
     m_model = layout.readEntry("Model", QString());
     if (!own || layouts.join(QString()).isEmpty()) {
@@ -119,6 +123,7 @@ void Keyboard::reload()
         }
         layouts = splitList(system.value(QStringLiteral("XKBLAYOUT"), QStringLiteral("gb")));
         variants = splitList(system.value(QStringLiteral("XKBVARIANT")));
+        methods.clear();
         if (!own) {
             m_options = system.value(QStringLiteral("XKBOPTIONS")).split(QLatin1Char(','), Qt::SkipEmptyParts);
         }
@@ -127,7 +132,8 @@ void Keyboard::reload()
     for (int i = 0; i < layouts.size(); ++i) {
         const QString code = layouts.at(i).trimmed();
         if (!code.isEmpty()) {
-            m_layouts.append({code, variants.value(i).trimmed()});
+            const QString method = methods.value(i).trimmed();
+            m_layouts.append({code, variants.value(i).trimmed(), TypingMethods::engine(method).isEmpty() ? QString() : method});
         }
     }
     if (m_layouts.isEmpty()) {
@@ -143,6 +149,7 @@ void Keyboard::reload()
     m_repeatDelay = keys.readEntry("RepeatDelay", 600);
     m_repeatRate = qRound(keys.readEntry("RepeatRate", 25.0));
     Q_EMIT changed();
+    Q_EMIT methodChanged();
     readCurrent();
 }
 
@@ -232,6 +239,21 @@ void Keyboard::loadNames()
             inVariant = false;
         }
     }
+    // Windows' two Vietnamese keyboards. Both type on the US English keys:
+    // Telex with letters (aa for â, s after a vowel for its acute accent),
+    // VNI with the number keys.
+    const QString vietnamese = QStringLiteral("vietnam vietnamese tieng viet tiếng việt vi");
+    m_available.append(QVariantMap{{QStringLiteral("layout"), QStringLiteral("us")},
+                                   {QStringLiteral("variant"), QString()},
+                                   {QStringLiteral("method"), QStringLiteral("telex")},
+                                   {QStringLiteral("name"), nameOf({QStringLiteral("us"), QString(), QStringLiteral("telex")})},
+                                   {QStringLiteral("keywords"), vietnamese + QStringLiteral(" telex")}});
+    m_available.append(QVariantMap{{QStringLiteral("layout"), QStringLiteral("us")},
+                                   {QStringLiteral("variant"), QString()},
+                                   {QStringLiteral("method"), QStringLiteral("vni")},
+                                   {QStringLiteral("name"), nameOf({QStringLiteral("us"), QString(), QStringLiteral("vni")})},
+                                   {QStringLiteral("keywords"), vietnamese + QStringLiteral(" vni number")}});
+
     QCollator collator;
     collator.setNumericMode(true);
     std::sort(m_available.begin(), m_available.end(), [&collator](const QVariant &a, const QVariant &b) {
@@ -244,6 +266,12 @@ void Keyboard::loadNames()
 
 QString Keyboard::nameOf(const Layout &l) const
 {
+    if (l.method == QLatin1String("telex")) {
+        return tr("Vietnamese (Telex)");
+    }
+    if (l.method == QLatin1String("vni")) {
+        return tr("Vietnamese (VNI)");
+    }
     const QString name = m_names.value(l.layout + QLatin1Char('|') + l.variant);
     if (!name.isEmpty()) {
         return name;
@@ -256,7 +284,10 @@ QVariantList Keyboard::layouts() const
     const_cast<Keyboard *>(this)->loadNames();
     QVariantList list;
     for (const Layout &l : m_layouts) {
-        list.append(QVariantMap{{QStringLiteral("layout"), l.layout}, {QStringLiteral("variant"), l.variant}, {QStringLiteral("name"), nameOf(l)}});
+        list.append(QVariantMap{{QStringLiteral("layout"), l.layout},
+                                {QStringLiteral("variant"), l.variant},
+                                {QStringLiteral("method"), l.method},
+                                {QStringLiteral("name"), nameOf(l)}});
     }
     return list;
 }
@@ -329,17 +360,30 @@ void Keyboard::saveLayouts()
 {
     QStringList layouts;
     QStringList variants;
+    QStringList methods;
+    QStringList displayNames;
     for (const Layout &l : std::as_const(m_layouts)) {
         layouts << l.layout;
         variants << l.variant;
+        methods << l.method;
+        // The indicator's short name: VI for a Vietnamese method, so it
+        // isn't a second US beside English (US).
+        displayNames << (l.method.isEmpty() ? QString() : QStringLiteral("vi"));
     }
     KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("kxkbrc"), KConfig::NoGlobals), QStringLiteral("Layout"));
     group.writeEntry("Use", true);
     group.writeEntry("LayoutList", layouts.join(QLatin1Char(',')));
     group.writeEntry("VariantList", variants.join(QLatin1Char(',')));
-    // One empty display name per layout, as the keyboard module writes it,
-    // so the indicator shows each layout's own short name.
-    group.writeEntry("DisplayNames", QStringList(layouts.size(), QString()).join(QLatin1Char(',')));
+    // One display name per layout, as the keyboard module writes it; empty
+    // shows the layout's own short name.
+    group.writeEntry("DisplayNames", displayNames.join(QLatin1Char(',')));
+    if (std::all_of(methods.cbegin(), methods.cend(), [](const QString &m) {
+            return m.isEmpty();
+        })) {
+        group.deleteEntry(TypingMethods::configKey());
+    } else {
+        group.writeEntry(TypingMethods::configKey(), methods.join(QLatin1Char(',')));
+    }
     group.writeEntry("Model", m_model);
     group.writeEntry("Options", m_options.join(QLatin1Char(',')));
     // Without this KWin adds the options to the ones it started with, so a
@@ -348,23 +392,107 @@ void Keyboard::saveLayouts()
     group.sync();
 
     QDBusConnection::sessionBus().send(QDBusMessage::createSignal(path, QStringLiteral("org.kde.keyboard"), QStringLiteral("reloadConfig")));
+    QDBusConnection::sessionBus().send(
+        QDBusMessage::createSignal(TypingMethods::signalPath(), TypingMethods::signalInterface(), QStringLiteral("changed")));
     Q_EMIT changed();
+    Q_EMIT methodChanged();
 }
 
-void Keyboard::add(const QString &layout, const QString &variant)
+void Keyboard::add(const QString &layout, const QString &variant, const QString &method)
 {
+    if (!method.isEmpty() && TypingMethods::engine(method).isEmpty()) {
+        return;
+    }
     for (const Layout &l : std::as_const(m_layouts)) {
-        if (l.layout == layout && l.variant == variant) {
+        if (l.layout == layout && l.variant == variant && l.method == method) {
             return;
         }
     }
-    m_layouts.append({layout, variant});
+    m_layouts.append({layout, variant, method});
     // A second layout is no use without a way to reach it, so it comes with
     // the key Windows uses unless one is already set.
     if (m_layouts.size() == 2 && switchKeys().isEmpty()) {
         m_options.append(QStringLiteral("grp:win_space_toggle"));
     }
     saveLayouts();
+    if (methodMissing()) {
+        download();
+    }
+}
+
+bool Keyboard::methodMissing() const
+{
+    return std::any_of(m_layouts.cbegin(), m_layouts.cend(), [](const Layout &l) {
+        return !l.method.isEmpty() && !TypingMethods::installed(TypingMethods::engine(l.method));
+    });
+}
+
+bool Keyboard::methodInUse() const
+{
+    return std::any_of(m_layouts.cbegin(), m_layouts.cend(), [](const Layout &l) {
+        return !l.method.isEmpty();
+    });
+}
+
+void Keyboard::download()
+{
+    if (m_process) {
+        return;
+    }
+    QString engine;
+    for (const Layout &l : std::as_const(m_layouts)) {
+        const QString e = TypingMethods::engine(l.method);
+        if (!e.isEmpty() && !TypingMethods::installed(e)) {
+            engine = e;
+            break;
+        }
+    }
+    if (engine.isEmpty()) {
+        return;
+    }
+    m_error.clear();
+    m_step = tr("Waiting for your password");
+    m_process = new QProcess(this);
+    connect(m_process, &QProcess::readyReadStandardOutput, this, [this] {
+        while (m_process->canReadLine()) {
+            const QString line = QString::fromUtf8(m_process->readLine()).trimmed();
+            if (line == QLatin1String("step Checking for updates")) {
+                m_step = tr("Checking for updates");
+            } else if (line == QLatin1String("step Downloading")) {
+                m_step = tr("Downloading");
+            } else if (line == QLatin1String("step Installing")) {
+                m_step = tr("Installing");
+            }
+            Q_EMIT methodChanged();
+        }
+    });
+    connect(m_process, &QProcess::finished, this, [this](int code) {
+        if (code == 126 || code == 127) {
+            m_error = tr("Nothing was downloaded because the password was not given.");
+        } else if (code != 0) {
+            m_error = tr("The typing method could not be downloaded. Check the internet connection and try again.");
+        }
+        m_process->deleteLater();
+        m_process = nullptr;
+        m_step.clear();
+        // wildos-access hands the keyboard to Fcitx now it is there.
+        QDBusConnection::sessionBus().send(
+            QDBusMessage::createSignal(TypingMethods::signalPath(), TypingMethods::signalInterface(), QStringLiteral("changed")));
+        Q_EMIT methodChanged();
+    });
+    m_process->start(QStringLiteral("pkexec"), {QStringLiteral("/usr/libexec/wildos/settings-input-method"), QStringLiteral("install"), engine});
+    Q_EMIT methodChanged();
+}
+
+// A download still running when Settings closes carries on by itself (the
+// helper ignores the closed pipe), so dpkg is never stopped halfway.
+Keyboard::~Keyboard()
+{
+    if (m_process) {
+        m_process->disconnect(this);
+        m_process->setParent(nullptr);
+        m_process = nullptr;
+    }
 }
 
 void Keyboard::remove(int index)

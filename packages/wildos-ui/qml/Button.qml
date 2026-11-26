@@ -70,7 +70,7 @@ T.Button {
             : control.onWallpaper ? (control.down ? Style.controlOnWallpaperPressed : control.lit ? Style.controlOnWallpaperHover : Style.controlOnWallpaper)
             : control.down ? Style.surfacePressed
             : control.lit || (control.textKind && control.checked) ? Style.surfaceHover
-            : control.textKind ? "transparent" : Style.surfaceControl
+            : control.textKind ? Style.surfaceHoverClear : Style.surfaceControl
         border.width: control.primary || control.textKind ? 0 : 1
         border.color: control.onWallpaper ? Style.borderControlOnWallpaper : Style.borderControl
         Behavior on color {

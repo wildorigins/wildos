@@ -31,7 +31,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.16),
+ wildos-ui (>= 0.1.28),
  wildos-overlays (>= 0.1.1),
  kwin-wayland,
  layer-shell-qt,

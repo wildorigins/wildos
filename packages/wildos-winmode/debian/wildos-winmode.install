@@ -26,6 +26,7 @@ build/wild-guest.exe usr/share/wildos/winmode/guest
 guest/setup.ps1 usr/share/wildos/winmode/guest
 guest/tune.ps1 usr/share/wildos/winmode/guest
 guest/opengl.ps1 usr/share/wildos/winmode/guest
+guest/prompts.ps1 usr/share/wildos/winmode/guest
 data/mimeapps.list usr/share/wildos/winmode
 data/org.wildos.WindowsMode1.conf usr/share/dbus-1/system.d
 data/org.wildos.winmode.policy usr/share/polkit-1/actions

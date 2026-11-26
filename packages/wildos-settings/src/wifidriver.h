@@ -31,6 +31,7 @@ class WifiDriver : public QObject
 
 public:
     explicit WifiDriver(QObject *parent = nullptr);
+    ~WifiDriver() override;
 
     bool needed() const;
     QString chipName() const { return m_name; }

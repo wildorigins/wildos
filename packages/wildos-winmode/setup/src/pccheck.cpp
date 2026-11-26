@@ -29,6 +29,9 @@ Virtualisation virtualisation()
         memcpy(vendor + 4, &edx, 4);
         memcpy(vendor + 8, &ecx, 4);
     }
+    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
+        result.nested = ecx & (1u << 31);
+    }
     bool capable = false;
     if (qstrcmp(vendor, "GenuineIntel") == 0 && __get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
         result.technology = QStringLiteral("Intel VT-x");

@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Δεν είναι διαθέσιμο όσο μια μέθοδος πληκτρολόγησης όπως τα Βιετναμικά (Telex) βρίσκεται στα πληκτρολόγιά σας</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Βιετναμικά (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Βιετναμικά (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Αναμονή για τον κωδικό πρόσβασής σας</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Έλεγχος για ενημερώσεις</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Λήψη</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Εγκατάσταση</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Δεν έγινε λήψη, επειδή δεν δόθηκε ο κωδικός πρόσβασης.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Δεν ήταν δυνατή η λήψη της μεθόδου πληκτρολόγησης. Ελέγξτε τη σύνδεση στο Internet και δοκιμάστε ξανά.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>Άκυρο</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Η πληκτρολόγηση στα Βιετναμικά χρειάζεται λήψη</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Αυτό διαρκεί περίπου ένα λεπτό.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Το Wild OS κάνει λήψη της μεθόδου πληκτρολόγησης μία φορά και, στη συνέχεια, μεταβαίνετε σε αυτήν με το πλήκτρο Windows + Διάστημα.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Λήψη</translation>
         </message>
     </context>
     <context>

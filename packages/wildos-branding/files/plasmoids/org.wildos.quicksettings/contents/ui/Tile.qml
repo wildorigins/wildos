@@ -219,7 +219,7 @@ Item {
                 radius: 8
                 color: page.down ? (tile.on ? tile.onAccent(0.20) : UI.Style.tone(0.16))
                     : page.hovered ? (tile.on ? tile.onAccent(0.12) : UI.Style.tone(0.10))
-                    : "transparent"
+                    : tile.on ? tile.onAccent(0) : "transparent"
                 Behavior on color {
                     ColorAnimation { duration: UI.Style.hoverDuration }
                 }

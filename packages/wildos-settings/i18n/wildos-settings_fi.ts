@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Ei käytettävissä, kun näppäimistöissäsi on kirjoitustapa, kuten vietnam (Telex)</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnam (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnam (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Odotetaan salasanaasi</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Tarkistetaan päivityksiä</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Ladataan</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Asennetaan</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Mitään ei ladattu, koska salasanaa ei annettu.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Kirjoitustapaa ei voitu ladata. Tarkista Internet-yhteys ja yritä uudelleen.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>Peruuta</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Vietnamin kirjoittaminen vaatii latauksen</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Tämä kestää noin minuutin.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS lataa kirjoitustavan kerran, minkä jälkeen voit vaihtaa siihen näppäinyhdistelmällä Windows-näppäin + välilyönti.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Lataa</translation>
         </message>
     </context>
     <context>

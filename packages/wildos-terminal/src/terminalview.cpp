@@ -336,12 +336,12 @@ bool TerminalView::eventFilter(QObject *watched, QEvent *event)
         if (mouse->button() == Qt::LeftButton && Config::instance()->copyOnSelect()) {
             // The widget finishes the selection in its own release handler,
             // which runs after this filter.
+            // Copying on select doesn't count as the Ctrl+C copy: selecting
+            // and then pressing Ctrl+C sent the shell ^C, as if the copy had
+            // been the first press. As in Windows Terminal, Ctrl+C with text
+            // selected copies, and only a second Ctrl+C stops the command.
             QTimer::singleShot(0, this, [this] {
                 copy();
-                // Already copied, so the next Ctrl+C stops the running
-                // command instead of copying the selection again.
-                m_copiedText = selectedText(true);
-                m_copiedByCtrlC = !m_copiedText.isEmpty();
             });
         }
     }

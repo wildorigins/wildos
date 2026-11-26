@@ -114,15 +114,15 @@ Bridge::Bridge(QObject *parent)
 
 QString Bridge::windowsModeReason() const
 {
-    if (m_action == QLatin1String("windows-mode")) {
+    if (m_windowsAction == QLatin1String("windows-mode")) {
         return {};
     }
-    if (m_action == QLatin1String("home")) {
+    if (m_windowsAction == QLatin1String("home")) {
         return tr("This PC has Windows 11 Home, which can't run Windows apps on Wild OS yet. "
                   "Microsoft's upgrade to Windows 11 Pro uses this PC's licence, or use the Wild OS version or Office on the web.");
     }
-    if (m_action == QLatin1String("cannot") && !m_compatReason.isEmpty()) {
-        return m_compatReason;
+    if (m_windowsAction == QLatin1String("cannot") && !m_windowsReason.isEmpty()) {
+        return m_windowsReason;
     }
     if (QStandardPaths::findExecutable(QStringLiteral("wildos-winmode")).isEmpty()) {
         return tr("Windows mode isn't installed on this PC.");
@@ -136,18 +136,29 @@ void Bridge::readDecision()
     // the catalogue read above only fills in when it is not there.
     const QString router = QStandardPaths::findExecutable(QStringLiteral("wild-run"));
     if (router.isEmpty()) {
-        m_action = QStringLiteral("setup");
+        m_action = m_windowsAction = QStringLiteral("setup");
         return;
     }
     QProcess run;
     run.start(router, {QStringLiteral("--json"), m_path});
     if (!run.waitForFinished(30000) || run.exitCode() != 0) {
         run.kill();
-        m_action = QStringLiteral("setup");
+        // A slow PC can keep wild-run past the limit. With Windows mode
+        // installed that says nothing about whether it is set up, and
+        // Windows mode answers for itself when the program is handed over.
+        const bool installed = !QStandardPaths::findExecutable(QStringLiteral("wildos-winmode")).isEmpty();
+        m_action = m_windowsAction = installed ? QStringLiteral("windows-mode") : QStringLiteral("setup");
         return;
     }
     const QJsonObject d = QJsonDocument::fromJson(run.readAllStandardOutput()).object();
     m_action = d.value(QStringLiteral("action")).toString();
+    m_windowsAction = d.value(QStringLiteral("windows")).toString();
+    if (m_windowsAction.isEmpty()) {
+        m_windowsAction = m_action;
+    }
+    if (m_windowsAction == QLatin1String("cannot")) {
+        m_windowsReason = d.value(QStringLiteral("reason")).toString();
+    }
     const QString name = d.value(QStringLiteral("name")).toString();
     if (!d.value(QStringLiteral("entry")).toString().isEmpty() && !name.isEmpty()) {
         m_catalogueName = name;

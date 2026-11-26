@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Tiếp tục</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Tìm ngôn ngữ</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Tìm theo thành phố hoặc quốc gia</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

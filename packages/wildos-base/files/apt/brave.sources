@@ -1,0 +1,9 @@
+# Brave, from Brave's own repository. Wild OS keeps its own copy of Brave's
+# key, so Brave updates, and can be installed again after it was removed,
+# whether or not Brave's brave-keyring package is there.
+Types: deb
+URIs: https://brave-browser-apt-release.s3.brave.com
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/wildos-brave-keyring.gpg

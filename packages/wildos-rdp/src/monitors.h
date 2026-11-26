@@ -2,6 +2,7 @@
 
 #include <QList>
 #include <QRect>
+#include <QRectF>
 #include <QSize>
 #include <QString>
 
@@ -36,6 +37,14 @@ QList<Monitor> arrange(QList<Monitor> screens);
 // else the one it overlaps most, else the nearest. -1 for no monitors.
 int at(const QList<Monitor> &layout, const QRect &frame);
 int named(const QList<Monitor> &layout, const QString &name);
+// The monitor a window on Windows' desktop covers the whole of, as a full
+// screen window does; -1 when it covers none.
+int covered(const QList<Monitor> &layout, const QRect &frame);
+
+// The part of a monitor that windows maximise into, in Windows' pixels,
+// for `area`, that part of its screen here in logical units (the screen
+// less the taskbar). Empty when the two do not overlap.
+QRect workArea(const Monitor &monitor, const QRectF &area);
 
 // The smallest rectangle round them all.
 QRect bounds(const QList<Monitor> &layout);

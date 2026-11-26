@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.ksvg as KSvg
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasmoid
 
 // The clock's flyout: the design's two glass cards, notifications above the
 // calendar. Plasma's popup frame is the calendar card. The notifications card
@@ -168,10 +169,12 @@ FocusScope {
         // The card sits on the side of the calendar away from the taskbar and
         // may reach that screen edge, less the design's 16 px. With the
         // taskbar at the top, Plasma hangs the calendar from it, so the card
-        // goes underneath.
+        // goes underneath. The taskbar's own edge decides: guessing from
+        // where the calendar sits put the card under it on short screens
+        // (1366 by 768), off the bottom.
         const screenTop = flyout.Screen.virtualY;
         const screenBottom = screenTop + flyout.Screen.height;
-        const barAtTop = popup.y - screenTop < flyout.Screen.height / 2;
+        const barAtTop = Plasmoid.location === PlasmaCore.Types.TopEdge;
         const room = barAtTop ? screenBottom - 16 - (popup.y + popup.height + Metrics.cardGap)
                               : popup.y - Metrics.cardGap - (screenTop + 16);
         notifications.maxHeight = Math.max(160, room - 2 * (Metrics.glassBorder + 16));

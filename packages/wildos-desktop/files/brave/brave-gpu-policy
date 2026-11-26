@@ -1,0 +1,31 @@
+#!/bin/sh
+# Turns graphics acceleration off for the whole computer in Brave, Google
+# Chrome and Chromium when brave-gpu says so, through each browser's own
+# policy. On nouveau with the screen on the NVIDIA card all three freeze with
+# it on (a GTX 960 and a GTX 980 Ti so far). The launcher's --disable-gpu only
+# applies when Brave starts through it; a taskbar pin, a restart after a
+# browser update or a second install all go round it, the policy does not.
+# Chrome or Chromium installed later is covered from the next start-up.
+# Run at start-up (wildos-brave-gpu.service) and when wildos-desktop is
+# installed or updated.
+set -eu
+
+off=$(/usr/libexec/wildos/brave-gpu)
+for dir in /etc/brave/policies/managed /etc/opt/chrome/policies/managed /etc/chromium/policies/managed; do
+    FILE=$dir/wildos-graphics.json
+    if [ "$off" = off ]; then
+        # Chrome's and Chromium's folders are only made once they are
+        # installed, so nothing is left behind for browsers that are not.
+        case $dir in
+        /etc/brave/*) ;;
+        /etc/opt/chrome/*) [ -d /opt/google/chrome ] || [ -d /etc/opt/chrome ] || continue ;;
+        /etc/chromium/*) [ -d /usr/lib/chromium ] || [ -d /etc/chromium ] || continue ;;
+        esac
+        mkdir -p "$dir"
+        printf '{\n  "HardwareAccelerationModeEnabled": false\n}\n' > "$FILE.new"
+        chmod 644 "$FILE.new"
+        mv "$FILE.new" "$FILE"
+    else
+        rm -f "$FILE"
+    fi
+done

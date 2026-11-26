@@ -657,8 +657,15 @@ class Agent:
         log("Windows refused the stored password; a new one is set next time")
         dbusutil.in_thread(self.keyring.forget, self.host.get("account", "wild"))
 
+    def shared_folders(self):
+        """The person's own choice from Settings, else setup's defaults."""
+        chosen = self.options.get("folders")
+        if isinstance(chosen, list):
+            return [f for f in config.FOLDER_CHOICES if f in chosen]
+        return self.host.get("folders") or config.load()["folders"]
+
     def guest_paths(self, files):
-        mapping = paths.folder_map(self.host.get("folders", []), self.host.get("share_root", ""))
+        mapping = paths.folder_map(self.shared_folders(), self.host.get("share_root", ""))
         drive = self.host.get("drive", "Z")
         return [paths.to_guest(f, mapping, drive) for f in files], mapping
 
@@ -915,12 +922,12 @@ class Agent:
                 else:
                     log("launch failed:", reply)
                     done("That Windows app didn't open. Try again.")
-            self.call_json("Launch", (path, args, ""), "(sass)", got, timeout=20)
+            self.call_json("Launch", (path, args, ""), "(sass)", got, timeout=110)
         attempt()
 
     def drive_folder(self):
         try:
-            return paths.drive_folder(self.host.get("folders") or config.load()["folders"], config.user_data_dir())
+            return paths.drive_folder(self.shared_folders(), config.user_data_dir())
         except OSError as e:
             log("shared folders:", e)
             return None
@@ -1246,6 +1253,7 @@ class Agent:
         options = dict(setup.get("options") or {})
         # In Settings' words (board 9.8).
         options["whenIdle"] = {"keep": "memory", "save": "disk"}.get(h.get("when_idle"), h.get("when_idle"))
+        options["folders"] = self.shared_folders()
         return {
             "state": state,
             # Board 9.5's progress while setting up (setup.py).
@@ -1742,6 +1750,20 @@ class Agent:
             self.call("SetOption", ("when_idle", mapped), "(ss)",
                       lambda r: defer.done(r if isinstance(r, str) else "That setting couldn't be changed."))
             return defer
+        if key == "folders":
+            chosen = [f for f in value.split(",") if f]
+            if any(f not in config.FOLDER_CHOICES for f in chosen):
+                return "That folder can't be shared with Windows."
+            self.options["folders"] = [f for f in config.FOLDER_CHOICES if f in chosen]
+            try:
+                config.write_json(config.user_config_file(), self.options)
+            except OSError:
+                return "Windows mode couldn't save that. Try again."
+            # The drive Windows sees is a folder of links, so a change
+            # reaches an open connection straight away.
+            self.drive_folder()
+            self.changed()
+            return ""
         if key == "memoryGb":
             # The system service changes the virtual PC itself.
             self.call("SetOption", ("memoryGb", value), "(ss)",

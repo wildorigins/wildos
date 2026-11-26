@@ -33,7 +33,7 @@ Depends:
  qml6-module-qtquick-layouts,
  qml6-module-qtquick-templates,
  qml6-module-qtquick-window,
- wildos-ui (>= 0.1.16),
+ wildos-ui (>= 0.1.28),
 Description: Wild OS Open and Save dialog and file clash dialog
  One Open and Save dialog for every app, laid out like the one on Windows:
  places on the left, a path bar, the file list with dates, types and sizes,

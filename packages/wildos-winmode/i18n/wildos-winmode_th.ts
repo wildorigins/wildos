@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>ใช้ไฟล์ Windows 11 ที่คุณมี</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS ทำงานอยู่ในเครื่องเสมือน Windows จึงต้องทำงานในเครื่องเสมือนอีกเครื่องหนึ่งและจะช้ามาก</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>เครื่องเสมือน</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>ตั้งค่าต่อไป</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>ในเครื่องเสมือน การตั้งค่าอาจใช้เวลาหลายชั่วโมง และแอป Windows จะช้ามาก โหมด Windows สร้างมาสำหรับ Wild OS ที่ติดตั้งบนพีซีโดยตรง</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>โหมด Windows สร้างมาสำหรับ Wild OS ที่ติดตั้งบนพีซีโดยตรง ไม่ใช่ในเครื่องเสมือน</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>กำลังตั้งค่าโหมด Windows</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>ใช้เวลาประมาณ 25 นาที ปิดหน้าต่างนี้แล้วใช้พีซีต่อได้ เราจะแจ้งให้ทราบเมื่อพร้อม</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>ปิด</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>บนพีซีส่วนใหญ่ใช้เวลาไม่ถึงหนึ่งชั่วโมง และนานกว่านั้นบนพีซีรุ่นเก่า ปิดหน้าต่างนี้แล้วใช้พีซีต่อได้ เราจะแจ้งให้ทราบเมื่อพร้อม</translation>
         </message>
     </context>
     <context>

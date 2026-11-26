@@ -1,3 +1,39 @@
+wildos-files (0.1.28) trixie; urgency=medium
+
+  * In light mode a hover highlight fades in cleanly, without a grey
+    flicker as it starts.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:24:59 +0000
+
+wildos-files (0.1.27) trixie; urgency=medium
+
+  * Resting the pointer on a name cut short shows the whole name again.
+    The side list lights one place at a time, with no grey trail in light
+    mode.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 09:58:46 +0000
+
+wildos-files (0.1.26) trixie; urgency=medium
+
+  * Moving the pointer along a list or menu lights one row at a time; the
+    row it leaves clears at once instead of fading out beside the next.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:52:08 +0000
+
+wildos-files (0.1.25) trixie; urgency=medium
+
+  * Videos, songs, documents and more picture types now show a small preview
+    in place of their icon, as in File Explorer on Windows.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 12:48:25 +0000
+
+wildos-files (0.1.24) trixie; urgency=medium
+
+  * A system folder you are not allowed to open now has a Continue button,
+    as on Windows: type your password and it opens as an administrator.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 12:32:59 +0000
+
 wildos-files (0.1.23) trixie; urgency=medium
 
   * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,

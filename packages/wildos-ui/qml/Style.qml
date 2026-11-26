@@ -276,6 +276,9 @@ QtObject {
     readonly property color surfaceRest: tone(0.04)
     readonly property color surfaceControl: tone(0.06)
     readonly property color surfaceHover: contrast ? tone(0.09) : layer(0.084, true, 0.5)
+    // What a hover fades back to. Plain "transparent" is clear black, so a
+    // white light-mode hover would pass through grey on its way out.
+    readonly property color surfaceHoverClear: Qt.alpha(surfaceHover, 0)
     readonly property color surfaceSelected: contrast ? tone(0.10) : layer(0.061, false, 0.037)
     readonly property color surfacePressed: tone(0.12)
     readonly property color surfaceTrack: tone(0.12)
@@ -288,7 +291,9 @@ QtObject {
     readonly property color borderSubtle: contrast ? contrastEdge : layer(0.07, false, 0.058)
     readonly property color divider: contrast ? contrastDivider : tone(0.06)
     readonly property color borderField: contrast ? contrastEdge : tone(0.10)
-    readonly property color windowEdge: contrast ? contrastEdge : layer(0.093, false, 0.073)
+    // Windows 11's 1px window border: in light mode a grey hairline that
+    // still shows against white, as the shadow alone does not.
+    readonly property color windowEdge: contrast ? contrastEdge : layer(0.093, false, 0.18)
     readonly property color borderGlass: contrast ? contrastEdge : layer(0.093, false, 0.073)
     readonly property color borderMenu: contrast ? contrastEdge : tone(0.14)
     readonly property color borderControl: contrast ? contrastEdge : tone(0.16)

@@ -153,14 +153,18 @@ Rectangle {
         anchors.bottomMargin: 12
         height: cardRow.implicitHeight + 22
         radius: 10
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
+        Behavior on color {
+            enabled: cardMouse.containsMouse
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
         color: cardMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRaised
         border.width: 1
         border.color: UI.Style.borderSubtle
         Accessible.role: Accessible.Button
         Accessible.name: cardTitle.text + ". " + cardText.text
-        Behavior on color {
-            ColorAnimation { duration: UI.Style.hoverDuration }
-        }
 
         RowLayout {
             id: cardRow

@@ -79,10 +79,14 @@ FocusScope {
 
         background: Rectangle {
             radius: 5
-            color: crumbButton.down ? UI.Style.surfacePressed : crumbButton.hovered || crumbButton.lit ? UI.Style.surfaceHover : "transparent"
+            // Fades in on hover and clears at once, so moving along a list
+            // never lights two items. It comes before the colour so it sees
+            // the change in hover first.
             Behavior on color {
+                enabled: crumbButton.hovered
                 ColorAnimation { duration: UI.Style.hoverDuration }
             }
+            color: crumbButton.down ? UI.Style.surfacePressed : crumbButton.hovered || crumbButton.lit ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
         }
     }
 

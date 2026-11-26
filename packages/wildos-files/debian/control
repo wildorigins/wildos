@@ -37,6 +37,7 @@ Depends:
  exfatprogs,
  fonts-jetbrains-mono,
  kio6,
+ kio-admin,
  libimage-exiftool-perl,
  ntfs-3g,
  python3,
@@ -55,7 +56,7 @@ Depends:
  qt6-svg-plugins,
  qpdf,
  udisks2,
- wildos-ui (>= 0.1.19),
+ wildos-ui (>= 0.1.28),
 Recommends:
  kio-extras,
  xdg-utils,

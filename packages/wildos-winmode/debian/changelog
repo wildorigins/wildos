@@ -1,3 +1,46 @@
+wildos-winmode (0.3.30) trixie; urgency=medium
+
+  * Windows programs started from Downloads or Documents wait for drive Z:
+    instead of failing with "path doesn't exist" on a slow PC. Opening an
+    installer no longer says Windows mode isn't set up when it is just
+    busy. Setup warns when Wild OS itself is running in a virtual machine,
+    and says it takes under an hour on most PCs rather than 25 minutes.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 12:59:16 +0000
+
+wildos-winmode (0.3.29) trixie; urgency=medium
+
+  * Installers that ask "Do you want to allow this app to make changes"
+    show that question in a window beside them. It never appeared, so the
+    install waited and then failed (issue 92).
+  * Windows comes back with its apps still open after the PC restarts when
+    a USB device was given to it. The saved Windows wouldn't load, so it
+    started afresh and open work was lost.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 15:00:00 +0000
+
+wildos-winmode (0.3.28) trixie; urgency=medium
+
+  * Problem reports show Windows apps that stopped responding or crashed,
+    from Windows' own records, read as the connection to Windows closes.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 19:30:00 +0000
+
+wildos-winmode (0.3.27) trixie; urgency=medium
+
+  * Settings > Windows mode keeps the folders chosen for Windows apps to
+    see. The choice was refused, so the list came back empty and nothing
+    changed. A change now reaches Windows straight away.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 18:50:00 +0000
+
+wildos-winmode (0.3.26) trixie; urgency=medium
+
+  * "Install in Windows mode instead" can be chosen for apps that have a
+    Wild OS version, such as WhatsApp, when Windows mode is set up.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 16:50:00 +0000
+
 wildos-winmode (0.3.25) trixie; urgency=medium
 
   * Windows mode can be set up on a processor with 2 or 3 cores after a

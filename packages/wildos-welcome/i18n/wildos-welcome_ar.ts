@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>متابعة</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>البحث في اللغات</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>البحث حسب المدينة أو البلد</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

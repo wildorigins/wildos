@@ -29,7 +29,7 @@ Item {
         radius: UI.Style.radiusLg
         color: item.selected ? UI.Style.accentSoft
              : item.hovered ? UI.Style.surfaceHover
-             : "transparent"
+             : UI.Style.surfaceHoverClear
         border.width: 2
         border.color: item.selected ? UI.Style.accent : "transparent"
 

@@ -59,6 +59,29 @@ Item {
             color: UI.Style.inkMuted
         }
 
+        UI.Label {
+            width: parent.width
+            visible: !!empty.folder && empty.folder.canOpenAsAdmin
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            text: qsTr("Select Continue to open it as an administrator. You will be asked for your password.")
+            color: UI.Style.inkMuted
+        }
+
+        Item {
+            width: 1
+            height: 6
+            visible: !!empty.folder && empty.folder.canOpenAsAdmin
+        }
+
+        UI.Button {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: !!empty.folder && empty.folder.canOpenAsAdmin
+            kind: "primary"
+            text: qsTr("Continue")
+            onClicked: empty.folder.openAsAdmin()
+        }
+
         UI.LinkButton {
             anchors.horizontalCenter: parent.horizontalCenter
             visible: empty.detail.length > 0 && !empty.detailShown

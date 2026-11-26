@@ -148,6 +148,9 @@ Q_SIGNALS:
     // The connection dropped and is being made again, and is back.
     void connectionLost();
     void connectionBack();
+    // Windows has this client's settings, FreeRDP's own: among them a work
+    // area of the whole desktop, which a setWorkArea() from now on replaces.
+    void railStarted();
     // Windows can take a new monitor layout (sendLayout) from now on.
     void displayControlReady();
     // The process behind a window: its image (full path), App User Model

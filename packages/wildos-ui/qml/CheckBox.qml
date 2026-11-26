@@ -30,13 +30,17 @@ T.CheckBox {
         width: 20
         height: 20
         radius: 6
-        color: control.marked ? (control.lit ? Style.accentHover : Style.accent) : control.lit ? Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
+        Behavior on color {
+            enabled: control.lit
+            ColorAnimation { duration: Style.hoverDuration }
+        }
+        color: control.marked ? (control.lit ? Style.accentHover : Style.accent) : control.lit ? Style.surfaceHover : Style.surfaceHoverClear
         border.width: control.marked ? 0 : 1.5
         border.color: Style.toggleOffBorder
         scale: control.down ? 0.92 : 1
-        Behavior on color {
-            ColorAnimation { duration: Style.hoverDuration }
-        }
         Behavior on scale {
             NumberAnimation { duration: Style.motionFast }
         }

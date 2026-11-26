@@ -182,6 +182,41 @@ int named(const QList<Monitor> &layout, const QString &name)
     return -1;
 }
 
+int covered(const QList<Monitor> &layout, const QRect &frame)
+{
+    const int under = at(layout, frame);
+    if (under >= 0 && !layout[under].rect.isEmpty() && frame.contains(layout[under].rect)) {
+        return under;
+    }
+    for (int i = 0; i < layout.size(); ++i) {
+        if (!layout[i].rect.isEmpty() && frame.contains(layout[i].rect)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+QRect workArea(const Monitor &monitor, const QRectF &area)
+{
+    const QRectF screen(monitor.logical);
+    const QRectF part = area.intersected(screen);
+    if (part.isEmpty() || monitor.rect.isEmpty()) {
+        return {};
+    }
+    // By the monitor's own pixels per unit rather than its scale, so the
+    // whole screen comes out as exactly the whole monitor: its size in
+    // pixels is rounded.
+    auto x = [&](double at) {
+        return monitor.rect.left() + std::clamp(int(std::lround((at - screen.left()) * monitor.rect.width() / screen.width())), 0, monitor.rect.width());
+    };
+    auto y = [&](double at) {
+        return monitor.rect.top() + std::clamp(int(std::lround((at - screen.top()) * monitor.rect.height() / screen.height())), 0, monitor.rect.height());
+    };
+    const int left = x(part.left());
+    const int top = y(part.top());
+    return QRect(left, top, x(part.right()) - left, y(part.bottom()) - top);
+}
+
 QRect bounds(const QList<Monitor> &layout)
 {
     QRect all;

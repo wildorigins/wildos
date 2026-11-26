@@ -549,6 +549,9 @@ QString StoreApp::progressText() const
     if (s.phase == QLatin1String("auth")) {
         return tr("Waiting for the administrator password");
     }
+    if (s.phase == QLatin1String("wait")) {
+        return tr("Waiting for another install to finish");
+    }
     if (s.action == QLatin1String("remove")) {
         return tr("Uninstalling");
     }

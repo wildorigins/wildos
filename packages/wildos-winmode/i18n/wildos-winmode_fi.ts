@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Käytä omaa Windows 11 -tiedostoasi</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS on virtuaalikoneessa, joten Windows toimisi toisen sisällä ja olisi hyvin hidas</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Virtuaalikone</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Määritä silti</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Virtuaalikoneessa määritys voi kestää tunteja, ja Windows-sovellukset ovat hyvin hitaita. Windows-tila on tehty Wild OS:lle, joka on asennettu suoraan tietokoneelle.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows-tila on tehty Wild OS:lle, joka on asennettu suoraan tietokoneelle, ei virtuaalikoneeseen.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Otetaan Windows-tilaa käyttöön</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Tämä kestää noin 25 minuuttia. Sulje tämä ikkuna ja jatka tietokoneen käyttöä; ilmoitamme, kun se on valmis.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Sulje</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Tämä kestää useimmilla tietokoneilla alle tunnin, vanhemmalla pidempään. Sulje tämä ikkuna ja jatka tietokoneen käyttöä; ilmoitamme, kun se on valmis.</translation>
         </message>
     </context>
     <context>

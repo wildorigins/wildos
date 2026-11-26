@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Devam</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Dil ara</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Şehir veya ülkeye göre ara</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

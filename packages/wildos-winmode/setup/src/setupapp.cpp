@@ -198,6 +198,7 @@ void SetupApp::recheck()
     const PcCheck::Virtualisation v = PcCheck::virtualisation();
     m_virt = v.state;
     m_technology = v.technology;
+    m_nested = v.nested;
     m_cores = PcCheck::processorCores();
     m_memory = PcCheck::memoryBytes();
     m_memoryLabel = PcCheck::memoryLabel(m_memory);
@@ -341,11 +342,12 @@ bool SetupApp::coresOk() const
     return m_cores >= PcCheck::neededCores;
 }
 
-// Offered only when the processor is the one thing in the way, so the
-// button never looks like it gets past something else.
+// Offered only when speed is the one thing in the way (a small processor,
+// or Wild OS in a virtual machine), so the button never looks like it gets
+// past something else.
 bool SetupApp::canAcceptSlow() const
 {
-    return !checking() && m_cores >= 2 && !coresOk() && m_virt == QLatin1String("ok") && m_memoryState == QLatin1String("ok") && spaceOk()
+    return !checking() && m_cores >= 2 && (!coresOk() || m_nested) && m_virt == QLatin1String("ok") && m_memoryState == QLatin1String("ok") && spaceOk()
         && m_internet != QLatin1String("offline");
 }
 
@@ -362,7 +364,7 @@ bool SetupApp::requirementsMet() const
     if (m_slowAccepted && canAcceptSlow()) {
         return true;
     }
-    return !checking() && m_virt == QLatin1String("ok") && coresOk() && m_memoryState == QLatin1String("ok") && spaceOk()
+    return !checking() && m_virt == QLatin1String("ok") && coresOk() && !m_nested && m_memoryState == QLatin1String("ok") && spaceOk()
         && m_internet != QLatin1String("offline");
 }
 

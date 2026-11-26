@@ -11,6 +11,7 @@
 #include <QScreen>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QStringList>
 
 #include <freerdp/rail.h>
 #include <freerdp/window.h>
@@ -89,6 +90,17 @@ bool isPopup(quint32 style, quint32 exStyle)
     return noActivate || (toolOrPopup && !appLike);
 }
 
+// A window that could be a full screen one: no title bar, no edge to size
+// it by and not maximised (a video, a game, a remote desktop viewer), and
+// one that takes clicks and the keyboard. Covering a whole monitor is what
+// makes it full screen.
+bool fullScreenStyle(quint32 style, quint32 exStyle)
+{
+    const bool captioned = (style & WS_CAPTION) == WS_CAPTION;
+    const bool clickThrough = (exStyle & WS_EX_TRANSPARENT) && (exStyle & WS_EX_LAYERED);
+    return !captioned && !(style & (WS_THICKFRAME | WS_MAXIMIZE | WS_CHILD)) && !(exStyle & WS_EX_NOACTIVATE) && !clickThrough;
+}
+
 QString settingsPath()
 {
     return QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + QStringLiteral("/wildos/windows-mode-windows.ini");
@@ -121,7 +133,9 @@ void showAs(RailWindow *window, quint32 state)
 {
     const QString saved = QGuiApplication::desktopFileName();
     QGuiApplication::setDesktopFileName(window->appId());
-    if (state == stateMaximized) {
+    if (window->remoteFullScreen() && state != stateMinimized) {
+        window->showFullScreen();
+    } else if (state == stateMaximized) {
         window->showMaximized();
     } else if (state == stateMinimized) {
         window->showMinimized();
@@ -166,6 +180,10 @@ Rail::Rail(Client *client, double scale, QObject *parent)
     connect(client, &Client::pointerDefault, this, [this] {
         m_pointerImage = QImage();
         setCursorAll(QCursor(Qt::ArrowCursor));
+    });
+    connect(client, &Client::railStarted, this, [this] {
+        m_railStarted = true;
+        sendWorkAreas();
     });
     connect(client, &Client::displayControlReady, this, [this] {
         // A screen changed while Windows could not be told, or the
@@ -235,6 +253,41 @@ double Rail::scaleForScreen(const QScreen *screen) const
     return i >= 0 ? m_layout[i].scale : m_scale;
 }
 
+void Rail::setWorkAreas(const QHash<QString, QRectF> &areas)
+{
+    m_workAreas = areas;
+    sendWorkAreas();
+}
+
+QRect Rail::workAreaFor(int monitor) const
+{
+    if (monitor < 0 || monitor >= m_layout.size() || !layoutCurrent()) {
+        return {};
+    }
+    const auto it = m_workAreas.constFind(m_layout[monitor].name);
+    return it == m_workAreas.cend() ? QRect() : monitors::workArea(m_layout[monitor], *it);
+}
+
+void Rail::sendWorkAreas()
+{
+    if (!m_railStarted) {
+        return;
+    }
+    // One per monitor: Windows takes each for the monitor it is on. A
+    // monitor KWin has not described keeps the whole of itself.
+    QStringList sent;
+    for (int i = 0; i < m_layout.size(); ++i) {
+        const QRect area = workAreaFor(i);
+        if (area.isValid()) {
+            m_client->setWorkArea(area);
+            sent.append(QStringLiteral("%1 %2x%3+%4+%5").arg(m_layout[i].name).arg(area.width()).arg(area.height()).arg(area.x()).arg(area.y()));
+        }
+    }
+    if (!sent.isEmpty()) {
+        qInfo("wildos-rdp: Windows' work area now %s", qPrintable(sent.join(QStringLiteral(", "))));
+    }
+}
+
 void Rail::relayout(const QList<Monitor> &layout)
 {
     m_wanted = layout;
@@ -256,6 +309,8 @@ void Rail::relayout(const QList<Monitor> &layout)
     // Windows moves the windows of a monitor that went onto one that is
     // left; each then goes to the monitor of the screen it is on here.
     QTimer::singleShot(1500, this, [this] {
+        // Windows may reset each monitor's work area for a new layout.
+        sendWorkAreas();
         for (RailWindow *w : std::as_const(m_windows)) {
             w->followScreen();
         }
@@ -636,6 +691,9 @@ void Rail::order(const RailOrder &o)
             }
         }
     }
+    if ((f & (WINDOW_ORDER_FIELD_STYLE | WINDOW_ORDER_FIELD_WND_OFFSET | WINDOW_ORDER_FIELD_WND_SIZE)) && !w->loading() && !m_closing.contains(o.id)) {
+        updateFullScreen(w, s);
+    }
     if ((f & WINDOW_ORDER_FIELD_STYLE) && (s.style & WS_DISABLED)) {
         if (auto it = m_closing.find(o.id); it != m_closing.end() && !it->disabled) {
             // Disabled by Windows after the close: a modal question is up.
@@ -678,7 +736,9 @@ void Rail::order(const RailOrder &o)
         } else {
             if (!w->isVisible()) {
                 showAs(w, s.showState);
-            } else if (!w->isPopup() && (w->windowStates() & Qt::WindowMaximized)) {
+            } else if (!w->isPopup() && (w->windowStates() & Qt::WindowMaximized) && !w->localMaximisePending()) {
+                // A window maximised here that Windows has not maximised
+                // yet is not restored by the state Windows still has.
                 w->showNormal();
                 w->resize(w->logicalSize(s.size));
             } else if (before == stateMinimized) {
@@ -695,7 +755,11 @@ void Rail::realize(quint32 id)
     if (m_cloaked.contains(id) || m_deciding.contains(id)) {
         return;
     }
-    const bool popup = isPopup(s.style, s.exStyle);
+    // A full screen window is never a popup, whatever its styles: a popup
+    // here stays above every other window, Wild OS's own included, and
+    // cannot fill the screen (issue 92: LogMeIn's full screen view).
+    const int fullMonitor = fullScreenMonitor(s);
+    const bool popup = fullMonitor < 0 && isPopup(s.style, s.exStyle);
     const QRect rect(s.offset, s.size);
     // Windows 11 draws a window's drop shadow as see-through windows round
     // it; the compositor draws shadows here. A see-through window over an
@@ -737,7 +801,7 @@ void Rail::realize(quint32 id)
     RailWindow *w = nullptr;
     bool adopted = false;
     const bool early = m_preexisting.contains(id);
-    if (topLevel && appSized && shown && !closingOwner && (!m_placeholders.isEmpty() || !m_cancelled.isEmpty())) {
+    if (topLevel && appSized && shown && !closingOwner && fullMonitor < 0 && (!m_placeholders.isEmpty() || !m_cancelled.isEmpty())) {
         if (!m_processes.contains(id) && !m_askedProcess.contains(id)) {
             // Which program this is decides which loading window it takes;
             // Windows answers within a few milliseconds.
@@ -798,6 +862,7 @@ void Rail::realize(quint32 id)
         }
     }
     w->setRemoteState(id, s.style, s.exStyle, popup);
+    w->setRemoteFullScreen(fullMonitor >= 0, screenOf(fullMonitor));
     w->setOwner(s.owner);
     w->setShowState(s.showState);
     w->setFrame(rect);
@@ -835,7 +900,8 @@ void Rail::realize(quint32 id)
         QTimer::singleShot(closeEndMs, this, [this, id] { closeUnanswered(id, true); });
         return;
     }
-    log(id, QStringLiteral("shown as %1 (%2)").arg(popup ? QStringLiteral("a popup") : QStringLiteral("a window"), w->appId()));
+    log(id, QStringLiteral("shown as %1 (%2)")
+                .arg(popup ? QStringLiteral("a popup") : fullMonitor >= 0 ? QStringLiteral("a full screen window") : QStringLiteral("a window"), w->appId()));
     if (popup) {
         w->setTransientParent(parent);
         const double scale = parent->scale();
@@ -890,6 +956,43 @@ void Rail::stepAsideFor(quint32 id)
             }
         }
     });
+}
+
+int Rail::fullScreenMonitor(const RailOrder &s) const
+{
+    if (!fullScreenStyle(s.style, s.exStyle) || s.size.width() <= 0 || s.size.height() <= 0) {
+        return -1;
+    }
+    return monitors::covered(m_layout, QRect(s.offset, s.size));
+}
+
+QScreen *Rail::screenOf(int monitor) const
+{
+    if (monitor < 0 || monitor >= m_layout.size()) {
+        return nullptr;
+    }
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    for (QScreen *s : screens) {
+        if (s->name() == m_layout[monitor].name) {
+            return s;
+        }
+    }
+    return nullptr;
+}
+
+void Rail::updateFullScreen(RailWindow *w, const RailOrder &s)
+{
+    const int monitor = fullScreenMonitor(s);
+    if ((monitor >= 0) == w->remoteFullScreen()) {
+        return;
+    }
+    if (monitor < 0 && w->isPopup()) {
+        return;
+    }
+    log(w->remoteId(), monitor >= 0 ? QStringLiteral("went full screen") : QStringLiteral("left full screen"));
+    if (w->setRemoteFullScreen(monitor >= 0, screenOf(monitor))) {
+        showAs(w, s.showState);
+    }
 }
 
 bool Rail::overlapsAppWindow(const QRect &rect) const
@@ -1462,6 +1565,7 @@ void Rail::connectionLost()
     // Reconnecting: windows that would only sit frozen go from the screen
     // if it takes more than a moment, and come back when it is back.
     m_lostAt.start();
+    m_railStarted = false;
     QTimer::singleShot(lostHideMs, this, [this] {
         if (!m_lostAt.isValid()) {
             return;

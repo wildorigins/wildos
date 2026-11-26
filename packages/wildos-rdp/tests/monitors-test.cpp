@@ -128,6 +128,45 @@ private Q_SLOTS:
         QVERIFY(!monitors::same(a, b));
     }
 
+    // A 52 unit taskbar along the bottom of each screen: Windows keeps the
+    // same strip clear, in each monitor's own pixels.
+    void workAreaLessTaskbar()
+    {
+        const auto l = monitors::arrange({screen("DP-1", QRect(0, 0, 1920, 1080), 1.0, QSize(1920, 1080)),
+                                          screen("eDP-1", QRect(1920, 0, 1707, 960), 2.25, QSize(3840, 2160))});
+        QCOMPARE(monitors::workArea(l[0], QRectF(0, 0, 1920, 1028)), QRect(0, 0, 1920, 1028));
+        QCOMPARE(monitors::workArea(l[1], QRectF(1920, 0, 1707, 908)), QRect(1920, 0, 3840, 2043));
+    }
+
+    // A full screen window is the monitor's rectangle, or a little more; a
+    // window that leaves any of it uncovered is not full screen.
+    void coveredMonitor()
+    {
+        const auto l = monitors::arrange({screen("eDP-1", QRect(0, 0, 1707, 960), 2.25, QSize(3840, 2160)),
+                                          screen("DP-1", QRect(1707, 0, 1920, 1080), 1.0, QSize(1920, 1080))});
+        QCOMPARE(monitors::covered(l, QRect(0, 0, 3840, 2160)), 0);
+        QCOMPARE(monitors::covered(l, QRect(3840, 0, 1920, 1080)), 1);
+        QCOMPARE(monitors::covered(l, QRect(3832, -8, 1936, 1096)), 1);
+        QCOMPARE(monitors::covered(l, QRect(3840, 0, 1920, 1028)), -1);
+        QCOMPARE(monitors::covered(l, QRect(0, 0, 1730, 1000)), -1);
+    }
+
+    void workAreaWholeScreenAndTopPanel()
+    {
+        const auto l = monitors::arrange({screen("eDP-1", QRect(0, 0, 1707, 960), 2.25, QSize(3840, 2160))});
+        QCOMPARE(monitors::workArea(l[0], QRectF(0, 0, 1707, 960)), QRect(0, 0, 3840, 2160));
+        QCOMPARE(monitors::workArea(l[0], QRectF(0, 40, 1707, 920)), QRect(0, 90, 3840, 2070));
+        QVERIFY(monitors::workArea(l[0], QRectF(2000, 0, 100, 100)).isEmpty());
+    }
+
+    // A screen left of the primary is at negative pixels in Windows.
+    void workAreaLeftOfPrimary()
+    {
+        const auto l = monitors::arrange({screen("DP-1", QRect(1707, 0, 1920, 1080), 1.0, QSize(1920, 1080)),
+                                          screen("eDP-1", QRect(0, 0, 1707, 960), 2.25, QSize(3840, 2160))});
+        QCOMPARE(monitors::workArea(l[1], QRectF(0, 0, 1707, 908)), QRect(-3840, 0, 3840, 2043));
+    }
+
     void rdpScales()
     {
         QCOMPARE(monitors::desktopScale(2.25), 225u);

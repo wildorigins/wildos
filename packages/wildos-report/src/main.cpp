@@ -258,5 +258,11 @@ int main(int argc, char *argv[])
     if (home.status() == QQmlComponent::Ready || home.status() == QQmlComponent::Error) {
         create();
     }
-    return app.exec();
+    const int code = app.exec();
+    // The window goes while the engine that made it is still whole. Left
+    // as the engine's child it went last, after the engine had let go of
+    // its QML state, and a dialog still open on it (the one after Open
+    // GitHub) crashed the app as it faded out on the way.
+    delete incubator.object();
+    return code;
 }

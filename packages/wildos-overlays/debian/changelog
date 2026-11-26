@@ -1,3 +1,17 @@
+wildos-overlays (0.1.14) trixie; urgency=medium
+
+  * Moving the pointer along a list or menu lights one row at a time; the
+    row it leaves clears at once instead of fading out beside the next.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:52:08 +0000
+
+wildos-overlays (0.1.13) trixie; urgency=medium
+
+  * The emoji panel no longer jumps as emoji are picked: Recently used
+    shows new picks the next time the panel opens, as on Windows.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 20:15:00 +0000
+
 wildos-overlays (0.1.12) trixie; urgency=medium
 
   * The emoji panel no longer seems to blink each time an emoji goes in:

@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>确定</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>当键盘列表中有越南语 (Telex) 等输入法时不可用</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>越南语 (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>越南语 (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>正在等待你的密码</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>正在检查更新</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>正在下载</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>正在安装</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>未提供密码，因此未下载任何内容。</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>无法下载输入法。请检查 Internet 连接，然后重试。</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>取消</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>越南语输入需要下载</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>这需要一分钟左右。</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS 只需下载一次输入法，之后按 Windows 徽标键 + 空格即可切换到该输入法。</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>下载</translation>
         </message>
     </context>
     <context>

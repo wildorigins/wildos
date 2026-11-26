@@ -422,8 +422,9 @@ PageScroll {
                             UI.Toggle {
                                 anchors.verticalCenter: parent.verticalCenter
                                 checked: Accessibility.onScreenKeyboard
-                                locked: !Accessibility.onScreenKeyboardInstalled
-                                lockedReason: qsTr("No on-screen keyboard is installed on this computer")
+                                locked: !Accessibility.onScreenKeyboardInstalled || Keyboard.methodInUse
+                                lockedReason: Keyboard.methodInUse ? qsTr("Not available while a typing method such as Vietnamese (Telex) is in your keyboards")
+                                                                   : qsTr("No on-screen keyboard is installed on this computer")
                                 Accessible.name: qsTr("On-screen keyboard")
                                 onToggled: Accessibility.setOnScreenKeyboard(checked)
                             }

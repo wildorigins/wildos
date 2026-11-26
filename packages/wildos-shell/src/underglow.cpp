@@ -1,5 +1,7 @@
 #include "underglow.h"
 
+#include "pillmask.h"
+
 #include <KConfigGroup>
 #include <KSharedConfig>
 
@@ -8,6 +10,11 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusVariant>
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QRectF>
 
 namespace
 {
@@ -37,9 +44,52 @@ Underglow::Underglow(QObject *parent)
     QDBusConnection::systemBus().connect(upowerService, upowerPath, propertiesInterface, QStringLiteral("PropertiesChanged"), this,
                                          SLOT(upowerPropertiesChanged(QString, QVariantMap, QStringList)));
 
+    // The panel replaces the file rather than writing into it, so the
+    // directory is what changes; the file itself is watched once it exists.
+    m_pillsWatcher.addPath(QFileInfo(PillMask::pillsPath()).absolutePath());
+    connect(&m_pillsWatcher, &QFileSystemWatcher::directoryChanged, this, &Underglow::readPills);
+    connect(&m_pillsWatcher, &QFileSystemWatcher::fileChanged, this, &Underglow::readPills);
+
     readSettings();
     readMotion();
     readBattery();
+    readPills();
+}
+
+void Underglow::readPills()
+{
+    const QString path = PillMask::pillsPath();
+    QJsonObject pills;
+    QFile file(path);
+    if (file.open(QIODevice::ReadOnly)) {
+        pills = QJsonDocument::fromJson(file.readAll()).object();
+        if (!m_pillsWatcher.files().contains(path)) {
+            m_pillsWatcher.addPath(path);
+        }
+    }
+    if (pills != m_pills) {
+        m_pills = pills;
+        ++m_pillsRevision;
+        Q_EMIT pillsChanged();
+    }
+}
+
+QVariantList Underglow::pills(const QString &screen) const
+{
+    QVariantList result;
+    const QJsonArray pills = m_pills.value(screen).toObject().value(QStringLiteral("pills")).toArray();
+    for (const QJsonValue &value : pills) {
+        const QJsonArray r = value.toArray();
+        if (r.size() == 4) {
+            result.append(QRectF(r.at(0).toDouble(), r.at(1).toDouble(), r.at(2).toDouble(), r.at(3).toDouble()));
+        }
+    }
+    return result;
+}
+
+qreal Underglow::pillRadius(const QString &screen) const
+{
+    return m_pills.value(screen).toObject().value(QStringLiteral("radius")).toDouble();
 }
 
 void Underglow::readSettings()

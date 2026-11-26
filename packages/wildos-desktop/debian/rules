@@ -18,11 +18,14 @@ execute_after_dh_install:
 	# every new profile starts with them off. Brave reads this file from
 	# beside its own binary and ships none of its own.
 	install -Dm644 files/brave/initial_preferences debian/wildos-desktop/opt/brave.com/brave/initial_preferences
+	# Started with every boot without needing systemctl enable.
+	mkdir -p debian/wildos-desktop/usr/lib/systemd/system/graphical.target.wants
+	ln -sf ../wildos-brave-gpu.service debian/wildos-desktop/usr/lib/systemd/system/graphical.target.wants/wildos-brave-gpu.service
 
 execute_after_dh_fixperms:
 	chmod 0755 debian/wildos-desktop/usr/libexec/wildos/wildos-app-names \
 		debian/wildos-desktop/usr/libexec/wildos/wildos-strings \
 		debian/wildos-desktop/usr/libexec/wildos/update-checks \
 		debian/wildos-desktop/usr/libexec/wildos/fingerprint-turn \
-		debian/wildos-desktop/usr/bin/brave-browser-stable \
+		debian/wildos-desktop/usr/bin/brave-browser-stable 		debian/wildos-desktop/usr/libexec/wildos/brave-gpu 		debian/wildos-desktop/usr/libexec/wildos/brave-gpu-policy \
 		debian/wildos-desktop/usr/lib/systemd/user-environment-generators/60-wildos-kpipewire-encoder

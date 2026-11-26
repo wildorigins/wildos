@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Turpināt</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Meklēt valodas</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Meklēt pēc pilsētas vai valsts</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

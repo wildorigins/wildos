@@ -22,10 +22,14 @@ T.Button {
 
     background: Rectangle {
         radius: UI.Style.radiusSm
-        color: control.down ? UI.Style.surfacePressed : control.hovered && control.enabled ? VideosStyle.rowHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: control.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: control.down ? UI.Style.surfacePressed : control.hovered && control.enabled ? VideosStyle.rowHover : "transparent"
 
         UI.FocusRing {
             visible: control.visualFocus

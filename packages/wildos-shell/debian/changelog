@@ -1,3 +1,34 @@
+wildos-shell (0.1.34) trixie; urgency=medium
+
+  * The arrows on the taskbar's Network Speed widget are drawn thick and
+    sit right next to the speed.
+  * The taskbar underglow also works on the floating taskbar, one glow
+    along the top of each pill.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 14:05:57 +0000
+
+wildos-shell (0.1.33) trixie; urgency=medium
+
+  * Network Speed on the taskbar draws its arrows bold, download in blue
+    and upload in orange. Widgets added since build 919 switch over by
+    themselves.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 08:50:00 +0000
+
+wildos-shell (0.1.32) trixie; urgency=medium
+
+  * Network Speed on the taskbar labels its figures with down and up
+    arrows.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 19:46:21 +0000
+
+wildos-shell (0.1.31) trixie; urgency=medium
+
+  * Network Speed and Disk Activity widgets added to the taskbar show
+    their figures as text instead of a faint line graph.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 19:32:12 +0000
+
 wildos-shell (0.1.30) trixie; urgency=medium
 
   * Built for Debian's KWin update (6.3.6-1+deb13u1), and KWin is held at

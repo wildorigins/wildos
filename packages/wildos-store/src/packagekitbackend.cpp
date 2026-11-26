@@ -180,6 +180,9 @@ void PackageKitBackend::watch(int job, Transaction *transaction, bool removing)
         case Transaction::StatusWaitingForAuth:
             status = QStringLiteral("auth");
             break;
+        case Transaction::StatusWaitingForLock:
+            status = QStringLiteral("wait");
+            break;
         case Transaction::StatusDownload:
             status = QStringLiteral("download");
             break;

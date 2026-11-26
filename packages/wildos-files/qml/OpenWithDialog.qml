@@ -102,10 +102,14 @@ UI.Dialog {
 
             background: Rectangle {
                 radius: UI.Style.radiusXs
-                color: app.chosen ? UI.Style.accentSelected : app.down ? UI.Style.surfacePressed : app.hovered ? UI.Style.surfaceHover : "transparent"
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
                 Behavior on color {
+                    enabled: app.hovered
                     ColorAnimation { duration: UI.Style.hoverDuration }
                 }
+                color: app.chosen ? UI.Style.accentSelected : app.down ? UI.Style.surfacePressed : app.hovered ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
             }
 
             contentItem: Item {

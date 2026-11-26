@@ -18,4 +18,12 @@ public:
     using QObject::QObject;
 
     Q_INVOKABLE QRegion region(const QVariantList &rects, qreal radius) const;
+
+    // Shares one screen's pills, relative to the panel window, with KWin's
+    // underglow script, which cannot see inside the panel: a floating
+    // taskbar is one full width window with the pills drawn in it.
+    Q_INVOKABLE void publish(const QString &screen, const QVariantList &rects, qreal radius) const;
+
+    // The file publish() writes, in the session's runtime directory.
+    static QString pillsPath();
 };

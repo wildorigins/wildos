@@ -1,3 +1,61 @@
+wildos-branding (0.1.104) trixie; urgency=medium
+
+  * Picture-in-picture videos from browsers stay above other windows.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 18:12:28 +0000
+
+wildos-branding (0.1.103) trixie; urgency=medium
+
+  * In light mode a hover highlight fades in cleanly, without a grey
+    flicker as it starts.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:24:59 +0000
+
+wildos-branding (0.1.102) trixie; urgency=medium
+
+  * In light mode a hover highlight fades out cleanly instead of leaving a
+    grey shadow behind as it goes.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:03:22 +0000
+
+wildos-branding (0.1.101) trixie; urgency=medium
+
+  * Windows have a visible thin grey border in light mode, as in Windows
+    11, for other apps too.
+  * Start's search box shows a blinking caret when you click into it or
+    type.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 09:59:50 +0000
+
+wildos-branding (0.1.100) trixie; urgency=medium
+
+  * Pinned apps in Start keep their icons and names after an app is
+    installed or removed (#96).
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 08:52:21 +0000
+
+wildos-branding (0.1.99) trixie; urgency=medium
+
+  * Folders in Start, as on Windows 11: drag a pinned app onto another to
+    make a folder, click it to open, click its name to rename it, and drag
+    an app out to take it out.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 16:01:00 +0000
+
+wildos-branding (0.1.98) trixie; urgency=medium
+
+  * Moving the pointer along a list or menu lights one row at a time; the
+    row it leaves clears at once instead of fading out beside the next.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:52:08 +0000
+
+wildos-branding (0.1.97) trixie; urgency=medium
+
+  * The clock's notifications sit above the calendar again on screens
+    768 pixels tall, instead of off the bottom of the screen.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 13:05:00 +0000
+
 wildos-branding (0.1.96) trixie; urgency=medium
 
   * With the taskbar at the top, the clock's notifications open below the

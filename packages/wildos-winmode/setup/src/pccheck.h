@@ -14,6 +14,10 @@ struct Virtualisation {
     QString state;
     // "Intel VT-x", "AMD-V" or empty
     QString technology;
+    // Wild OS itself runs in a virtual machine (CPUID's hypervisor bit), so
+    // Windows would be a virtual PC inside a virtual PC: it works where the
+    // outer one passes virtualisation on, many times slower.
+    bool nested = false;
 };
 
 // CPUID says whether the processor has VT-x or AMD-V; creating a VM through

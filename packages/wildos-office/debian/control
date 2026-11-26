@@ -25,7 +25,7 @@ Depends:
  fonts-crosextra-caladea,
  hunspell-en-gb,
  hunspell-en-us,
- wildos-ui (>= 0.1.2),
+ wildos-ui (>= 0.1.28),
  wildos-branding (>= 0.1.10),
  qml6-module-qtcore,
  qml6-module-qtquick,

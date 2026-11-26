@@ -74,10 +74,14 @@ ColumnLayout {
                         Layout.fillWidth: true
                         implicitHeight: 46
                         radius: UI.Style.radiusXs
-                        color: chosen ? UI.Style.surfaceSelected : sigMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                        // Fades in on hover and clears at once, so moving along a list
+                        // never lights two items. It comes before the colour so it sees
+                        // the change in hover first.
                         Behavior on color {
+                            enabled: sigMouse.containsMouse
                             ColorAnimation { duration: 80 }
                         }
+                        color: chosen ? UI.Style.surfaceSelected : sigMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                         Rectangle {
                             visible: sigRow.chosen
                             width: 3

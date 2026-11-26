@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Користи Windows 11 датотеку коју имате</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS ради у виртуелној машини, па би Windows радио унутар друге и био би веома спор</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Виртуелна машина</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Ипак подеси</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>У виртуелној машини подешавање може трајати сатима, а Windows апликације су веома споре. Windows режим је направљен за Wild OS инсталиран на самом рачунару.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows режим је направљен за Wild OS инсталиран на самом рачунару, а не у виртуелној машини.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Подешавање Windows режима</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Ово траје око 25 минута. Затворите овај прозор и наставите да користите рачунар; јавићемо вам када буде спремно.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Затвори</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>На већини рачунара ово траје мање од сат времена, на старијем дуже. Затворите овај прозор и наставите да користите рачунар; јавићемо вам када буде спремно.</translation>
         </message>
     </context>
     <context>

@@ -22,10 +22,14 @@ T.AbstractButton {
 
     background: Rectangle {
         radius: UI.Style.radiusMd
-        color: link.down ? UI.Style.surfacePressed : link.hovered ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: link.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: link.down ? UI.Style.surfacePressed : link.hovered ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
         UI.FocusRing {
             visible: link.visualFocus

@@ -23,10 +23,14 @@ T.TabButton {
 
     background: Rectangle {
         radius: Style.radiusSm
-        color: control.checked ? Style.surfaceSelected : control.down ? Style.surfacePressed : control.lit ? Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: control.lit
             ColorAnimation { duration: Style.hoverDuration }
         }
+        color: control.checked ? Style.surfaceSelected : control.down ? Style.surfacePressed : control.lit ? Style.surfaceHover : Style.surfaceHoverClear
 
         FocusRing {
             visible: control.visualFocus

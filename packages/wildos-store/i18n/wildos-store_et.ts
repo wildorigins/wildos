@@ -876,6 +876,10 @@ Säilita kõik, mida teed.</translation>
             <source>App ID %1</source>
             <translation>Rakenduse ID %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Ootab, kuni teine paigaldus lõpeb</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Säilita kõik, mida teed.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Umbes %1 tundi jäänud</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Ootab, kuni teine paigaldus lõpeb</translation>
         </message>
     </context>
     <context>

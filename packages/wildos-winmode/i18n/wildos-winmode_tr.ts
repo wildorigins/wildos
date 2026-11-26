@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Elinizdeki bir Windows 11 dosyasını kullanın</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS bir sanal makinede çalışıyor, bu yüzden Windows ikinci bir sanal makinede çalışır ve çok yavaş olur</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Sanal makine</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Yine de kur</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Sanal makinede kurulum saatler sürebilir ve Windows uygulamaları çok yavaş çalışır. Windows modu, doğrudan bilgisayara kurulu Wild OS için tasarlandı.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows modu, sanal makineye değil, doğrudan bilgisayara kurulu Wild OS için tasarlandı.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Windows modu kuruluyor</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Bu yaklaşık 25 dakika sürer. Bu pencereyi kapatıp bilgisayarınızı kullanmaya devam edin; hazır olduğunda size haber veririz.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Kapat</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Bu çoğu bilgisayarda bir saatten kısa sürer, eski bir bilgisayarda daha uzun sürer. Bu pencereyi kapatıp bilgisayarınızı kullanmaya devam edin; hazır olduğunda size haber veririz.</translation>
         </message>
     </context>
     <context>

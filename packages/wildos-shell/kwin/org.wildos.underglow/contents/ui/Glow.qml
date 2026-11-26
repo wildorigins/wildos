@@ -1,10 +1,13 @@
 import QtQuick
 import QtQuick.Window
+import Qt5Compat.GraphicalEffects
 import org.wildos.shell as WildOS
 import WildOS.UI as UI
 
 // One taskbar's underglow: a strip window across the taskbar's top edge,
 // reaching far enough above and below the line for the glow to fade out.
+// Floating, one strip per pill, along the straight part of its top edge
+// between the rounded corners, faded out at both ends.
 //
 // The line lies on the taskbar's top two pixels, over its hairline, rather
 // than just above it as the board draws it: above, it would cover the bottom
@@ -13,6 +16,10 @@ Window {
     id: glow
 
     property var dock: null
+    // Floating: the pill, relative to the taskbar window, and its corners.
+    property rect pill
+    property real radius: 0
+    readonly property bool floating: WildOS.TaskbarStyle.floating
     property bool ready: true
     property bool covered: false
 
@@ -54,12 +61,12 @@ Window {
 
     flags: Qt.FramelessWindowHint | Qt.BypassWindowManagerHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     color: "transparent"
-    x: Math.round(bar.x)
-    y: Math.round(bar.y) - reach
-    width: Math.max(1, Math.round(bar.width))
+    x: Math.round(bar.x + (floating ? pill.x + radius : 0))
+    y: Math.round(bar.y + (floating ? pill.y : 0)) - reach
+    width: Math.max(1, Math.round(floating ? pill.width - radius * 2 : bar.width))
     height: reach * 2 + lineHeight
-    visible: WildOS.Underglow.enabled && !WildOS.TaskbarStyle.floating
-        && dock !== null && !dock.deleted && !dock.hidden && !covered && bar.width > 0
+    visible: WildOS.Underglow.enabled && dock !== null && !dock.deleted && !dock.hidden && !covered && bar.width > 0
+        && (!floating || pill.width > radius * 2)
 
     // Comes up once the desktop has faded in after signing in (main.qml),
     // not on its own over the start-up screen: KWin draws this window itself,
@@ -67,6 +74,13 @@ Window {
     Item {
         anchors.fill: parent
         opacity: glow.ready ? 1 : 0
+
+        // A pill's strip ends inside the glass, so the glow and spectrum fade
+        // out towards its corners rather than stopping in a hard edge.
+        layer.enabled: glow.floating
+        layer.effect: OpacityMask {
+            maskSource: edgeFade
+        }
 
         Behavior on opacity {
             NumberAnimation { duration: 450; easing.type: Easing.OutCubic }
@@ -159,6 +173,19 @@ Window {
                     onTriggered: spectrum.phase = WildOS.Underglow.flowPhase()
                 }
             }
+        }
+    }
+
+    Rectangle {
+        id: edgeFade
+        anchors.fill: parent
+        visible: false
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 0.15; color: "black" }
+            GradientStop { position: 0.85; color: "black" }
+            GradientStop { position: 1.0; color: "transparent" }
         }
     }
 

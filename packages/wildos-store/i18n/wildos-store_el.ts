@@ -876,6 +876,10 @@ Keep everything you do.</source>
             <source>App ID %1</source>
             <translation>Αναγνωριστικό εφαρμογής %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Αναμονή για να ολοκληρωθεί άλλη εγκατάσταση</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Keep everything you do.</source>
         <message>
             <source>About %1 hours left</source>
             <translation>Απομένουν περίπου %1 ώρες</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Αναμονή για να ολοκληρωθεί άλλη εγκατάσταση</translation>
         </message>
     </context>
     <context>

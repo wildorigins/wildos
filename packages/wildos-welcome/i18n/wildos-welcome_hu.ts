@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Folytatás</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Nyelvek keresése</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Keresés város vagy ország szerint</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

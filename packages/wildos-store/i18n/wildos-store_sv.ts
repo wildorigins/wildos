@@ -876,6 +876,10 @@ Behåll allt du gör.</translation>
             <source>App ID %1</source>
             <translation>App-ID %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Väntar på att en annan installation ska bli klar</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Behåll allt du gör.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Cirka %1 timmar kvar</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Väntar på att en annan installation ska bli klar</translation>
         </message>
     </context>
     <context>

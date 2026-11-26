@@ -488,8 +488,9 @@ class UsbManager:
     def reconcile(self, remembered, failed, setting_up):
         devices = scan()
         st = virsh.state(self.domain)
-        # Setup owns the virtual PC until it finishes.
-        active = st in ("running", "paused") and not setting_up
+        # Setup owns the virtual PC until it finishes, and a Windows being
+        # saved to disk has given its devices back (give_back_for_save).
+        active = st in ("running", "paused") and not setting_up and not self.service.saving
         attached = set()
         if st in ("running", "paused"):
             try:
@@ -520,6 +521,25 @@ class UsbManager:
                 failed[dev["alias"]] = attach_problem(e)
                 log(f"couldn't give {dev['name']} to Windows:", e)
         return describe(devices, remembered, attached, active, failed), failed
+
+    def give_back_for_save(self):
+        """Before Windows is saved to disk: the devices it was given come
+        back here first. A saved Windows names each one by the number the PC
+        gave it when it was plugged in, which changes when it is plugged in
+        again or the PC restarts, and libvirt then refused to load the save
+        at all, so every app open in Windows was lost (issue 92). Windows
+        gets them again as it comes back (vm_changed)."""
+        try:
+            attached = attached_aliases(virsh.dumpxml(self.domain))
+        except virsh.VirshError as e:
+            log(e)
+            return
+        for alias in sorted(attached):
+            try:
+                virsh.run("detach-device-alias", self.domain, alias, "--live", timeout=30)
+                log("given back to Wild OS before saving Windows:", alias)
+            except virsh.VirshError as e:
+                log("couldn't give back", alias, e)
 
     def finished(self, result):
         self.running = False

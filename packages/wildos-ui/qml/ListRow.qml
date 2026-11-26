@@ -93,10 +93,14 @@ T.AbstractButton {
 
     background: Rectangle {
         radius: row.radius
-        color: row.interactive && row.down ? Style.surfacePressed : row.lit ? Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: row.lit
             ColorAnimation { duration: Style.hoverDuration }
         }
+        color: row.interactive && row.down ? Style.surfacePressed : row.lit ? Style.surfaceHover : Style.surfaceHoverClear
 
         Rectangle {
             visible: row.divider && row.radius === 0

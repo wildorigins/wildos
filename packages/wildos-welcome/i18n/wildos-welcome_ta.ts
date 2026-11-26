@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>தொடர்</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>மொழிகளைத் தேடு</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>நகரம் அல்லது நாட்டின்படி தேடு</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

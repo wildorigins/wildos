@@ -876,6 +876,10 @@ Keep everything you do.</source>
             <source>App ID %1</source>
             <translation>பயன்பாட்டு ஐடி %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>மற்றொரு நிறுவல் முடிவதற்காகக் காத்திருக்கிறது</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Keep everything you do.</source>
         <message>
             <source>About %1 hours left</source>
             <translation>சுமார் %1 மணிநேரம் மீதமுள்ளது</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>மற்றொரு நிறுவல் முடிவதற்காகக் காத்திருக்கிறது</translation>
         </message>
     </context>
     <context>

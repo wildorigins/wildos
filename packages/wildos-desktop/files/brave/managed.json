@@ -9,5 +9,6 @@
   "BraveWebDiscoveryEnabled": false,
   "MetricsReportingEnabled": false,
   "PromptForDownloadLocation": false,
-  "CommandLineFlagSecurityWarningsEnabled": false
+  "CommandLineFlagSecurityWarningsEnabled": false,
+  "AlwaysOpenPdfExternally": true
 }

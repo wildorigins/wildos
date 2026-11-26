@@ -125,6 +125,18 @@
     <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-wifi-driver</annotate>
   </action>
 
+  <action id="org.wildos.settings.input-method">
+    <description>Add a typing method</description>
+    <message>Download and install the typing method for this keyboard?</message>
+    <icon_name>input-keyboard</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/wildos/settings-input-method</annotate>
+  </action>
+
   <action id="org.wildos.settings.printer-driver">
     <description>Install a printer driver</description>
     <message>Download and install this printer's driver?</message>

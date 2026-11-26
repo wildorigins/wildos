@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Gamitin ang Windows 11 file na mayroon ka</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Nasa virtual machine ang Wild OS, kaya tatakbo ang Windows sa loob ng isa pa at magiging napakabagal</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Virtual machine</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>I-set up pa rin</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Sa virtual machine, puwedeng umabot nang ilang oras ang setup at napakabagal ng mga Windows app. Ginawa ang Windows mode para sa Wild OS na naka-install sa mismong PC.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Ginawa ang Windows mode para sa Wild OS na naka-install sa mismong PC, hindi sa virtual machine.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Sine-set up ang Windows mode</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Tumatagal ito nang mga 25 minuto. Isara ang window na ito at ipagpatuloy ang paggamit ng PC mo; ipapaalam namin kapag handa na ito.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Isara</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Tumatagal ito nang wala pang isang oras sa karamihan ng PC, mas matagal sa mas lumang PC. Isara ang window na ito at ipagpatuloy ang paggamit ng PC mo; ipapaalam namin kapag handa na ito.</translation>
         </message>
     </context>
     <context>

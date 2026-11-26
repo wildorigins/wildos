@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>సరే</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>వియత్నామీస్ (Telex) వంటి టైపింగ్ పద్ధతి మీ కీబోర్డ్‌లలో ఉన్నప్పుడు అందుబాటులో ఉండదు</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>వియత్నామీస్ (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>వియత్నామీస్ (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>మీ పాస్‌వర్డ్ కోసం వేచి ఉంది</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>నవీకరణల కోసం తనిఖీ చేస్తోంది</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>డౌన్‌లోడ్ చేస్తోంది</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>ఇన్‌స్టాల్ చేస్తోంది</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>పాస్‌వర్డ్ ఇవ్వనందున ఏదీ డౌన్‌లోడ్ కాలేదు.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>టైపింగ్ పద్ధతిని డౌన్‌లోడ్ చేయడం సాధ్యం కాలేదు. ఇంటర్నెట్ కనెక్షన్‌ను తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>రద్దు చేయి</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>వియత్నామీస్ టైపింగ్‌కు డౌన్‌లోడ్ అవసరం</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>దీనికి ఒక నిమిషం పడుతుంది.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS టైపింగ్ పద్ధతిని ఒకసారి డౌన్‌లోడ్ చేస్తుంది, ఆ తర్వాత Windows కీ + Space దానికి మారుస్తుంది.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>డౌన్‌లోడ్ చేయి</translation>
         </message>
     </context>
     <context>

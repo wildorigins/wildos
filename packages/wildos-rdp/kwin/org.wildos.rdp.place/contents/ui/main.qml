@@ -21,7 +21,8 @@ Item {
     }
 
     function placeable(window) {
-        return window && !window.deleted && window.normalWindow && !window.transient && root.appOf(window) !== "";
+        // A full screen window has no place of its own: it is the screen.
+        return window && !window.deleted && window.normalWindow && !window.transient && !window.fullScreen && root.appOf(window) !== "";
     }
 
     function openFor(app, except) {

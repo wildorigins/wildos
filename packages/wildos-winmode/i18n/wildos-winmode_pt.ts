@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Utilizar um ficheiro do Windows 11 que tenho</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>O Wild OS está numa máquina virtual, por isso o Windows correria dentro de uma segunda e seria muito lento</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Máquina virtual</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Configurar mesmo assim</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Numa máquina virtual, a configuração pode demorar horas e as aplicações do Windows são muito lentas. O Modo Windows foi feito para o Wild OS instalado no próprio PC.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>O Modo Windows foi feito para o Wild OS instalado no próprio PC, não numa máquina virtual.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>A configurar o Modo Windows</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Demora cerca de 25 minutos. Feche esta janela e continue a utilizar o PC; avisamos quando estiver pronto.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Fechar</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Demora menos de uma hora na maioria dos PCs, mais num PC antigo. Feche esta janela e continue a utilizar o PC; avisamos quando estiver pronto.</translation>
         </message>
     </context>
     <context>

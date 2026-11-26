@@ -5,6 +5,14 @@
 # of people. Settings knows every KDE module name and opens the Wild OS page
 # for it, so the module named here goes there instead.
 page=
+# Window rules (KWin's window menu, More actions > Configure special window
+# or application settings) have no Wild OS page: Settings opened on nothing.
+# KDE's own module edits them, so that one goes to the real kcmshell6.
+case " $* " in
+    *" kcm_kwinrules "*)
+        [ -x /usr/bin/kcmshell6.kde ] && exec /usr/bin/kcmshell6.kde "$@"
+        ;;
+esac
 while [ $# -gt 0 ]; do
     case $1 in
         --args | --icon | --caption | --lang | -platform | --platform | -qwindowtitle | --qwindowtitle)

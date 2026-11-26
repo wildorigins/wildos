@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Folosiți un fișier Windows 11 pe care îl aveți</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS rulează într-o mașină virtuală, așa că Windows ar rula într-o a doua și ar fi foarte lent</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Mașină virtuală</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Configurează oricum</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Într-o mașină virtuală, configurarea poate dura ore întregi, iar aplicațiile Windows sunt foarte lente. Modul Windows este făcut pentru Wild OS instalat pe PC-ul însuși.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Modul Windows este făcut pentru Wild OS instalat pe PC-ul însuși, nu într-o mașină virtuală.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Se configurează modul Windows</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Durează aproximativ 25 de minute. Închideți această fereastră și continuați să folosiți PC-ul; vă anunțăm când este gata.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Închidere</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Durează sub o oră pe majoritatea PC-urilor, mai mult pe unul mai vechi. Închideți această fereastră și continuați să folosiți PC-ul; vă anunțăm când este gata.</translation>
         </message>
     </context>
     <context>

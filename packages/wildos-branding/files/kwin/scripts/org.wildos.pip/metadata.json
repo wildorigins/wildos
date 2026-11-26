@@ -1,0 +1,20 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "dev@wildos.io",
+                "Name": "Wild OS"
+            }
+        ],
+        "Description": "Keeps a browser's picture-in-picture video above other windows",
+        "EnabledByDefault": true,
+        "Id": "org.wildos.pip",
+        "License": "GPL-3.0-or-later",
+        "Name": "Picture in picture on top",
+        "Version": "0.1.0",
+        "Website": "https://wildos.io"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

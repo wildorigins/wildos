@@ -30,25 +30,64 @@ GridView {
     property point dragAt: Qt.point(0, 0)
     signal moved(int from, int to)
 
+    // With `mergeable`, letting go over the middle of another item drops
+    // the dragged one onto it (Start makes a folder that way) rather than
+    // beside it. canMerge(from, onto) says which pairs may.
+    property bool mergeable: false
+    property var canMerge: (from, onto) => true
+    property int dragOnto: -1
+    signal merged(int from, int onto)
+    // Let go outside the grid's visible area (out of an open folder).
+    readonly property bool dragOutside: dragFrom >= 0
+        && (dragAt.x < 0 || dragAt.x > width || dragAt.y < contentY || dragAt.y > contentY + height)
+    signal droppedOutside(int from)
+
     function dragStart(index: int, icon: var): void {
         dragFrom = index;
         dragTo = index;
+        dragOnto = -1;
         dragIcon = icon;
     }
 
     function dragMove(x: real, y: real): void {
         dragAt = Qt.point(x, y);
         const over = indexAt(x, y);
-        dragTo = over >= 0 && over < shownCount ? over : dragFrom;
+        if (over < 0 || over >= shownCount) {
+            dragTo = dragFrom;
+            dragOnto = -1;
+            return;
+        }
+        // The middle half of an item, across and down, is "onto"; nearer
+        // its sides is "beside", as before.
+        const across = (x - (over % columns) * cellWidth) / cellWidth;
+        const down = (y - Math.floor(over / columns) * cellHeight) / cellHeight;
+        if (mergeable && over !== dragFrom && across > 0.25 && across < 0.75 && down > 0.15 && down < 0.85
+                && canMerge(dragFrom, over)) {
+            dragOnto = over;
+            dragTo = dragFrom;
+        } else {
+            dragOnto = -1;
+            dragTo = over;
+        }
     }
 
     function dragEnd(drop: bool): void {
         const from = dragFrom;
         const to = dragTo;
+        const onto = dragOnto;
+        const outside = dragOutside;
         dragFrom = -1;
         dragTo = -1;
+        dragOnto = -1;
         dragIcon = "";
-        if (drop && from >= 0 && to >= 0 && to !== from) {
+        if (!drop || from < 0) {
+            return;
+        }
+        if (onto >= 0) {
+            merged(from, onto);
+        } else if (outside) {
+            droppedOutside(from);
+        } else if (to >= 0 && to !== from) {
             moved(from, to);
         }
     }

@@ -34,10 +34,14 @@ T.AbstractButton {
     Accessible.name: value.length > 0 ? qsTr("%1, %2").arg(title).arg(value) : title
 
     background: Rectangle {
-        color: row.down ? UI.Style.surfacePressed : row.hovered ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: row.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: row.down ? UI.Style.surfacePressed : row.hovered ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
         Rectangle {
             width: parent.width

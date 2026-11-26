@@ -20,6 +20,7 @@
 
 #include "accesscore.h"
 #include "osklanguages.h"
+#include "typingfollower.h"
 
 #include <KGlobalAccel>
 
@@ -124,6 +125,7 @@ int runService(int argc, char **argv)
     });
 
     OskLanguages languages(&app);
+    TypingFollower typing(&app);
 
     return app.exec();
 }

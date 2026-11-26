@@ -1,0 +1,13 @@
+Lotus's settings app uses only QtCore, QtGui and QtWidgets. Its
+python3-qtpy-pyqt6 dependency pulls in every PyQt6 module and the PyQt
+developer tools (26 MB); the PyQt6 core binding is all it needs.
+
+--- a/packaging/debian/control
++++ b/packaging/debian/control
+@@ -30,5 +30,5 @@
+ 
+ Package: fcitx5-lotus
+ Architecture: any
+-Depends: acl, fcitx5, fcitx5-data, udev, python3-qtpy, python3-dbus, python3-qtpy-pyqt6 | python3-qtpy-pyside6 | python3-qtpy-pyqt5 | python3-pyqt5, ${misc:Depends}, ${shlibs:Depends}, ${python3:Depends}
++Depends: acl, fcitx5, fcitx5-data, udev, python3-qtpy, python3-dbus, python3-pyqt6, ${misc:Depends}, ${shlibs:Depends}, ${python3:Depends}
+ Description: Vietnamese input method for fcitx5

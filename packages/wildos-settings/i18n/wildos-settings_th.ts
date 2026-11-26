@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>ตกลง</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>ใช้ไม่ได้ขณะที่มีวิธีการพิมพ์อย่างภาษาเวียดนาม (Telex) อยู่ในคีย์บอร์ดของคุณ</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>ภาษาเวียดนาม (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>ภาษาเวียดนาม (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>กำลังรอรหัสผ่านของคุณ</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>กำลังตรวจหาการอัปเดต</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>กำลังดาวน์โหลด</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>กำลังติดตั้ง</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>ไม่ได้ดาวน์โหลดอะไรเลย เนื่องจากไม่ได้ใส่รหัสผ่าน</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>ไม่สามารถดาวน์โหลดวิธีการพิมพ์ได้ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองอีกครั้ง</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>ยกเลิก</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>การพิมพ์ภาษาเวียดนามต้องดาวน์โหลดก่อน</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>ใช้เวลาประมาณหนึ่งนาที</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS จะดาวน์โหลดวิธีการพิมพ์เพียงครั้งเดียว จากนั้นกดปุ่ม Windows + Space เพื่อสลับไปใช้</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>ดาวน์โหลด</translation>
         </message>
     </context>
     <context>

@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Meglévő Windows 11-fájl használata</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>A Wild OS virtuális gépen fut, így a Windows egy második virtuális gépen belül futna, és nagyon lassú lenne</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Virtuális gép</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Beállítás mégis</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Virtuális gépen a beállítás órákig tarthat, és a Windows-alkalmazások nagyon lassúak. A Windows-mód a közvetlenül a számítógépre telepített Wild OS-hez készült.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>A Windows-mód a közvetlenül a számítógépre telepített Wild OS-hez készült, nem virtuális géphez.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>A Windows-mód beállítása</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Ez körülbelül 25 percig tart. Zárja be ezt az ablakot, és használja tovább a számítógépet; értesítjük, ha kész.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Bezárás</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Ez a legtöbb számítógépen kevesebb mint egy óráig tart, egy régebbin tovább. Zárja be ezt az ablakot, és használja tovább a számítógépet; értesítjük, ha kész.</translation>
         </message>
     </context>
     <context>

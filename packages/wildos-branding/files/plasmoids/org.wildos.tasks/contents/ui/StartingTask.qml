@@ -40,10 +40,14 @@ Item {
         anchors.fill: parent
         anchors.margins: Style.highlightInset
         radius: Style.highlightRadius
-        color: hover.hovered ? Style.hover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: hover.hovered
             ColorAnimation { duration: Style.hoverDuration }
         }
+        color: hover.hovered ? Style.hover : UI.Style.surfaceHoverClear
     }
 
     Rectangle {

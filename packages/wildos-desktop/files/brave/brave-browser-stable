@@ -4,22 +4,21 @@
 # the processor where it can't. Installed over Brave's own link by a dpkg
 # diversion (wildos-desktop's postinst), so a Brave update keeps it.
 
-# On an NVIDIA card running the open nouveau driver, with no Intel or AMD chip
-# beside it, Chromium's GPU process greys out the window or flickers (a GTX
-# 980 Ti tester, fixed by --disable-gpu). Laptops where nouveau only drives a
-# second card keep acceleration, as Brave draws on the Intel or AMD chip.
-nouveau=
-other=
-for card in /sys/class/drm/card[0-9] /sys/class/drm/card[0-9][0-9]; do
-    [ -e "$card/device/driver" ] || continue
-    case $(basename "$(readlink "$card/device/driver")") in
-        nouveau) nouveau=1 ;;
-        i915|xe|amdgpu|radeon|nvidia) other=1 ;;
-    esac
-done
+# Screens on an NVIDIA card running the open nouveau driver: no graphics
+# acceleration (brave-gpu says why). wildos-brave-gpu.service also sets it as
+# a policy, for the ways of starting Brave that skip this launcher.
 
-if [ -n "$nouveau" ] && [ -z "$other" ]; then
-    exec /opt/brave.com/brave/brave-browser --disable-gpu "$@"
+# A typing method such as Vietnamese Telex runs through Fcitx 5 as KWin's input
+# method, which Chromium only talks to with these switches.
+ime=
+if grep -qs '^InputMethod=.*org\.fcitx\.Fcitx5\.desktop' "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc"; then
+    ime="--enable-wayland-ime --wayland-text-input-version=3"
 fi
+
+if [ "$(/usr/libexec/wildos/brave-gpu)" = off ]; then
+    # shellcheck disable=SC2086
+    exec /opt/brave.com/brave/brave-browser --disable-gpu $ime "$@"
+fi
+# shellcheck disable=SC2086
 exec /opt/brave.com/brave/brave-browser \
-    --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL "$@"
+    --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL $ime "$@"

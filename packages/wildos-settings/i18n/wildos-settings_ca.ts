@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>D'acord</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>No està disponible mentre hi hagi un mètode d'escriptura com ara el vietnamita (Telex) als teus teclats</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamita (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamita (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>S'està esperant la contrasenya</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>S'estan cercant actualitzacions</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>S'està baixant</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>S'està instal·lant</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>No s'ha baixat res perquè no s'ha introduït la contrasenya.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>No s'ha pogut baixar el mètode d'escriptura. Comprova la connexió a Internet i torna-ho a provar.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>Cancel·la</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Per escriure en vietnamita cal una baixada</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Triga un minut.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS baixa el mètode d'escriptura una sola vegada i després hi pots canviar amb la tecla Windows + Espai.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Baixa</translation>
         </message>
     </context>
     <context>

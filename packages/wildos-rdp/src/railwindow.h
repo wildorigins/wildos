@@ -32,6 +32,11 @@ public:
     QString appId() const { return m_appId; }
     bool loading() const { return m_loading; }
     bool isPopup() const { return m_popup; }
+    // Covers a whole monitor in Windows with no frame: full screen here too.
+    bool remoteFullScreen() const { return m_fullScreen; }
+    // Returns true when the window had to be made again (a popup until now)
+    // and is to be shown afresh.
+    bool setRemoteFullScreen(bool full, QScreen *screen);
     // Where Windows has the window, in its desktop's pixels.
     QRect frame() const { return m_frame; }
     quint32 owner() const { return m_owner; }
@@ -70,6 +75,9 @@ public:
     // edge; the compositor takes over until the button is let go.
     void beginLocalMoveSize(quint16 type);
     void endLocalMoveSize();
+    // Maximised here and Windows not yet told, or told and not yet
+    // answered: Windows' own show state is not this window's meanwhile.
+    bool localMaximisePending() const { return m_maximiseAfterMove || m_maximiseSent; }
 
     // The window's size in device pixels for a size in Windows' pixels.
     QSize logicalSize(const QSize &remote) const;
@@ -117,6 +125,12 @@ private:
     void releaseKeys();
     void sendIcon();
     void finishMoveSize(const QPointF &local);
+    // The compositor maximised the window: Windows maximises the app.
+    void sendMaximise();
+    void maximiseTimeout();
+    // Windows' work area for the monitor of this screen: KWin's, or until
+    // KWin has said, as big as a window maximised here at this logical size.
+    void sendWorkArea(const QSize &logical);
     // Where a window this size (in the target's pixels) goes on monitor
     // `to`, at about the same place it had on `from`.
     QRect placeOn(int from, int to, const QSize &size) const;
@@ -125,6 +139,8 @@ private:
     // A frame from Windows while a move to another monitor is under way;
     // true when the window here keeps its size meanwhile.
     bool followFrame();
+    // Asks for a render on the compositor's next frame, once per frame.
+    void scheduleRender();
 
     Rail *m_rail;
     Client *m_client;
@@ -137,6 +153,7 @@ private:
     quint32 m_owner = 0;
     quint32 m_showState = 0x05;
     bool m_popup = false;
+    bool m_fullScreen = false;
     bool m_layered = false;
     // A popup's own transparency, looked at once in its first picture.
     bool m_alpha = false;
@@ -177,6 +194,11 @@ private:
     quint16 m_moveSizeType = 0;
     QPoint m_pressRemote;
     QRect m_moveSizeStart;
+    // Maximised by the compositor at the end of a move Windows started:
+    // Windows is asked to maximise once its move loop is over.
+    bool m_maximiseAfterMove = false;
+    bool m_maximiseSent = false;
+    QTimer m_maximiseTimer;
 
     // A move to another of Windows' monitors: which one, the size the window
     // keeps here, and whether Windows has been asked once more for that

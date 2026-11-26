@@ -1,3 +1,10 @@
+wildos-report (0.1.11) trixie; urgency=medium
+
+  * Report a problem no longer crashes when you close it while the Finish
+    in your browser dialog is still open after Open GitHub.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 21:00:00 +0000
+
 wildos-report (0.1.10) trixie; urgency=medium
 
   * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,

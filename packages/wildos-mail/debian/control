@@ -32,7 +32,7 @@ Depends:
  evolution-data-server-core,
  evolution-ews-core (>= 3.56.1-1+wildos2),
  pst-utils,
- wildos-ui (>= 0.1.16),
+ wildos-ui (>= 0.1.28),
  evolution-data-server-common,
  qml6-module-qtcore,
  qml6-module-qtquick,

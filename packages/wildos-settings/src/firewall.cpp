@@ -71,6 +71,8 @@ QString prettyProcess(const QString &process)
     static const QHash<QString, QString> known{{QStringLiteral("jellyfin"), QStringLiteral("Jellyfin")},
                                                {QStringLiteral("syncthing"), QStringLiteral("Syncthing")},
                                                {QStringLiteral("kdeconnectd"), QStringLiteral("KDE Connect")},
+                                               {QStringLiteral("localsend_app"), QStringLiteral("LocalSend")},
+                                               {QStringLiteral("localsend"), QStringLiteral("LocalSend")},
                                                {QStringLiteral("plexmediaserver"), QStringLiteral("Plex Media Server")},
                                                {QStringLiteral("java"), QCoreApplication::translate("Firewall", "A Java program")},
                                                {QStringLiteral("python3"), QCoreApplication::translate("Firewall", "A Python program")},
@@ -299,6 +301,8 @@ QString Firewall::serviceName(int port, const QString &proto) const
         return tr("Game server");
     case 51820:
         return udp ? QStringLiteral("WireGuard") : QString();
+    case 53317:
+        return QStringLiteral("LocalSend");
     default:
         return port >= 1714 && port <= 1764 ? QStringLiteral("KDE Connect") : QString();
     }

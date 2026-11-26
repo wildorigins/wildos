@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Використати наявний файл Windows 11</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS працює у віртуальній машині, тому Windows працювала б у другій і була б дуже повільною</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Віртуальна машина</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Усе одно налаштувати</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>У віртуальній машині налаштування може тривати години, а програми Windows працюють дуже повільно. Режим Windows створено для Wild OS, установленої на самому ПК.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Режим Windows створено для Wild OS, установленої на самому ПК, а не у віртуальній машині.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Налаштування режиму Windows</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Це займає близько 25 хвилин. Закрийте це вікно й продовжуйте користуватися ПК; ми повідомимо, коли все буде готово.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Закрити</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>На більшості ПК це займає менше години, на старішому довше. Закрийте це вікно й продовжуйте користуватися ПК; ми повідомимо, коли все буде готово.</translation>
         </message>
     </context>
     <context>

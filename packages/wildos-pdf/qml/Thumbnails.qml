@@ -130,10 +130,14 @@ Rectangle {
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 radius: UI.Style.radiusXs
-                color: line.isCurrent ? UI.Style.surfaceSelected : lineMouse.containsMouse && line.leads ? UI.Style.surfaceHover : "transparent"
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
                 Behavior on color {
+                    enabled: lineMouse.containsMouse
                     ColorAnimation { duration: UI.Style.hoverDuration }
                 }
+                color: line.isCurrent ? UI.Style.surfaceSelected : lineMouse.containsMouse && line.leads ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
                 Rectangle {
                     anchors.fill: parent

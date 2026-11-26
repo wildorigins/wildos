@@ -45,6 +45,13 @@ public:
     // reach Windows: a window moved then lands in a layout Windows is about
     // to replace, and is not rescaled for its new monitor.
     bool layoutCurrent() const;
+    // The part of each screen here that windows maximise into, by screen
+    // name in logical units; Windows is given each monitor's as soon as it
+    // can take it, and again whenever it or the layout changes.
+    void setWorkAreas(const QHash<QString, QRectF> &areas);
+    // A monitor's work area in Windows' pixels, as last given to Windows.
+    // Invalid when KWin has not said, or the layout is about to change.
+    QRect workAreaFor(int monitor) const;
     // The scale Windows draws a window at, by the monitor it is on there.
     double scaleFor(const QRect &frame) const;
     double scaleForScreen(const QScreen *screen) const;
@@ -126,6 +133,7 @@ private:
     void desktopSynced();
     void hideClosing(quint32 id);
     void setCursorAll(const QCursor &cursor);
+    void sendWorkAreas();
 
     void realize(quint32 id);
     void process(quint32 id, const QString &image, const QString &appUserModel, quint32 pid);
@@ -140,6 +148,12 @@ private:
     void connectionBack();
     bool ownedByShownWindow(const RailOrder &state) const;
     bool overlapsAppWindow(const QRect &rect) const;
+    // The monitor a window covers as a full screen window (no frame, the
+    // whole of a monitor), or -1.
+    int fullScreenMonitor(const RailOrder &state) const;
+    QScreen *screenOf(int monitor) const;
+    // A window that went full screen in Windows, or left it.
+    void updateFullScreen(RailWindow *window, const RailOrder &state);
     void log(quint32 id, const QString &what) const;
     RailWindow *parentFor(quint32 id) const;
     RailWindow *takePlaceholder(quint32 id, const QString &title, bool early);
@@ -157,6 +171,10 @@ private:
     QList<Monitor> m_layout;
     // The layout for the screens now, when Windows has not taken it yet.
     QList<Monitor> m_wanted;
+    QHash<QString, QRectF> m_workAreas;
+    // Windows has FreeRDP's work area (the whole desktop) and takes ours
+    // in its place from now until the connection drops.
+    bool m_railStarted = false;
     double m_pointerScale = 0;
     QImage m_pointerImage;
     QPoint m_pointerHotspot;

@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>가지고 있는 Windows 11 파일 사용</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS가 가상 머신에서 실행 중이므로 Windows는 그 안의 두 번째 가상 머신에서 실행되어 매우 느립니다</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>가상 머신</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>그래도 설정</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>가상 머신에서는 설정에 몇 시간이 걸릴 수 있고 Windows 앱이 매우 느립니다. Windows 모드는 PC에 직접 설치한 Wild OS용으로 만들어졌습니다.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows 모드는 가상 머신이 아니라 PC에 직접 설치한 Wild OS용으로 만들어졌습니다.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Windows 모드 설정 중</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>약 25분이 걸립니다. 이 창을 닫고 PC를 계속 사용하세요. 준비되면 알려 드리겠습니다.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>닫기</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>대부분의 PC에서 1시간이 채 걸리지 않으며, 오래된 PC에서는 더 걸립니다. 이 창을 닫고 PC를 계속 사용하세요. 준비되면 알려 드리겠습니다.</translation>
         </message>
     </context>
     <context>

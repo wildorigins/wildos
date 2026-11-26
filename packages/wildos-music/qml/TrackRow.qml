@@ -31,10 +31,14 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: UI.Style.radiusXs
-        color: row.isCurrent || row.selected ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: mouse.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: row.isCurrent || row.selected ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
     }
 
     MouseArea {

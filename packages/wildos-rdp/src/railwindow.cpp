@@ -109,6 +109,8 @@ RailWindow::RailWindow(Rail *rail, Client *client, const QString &appId)
     m_screenSettle.setInterval(300);
     connect(&m_screenSettle, &QTimer::timeout, this, &RailWindow::followScreen);
     connect(this, &QWindow::screenChanged, this, [this] { m_screenSettle.start(); });
+    m_maximiseTimer.setSingleShot(true);
+    connect(&m_maximiseTimer, &QTimer::timeout, this, &RailWindow::maximiseTimeout);
 }
 
 RailWindow::~RailWindow()
@@ -438,12 +440,61 @@ void RailWindow::setRemoteState(quint32 id, quint32 style, quint32 exStyle, bool
     m_style = style;
     m_exStyle = exStyle;
     m_layered = (exStyle & WS_EX_LAYERED) && popup;
+    // A see-through window Windows passes clicks through (an app's overlay,
+    // a dimmed backdrop) does the same here. Taking the clicks, one that
+    // covered the screen left nothing under it usable, Wild OS's own apps
+    // included (issue 92).
+    const bool clickThrough = (exStyle & WS_EX_TRANSPARENT) && (exStyle & WS_EX_LAYERED);
+    if (clickThrough != flags().testFlag(Qt::WindowTransparentForInput)) {
+        setFlag(Qt::WindowTransparentForInput, clickThrough);
+    }
     if (popup != m_popup && !handle()) {
         m_popup = popup;
         // Menus and tooltips are popups of the window they belong to; they
         // never take the keyboard from it, which Windows keeps routing.
         setFlags(popup ? (Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus) : (Qt::Window | Qt::FramelessWindowHint));
     }
+}
+
+bool RailWindow::setRemoteFullScreen(bool full, QScreen *screen)
+{
+    if (full == m_fullScreen) {
+        return false;
+    }
+    m_fullScreen = full;
+    if (full && m_popup) {
+        // Shown as a popup until now (a borderless window that then grew to
+        // cover its monitor). A popup stays above every other window on the
+        // desktop and can never be full screen, so it is made again as a
+        // window of its own.
+        const bool shown = isVisible();
+        destroy();
+        m_popup = false;
+        setTransientParent(nullptr);
+        setFlags(Qt::Window | Qt::FramelessWindowHint);
+        m_store = std::make_unique<QBackingStore>(this);
+        m_store->resize(size());
+        m_iconSent = false;
+        if (screen) {
+            setScreen(screen);
+        }
+        return shown;
+    }
+    if (screen) {
+        setScreen(screen);
+    }
+    if (!isVisible() || (windowStates() & Qt::WindowMinimized)) {
+        return false;
+    }
+    if (full) {
+        showFullScreen();
+    } else {
+        showNormal();
+        if (m_frame.isValid()) {
+            resize(logicalSize(m_frame.size()));
+        }
+    }
+    return false;
 }
 
 void RailWindow::setFrame(const QRect &frame)
@@ -455,7 +506,7 @@ void RailWindow::setFrame(const QRect &frame)
         // has rescaled for it.
         return;
     }
-    if (resized && !m_loading && !(windowStates() & Qt::WindowMaximized)) {
+    if (resized && !m_loading && !m_fullScreen && !(windowStates() & (Qt::WindowMaximized | Qt::WindowFullScreen))) {
         resize(logicalSize(frame.size()));
     }
 }
@@ -549,10 +600,7 @@ void RailWindow::surfaceDamaged(quint16 surfaceId, const QRegion &damage, const 
         m_damage += damage;
     }
     handoffContent(size);
-    if (!m_updateQueued) {
-        m_updateQueued = true;
-        requestUpdate();
-    }
+    scheduleRender();
 }
 
 void RailWindow::primaryDamaged(const QRegion &desktopDamage)
@@ -568,10 +616,21 @@ void RailWindow::primaryDamaged(const QRegion &desktopDamage)
     m_primary = true;
     m_damage += mine;
     handoffContent(m_frame.size());
-    if (!m_updateQueued) {
-        m_updateQueued = true;
-        requestUpdate();
+    scheduleRender();
+}
+
+void RailWindow::scheduleRender()
+{
+    // A window Windows drew before showing it gets its picture here before
+    // it is shown, when it has no platform window yet: Qt drops the update
+    // request then, and a flag left set would stop every later one, so the
+    // window would only redraw when the compositor exposed it again (on a
+    // focus change). The damage waits in m_damage for the first expose.
+    if (m_updateQueued || !handle()) {
+        return;
     }
+    m_updateQueued = true;
+    requestUpdate();
 }
 
 bool RailWindow::event(QEvent *event)
@@ -620,11 +679,25 @@ bool RailWindow::event(QEvent *event)
         if (m_id && !m_loading && !m_popup) {
             const bool maximized = windowStates() & Qt::WindowMaximized;
             if (maximized && m_showState != stateMaximized) {
-                // Maximised to the monitor it is on in Windows, which has to
-                // be this screen's.
-                followScreen();
-                m_client->sysCommand(m_id, SC_MAXIMIZE);
-            } else if (!maximized && m_showState == stateMaximized) {
+                if (m_moveSize) {
+                    // Dragged to the top of the screen from the app's own
+                    // title bar: Windows is still in its move loop, waiting
+                    // for the button, and a maximise sent into the loop can
+                    // be lost or undone as it ends, which leaves the app at
+                    // its old size in a maximised window here (issue 92).
+                    // The loop is ended first; Windows says when it is over.
+                    finishMoveSize(QPointF());
+                    m_maximiseAfterMove = true;
+                    m_maximiseTimer.start(1000);
+                } else if (!m_maximiseAfterMove) {
+                    sendMaximise();
+                }
+            } else if (!maximized) {
+                m_maximiseAfterMove = false;
+                m_maximiseSent = false;
+                m_maximiseTimer.stop();
+            }
+            if (!maximized && m_showState == stateMaximized) {
                 m_client->sysCommand(m_id, SC_RESTORE);
             }
         }
@@ -667,19 +740,14 @@ void RailWindow::resizeEvent(QResizeEvent *event)
     if (m_hasSurface) {
         m_damage = QRect(QPoint(0, 0), m_surfaceSize);
     }
-    if (!m_loading && m_id && !m_popup && !m_moveSize) {
+    if (!m_loading && m_id && !m_popup && !m_moveSize && !m_fullScreen) {
         // The compositor sized the window itself (snapped to half the
         // screen, maximised): Windows follows, unless the window is on its
         // way to another monitor, which sets its size there.
         const QSize remote(int(std::lround(event->size().width() * scale())), int(std::lround(event->size().height() * scale())));
         const bool maximized = windowStates() & Qt::WindowMaximized;
         if (maximized) {
-            // The work area of the monitor this screen is in Windows, which
-            // Windows maximises the app to.
-            const int monitor = m_rail->monitorFor(screen());
-            const double s = m_rail->scaleForScreen(screen());
-            const QPoint corner = monitor >= 0 ? m_rail->layout()[monitor].rect.topLeft() : QPoint(0, 0);
-            m_client->setWorkArea(QRect(corner, QSize(int(std::lround(event->size().width() * s)), int(std::lround(event->size().height() * s)))));
+            sendWorkArea(event->size());
         } else if (logicalSize(m_frame.size()) != event->size() && m_frame.isValid() && m_follow.monitor < 0) {
             m_client->moveWindow(m_id, QRect(m_frame.topLeft(), remote));
         }
@@ -999,6 +1067,63 @@ void RailWindow::beginLocalMoveSize(quint16 type)
 void RailWindow::endLocalMoveSize()
 {
     m_moveSize = false;
+    if (m_maximiseAfterMove) {
+        m_maximiseAfterMove = false;
+        m_maximiseTimer.stop();
+        if ((windowStates() & Qt::WindowMaximized) && m_showState != stateMaximized) {
+            sendMaximise();
+        }
+    }
+}
+
+void RailWindow::sendMaximise()
+{
+    // Maximised to the monitor it is on in Windows, which has to be this
+    // screen's, and to the space this window has: the size event that
+    // sends it may have come while the move was still under way.
+    followScreen();
+    sendWorkArea(size());
+    m_client->sysCommand(m_id, SC_MAXIMIZE);
+    m_maximiseSent = true;
+    m_maximiseTimer.start(2000);
+}
+
+void RailWindow::maximiseTimeout()
+{
+    if (m_maximiseAfterMove) {
+        // Windows never said its move loop was over.
+        m_maximiseAfterMove = false;
+        if ((windowStates() & Qt::WindowMaximized) && m_showState != stateMaximized) {
+            sendMaximise();
+        }
+        return;
+    }
+    if (!m_maximiseSent) {
+        return;
+    }
+    m_maximiseSent = false;
+    if ((windowStates() & Qt::WindowMaximized) && m_showState != stateMaximized && m_frame.isValid()) {
+        // Windows would not maximise the app (one with no maximise, or a
+        // largest size of its own): this window goes back to the app's
+        // size rather than show it in a corner of a bigger one.
+        qInfo("wildos-rdp: window %08x was not maximised by Windows; shown at its own size", m_id);
+        showNormal();
+        resize(logicalSize(m_frame.size()));
+    }
+}
+
+void RailWindow::sendWorkArea(const QSize &logical)
+{
+    const int monitor = m_rail->monitorFor(screen());
+    // KWin's own work area for the screen, the same one every monitor is
+    // given from the start; it also knows a taskbar at the top or left.
+    if (const QRect known = m_rail->workAreaFor(monitor); known.isValid()) {
+        m_client->setWorkArea(known);
+        return;
+    }
+    const double s = m_rail->scaleForScreen(screen());
+    const QPoint corner = monitor >= 0 ? m_rail->layout()[monitor].rect.topLeft() : QPoint(0, 0);
+    m_client->setWorkArea(QRect(corner, QSize(int(std::lround(logical.width() * s)), int(std::lround(logical.height() * s)))));
 }
 
 void RailWindow::finishMoveSize(const QPointF &)

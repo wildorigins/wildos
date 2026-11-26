@@ -162,10 +162,14 @@ FocusScope {
                 width: Math.max(28, letterLabel.implicitWidth + 16)
                 height: 24
                 radius: 6
-                color: headingMouse.pressed ? UI.Style.surfacePressed : headingMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
                 Behavior on color {
+                    enabled: headingMouse.containsMouse
                     ColorAnimation { duration: UI.Style.hoverDuration }
                 }
+                color: headingMouse.pressed ? UI.Style.surfacePressed : headingMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
                 MouseArea {
                     id: headingMouse
@@ -274,10 +278,14 @@ FocusScope {
             Rectangle {
                 anchors.fill: parent
                 radius: Style.radiusItem
-                color: mouse.pressed ? UI.Style.surfacePressed : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
                 Behavior on color {
+                    enabled: mouse.containsMouse
                     ColorAnimation { duration: UI.Style.hoverDuration }
                 }
+                color: mouse.pressed ? UI.Style.surfacePressed : mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
             }
 
             AppIcon {
@@ -357,12 +365,16 @@ FocusScope {
             Rectangle {
                 anchors.fill: parent
                 radius: Style.radiusItem
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
+                Behavior on color {
+                    enabled: cellMouse.containsMouse
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
                 color: !cell.used ? "transparent"
                     : cellMouse.pressed ? UI.Style.surfacePressed
                     : cellMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRest
-                Behavior on color {
-                    ColorAnimation { duration: UI.Style.hoverDuration }
-                }
             }
 
             UI.Label {

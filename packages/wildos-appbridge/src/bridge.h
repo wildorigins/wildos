@@ -95,7 +95,7 @@ public:
     bool alreadyInstalled() const { return m_alreadyInstalled; }
     bool callApp() const { return m_callApp; }
     bool hasNativeVersion() const { return !m_webApp.isEmpty() || canOpenStore(); }
-    bool windowsModeReady() const { return m_action == QLatin1String("windows-mode"); }
+    bool windowsModeReady() const { return m_windowsAction == QLatin1String("windows-mode"); }
     QString windowsModeReason() const;
     bool needsSetup() const { return m_action == QLatin1String("setup"); }
 
@@ -157,4 +157,9 @@ private:
     // wild-run's action: windows-mode, native, unsupported, home, cannot,
     // setup or not-windows
     QString m_action;
+    // What Windows mode itself could do with it, whatever action is
+    // recommended (wild-run's "windows"); the same as m_action from older
+    // versions that don't say.
+    QString m_windowsAction;
+    QString m_windowsReason;
 };

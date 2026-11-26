@@ -202,12 +202,16 @@ Item {
                     anchors.topMargin: row.kind === "header" ? 4 : 0
                     radius: UI.Style.radiusXs
                     visible: row.kind === "folder"
-                    color: drop.containsDrag || row.current ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
-                    border.width: drop.containsDrag ? 1 : 0
-                    border.color: UI.Style.accent
+                    // Fades in on hover and clears at once, so moving along a list
+                    // never lights two items. It comes before the colour so it sees
+                    // the change in hover first.
                     Behavior on color {
+                        enabled: mouse.containsMouse
                         ColorAnimation { duration: UI.Style.hoverDuration }
                     }
+                    color: drop.containsDrag || row.current ? UI.Style.surfaceSelected : mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
+                    border.width: drop.containsDrag ? 1 : 0
+                    border.color: UI.Style.accent
                 }
 
                 // Messages dragged from the list move here (MessageRowItem).

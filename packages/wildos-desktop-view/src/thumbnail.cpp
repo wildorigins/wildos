@@ -62,7 +62,10 @@ void Thumbnail::load()
         return;
     }
     const int side = std::max(256, int(std::ceil(std::max(width(), height()) * 2)));
-    auto job = KIO::filePreview(KFileItemList{KFileItem(m_url)}, QSize(side, side));
+    // Without a list KIO only runs its image and folder thumbnailers,
+    // so videos, songs and documents kept their plain icons.
+    static const QStringList plugins = KIO::PreviewJob::defaultPlugins();
+    auto job = KIO::filePreview(KFileItemList{KFileItem(m_url)}, QSize(side, side), &plugins);
     job->setScaleType(KIO::PreviewJob::ScaledAndCached);
     m_job = job;
     connect(job, &KIO::PreviewJob::gotPreview, this, [this](const KFileItem &, const QPixmap &pixmap) {

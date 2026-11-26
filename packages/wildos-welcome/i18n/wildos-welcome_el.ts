@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Συνέχεια</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Αναζήτηση γλωσσών</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Αναζήτηση κατά πόλη ή χώρα</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

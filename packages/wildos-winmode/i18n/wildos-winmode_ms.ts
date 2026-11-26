@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Gunakan fail Windows 11 yang anda ada</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS berada dalam mesin maya, jadi Windows akan berjalan dalam mesin maya kedua dan menjadi sangat perlahan</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Mesin maya</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Sediakan juga</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Dalam mesin maya, penyediaan boleh mengambil masa berjam-jam dan apl Windows sangat perlahan. Mod Windows dibuat untuk Wild OS yang dipasang pada PC itu sendiri.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Mod Windows dibuat untuk Wild OS yang dipasang pada PC itu sendiri, bukan dalam mesin maya.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Menyediakan Mod Windows</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Ini mengambil masa kira-kira 25 minit. Tutup tetingkap ini dan teruskan menggunakan PC anda; kami akan memberitahu anda apabila ia sedia.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Tutup</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Ini mengambil masa kurang daripada sejam pada kebanyakan PC, lebih lama pada PC yang lama. Tutup tetingkap ini dan teruskan menggunakan PC anda; kami akan memberitahu anda apabila ia sedia.</translation>
         </message>
     </context>
     <context>

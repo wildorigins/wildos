@@ -1,3 +1,31 @@
+wildos-portal (0.1.19) trixie; urgency=medium
+
+  * In light mode a hover highlight fades in cleanly, without a grey
+    flicker as it starts.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:24:59 +0000
+
+wildos-portal (0.1.18) trixie; urgency=medium
+
+  * In light mode a hover highlight fades out cleanly instead of leaving
+    a grey shadow behind as it goes.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:02:08 +0000
+
+wildos-portal (0.1.17) trixie; urgency=medium
+
+  * Moving the pointer along a list or menu lights one row at a time; the
+    row it leaves clears at once instead of fading out beside the next.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:52:08 +0000
+
+wildos-portal (0.1.16) trixie; urgency=medium
+
+  * Videos, songs and documents now show a preview in the open and save
+    windows, not only pictures.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 12:48:25 +0000
+
 wildos-portal (0.1.15) trixie; urgency=medium
 
   * Flatpak apps that draw their own title bar, such as Firefox, show the

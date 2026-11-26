@@ -33,7 +33,8 @@ Page {
     }
 
     title: qsTr("Setting up Windows mode")
-    text: qsTr("This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.")
+    // Timed at 47 minutes with Microsoft 365 on a fast PC (11 Nov).
+    text: qsTr("This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.")
     note: qsTr("If your PC restarts or sleeps, setup carries on where it left off.")
     spacing: 16
 

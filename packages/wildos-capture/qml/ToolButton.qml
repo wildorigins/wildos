@@ -34,7 +34,7 @@ T.Button {
     background: Rectangle {
         radius: control.tool || !control.iconOnly ? UI.Style.radiusXs : UI.Style.radiusSm
         color: control.primary ? (control.down ? UI.Style.accentPressed : control.lit ? UI.Style.accentHover : UI.Style.accent)
-            : control.down ? UI.Style.surfacePressed : control.active ? UI.Style.surfaceSelected : control.lit ? UI.Style.surfaceHover : "transparent"
+            : control.down ? UI.Style.surfacePressed : control.active ? UI.Style.surfaceSelected : control.lit ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
         Behavior on color {
             ColorAnimation { duration: UI.Style.hoverDuration }
         }

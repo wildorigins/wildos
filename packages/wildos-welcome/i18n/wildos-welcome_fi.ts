@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Jatka</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Hae kieliä</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Hae kaupungin tai maan mukaan</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

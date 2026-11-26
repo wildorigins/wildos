@@ -859,6 +859,13 @@ void LocalPackage::installDeb()
         case Transaction::StatusWaitingForAuth:
             m_phase = QStringLiteral("auth");
             break;
+        // After the password, an install still running (or stuck) holds
+        // the package system; that wait was shown as "Waiting for the
+        // password" with no password box to answer.
+        case Transaction::StatusWaitingForLock:
+        case Transaction::StatusWait:
+            m_phase = QStringLiteral("wait");
+            break;
         case Transaction::StatusDownload:
             m_phase = QStringLiteral("download");
             break;
@@ -869,6 +876,9 @@ void LocalPackage::installDeb()
             m_phase = QStringLiteral("install");
             break;
         default:
+            if (m_phase == QLatin1String("auth") || m_phase == QLatin1String("wait")) {
+                m_phase = QStringLiteral("prepare");
+            }
             break;
         }
         m_progress = pct > 100 ? -1 : int(pct);

@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>继续</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>搜索语言</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>按城市或国家/地区搜索</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

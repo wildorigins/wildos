@@ -29,7 +29,7 @@ Item {
         radius: UI.Style.radiusLg
         color: card.selected ? UI.Style.accentSoft
              : card.hovered ? UI.Style.surfaceHover
-             : "transparent"
+             : UI.Style.surfaceHoverClear
         border.width: 2
         border.color: card.selected ? UI.Style.accent : "transparent"
 

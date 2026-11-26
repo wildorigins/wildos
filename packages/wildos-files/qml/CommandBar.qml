@@ -216,12 +216,16 @@ Item {
 
             background: Rectangle {
                 radius: 15
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
+                Behavior on color {
+                    enabled: chip.hovered
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
                 color: chip.hovered ? Metrics.chipHover : UI.Style.accentSoft
                 border.width: 1
                 border.color: UI.Style.accentBorder
-                Behavior on color {
-                    ColorAnimation { duration: UI.Style.hoverDuration }
-                }
 
                 UI.FocusRing {
                     visible: chip.visualFocus

@@ -407,10 +407,14 @@ FocusScope {
                 Rectangle {
                     anchors.fill: parent
                     radius: 15
-                    color: chip.active ? UI.Style.accent : chipMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceTile
+                    // Fades in on hover and clears at once, so moving along a list
+                    // never lights two items. It comes before the colour so it sees
+                    // the change in hover first.
                     Behavior on color {
+                        enabled: chipMouse.containsMouse
                         ColorAnimation { duration: UI.Style.hoverDuration }
                     }
+                    color: chip.active ? UI.Style.accent : chipMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceTile
                 }
 
                 UI.Label {
@@ -518,10 +522,14 @@ FocusScope {
                     visible: !entry.isHeader
                     anchors.fill: parent
                     radius: Style.radiusItem
-                    color: entry.isSelected ? UI.Style.accentSelected : rowMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                    // Fades in on hover and clears at once, so moving along a list
+                    // never lights two items. It comes before the colour so it sees
+                    // the change in hover first.
                     Behavior on color {
+                        enabled: rowMouse.containsMouse
                         ColorAnimation { duration: UI.Style.hoverDuration }
                     }
+                    color: entry.isSelected ? UI.Style.accentSelected : rowMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                 }
 
                 // One box per row kind: the best match larger, every other

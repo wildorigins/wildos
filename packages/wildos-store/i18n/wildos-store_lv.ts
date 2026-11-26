@@ -876,6 +876,10 @@ Paturiet visu, ko darāt.</translation>
             <source>App ID %1</source>
             <translation>Lietotnes ID %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Gaida, kamēr beigsies cita instalēšana</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Paturiet visu, ko darāt.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Atlicis aptuveni %1 h</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Gaida, kamēr beigsies cita instalēšana</translation>
         </message>
     </context>
     <context>

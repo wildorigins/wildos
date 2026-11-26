@@ -876,6 +876,10 @@ Panatilihin ang lahat ng ginagawa mo.</translation>
             <source>App ID %1</source>
             <translation>App ID %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Hinihintay matapos ang isa pang pag-install</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Panatilihin ang lahat ng ginagawa mo.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Mga %1 oras na lang</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Hinihintay matapos ang isa pang pag-install</translation>
         </message>
     </context>
     <context>

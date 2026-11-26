@@ -57,7 +57,7 @@ T.AbstractButton {
                  : control.primary && control.hovered ? UI.Style.accentBorder
                  : control.primary ? UI.Style.accentSelected
                  : control.hovered ? UI.Style.surfaceHover
-                 : "transparent"
+                 : UI.Style.surfaceHoverClear
 
             Behavior on color {
                 ColorAnimation { duration: UI.Style.hoverDuration }

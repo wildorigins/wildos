@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>உங்களிடம் உள்ள Windows 11 கோப்பைப் பயன்படுத்து</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS ஒரு மெய்நிகர் கணினியில் இயங்குகிறது, எனவே Windows இரண்டாவது மெய்நிகர் கணினிக்குள் இயங்கி மிக மெதுவாக இருக்கும்</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>மெய்நிகர் கணினி</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>இருந்தாலும் அமை</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>மெய்நிகர் கணினியில் அமைப்புக்குப் பல மணிநேரம் ஆகலாம், Windows பயன்பாடுகளும் மிக மெதுவாக இயங்கும். Windows பயன்முறை கணினியிலேயே நிறுவப்பட்ட Wild OS-க்காக உருவாக்கப்பட்டது.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows பயன்முறை மெய்நிகர் கணினிக்காக அல்ல, கணினியிலேயே நிறுவப்பட்ட Wild OS-க்காக உருவாக்கப்பட்டது.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Windows பயன்முறையை அமைக்கிறது</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>இதற்குச் சுமார் 25 நிமிடங்கள் ஆகும். இந்தச் சாளரத்தை மூடி உங்கள் கணினியைத் தொடர்ந்து பயன்படுத்தவும்; தயாரானதும் உங்களுக்குத் தெரிவிப்போம்.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>மூடு</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>பெரும்பாலான கணினிகளில் இதற்கு ஒரு மணிநேரத்துக்குக் குறைவாகவே ஆகும், பழைய கணினியில் அதிக நேரம் ஆகும். இந்தச் சாளரத்தை மூடி உங்கள் கணினியைத் தொடர்ந்து பயன்படுத்தவும்; தயாரானதும் உங்களுக்குத் தெரிவிப்போம்.</translation>
         </message>
     </context>
     <context>

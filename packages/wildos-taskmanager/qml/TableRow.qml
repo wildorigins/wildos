@@ -30,10 +30,14 @@ T.ItemDelegate {
     }
 
     background: Rectangle {
-        color: row.selected ? UI.Style.tone(0.08) : row.hovered ? UI.Style.surfaceRaised : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: row.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: row.selected ? UI.Style.tone(0.08) : row.hovered ? UI.Style.surfaceRaised : Qt.alpha(UI.Style.surfaceRaised, 0)
 
         Rectangle {
             anchors.bottom: parent.bottom

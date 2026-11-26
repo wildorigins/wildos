@@ -7,14 +7,16 @@ import WildOS.UI as UI
 // tall with the 17 px magnifier of the Start artboard. Start opens with the
 // field focused so typing goes straight in, so the edge only takes the
 // accent, with a soft glow around it, once there is something in it (the
-// searching design); until then the caret is hidden too and the pill looks
-// exactly like the resting design.
+// searching design); until then the caret is hidden too, unless the field
+// was clicked, and the pill looks exactly like the resting design.
 FocusScope {
     id: box
 
     property alias text: field.text
     property alias input: field
     readonly property bool active: field.text.length > 0
+    // A click into the empty field asks for the caret, as in Windows.
+    property bool clicked: false
 
     signal accepted()
     signal moveDown()
@@ -32,6 +34,7 @@ FocusScope {
 
     function clear(): void {
         field.clear();
+        clicked = false;
     }
 
     Rectangle {
@@ -75,10 +78,28 @@ FocusScope {
             }
         }
 
+        onPressed: box.clicked = true
+
+        // A cursor delegate has to blink by itself; the field only says
+        // whether it should show. Typing or moving it shows it solid again.
         cursorDelegate: Rectangle {
+            id: caret
+            readonly property int position: field.cursorPosition
             width: 1.5
             color: UI.Style.inkStrong
-            visible: field.cursorVisible && box.active
+            visible: field.cursorVisible && (box.active || box.clicked)
+            onPositionChanged: blink.restart()
+            onVisibleChanged: if (visible) blink.restart()
+
+            SequentialAnimation {
+                id: blink
+                running: caret.visible
+                loops: Animation.Infinite
+                PropertyAction { target: caret; property: "opacity"; value: 1 }
+                PauseAnimation { duration: Qt.styleHints.cursorFlashTime / 2 }
+                PropertyAction { target: caret; property: "opacity"; value: 0 }
+                PauseAnimation { duration: Qt.styleHints.cursorFlashTime / 2 }
+            }
         }
 
         onAccepted: box.accepted()

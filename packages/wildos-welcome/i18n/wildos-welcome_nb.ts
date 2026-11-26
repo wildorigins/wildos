@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Fortsett</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Søk etter språk</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Søk etter by eller land</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

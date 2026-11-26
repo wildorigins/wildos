@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Izmantot jūsu Windows 11 failu</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS darbojas virtuālajā mašīnā, tāpēc Windows darbotos otrā virtuālajā mašīnā un būtu ļoti lēns</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Virtuālā mašīna</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Tomēr iestatīt</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Virtuālajā mašīnā iestatīšana var aizņemt vairākas stundas, un Windows lietotnes darbojas ļoti lēni. Windows režīms ir paredzēts Wild OS, kas instalēta pašā datorā.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows režīms ir paredzēts Wild OS, kas instalēta pašā datorā, nevis virtuālajā mašīnā.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Notiek Windows režīma iestatīšana</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Tas aizņem aptuveni 25 minūtes. Aizveriet šo logu un turpiniet lietot datoru; mēs paziņosim, kad tas būs gatavs.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Aizvērt</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Lielākajā daļā datoru tas aizņem mazāk par stundu, vecākā datorā ilgāk. Aizveriet šo logu un turpiniet lietot datoru; mēs paziņosim, kad tas būs gatavs.</translation>
         </message>
     </context>
     <context>

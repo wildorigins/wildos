@@ -876,6 +876,10 @@ Pertahankan semua yang Anda lakukan.</translation>
             <source>App ID %1</source>
             <translation>ID aplikasi %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Menunggu penginstalan lain selesai</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Pertahankan semua yang Anda lakukan.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Sekitar %1 jam lagi</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Menunggu penginstalan lain selesai</translation>
         </message>
     </context>
     <context>

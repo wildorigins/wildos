@@ -1,0 +1,4 @@
+# A device plugged in may ask for firmware Wild OS doesn't have yet
+# (driver-check). Whole devices only, not each of their interfaces.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/usr/bin/systemctl --no-block start wildos-driver-check.service"
+ACTION=="add", SUBSYSTEM=="pci", RUN+="/usr/bin/systemctl --no-block start wildos-driver-check.service"

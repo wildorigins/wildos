@@ -52,7 +52,7 @@ T.Button {
     background: Rectangle {
         radius: control.radius
         color: control.selected ? (control.down ? Style.accentPressed : control.lit ? Style.accentHover : Style.accent)
-            : control.down ? Style.surfacePressed : control.lit || control.checked ? Style.surfaceHover : "transparent"
+            : control.down ? Style.surfacePressed : control.lit || control.checked ? Style.surfaceHover : Style.surfaceHoverClear
         Behavior on color {
             ColorAnimation { duration: Style.hoverDuration }
         }

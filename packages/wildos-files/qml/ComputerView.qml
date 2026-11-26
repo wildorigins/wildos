@@ -118,10 +118,14 @@ FocusScope {
 
                         background: Rectangle {
                             radius: 10
-                            color: tile.down ? UI.Style.surfacePressed : tile.hovered ? UI.Style.surfaceHover : UI.Style.surfaceRest
+                            // Fades in on hover and clears at once, so moving along a list
+                            // never lights two items. It comes before the colour so it sees
+                            // the change in hover first.
                             Behavior on color {
+                                enabled: tile.hovered
                                 ColorAnimation { duration: UI.Style.hoverDuration }
                             }
+                            color: tile.down ? UI.Style.surfacePressed : tile.hovered ? UI.Style.surfaceHover : UI.Style.surfaceRest
 
                             UI.FocusRing {
                                 visible: tile.visualFocus
@@ -216,12 +220,16 @@ FocusScope {
 
                         background: Rectangle {
                             radius: UI.Style.radiusMd
+                            // Fades in on hover and clears at once, so moving along a list
+                            // never lights two items. It comes before the colour so it sees
+                            // the change in hover first.
+                            Behavior on color {
+                                enabled: card.hovered
+                                ColorAnimation { duration: UI.Style.hoverDuration }
+                            }
                             color: card.selected ? UI.Style.accentSelected : card.down ? UI.Style.surfacePressed : card.hovered ? UI.Style.surfaceHover : UI.Style.surfaceRaised
                             border.width: 1
                             border.color: card.selected ? UI.Style.accentBorderStrong : UI.Style.borderSubtle
-                            Behavior on color {
-                                ColorAnimation { duration: UI.Style.hoverDuration }
-                            }
 
                             UI.FocusRing {
                                 visible: card.current

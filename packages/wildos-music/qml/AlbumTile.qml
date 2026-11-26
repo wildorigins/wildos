@@ -39,10 +39,14 @@ Item {
         anchors.fill: parent
         anchors.margins: -8
         radius: UI.Style.radiusMd
-        color: mouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: mouse.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: mouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
         // On the plate itself, which already stands 8px clear of the cover.
         UI.FocusRing {

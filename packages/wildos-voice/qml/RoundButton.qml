@@ -39,10 +39,14 @@ T.Button {
             width: control.diameter
             height: control.diameter
             radius: width / 2
-            color: control.down ? Qt.darker(control.fillHover, 1.06) : control.hovered && control.enabled ? control.fillHover : control.fill
+            // Fades in on hover and clears at once, so moving along a list
+            // never lights two items. It comes before the colour so it sees
+            // the change in hover first.
             Behavior on color {
+                enabled: control.hovered
                 ColorAnimation { duration: UI.Style.hoverDuration }
             }
+            color: control.down ? Qt.darker(control.fillHover, 1.06) : control.hovered && control.enabled ? control.fillHover : control.fill
 
             Rectangle {
                 visible: control.halo.a > 0

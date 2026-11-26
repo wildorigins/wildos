@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>Gerai</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Nepasiekiama, kol jūsų klaviatūrose yra įvesties būdas, pvz., vietnamiečių (Telex)</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7330,6 +7334,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamiečių (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamiečių (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Laukiama jūsų slaptažodžio</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Tikrinama, ar yra naujinimų</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Atsisiunčiama</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Diegiama</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Niekas neatsisiųsta, nes nebuvo pateiktas slaptažodis.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Nepavyko atsisiųsti įvesties būdo. Patikrinkite interneto ryšį ir bandykite dar kartą.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7645,6 +7684,22 @@
         <message>
             <source>Cancel</source>
             <translation>Atšaukti</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Norint rašyti vietnamiečių kalba, reikia atsisiųsti</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Tai užtrunka minutę.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS vieną kartą atsisiunčia įvesties būdą, tada į jį galite perjungti paspaudę „Windows“ klavišas + tarpas.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Atsisiųsti</translation>
         </message>
     </context>
     <context>

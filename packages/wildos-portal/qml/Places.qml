@@ -73,10 +73,14 @@ Item {
                     width: column.width
                     height: 32
                     radius: UI.Style.radiusXs
-                    color: placeMouse.pressed ? UI.Style.surfacePressed : current || placeMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                    // Fades in on hover and clears at once, so moving along a list
+                    // never lights two items. It comes before the colour so it sees
+                    // the change in hover first.
                     Behavior on color {
+                        enabled: placeMouse.containsMouse
                         ColorAnimation { duration: UI.Style.hoverDuration }
                     }
+                    color: placeMouse.pressed ? UI.Style.surfacePressed : current || placeMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                     activeFocusOnTab: true
                     Accessible.role: Accessible.Button
                     Accessible.name: modelData.name

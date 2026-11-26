@@ -1,3 +1,17 @@
+wildos-appbridge (0.1.7) trixie; urgency=medium
+
+  * Says Windows mode isn't set up only when that is so, not when the
+    check took too long.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 12:59:16 +0000
+
+wildos-appbridge (0.1.6) trixie; urgency=medium
+
+  * "Install in Windows mode instead" can be chosen for apps that have a
+    Wild OS version, such as WhatsApp, when Windows mode is set up.
+
+ -- Wild OS Developers <dev@wildos.io>  Sun, 22 Nov 2026 16:50:00 +0000
+
 wildos-appbridge (0.1.5) trixie; urgency=medium
 
   * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,

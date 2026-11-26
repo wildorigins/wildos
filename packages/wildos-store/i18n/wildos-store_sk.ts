@@ -876,6 +876,10 @@ Zachovajte všetko, čo robíte.</translation>
             <source>App ID %1</source>
             <translation>ID aplikácie %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Čaká sa na dokončenie inej inštalácie</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Zachovajte všetko, čo robíte.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Zostáva približne hodín: %1</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Čaká sa na dokončenie inej inštalácie</translation>
         </message>
     </context>
     <context>

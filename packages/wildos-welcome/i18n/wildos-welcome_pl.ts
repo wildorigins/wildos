@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Kontynuuj</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Szukaj języków</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Szukaj według miasta lub kraju</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

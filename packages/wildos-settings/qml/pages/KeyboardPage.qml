@@ -101,6 +101,26 @@ PageScroll {
         }
     }
 
+    // A typing method such as Vietnamese (Telex) is fetched the first time
+    // it is added; until then its entry types plain US English.
+    StatusCard {
+        visible: Keyboard.methodMissing || Keyboard.downloading
+        iconName: "keyboard"
+        warning: !Keyboard.downloading
+        spinning: Keyboard.downloading
+        title: Keyboard.downloading ? Keyboard.downloadStep : qsTr("Vietnamese typing needs a download")
+        description: Keyboard.downloading ? qsTr("This takes a minute.")
+            : Keyboard.downloadError.length > 0 ? Keyboard.downloadError
+            : qsTr("Wild OS downloads the typing method once, then Windows key + Space switches to it.")
+
+        UI.Button {
+            visible: !Keyboard.downloading
+            kind: "primary"
+            text: qsTr("Download")
+            onClicked: Keyboard.download()
+        }
+    }
+
     UI.Card {
         Layout.fillWidth: true
 
@@ -281,8 +301,9 @@ PageScroll {
         property int chosen: -1
         readonly property var shown: {
             const query = filter.text.trim().toLowerCase();
-            const taken = page.layouts.map(l => l.layout + "|" + l.variant);
-            return all.filter(l => !taken.includes(l.layout + "|" + l.variant)
+            const key = l => l.layout + "|" + l.variant + "|" + (l.method || "");
+            const taken = page.layouts.map(key);
+            return all.filter(l => !taken.includes(key(l))
                 && (query.length === 0 || l.name.toLowerCase().includes(query) || (l.keywords || "").includes(query)));
         }
 
@@ -375,7 +396,7 @@ PageScroll {
                         return;
                     }
                     const l = addDialog.shown[addDialog.chosen];
-                    Keyboard.add(l.layout, l.variant);
+                    Keyboard.add(l.layout, l.variant, l.method || "");
                     addDialog.close();
                 }
             },

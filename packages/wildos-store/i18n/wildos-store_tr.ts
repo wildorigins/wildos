@@ -876,6 +876,10 @@ Yaptığınız her şeyi koruyun.</translation>
             <source>App ID %1</source>
             <translation>Uygulama kimliği %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Başka bir yüklemenin bitmesi bekleniyor</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Yaptığınız her şeyi koruyun.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Yaklaşık %1 saat kaldı</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Başka bir yüklemenin bitmesi bekleniyor</translation>
         </message>
     </context>
     <context>

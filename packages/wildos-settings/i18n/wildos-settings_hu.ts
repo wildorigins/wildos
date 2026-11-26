@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Nem érhető el, amíg egy beviteli mód, például a Vietnámi (Telex), szerepel a billentyűzetei között</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnámi (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnámi (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Várakozás a jelszóra</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Frissítések keresése</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Letöltés</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Telepítés</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Semmi sem lett letöltve, mert nem adta meg a jelszót.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>A beviteli módot nem sikerült letölteni. Ellenőrizze az internetkapcsolatot, és próbálja újra.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>Mégse</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>A vietnámi gépeléshez letöltés szükséges</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Ez egy percig tart.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>A Wild OS egyszer letölti a beviteli módot, utána a Windows billentyű + Szóköz billentyűkombinációval válthat rá.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Letöltés</translation>
         </message>
     </context>
     <context>

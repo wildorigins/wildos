@@ -839,10 +839,14 @@ PageScroll {
 
         background: Rectangle {
             radius: 7
-            color: choice.current ? UI.Style.tone(0.14) : choice.down ? UI.Style.surfacePressed : choice.hovered ? UI.Style.surfaceHover : "transparent"
+            // Fades in on hover and clears at once, so moving along a list
+            // never lights two items. It comes before the colour so it sees
+            // the change in hover first.
             Behavior on color {
+                enabled: choice.hovered
                 ColorAnimation { duration: UI.Style.hoverDuration }
             }
+            color: choice.current ? UI.Style.tone(0.14) : choice.down ? UI.Style.surfacePressed : choice.hovered ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
             UI.FocusRing {
                 visible: choice.visualFocus

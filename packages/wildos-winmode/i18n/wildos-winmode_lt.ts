@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Naudoti turimą „Windows 11“ failą</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS veikia virtualiojoje mašinoje, todėl „Windows“ veiktų antroje ir būtų labai lėta</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Virtualioji mašina</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Vis tiek nustatyti</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>Virtualiojoje mašinoje sąranka gali užtrukti kelias valandas, o „Windows“ programos veikia labai lėtai. „Windows“ režimas skirtas Wild OS, įdiegtai pačiame kompiuteryje.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>„Windows“ režimas skirtas Wild OS, įdiegtai pačiame kompiuteryje, o ne virtualiojoje mašinoje.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Nustatomas „Windows“ režimas</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Tai užtrunka apie 25 minutes. Uždarykite šį langą ir toliau naudokite kompiuterį; pranešime, kai bus paruošta.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Uždaryti</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Daugumoje kompiuterių tai užtrunka mažiau nei valandą, senesniame ilgiau. Uždarykite šį langą ir toliau naudokite kompiuterį; pranešime, kai bus paruošta.</translation>
         </message>
     </context>
     <context>

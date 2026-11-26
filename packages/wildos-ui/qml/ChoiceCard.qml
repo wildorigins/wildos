@@ -41,12 +41,16 @@ T.AbstractButton {
 
     background: Rectangle {
         radius: control.radius
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
+        Behavior on color {
+            enabled: control.lit
+            ColorAnimation { duration: Style.hoverDuration }
+        }
         color: control.checked ? Style.accentTint : control.down ? Style.surfacePressed : control.lit ? Style.surfaceHover : Style.surfaceRest
         border.width: control.checked ? 2 : 1
         border.color: control.checked ? Style.accent : Style.borderGlass
-        Behavior on color {
-            ColorAnimation { duration: Style.hoverDuration }
-        }
 
         FocusRing {
             visible: control.visualFocus || control.previewFocus

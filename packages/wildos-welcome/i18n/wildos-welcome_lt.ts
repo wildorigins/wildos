@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Tęsti</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Ieškoti kalbų</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Ieškoti pagal miestą ar šalį</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

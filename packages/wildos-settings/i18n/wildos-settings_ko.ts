@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>확인</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>베트남어(Telex) 같은 입력 방법이 키보드 목록에 있는 동안에는 사용할 수 없음</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>베트남어(Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>베트남어(VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>암호를 기다리는 중</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>업데이트 확인 중</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>다운로드 중</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>설치 중</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>암호를 입력하지 않아 아무것도 다운로드되지 않았습니다.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>입력 방법을 다운로드할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>취소</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>베트남어를 입력하려면 다운로드가 필요합니다</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>1분 정도 걸립니다.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS가 입력 방법을 한 번만 다운로드하며, 그 후에는 Windows 키 + Space로 전환할 수 있습니다.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>다운로드</translation>
         </message>
     </context>
     <context>

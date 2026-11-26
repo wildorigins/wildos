@@ -1,0 +1,20 @@
+[Unit]
+Description=Build NVIDIA's driver for this Linux kernel if it is missing
+Documentation=file:///usr/libexec/wildos/nvidia-kernel-check
+# Only with NVIDIA's driver installed from Settings. Quick when the module is
+# there; when a kernel update left it out, the sign-in screen waits for the
+# build instead of starting with no driver for the card.
+ConditionPathExists=/var/lib/dpkg/info/nvidia-kernel-dkms.list
+ConditionKernelCommandLine=!wildos.mode=recovery
+DefaultDependencies=no
+After=local-fs.target systemd-modules-load.service
+Before=display-manager.service shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wildos/nvidia-kernel-check --boot
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=multi-user.target

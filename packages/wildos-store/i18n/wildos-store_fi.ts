@@ -876,6 +876,10 @@ Säilytä kaikki, mitä teet.</translation>
             <source>App ID %1</source>
             <translation>Sovelluksen tunnus %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Odotetaan toisen asennuksen valmistumista</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Säilytä kaikki, mitä teet.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Noin %1 tuntia jäljellä</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Odotetaan toisen asennuksen valmistumista</translation>
         </message>
     </context>
     <context>

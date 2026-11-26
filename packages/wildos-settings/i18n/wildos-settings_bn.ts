@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>ঠিক আছে</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>ভিয়েতনামী (Telex)-এর মতো কোনো টাইপিং পদ্ধতি আপনার কীবোর্ডে থাকাকালীন উপলভ্য নয়</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>ভিয়েতনামী (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>ভিয়েতনামী (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>আপনার পাসওয়ার্ডের জন্য অপেক্ষা করা হচ্ছে</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>আপডেট পরীক্ষা করা হচ্ছে</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>ডাউনলোড করা হচ্ছে</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>ইনস্টল করা হচ্ছে</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>পাসওয়ার্ড দেওয়া হয়নি বলে কিছুই ডাউনলোড করা হয়নি।</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>টাইপিং পদ্ধতিটি ডাউনলোড করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>বাতিল</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>ভিয়েতনামী টাইপিংয়ের জন্য একটি ডাউনলোড প্রয়োজন</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>এতে এক মিনিট সময় লাগে।</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS টাইপিং পদ্ধতিটি একবার ডাউনলোড করে, তারপর Windows কী + Space চাপলে সেটিতে পরিবর্তন হয়।</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>ডাউনলোড করুন</translation>
         </message>
     </context>
     <context>

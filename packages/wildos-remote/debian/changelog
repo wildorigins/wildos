@@ -1,3 +1,9 @@
+wildos-remote (0.1.14) trixie; urgency=medium
+
+  * No longer crashes when closed while a dialog is still open.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 20:52:49 +0000
+
 wildos-remote (0.1.13) trixie; urgency=medium
 
   * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,

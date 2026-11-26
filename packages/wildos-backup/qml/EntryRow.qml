@@ -21,10 +21,14 @@ Rectangle {
     readonly property bool picked: Restore.selected.indexOf(entry.path) >= 0
 
     implicitHeight: showPath ? 50 : 38
-    color: picked ? BackupStyle.rowSelected : mouse.containsMouse ? BackupStyle.rowHover : "transparent"
+    // Fades in on hover and clears at once, so moving along a list
+    // never lights two items. It comes before the colour so it sees
+    // the change in hover first.
     Behavior on color {
+        enabled: mouse.containsMouse
         ColorAnimation { duration: UI.Style.hoverDuration }
     }
+    color: picked ? BackupStyle.rowSelected : mouse.containsMouse ? BackupStyle.rowHover : "transparent"
     Accessible.role: Accessible.ListItem
     Accessible.name: entry.name
     Accessible.selected: picked

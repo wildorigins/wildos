@@ -23,12 +23,16 @@ T.CheckBox {
         width: 18
         height: 18
         radius: 5
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
+        Behavior on color {
+            enabled: control.lit
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
         color: control.checked ? (control.lit ? UI.Style.accentHover : UI.Style.accent) : control.lit ? ArchiveStyle.rowHover : "transparent"
         border.width: control.checked ? 0 : 1.5
         border.color: ArchiveStyle.checkEdge
-        Behavior on color {
-            ColorAnimation { duration: UI.Style.hoverDuration }
-        }
 
         ArchiveIcon {
             visible: control.checked

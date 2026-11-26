@@ -876,6 +876,10 @@ Tartsa meg mindent, amit csinál.</translation>
             <source>App ID %1</source>
             <translation>Alkalmazásazonosító: %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Várakozás egy másik telepítés befejezésére</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Tartsa meg mindent, amit csinál.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Körülbelül %1 óra van hátra</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Várakozás egy másik telepítés befejezésére</translation>
         </message>
     </context>
     <context>

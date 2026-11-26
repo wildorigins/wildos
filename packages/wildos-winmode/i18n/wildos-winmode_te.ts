@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>మీ వద్ద ఉన్న Windows 11 ఫైల్‌ను ఉపయోగించండి</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS వర్చువల్ మెషిన్‌లో నడుస్తోంది, కాబట్టి Windows రెండవ వర్చువల్ మెషిన్ లోపల నడిచి చాలా నెమ్మదిగా ఉంటుంది</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>వర్చువల్ మెషిన్</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>అయినా సెటప్ చేయి</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>వర్చువల్ మెషిన్‌లో సెటప్‌కు గంటలు పట్టవచ్చు, Windows యాప్‌లు చాలా నెమ్మదిగా పనిచేస్తాయి. Windows మోడ్ PCలోనే ఇన్‌స్టాల్ చేసిన Wild OS కోసం రూపొందించబడింది.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows మోడ్ వర్చువల్ మెషిన్ కోసం కాదు, PCలోనే ఇన్‌స్టాల్ చేసిన Wild OS కోసం రూపొందించబడింది.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Windows మోడ్‌ను సెటప్ చేస్తోంది</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>దీనికి సుమారు 25 నిమిషాలు పడుతుంది. ఈ విండోను మూసివేసి మీ PCని ఉపయోగిస్తూ ఉండండి; అది సిద్ధమైనప్పుడు మేము మీకు తెలియజేస్తాము.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>మూసివేయి</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>చాలా PCలలో దీనికి గంట కంటే తక్కువ సమయం పడుతుంది, పాత PCలో ఎక్కువ సమయం పడుతుంది. ఈ విండోను మూసివేసి మీ PCని ఉపయోగిస్తూ ఉండండి; అది సిద్ధమైనప్పుడు మేము మీకు తెలియజేస్తాము.</translation>
         </message>
     </context>
     <context>

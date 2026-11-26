@@ -1,0 +1,11 @@
+[Unit]
+Description=Brave graphics acceleration for this computer's graphics card
+After=systemd-udev-settle.service systemd-modules-load.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/wildos/brave-gpu-policy
+
+[Install]
+WantedBy=graphical.target

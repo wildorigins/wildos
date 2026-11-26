@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>Labi</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Nav pieejams, kamēr jūsu tastatūrās ir ievades metode, piemēram, vjetnamiešu (Telex)</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7330,6 +7334,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vjetnamiešu (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vjetnamiešu (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Gaida jūsu paroli</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Notiek atjauninājumu meklēšana</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Notiek lejupielāde</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Notiek instalēšana</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Nekas netika lejupielādēts, jo netika ievadīta parole.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Ievades metodi nevarēja lejupielādēt. Pārbaudiet interneta savienojumu un mēģiniet vēlreiz.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7645,6 +7684,22 @@
         <message>
             <source>Cancel</source>
             <translation>Atcelt</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Vjetnamiešu rakstīšanai nepieciešama lejupielāde</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Tas aizņem minūti.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS vienreiz lejupielādē ievades metodi, pēc tam uz to var pārslēgties ar Windows taustiņš + Atstarpe.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Lejupielādēt</translation>
         </message>
     </context>
     <context>

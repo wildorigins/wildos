@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>استخدام ملف Windows 11 لديك</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS يعمل داخل جهاز افتراضي، لذا سيعمل Windows داخل جهاز افتراضي ثانٍ وسيكون بطيئًا جدًا</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>جهاز افتراضي</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>الإعداد على أي حال</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>في الجهاز الافتراضي، قد يستغرق الإعداد ساعات وتكون تطبيقات Windows بطيئة جدًا. وضع Windows مصمم لـ Wild OS المثبّت على الكمبيوتر نفسه.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>وضع Windows مصمم لـ Wild OS المثبّت على الكمبيوتر نفسه، وليس داخل جهاز افتراضي.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>جارٍ إعداد وضع Windows</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>يستغرق هذا نحو 25 دقيقة. أغلق هذه النافذة وواصل استخدام كمبيوترك؛ وسنُعلمك عندما يصبح جاهزًا.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>إغلاق</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>يستغرق هذا أقل من ساعة على معظم أجهزة الكمبيوتر، وأطول على الأجهزة الأقدم. أغلق هذه النافذة وواصل استخدام كمبيوترك؛ وسنُعلمك عندما يصبح جاهزًا.</translation>
         </message>
     </context>
     <context>

@@ -17,6 +17,10 @@
             <label>Default pins this account has already been given. A default added in an update is pinned once, at the end; one the user later unpins stays unpinned.</label>
             <default></default>
         </entry>
+        <entry name="pinFolders" type="String">
+            <label>Folders on the pinned grid, as JSON: a list of {id, name, apps}, apps being favourite ids in the folder's order. The apps stay pinned; a folder sits where its first app is among the pins.</label>
+            <default></default>
+        </entry>
         <entry name="favoritesPortedToKAstats" type="Bool">
             <label>Whether the default pins have been copied into the activity manager.</label>
             <default>false</default>

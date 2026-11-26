@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Không dùng được khi danh sách bàn phím của bạn có kiểu gõ như Tiếng Việt (Telex)</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Tiếng Việt (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Tiếng Việt (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Đang chờ mật khẩu của bạn</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Đang kiểm tra bản cập nhật</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Đang tải xuống</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Đang cài đặt</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Chưa tải xuống gì vì bạn chưa nhập mật khẩu.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Không tải được kiểu gõ. Hãy kiểm tra kết nối Internet rồi thử lại.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>Hủy</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Cần tải xuống để gõ tiếng Việt</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Việc này mất khoảng một phút.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS chỉ tải kiểu gõ một lần, sau đó bạn nhấn phím Windows + Space để chuyển sang kiểu gõ này.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Tải xuống</translation>
         </message>
     </context>
     <context>

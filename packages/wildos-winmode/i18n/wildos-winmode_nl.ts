@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>Een Windows 11-bestand gebruiken dat je hebt</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS draait in een virtuele machine, dus Windows zou in een tweede draaien en erg traag zijn</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>Virtuele machine</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>Toch instellen</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>In een virtuele machine kan het instellen uren duren en zijn Windows-apps erg traag. Windows-modus is gemaakt voor Wild OS dat op de pc zelf is geïnstalleerd.</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows-modus is gemaakt voor Wild OS dat op de pc zelf is geïnstalleerd, niet in een virtuele machine.</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Windows-modus instellen</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>Dit duurt ongeveer 25 minuten. Sluit dit venster en gebruik je pc gewoon verder; we laten het je weten wanneer het klaar is.</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>Sluiten</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>Dit duurt op de meeste pc's minder dan een uur, op een oudere pc langer. Sluit dit venster en gebruik je pc gewoon verder; we laten het je weten wanneer het klaar is.</translation>
         </message>
     </context>
     <context>

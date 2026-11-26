@@ -22,7 +22,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- wildos-ui (>= 0.1.19),
+ wildos-ui (>= 0.1.28),
  plasma-workspace (>= 4:6.3),
  kio6,
  qml6-module-qtquick,

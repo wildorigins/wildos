@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Continuare</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Caută limbi</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Caută după oraș sau țară</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

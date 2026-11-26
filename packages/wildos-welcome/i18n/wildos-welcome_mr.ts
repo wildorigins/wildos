@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>पुढे जा</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>भाषा शोधा</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>शहर किंवा देशानुसार शोधा</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

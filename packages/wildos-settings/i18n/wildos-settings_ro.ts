@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Indisponibil cât timp o metodă de introducere, cum ar fi vietnameză (Telex), se află printre tastaturile dvs.</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7330,6 +7334,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnameză (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnameză (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Se așteaptă parola dvs.</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Se caută actualizări</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Se descarcă</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Se instalează</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Nu s-a descărcat nimic, deoarece parola nu a fost furnizată.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Metoda de introducere nu a putut fi descărcată. Verificați conexiunea la internet și încercați din nou.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7645,6 +7684,22 @@
         <message>
             <source>Cancel</source>
             <translation>Anulare</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Scrierea în vietnameză necesită o descărcare</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Durează un minut.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS descarcă metoda de introducere o singură dată, apoi tasta Windows + Spațiu comută la ea.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Descărcare</translation>
         </message>
     </context>
     <context>

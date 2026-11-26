@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Doorgaan</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Talen zoeken</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Zoeken op stad of land</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

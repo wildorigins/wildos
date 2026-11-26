@@ -23,6 +23,7 @@ then words.
 import glob
 import hashlib
 import json
+import mmap
 import os
 import re
 import shutil
@@ -154,8 +155,14 @@ def signer(path):
 
 
 def identify(path, check_signature=True):
+    # Mapped rather than read: an installer can be gigabytes, and reading
+    # it all into memory first kept App Bridge waiting on a slow PC until it
+    # gave up and said Windows mode wasn't set up.
     with open(path, "rb") as f:
-        data = f.read()
+        try:
+            data = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        except ValueError:
+            data = b""
     info = {"file": os.path.basename(path), "sha256": hashlib.sha256(data).hexdigest(), "kind": "unknown"}
     lower = path.lower()
     if lower.endswith((".msix", ".appx", ".msixbundle", ".appxbundle")):
@@ -216,22 +223,35 @@ def decide(info, entry, host):
       cannot        this PC can't have Windows mode (too little memory)
       setup         Windows mode first needs setting up (board 9.1)
       windows-mode  run it in Windows mode
+
+    windows is what Windows mode could do with it, whatever action is
+    recommended: home, cannot, setup or windows-mode.
     """
     out = {"engine": entry["engine"] if entry else "windows-mode", "entry": entry.get("id") if entry else None,
            "name": (entry or {}).get("name") or info.get("product") or info.get("file"),
            "alternative": (entry or {}).get("alternative"), "reason": (entry or {}).get("reason"),
            "calls": bool((entry or {}).get("calls"))}
+    # What Windows mode itself could do with it, whatever is recommended. A
+    # program with a Wild OS version still offers Windows mode as the second
+    # choice, and that choice used to read as "set up Windows mode first" on
+    # PCs where it was set up and running.
+    if host.get("edition") == "home":
+        windows = "home"
+    elif host.get("memory", 0) and host["memory"] < 7.5 * 1024 ** 3:
+        windows = "cannot"
+    elif not host.get("installed") or host.get("state") not in ("ready", "", "unknown"):
+        # A state that couldn't be read (Windows mode busy on a slow PC)
+        # is not "not set up": Windows mode itself says if it can't run it.
+        windows = "setup"
+    else:
+        windows = "windows-mode"
+    out["windows"] = windows
     if info.get("kind") == "not-windows":
         out["action"] = "not-windows"
     elif out["engine"] in ("native", "unsupported"):
         out["action"] = out["engine"]
-    elif host.get("edition") == "home":
-        out["action"] = "home"
-    elif host.get("memory", 0) and host["memory"] < 7.5 * 1024 ** 3:
-        out["action"] = "cannot"
-        out["reason"] = "Windows mode needs at least 8 GB of memory, and this PC has less."
-    elif not host.get("installed") or host.get("state") != "ready":
-        out["action"] = "setup"
     else:
-        out["action"] = "windows-mode"
+        out["action"] = windows
+    if windows == "cannot" and not out.get("reason"):
+        out["reason"] = "Windows mode needs at least 8 GB of memory, and this PC has less."
     return out

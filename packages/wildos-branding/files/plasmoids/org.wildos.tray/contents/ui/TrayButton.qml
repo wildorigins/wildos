@@ -37,7 +37,7 @@ MouseArea {
         radius: UI.Style.radiusSm
         color: button.pressed ? UI.Style.surfacePressed
             : button.checked ? UI.Style.surfaceSelected
-            : button.containsMouse ? UI.Style.surfaceHover : "transparent"
+            : button.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
         Behavior on color {
             ColorAnimation { duration: UI.Style.hoverDuration }
         }

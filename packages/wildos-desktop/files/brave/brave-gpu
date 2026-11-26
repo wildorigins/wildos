@@ -1,0 +1,36 @@
+#!/bin/sh
+# Prints "off" when Brave should not use the graphics card: the screens are
+# driven by an NVIDIA card on the open nouveau driver, where Chromium's GPU
+# process greys out the window or flickers (a GTX 980 Ti tester, fixed by
+# --disable-gpu). Prints "on" otherwise.
+#
+# What counts is the card the screens are plugged into. A desktop with the
+# processor's Intel graphics switched on in the firmware but nothing plugged
+# into it still draws everything on nouveau; a laptop whose panel is on the
+# Intel or AMD chip keeps acceleration, as Brave draws there.
+nouveau=
+other=
+shown_nouveau=
+shown_other=
+for card in /sys/class/drm/card[0-9] /sys/class/drm/card[0-9][0-9]; do
+    [ -e "$card/device/driver" ] || continue
+    driver=$(basename "$(readlink "$card/device/driver")")
+    shown=
+    for status in "$card"/"$(basename "$card")"-*/status; do
+        [ "$(cat "$status" 2>/dev/null)" = connected ] && shown=1
+    done
+    case $driver in
+        nouveau) nouveau=1; [ -n "$shown" ] && shown_nouveau=1 ;;
+        i915|xe|amdgpu|radeon|nvidia) other=1; [ -n "$shown" ] && shown_other=1 ;;
+    esac
+done
+
+if [ -n "$shown_nouveau" ] || [ -n "$shown_other" ]; then
+    [ -n "$shown_nouveau" ] && [ -z "$shown_other" ] && { echo off; exit 0; }
+elif [ -n "$nouveau" ] && [ -z "$other" ]; then
+    # No screen reported as connected (some cards only say so once a
+    # session has started): go by the drivers alone.
+    echo off
+    exit 0
+fi
+echo on

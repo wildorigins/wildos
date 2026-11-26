@@ -547,6 +547,7 @@ struct ClientCallbacks {
             qWarning("wildos-rdp: the app could not be asked for");
             return false;
         }
+        Q_EMIT self->railStarted();
         return true;
     }
 

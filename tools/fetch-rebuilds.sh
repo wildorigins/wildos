@@ -95,6 +95,9 @@ apt-get update -qq
 # line, run as build.sh runs it.
 BUILD=$SRC/build/build.sh
 suffix_fn=$(sed -n '/^wildos_suffix() {$/,/^}$/p' "$BUILD")
+# The Debian release the blocks build for, as build.sh sets it.
+SUITE=$(sed -n 's/^SUITE=\([a-z]*\)$/\1/p' "$BUILD")
+[ -n "$SUITE" ] || die "build.sh no longer sets SUITE"
 [ -n "$suffix_fn" ] || die "build.sh no longer defines wildos_suffix"
 mapfile -t ends < <(grep -n '^[[:space:]]*cached="\$REBUILDS/' "$BUILD" | cut -d: -f1)
 [ ${#ends[@]} -gt 0 ] || die "found no rebuilds in build.sh"
@@ -106,11 +109,17 @@ for end in "${ends[@]}"; do
     line=$(sed -n "${end}p" "$BUILD")
     dir=$(sed -n 's|.*cached="\$REBUILDS/\([^/]*\)/.*|\1|p' <<<"$line")
     name=$(sed -n 's/.*wildos_suffix \([A-Za-z0-9_.-]*\).*/\1/p' <<<"$line")
-    anchor=$(grep -o 'apt-cache policy [^ |]*' <<<"$block" | head -1 | cut -d' ' -f3)
+    # policy or madison (FreeRDP reads its backports version with madison).
+    # No match must not end the script: with pipefail a grep that finds
+    # nothing stopped it there, silently.
+    anchor=$(grep -oE 'apt-cache (policy|madison) [^ |]*' <<<"$block" | head -1 | cut -d' ' -f3 || true)
+    # A rebuild of something Debian doesn't carry (Lotus) has no Debian
+    # version to ask apt for, so it names its package instead.
+    [ -n "$anchor" ] || anchor=$(sed -n 's/^[[:space:]]*package=\([A-Za-z0-9.+-]*\)$/\1/p' <<<"$block" | head -1)
     stampline=$(grep '^[[:space:]]*stamp=' <<<"$block" | sed 's/^[[:space:]]*//')
     [ -n "$dir" ] && [ -n "$name" ] && [ -n "$anchor" ] || die "build.sh line $end: cannot read this rebuild"
     mkdir -p "$TMP/work"
-    out=$(cd "$TMP/work" && SRC=$SRC REBUILDS=$REBUILDS WORK=$TMP/work bash -c \
+    out=$(cd "$TMP/work" && SRC=$SRC REBUILDS=$REBUILDS WORK=$TMP/work SUITE=$SUITE bash -c \
         "set -euo pipefail; $suffix_fn
 $block
 printf '%s\t%s\t%s\n' \"\$cached\" \"\$version\$(wildos_suffix $name)\" \"\$stamp\"") \

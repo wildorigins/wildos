@@ -62,10 +62,14 @@ Item {
                 onClicked: heading.sortRequested(modelData.id)
 
                 background: Rectangle {
-                    color: cell.down ? UI.Style.surfacePressed : cell.hovered ? UI.Style.surfaceRaised : "transparent"
+                    // Fades in on hover and clears at once, so moving along a list
+                    // never lights two items. It comes before the colour so it sees
+                    // the change in hover first.
                     Behavior on color {
+                        enabled: cell.hovered
                         ColorAnimation { duration: UI.Style.hoverDuration }
                     }
+                    color: cell.down ? UI.Style.surfacePressed : cell.hovered ? UI.Style.surfaceRaised : Qt.alpha(UI.Style.surfaceRaised, 0)
 
                     UI.FocusRing {
                         visible: cell.visualFocus

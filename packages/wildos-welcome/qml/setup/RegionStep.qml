@@ -19,6 +19,20 @@ StepPage {
     property bool changingFormats: false
     readonly property bool canLookUp: FirstBoot.wifi.online && FirstBoot.zoneSource !== "internet"
 
+    // The choices a search box leaves in its drop-down: every word typed
+    // must be in the entry's name, own-language name, country or code. The
+    // one in use stays, so the drop-down always has it to show.
+    function narrowed(list, query, current) {
+        const words = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+        if (words.length === 0) {
+            return list;
+        }
+        return list.filter(entry => {
+            const names = (entry.search || entry.text).toLowerCase();
+            return entry.value === current || words.every(word => names.includes(word));
+        });
+    }
+
     gap: 18
     title: qsTr("Region and language")
     subtitle: qsTr("We picked these from the installer. Check they look right; you can change them later in Settings.")
@@ -62,13 +76,26 @@ StepPage {
                 font.weight: UI.Style.weightMedium
             }
 
+            UI.SearchField {
+                id: languageSearch
+                Layout.fillWidth: true
+                placeholderText: qsTr("Search languages")
+                // Enter or Down opens the list as the search left it.
+                onAccepted: { languageBox.forceActiveFocus(); languageBox.popup.open(); }
+                onDownPressed: { languageBox.forceActiveFocus(); languageBox.popup.open(); }
+            }
+
             UI.ComboBox {
+                id: languageBox
                 Layout.fillWidth: true
                 look: "field"
-                model: FirstBoot.languages
-                currentIndex: count > 0 ? indexOfValue(FirstBoot.language) : -1
+                model: page.narrowed(FirstBoot.languages, languageSearch.text, FirstBoot.language)
+                currentIndex: model ? model.findIndex(o => o.value === FirstBoot.language) : -1
                 Accessible.name: qsTr("Display language")
-                onActivated: FirstBoot.language = currentValue
+                onActivated: index => {
+                    FirstBoot.language = model[index].value;
+                    languageSearch.text = "";
+                }
             }
 
             UI.Label {
@@ -92,13 +119,25 @@ StepPage {
                 font.weight: UI.Style.weightMedium
             }
 
+            UI.SearchField {
+                id: zoneSearch
+                Layout.fillWidth: true
+                placeholderText: qsTr("Search by city or country")
+                onAccepted: { zoneBox.forceActiveFocus(); zoneBox.popup.open(); }
+                onDownPressed: { zoneBox.forceActiveFocus(); zoneBox.popup.open(); }
+            }
+
             UI.ComboBox {
+                id: zoneBox
                 Layout.fillWidth: true
                 look: "field"
-                model: FirstBoot.zones
-                currentIndex: count > 0 ? indexOfValue(FirstBoot.timeZone) : -1
+                model: page.narrowed(FirstBoot.zones, zoneSearch.text, FirstBoot.timeZone)
+                currentIndex: model ? model.findIndex(o => o.value === FirstBoot.timeZone) : -1
                 Accessible.name: qsTr("Time zone")
-                onActivated: FirstBoot.timeZone = currentValue
+                onActivated: index => {
+                    FirstBoot.timeZone = model[index].value;
+                    zoneSearch.text = "";
+                }
             }
 
             RowLayout {

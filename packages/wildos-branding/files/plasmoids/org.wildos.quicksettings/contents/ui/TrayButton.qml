@@ -84,10 +84,14 @@ MouseArea {
         width: parent.width
         height: 44
         radius: 12
-        color: button.pressed ? UI.Style.surfacePressed : quick.expanded ? UI.Style.surfaceSelected : button.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: button.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: button.pressed ? UI.Style.surfacePressed : quick.expanded ? UI.Style.surfaceSelected : button.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
     }
 
     RowLayout {

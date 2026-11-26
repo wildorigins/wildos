@@ -44,10 +44,14 @@ T.MenuItem {
 
     background: Rectangle {
         radius: Style.radiusMenuRow
-        color: control.down ? Style.surfacePressed : control.lit ? Style.surfaceSelected : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: control.lit
             ColorAnimation { duration: 80 }
         }
+        color: control.down ? Style.surfacePressed : control.lit ? Style.surfaceSelected : "transparent"
     }
 
     contentItem: Item {

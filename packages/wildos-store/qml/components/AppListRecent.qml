@@ -31,10 +31,14 @@ T.AbstractButton {
             anchors.rightMargin: -8
             anchors.topMargin: 1
             radius: UI.Style.radiusSm
-            color: row.down ? Metrics.pill : row.hovered ? Metrics.rowHover : "transparent"
+            // Fades in on hover and clears at once, so moving along a list
+            // never lights two items. It comes before the colour so it sees
+            // the change in hover first.
             Behavior on color {
+                enabled: row.hovered
                 ColorAnimation { duration: UI.Style.hoverDuration }
             }
+            color: row.down ? Metrics.pill : row.hovered ? Metrics.rowHover : "transparent"
 
             UI.FocusRing {
                 visible: row.visualFocus

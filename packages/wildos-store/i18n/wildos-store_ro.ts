@@ -876,6 +876,10 @@ Păstrați tot ce faceți.</translation>
             <source>App ID %1</source>
             <translation>ID aplicație %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Se așteaptă terminarea altei instalări</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Păstrați tot ce faceți.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Aproximativ %1 ore rămase</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Se așteaptă terminarea altei instalări</translation>
         </message>
     </context>
     <context>

@@ -1,0 +1,176 @@
+#!/bin/sh
+# Drivers from the internet for hardware this PC has, the way Windows Update
+# fetches them. Linux's drivers are in the kernel already; what it can lack
+# is firmware (files a device loads, packaged separately by Debian) and the
+# drivers vendors keep out of the kernel (NVIDIA's, Broadcom's Wi-Fi).
+#
+#   scan          as root, from wildos-driver-check.service (a minute after
+#                 start-up and when a device is plugged in):
+#                 - firmware the kernel asked for and didn't find is
+#                   installed from Debian straight away (it only adds files),
+#                   and whoever is signed in is told to restart;
+#                 - an NVIDIA card Debian's driver supports, still on the
+#                   open driver, and a Broadcom Wi-Fi chip with no driver
+#                   get one notification each, whose button opens the page
+#                   in Settings that installs it. Those need a restart and,
+#                   with Secure Boot, a code, so they are never installed
+#                   unasked.
+#   offer <what>  as the signed-in person: shows that notification and
+#                 opens Settings when it is clicked.
+#
+# Everything is logged to /var/log/wildos/driver-check.log.
+
+set -u
+TABLE=/usr/share/wildos/firmware-packages.tsv
+NVIDIA_IDS=/usr/share/wildos/nvidia-supported.ids
+STATE=/var/lib/wildos/driver-check
+LOG=/var/log/wildos/driver-check.log
+APT="apt-get -y -q --no-install-recommends -o DPkg::Lock::Timeout=600 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+
+installed() {
+    [ "$(dpkg-query -W -f='${db:Status-Status}' "$1" 2>/dev/null)" = installed ]
+}
+
+# Signed-in people at the screen: "uid name" per line.
+people() {
+    for s in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{ print $1 }'); do
+        [ "$(loginctl show-session "$s" -P Active 2>/dev/null)" = yes ] || continue
+        case $(loginctl show-session "$s" -P Type 2>/dev/null) in wayland | x11) ;; *) continue ;; esac
+        uid=$(loginctl show-session "$s" -P User 2>/dev/null)
+        case $uid in '' | *[!0-9]*) continue ;; esac
+        [ -S "/run/user/$uid/bus" ] || continue
+        echo "$uid $(loginctl show-session "$s" -P Name 2>/dev/null)"
+    done | sort -u
+}
+
+as_person() {
+    uid=$1 user=$2
+    shift 2
+    timeout 15 runuser -u "$user" -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" "$@"
+}
+
+# Firmware files the kernel asked for in this start-up and didn't get.
+# Debian's kernel logs "firmware: failed to load X (-2)"; the generic
+# message is "Direct firmware load for X failed with error -2".
+wanted_firmware() {
+    journalctl -k -b -o cat --no-pager 2>/dev/null | sed -n \
+        -e 's/.*firmware: failed to load \([^ ]*\) (.*/\1/p' \
+        -e 's/.*Direct firmware load for \([^ ]*\) failed with error.*/\1/p' | sort -u
+}
+
+firmware_packages() {
+    wanted_firmware | while read -r file; do
+        case $file in '' | /* | *..*) continue ;; esac
+        for f in "/usr/lib/firmware/$file" "/usr/lib/firmware/$file.xz" "/usr/lib/firmware/$file.zst"; do
+            [ -e "$f" ] && continue 2
+        done
+        package=$(FILE=$file awk -F '\t' '$1 == ENVIRON["FILE"] { print $2; exit }' "$TABLE")
+        [ -n "$package" ] || continue
+        installed "$package" && continue
+        log "firmware: $file is in $package"
+        echo "$package"
+    done | sort -u
+}
+
+firmware() {
+    packages=$(firmware_packages | tr '\n' ' ')
+    [ -n "${packages% }" ] || return 0
+    log "firmware: installing $packages"
+    apt-get -q -o DPkg::Lock::Timeout=600 update >> "$LOG" 2>&1 || true
+    # shellcheck disable=SC2086
+    if ! $APT install $packages >> "$LOG" 2>&1; then
+        log "firmware: install failed, trying again at the next start-up"
+        return 0
+    fi
+    log "firmware: installed"
+    people | while read -r uid user; do
+        as_person "$uid" "$user" notify-send --app-name="Wild OS" --icon=system-reboot \
+            "Drivers installed" \
+            "Wild OS installed drivers for hardware in this PC. Restart to start using them." || true
+    done
+}
+
+# The first NVIDIA display controller, when it is on the open driver and
+# the driver Settings installs supports it: prints its PCI device ID.
+nvidia_card() {
+    installed nvidia-driver && return 1
+    [ -e /var/lib/wildos/graphics-driver/failed ] && return 1
+    for dev in /sys/bus/pci/devices/*; do
+        [ "$(cat "$dev/vendor" 2>/dev/null)" = 0x10de ] || continue
+        case $(cat "$dev/class" 2>/dev/null) in 0x03*) ;; *) continue ;; esac
+        driver=$(basename "$(readlink "$dev/driver" 2>/dev/null)" 2>/dev/null)
+        case $driver in nvidia) return 1 ;; esac
+        id=$(sed 's/^0x//' "$dev/device" 2>/dev/null)
+        grep -qx "$id" "$NVIDIA_IDS" 2>/dev/null || return 1
+        echo "$id"
+        return 0
+    done
+    return 1
+}
+
+# One notification per thing, ever: once someone has seen it they know
+# where the driver is, and Settings keeps the button.
+offer() {
+    key=$1 what=$2
+    [ -e "$STATE/offered-$key" ] && return 0
+    shown=
+    while read -r uid user; do
+        as_person "$uid" "$user" systemd-run --user --quiet --collect \
+            /usr/libexec/wildos/driver-check offer "$what" >> "$LOG" 2>&1 && shown=1
+    done <<EOF
+$(people)
+EOF
+    if [ -n "$shown" ]; then
+        log "offer: $what shown"
+        : > "$STATE/offered-$key"
+    fi
+}
+
+offers() {
+    if id=$(nvidia_card); then
+        offer "nvidia-$id" nvidia
+    fi
+    if /usr/libexec/wildos/settings-wifi-driver check 2>/dev/null; then
+        offer broadcom-wifi broadcom
+    fi
+}
+
+case "${1:-}" in
+scan)
+    # Not in the live session from the USB stick: nothing installed there
+    # is kept, and the installer sees to the PC it goes on.
+    awk '$2 == "/" { root = $3 " " $4 } END { exit !(root ~ /^(btrfs|ext4|xfs) rw(,|$)/) }' /proc/self/mounts || exit 0
+    mkdir -p "$STATE" "$(dirname "$LOG")"
+    exec 9> "$STATE/lock"
+    flock 9
+    firmware
+    offers
+    ;;
+offer)
+    case "${2:-}" in
+    nvidia)
+        page=graphicsdriver icon=video-display
+        title="Get NVIDIA's driver"
+        body="Your NVIDIA graphics are using the basic driver. NVIDIA's own driver is faster and works with more apps and games."
+        ;;
+    broadcom)
+        page=network icon=network-wireless
+        title="Wi-Fi needs a driver"
+        body="This PC's Broadcom Wi-Fi needs Broadcom's driver. Connect with a cable or phone tethering, then set it up in Settings."
+        ;;
+    *) exit 2 ;;
+    esac
+    choice=$(notify-send --app-name="Wild OS" --icon="$icon" --expire-time=0 \
+        --action=default="Set up" --action=open="Set up" --wait "$title" "$body" 2>/dev/null)
+    case $choice in
+    default | open) exec wildos-settings --page "$page" ;;
+    esac
+    ;;
+*)
+    echo "usage: $0 scan | offer nvidia|broadcom" >&2
+    exit 2
+    ;;
+esac

@@ -129,3 +129,15 @@ void WifiDriver::restart()
                                                   QStringLiteral("logoutAndReboot"));
     QDBusConnection::sessionBus().asyncCall(message);
 }
+
+// An install still running when Settings closes carries on by itself: the
+// process is let go rather than killed with this object (the helper ignores
+// the closed pipe), so dpkg is never stopped halfway.
+WifiDriver::~WifiDriver()
+{
+    if (m_process) {
+        m_process->disconnect(this);
+        m_process->setParent(nullptr);
+        m_process = nullptr;
+    }
+}

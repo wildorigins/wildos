@@ -46,6 +46,7 @@ qt_add_executable(wildos-rdp
     src/wayland.cpp src/wayland.h
     src/kwin.cpp src/kwin.h
     src/screens.cpp src/screens.h
+    src/workareas.cpp src/workareas.h
     ${PROTOCOL_SOURCES}
 )
 target_include_directories(wildos-rdp PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

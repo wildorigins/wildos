@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>जारी रखें</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>भाषाएँ खोजें</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>शहर या देश से खोजें</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

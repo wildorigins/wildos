@@ -20,6 +20,7 @@
 #include "screens.h"
 #include "selftest.h"
 #include "service.h"
+#include "workareas.h"
 
 #include <QElapsedTimer>
 #include <QFile>
@@ -202,6 +203,14 @@ int main(int argc, char **argv)
 
     startSelfTest(&rail, &client);
 
+    // Not for a session only being made ready: it ends in a moment and
+    // shows nothing.
+    WorkAreas workAreas;
+    if (!options.prepareSession) {
+        QObject::connect(&workAreas, &WorkAreas::changed, &app, [&] { rail.setWorkAreas(workAreas.areas()); });
+        workAreas.start();
+    }
+
     Screens screens;
     QObject::connect(&screens, &Screens::changed, &app, [&] {
         if (client.running()) {
@@ -347,6 +356,7 @@ int main(int argc, char **argv)
 
     const int code = app.exec();
     rail.closeAll();
+    workAreas.stop();
     if (client.running()) {
         // FreeRDP is stuck in a call that does not return (a connection to a
         // Windows that stopped answering): waiting for its thread would leave

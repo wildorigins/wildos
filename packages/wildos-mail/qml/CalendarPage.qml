@@ -408,11 +408,16 @@ Item {
                                     iconName: modelData.icon
                                     checkable: false
                                     background: Rectangle {
+                                        id: viewBackground
                                         radius: UI.Style.radiusXs
-                                        color: window.view === modelData.id && !window.editing ? UI.Style.surfaceSelected : parent.hovered ? UI.Style.surfaceHover : "transparent"
+                                        // Fades in on hover and clears at once, so moving along a list
+                                        // never lights two items. It comes before the colour so it sees
+                                        // the change in hover first.
                                         Behavior on color {
+                                            enabled: viewBackground.parent.hovered
                                             ColorAnimation { duration: UI.Style.hoverDuration }
                                         }
+                                        color: window.view === modelData.id && !window.editing ? UI.Style.surfaceSelected : parent.hovered ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                                     }
                                     onClicked: window.setView(modelData.id)
                                 }

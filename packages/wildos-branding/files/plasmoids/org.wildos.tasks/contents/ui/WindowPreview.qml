@@ -366,12 +366,16 @@ PlasmaCore.Dialog {
                     Rectangle {
                         anchors.fill: parent
                         radius: UI.Style.radiusSm
-                        color: tileTap.pressed ? UI.Style.surfacePressed
-                             : tileHover.hovered || tile.current ? UI.Style.surfaceHover
-                             : "transparent"
+                        // Fades in on hover and clears at once, so moving along a list
+                        // never lights two items. It comes before the colour so it sees
+                        // the change in hover first.
                         Behavior on color {
+                            enabled: tileHover.hovered
                             ColorAnimation { duration: UI.Style.hoverDuration }
                         }
+                        color: tileTap.pressed ? UI.Style.surfacePressed
+                             : tileHover.hovered || tile.current ? UI.Style.surfaceHover
+                             : UI.Style.surfaceHoverClear
 
                         // Inside the tile's edge: 4 px is all there is
                         // between two tiles.
@@ -567,12 +571,16 @@ PlasmaCore.Dialog {
                 Rectangle {
                     anchors.fill: parent
                     radius: UI.Style.radiusSm
-                    color: lineTap.pressed ? UI.Style.surfacePressed
-                         : lineHover.hovered || line.current ? UI.Style.surfaceHover
-                         : "transparent"
+                    // Fades in on hover and clears at once, so moving along a list
+                    // never lights two items. It comes before the colour so it sees
+                    // the change in hover first.
                     Behavior on color {
+                        enabled: lineHover.hovered
                         ColorAnimation { duration: UI.Style.hoverDuration }
                     }
+                    color: lineTap.pressed ? UI.Style.surfacePressed
+                         : lineHover.hovered || line.current ? UI.Style.surfaceHover
+                         : UI.Style.surfaceHoverClear
 
                     // Inside the row's edge, where the list does not clip it.
                     UI.FocusRing {

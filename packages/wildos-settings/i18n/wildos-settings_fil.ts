@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Hindi available habang may paraan ng pag-type gaya ng Vietnamese (Telex) sa iyong mga keyboard</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamese (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamese (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Naghihintay sa iyong password</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Tinitingnan kung may mga update</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Nagda-download</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Nag-i-install</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Walang na-download dahil hindi ibinigay ang password.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Hindi ma-download ang paraan ng pag-type. Tingnan ang koneksyon sa internet at subukan ulit.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>Kanselahin</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Kailangan ng download para sa pag-type sa Vietnamese</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Aabutin ito ng isang minuto.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Isang beses lang dina-download ng Wild OS ang paraan ng pag-type, pagkatapos ay Windows key + Space ang lilipat dito.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>I-download</translation>
         </message>
     </context>
     <context>

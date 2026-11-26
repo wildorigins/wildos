@@ -56,6 +56,13 @@ Item {
     onDockedChanged: pillTimer.restart()
     property var pillRects: []
     property var watched: []
+    // KWin's underglow lights the floating pills' top edges from these.
+    readonly property string screenName: Screen.name
+    function publishPills() {
+        WildOS.PillMask.publish(screenName, pillRects, pillRadius);
+    }
+    onPillRectsChanged: publishPills()
+    onScreenNameChanged: publishPills()
 
     function updatePills() {
         const layout = containment?.layoutManager?.layout;
@@ -130,6 +137,87 @@ Item {
         target: root.containment?.layoutManager?.layout ?? null
         function onChildrenChanged() { pillTimer.restart(); }
         function onWidthChanged() { pillTimer.restart(); }
+    }
+
+    // KDE's network and disk activity monitors open as a line graph, which at
+    // taskbar height is a faint scribble on the dark glass (#89). Dropped on
+    // the taskbar they show their figures as text instead, like the clock;
+    // appletCreated fires only for a widget just added, so a face someone
+    // picks later in the widget's settings is kept.
+    Connections {
+        target: root.containment?.plasmoid ?? null
+        function onAppletCreated(applet) {
+            if (!applet || !String(applet.pluginName).startsWith("org.kde.plasma.systemmonitor")) {
+                return;
+            }
+            textFace.applets.push(applet);
+            textFace.tries = 0;
+            textFace.restart();
+        }
+    }
+    // Network Speed widgets added before the coloured arrows (builds 919 and
+    // 920) carry Text Only with the plain arrows; move those on as well.
+    Timer {
+        interval: 2000
+        running: root.containment !== null
+        onTriggered: {
+            const applets = root.containment?.plasmoid?.applets ?? [];
+            for (const applet of applets) {
+                if (String(applet.pluginName) === "org.kde.plasma.systemmonitor.net") {
+                    textFace.applets.push(applet);
+                }
+            }
+            textFace.tries = 0;
+            textFace.restart();
+        }
+    }
+    Timer {
+        id: textFace
+        property var applets: []
+        property int tries: 0
+        readonly property string netFace: "org.wildos.ksysguard.colourtext"
+        // The face controller is made once the widget has loaded its preset.
+        interval: 300
+        onTriggered: {
+            if (++tries > 20) {
+                applets = [];
+                return;
+            }
+            const waiting = [];
+            for (const applet of applets) {
+                const face = applet.faceController;
+                const net = String(applet.pluginName) === "org.kde.plasma.systemmonitor.net";
+                if (!face) {
+                    waiting.push(applet);
+                } else if (face.faceId === "org.kde.ksysguard.linechart") {
+                    face.faceId = net ? netFace : "org.kde.ksysguard.textonly";
+                    if (net) {
+                        netArrows(face);
+                    }
+                } else if (net && face.faceId === "org.kde.ksysguard.textonly"
+                           && face.sensorLabels["network/all/download"] === "↓") {
+                    face.faceId = netFace;
+                    netArrows(face);
+                }
+            }
+            applets = waiting;
+            if (waiting.length > 0) {
+                restart();
+            }
+        }
+        // Arrows read at a glance in any language, where "Download Rate"
+        // pushed the numbers along the bar. Blue and orange, bold, tell them
+        // apart on light and dark glass alike.
+        function netArrows(face) {
+            face.sensorLabels = {
+                "network/all/download": "↓",
+                "network/all/upload": "↑"
+            };
+            face.sensorColors = {
+                "network/all/download": "#2f9bff",
+                "network/all/upload": "#ff8a2f"
+            };
+        }
     }
 
     Repeater {

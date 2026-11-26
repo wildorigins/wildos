@@ -1,3 +1,24 @@
+wildos-terminal (0.1.10) trixie; urgency=medium
+
+  * Selecting text and pressing Ctrl+C copies it instead of stopping the
+    command.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 14:08:48 +0000
+
+wildos-terminal (0.1.9) trixie; urgency=medium
+
+  * In light mode a hover highlight fades in cleanly, without a grey
+    flicker as it starts.
+
+ -- Wild OS Developers <dev@wildos.io>  Thu, 26 Nov 2026 10:24:59 +0000
+
+wildos-terminal (0.1.8) trixie; urgency=medium
+
+  * Moving the pointer along a list or menu lights one row at a time; the
+    row it leaves clears at once instead of fading out beside the next.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 15:52:08 +0000
+
 wildos-terminal (0.1.7) trixie; urgency=medium
 
   * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,

@@ -876,6 +876,10 @@ Pasilaikykite viską, ką darote.</translation>
             <source>App ID %1</source>
             <translation>Programos ID %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Laukiama, kol baigsis kitas diegimas</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Pasilaikykite viską, ką darote.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Liko apie %1 val.</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Laukiama, kol baigsis kitas diegimas</translation>
         </message>
     </context>
     <context>

@@ -58,6 +58,7 @@ qt_add_qml_module(wildos-settings
         src/compat32.cpp src/compat32.h
         src/graphics.cpp src/graphics.h
         src/wifidriver.cpp src/wifidriver.h
+        src/typingmethods.h
         src/inputdevices.cpp src/inputdevices.h
         src/defaultapps.cpp src/defaultapps.h
         src/clock.cpp src/clock.h
@@ -130,7 +131,7 @@ install(TARGETS wildos-settings RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.settings.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 # The helpers are looked up by these exact paths (polkit pins the update
 # helper to it), so they do not follow the distribution's libexec layout.
-install(PROGRAMS data/settings-update-policy data/settings-users data/settings-locale data/settings-protection data/settings-firewall data/settings-firewall-off data/settings-history data/settings-devices data/settings-network data/settings-cpu-threads data/settings-32bit data/settings-game-overlay data/settings-graphics-driver data/settings-wifi-driver data/graphics-driver-trial data/settings-brave-spelling data/settings-fingerprint data/settings-free-space data/settings-advanced data/advanced-protection-apply data/settings-time-source DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+install(PROGRAMS data/settings-update-policy data/settings-users data/settings-locale data/settings-protection data/settings-firewall data/settings-firewall-off data/settings-history data/settings-devices data/settings-network data/settings-cpu-threads data/settings-32bit data/settings-game-overlay data/settings-graphics-driver data/settings-wifi-driver data/settings-input-method data/graphics-driver-trial data/nvidia-kernel-check data/settings-brave-spelling data/settings-fingerprint data/settings-free-space data/settings-advanced data/advanced-protection-apply data/settings-time-source DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
 install(FILES data/org.wildos.settings.policy DESTINATION ${CMAKE_INSTALL_DATADIR}/polkit-1/actions)
 # Not in polkit's own folder: settings-32bit links it in while Steam and
 # 32-bit apps are on.
@@ -157,11 +158,21 @@ install(FILES data/org.wildos.auto-theme.desktop DESTINATION ${CMAKE_INSTALL_SYS
 # The accessibility shortcuts: a service in every session and the switches
 # the lock and sign-in screens run. It shares AccessCore with Settings so a
 # shortcut and its switch do the same thing.
-qt_add_executable(wildos-access src/access/main.cpp src/access/osklanguages.cpp src/access/osklanguages.h src/osklangs.cpp src/osklangs.h src/accesscore.cpp src/accesscore.h)
+qt_add_executable(wildos-access src/access/main.cpp src/access/osklanguages.cpp src/access/osklanguages.h src/access/typingfollower.cpp src/access/typingfollower.h src/typingmethods.h src/osklangs.cpp src/osklangs.h src/accesscore.cpp src/accesscore.h)
 target_include_directories(wildos-access PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(wildos-access PRIVATE Qt6::Core Qt6::Gui Qt6::DBus KF6::ConfigCore KF6::GlobalAccel)
 install(TARGETS wildos-access RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES data/org.wildos.access.desktop DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg/autostart)
+# How Fcitx 5 behaves once a Wild OS typing method brings it in: copied into
+# the person's own Fcitx settings then (typingfollower.cpp), never put in
+# /etc/xdg, where it took the switching keys and tray icon from anyone who
+# set up Fcitx themselves. Keeping KDE's layout list to itself (#79) helps
+# everyone, so that one is system-wide.
+install(FILES data/fcitx5/config DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos/fcitx5)
+install(FILES data/fcitx5/conf/wayland.conf DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg/fcitx5/conf)
+# Lotus's own unit stays as upstream wrote it; Wild OS's limits go beside it.
+install(FILES data/fcitx5-lotus-server-hardening.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/fcitx5-lotus-server@.service.d
+    RENAME 50-wildos-hardening.conf)
 # The on-screen keyboard's language key (over Maliit's own, see debian/preinst)
 # and the handler for the settings link its language menu opens.
 install(FILES data/maliit/LanguageKey.qml DESTINATION ${CMAKE_INSTALL_LIBDIR}/maliit/keyboard2/qml/keys)
@@ -194,6 +205,10 @@ install(FILES data/wildos-free-space.service data/wildos-free-space.timer
 # The first start-up after NVIDIA's driver is installed: back to the open
 # driver when no desktop appears (graphics-driver-trial).
 install(FILES data/wildos-graphics-driver-trial.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
+# NVIDIA's driver rebuilt for a new kernel if dkms left it out: after the
+# kernel installs, and at start-up before the sign-in screen.
+install(FILES data/wildos-nvidia-kernel-check.service DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
+install(PROGRAMS data/zz-wildos-nvidia DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/kernel/postinst.d)
 # System > Devices: the kernel's firmware complaints and the drives' own
 # health checks, which only root can read (settings-devices).
 install(FILES data/wildos-devices.socket data/wildos-devices@.service
@@ -208,6 +223,12 @@ install(FILES data/printer-drivers.tsv DESTINATION ${CMAKE_INSTALL_DATADIR}/wild
 install(FILES data/configure-printer-wildos.conf DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/configure-printer@.service.d
     RENAME wildos-printer-driver.conf)
 install(FILES data/71-wildos-printers.rules DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/udev/rules.d)
+# Firmware and vendor drivers from the internet for the hardware a PC has
+# (driver-check), a minute after start-up and when a device is plugged in.
+install(PROGRAMS data/driver-check DESTINATION ${CMAKE_INSTALL_PREFIX}/libexec/wildos)
+install(FILES data/firmware-packages.tsv data/nvidia-supported.ids DESTINATION ${CMAKE_INSTALL_DATADIR}/wildos)
+install(FILES data/wildos-driver-check.service data/wildos-driver-check.timer DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system)
+install(FILES data/72-wildos-driver-check.rules DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/udev/rules.d)
 
 # The root half of Advanced network settings and the firewall: encrypted DNS
 # for each new network, the VPN kill switch, loading the firewall again as

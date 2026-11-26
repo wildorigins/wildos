@@ -26,10 +26,14 @@ T.AbstractButton {
 
     background: Rectangle {
         radius: Metrics.radiusCard
-        color: card.down ? Metrics.buttonFill : card.hovered ? Metrics.pill : Metrics.card
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: card.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: card.down ? Metrics.buttonFill : card.hovered ? Metrics.pill : Metrics.card
 
         UI.FocusRing {
             visible: card.visualFocus

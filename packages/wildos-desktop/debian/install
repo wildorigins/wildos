@@ -14,6 +14,9 @@ files/environment.d/99-wildos.conf usr/lib/environment.d/
 files/konsole/WildOS.profile usr/share/wildos/konsole/
 files/polkit/50-wildos-store.rules usr/share/polkit-1/rules.d/
 files/update-checks usr/libexec/wildos/
+files/brave/brave-gpu usr/libexec/wildos/
+files/brave/brave-gpu-policy usr/libexec/wildos/
+files/systemd/wildos-brave-gpu.service usr/lib/systemd/system/
 files/polkit/org.wildos.update-checks.policy usr/share/polkit-1/actions/
 files/syntax-highlighting/* usr/share/org.kde.syntax-highlighting/themes/
 files/apt/21wildos-update-checks etc/apt/apt.conf.d/

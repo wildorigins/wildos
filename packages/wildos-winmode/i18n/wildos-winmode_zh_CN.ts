@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>使用你已有的 Windows 11 文件</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS 运行在虚拟机中，Windows 将在第二层虚拟机中运行，速度会非常慢</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>虚拟机</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>仍然设置</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>在虚拟机中，设置可能需要几个小时，Windows 应用也会非常慢。Windows 模式适用于直接安装在电脑上的 Wild OS。</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows 模式适用于直接安装在电脑上的 Wild OS，而不是虚拟机中的。</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>正在设置 Windows 模式</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>这大约需要 25 分钟。你可以关闭此窗口并继续使用电脑；准备就绪时我们会通知你。</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>关闭</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>在大多数电脑上这不到一小时，旧电脑上会更久。你可以关闭此窗口并继续使用电脑；准备就绪时我们会通知你。</translation>
         </message>
     </context>
     <context>

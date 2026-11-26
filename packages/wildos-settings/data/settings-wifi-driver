@@ -29,7 +29,13 @@ LOG=/var/log/wildos/wifi-driver.log
 # chip at start-up has to let go before wl can have it.
 OPEN="b43 b43legacy bcma ssb brcmsmac brcmutil"
 
-step() { echo "step $*"; }
+# Closing Settings must not stop an install halfway: dpkg and dkms killed
+# mid-build left a driver half installed and never built for a new kernel.
+# So the hang-up and broken pipe a closed window sends are ignored, and the
+# progress lines below carry on quietly once nobody is reading them.
+trap '' HUP PIPE
+
+step() { echo "step $*" 2>/dev/null || true; }
 
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 
@@ -101,7 +107,7 @@ install)
         while [ "${#code}" -lt 8 ]; do code="${code}0"; done
         printf '%s\n%s\n' "$code" "$code" | mokutil --import "$MOK_PUB" >/dev/null 2>&1
         log "install: done, key queued, Wi-Fi starts after the restart"
-        echo "code $code"
+        echo "code $code" 2>/dev/null || true
         step "Done"
         exit 0
     fi
@@ -122,7 +128,7 @@ install)
         exit 4
     fi
     log "install: done, wl is running"
-    echo "ready"
+    echo "ready" 2>/dev/null || true
     step "Done"
     ;;
 remove)

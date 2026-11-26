@@ -41,6 +41,9 @@ if [ "$1" = "configure" ]; then
         dpkg-divert --package wildos-desktop --add --rename \
             --divert "$DISABLED/$f" "/etc/xdg/autostart/$f" >/dev/null
     done
+    # Brave's graphics setting for this card now, not only from the next
+    # start-up.
+    /usr/libexec/wildos/brave-gpu-policy || true
 fi
 
 #DEBHELPER#

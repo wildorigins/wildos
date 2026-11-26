@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Pole saadaval, kui sinu klaviatuuride hulgas on sisestusmeetod, näiteks vietnami (Telex)</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnami (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnami (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Sinu parooli ootamine</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Värskenduste kontrollimine</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Allalaadimine</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Installimine</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Midagi ei laaditud alla, sest parooli ei sisestatud.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Sisestusmeetodit ei saanud alla laadida. Kontrolli Interneti-ühendust ja proovi uuesti.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>Loobu</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Vietnami keeles tippimiseks on vaja allalaadimist</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>See võtab umbes minuti.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS laadib sisestusmeetodi ühe korra alla, seejärel saad sellele lülituda klahvidega Windowsi klahv + tühik.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Laadi alla</translation>
         </message>
     </context>
     <context>

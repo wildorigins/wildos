@@ -28,12 +28,16 @@ T.AbstractButton {
     // chosen, hover and press fills otherwise.
     background: Rectangle {
         radius: UI.Style.radiusMd
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
+        Behavior on color {
+            enabled: card.hovered
+            ColorAnimation { duration: UI.Style.hoverDuration }
+        }
         color: card.checked ? UI.Style.accentTint : card.down ? UI.Style.surfacePressed : card.hovered ? UI.Style.surfaceHover : UI.Style.surfaceRest
         border.width: card.checked ? 2 : 1
         border.color: card.checked ? UI.Style.accent : UI.Style.borderGlass
-        Behavior on color {
-            ColorAnimation { duration: UI.Style.hoverDuration }
-        }
 
         UI.FocusRing {
             visible: card.visualFocus

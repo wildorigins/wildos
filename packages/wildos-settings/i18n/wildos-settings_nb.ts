@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Ikke tilgjengelig mens en skrivemetode som vietnamesisk (Telex) er blant tastaturene dine</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7325,6 +7329,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamesisk (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamesisk (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Venter på passordet ditt</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Ser etter oppdateringer</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Laster ned</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Installerer</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Ingenting ble lastet ned fordi passordet ikke ble oppgitt.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Skrivemetoden kunne ikke lastes ned. Kontroller Internett-tilkoblingen og prøv igjen.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7640,6 +7679,22 @@
         <message>
             <source>Cancel</source>
             <translation>Avbryt</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Vietnamesisk skriving krever en nedlasting</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Dette tar et minutt.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS laster ned skrivemetoden én gang, deretter bytter du til den med Windows-tasten + mellomrom.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Last ned</translation>
         </message>
     </context>
     <context>

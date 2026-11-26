@@ -36,6 +36,13 @@ if [ "$1" = "configure" ]; then
             '-kernel.split_lock_mitigate = 0' >> "$SYSCTL32"
         sysctl -q -w kernel.split_lock_mitigate=0 2>/dev/null || true
     fi
+    # Vietnamese typing is Lotus's now. PCs that type it with Bamboo
+    # download Lotus once this update has finished (the helper waits for
+    # it), so Telex and VNI carry on without anyone setting them up again.
+    if [ -d /run/systemd/system ]; then
+        systemd-run --quiet --no-block --collect --unit=wildos-typing-move \
+            /usr/libexec/wildos/settings-input-method move >/dev/null 2>&1 || true
+    fi
 fi
 
 #DEBHELPER#

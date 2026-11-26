@@ -1,0 +1,122 @@
+#!/bin/sh
+# The typing methods some languages need on top of a keyboard layout, such as
+# Telex and VNI for Vietnamese, fetched the first time someone adds one in
+# Settings > Devices > Keyboard, as Windows fetches a language's keyboards.
+# Fcitx 5 does the typing; Wild OS's session service (wildos-access) hands it
+# to KWin and turns it on and off as the layout changes. Runs as root through
+# pkexec (org.wildos.settings.input-method).
+#
+#   install ENGINE   install Fcitx 5 and the engine. ENGINE is lotus
+#                    (Vietnamese; bamboo, what Wild OS used before, still
+#                    works). Exit 6 when the download failed.
+#   move             PCs where someone has Telex or VNI get Lotus (they
+#                    had Bamboo before) and its server for each of them.
+#                    Run by wildos-settings' postinst once its update has
+#                    finished.
+#
+# Settings reads "step <what is happening>" from what this prints. Everything
+# apt says goes to /var/log/wildos/input-method.log.
+
+set -eu
+export DEBIAN_FRONTEND=noninteractive
+# Waits for an update that is still installing rather than failing on it.
+APT="apt-get -y -q --no-install-recommends -o DPkg::Lock::Timeout=1800 -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+LOG=/var/log/wildos/input-method.log
+# Fcitx's GTK 3 module is GTK's input module for every language once it is
+# installed, which is how Electron apps (Discord, VS Code, Obsidian) running
+# through XWayland, or on Wayland without Chromium's own input method, take
+# typing from Fcitx with nothing set up per app. Without it they got none.
+LOTUS="fcitx5 fcitx5-lotus fcitx5-frontend-gtk3"
+
+# Closing Settings must not stop dpkg halfway, so the hang-up and broken pipe
+# a closed window sends are ignored, and progress lines fail quietly.
+trap '' HUP PIPE
+
+step() { echo "step $*" 2>/dev/null || true; }
+
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+
+run() { "$@" >> "$LOG" 2>&1; }
+
+installed() { dpkg-query -W -f '${Status}' "$1" 2>/dev/null | grep -q ' installed$'; }
+
+# Lotus corrects a word by typing backspaces, through its own server for
+# that person (fcitx5-lotus-server@USER, which only their Fcitx may use).
+# It needs uinput, and the access udev gives its account to /dev/uinput,
+# which only applies once udev has looked at the device again.
+start_server() {
+    case "$1" in
+    ''|*[!a-z0-9_-]*|-*) log "server: odd user name '$1', skipped"; return 0 ;;
+    esac
+    [ -d /run/systemd/system ] || return 0
+    run modprobe uinput || true
+    run udevadm control --reload || true
+    run udevadm trigger --action=change --sysname-match=uinput || true
+    run udevadm settle --timeout=10 || true
+    if run systemctl enable --now "fcitx5-lotus-server@$1.service"; then
+        log "server: on for $1"
+    else
+        log "server: could not start for $1"
+    fi
+}
+
+# People with Telex or VNI in their layout list (kxkbrc, as Settings writes
+# it).
+vietnamese_users() {
+    getent passwd | while IFS=: read -r name _ uid _ _ home _; do
+        [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || continue
+        grep -qsE '^WildOSInputMethods=.*(telex|vni)' "$home/.config/kxkbrc" && echo "$name"
+    done
+}
+
+mkdir -p "$(dirname "$LOG")"
+
+case "${1:-}" in
+install)
+    case "${2:-}" in
+    lotus) packages=$LOTUS ;;
+    bamboo) packages="fcitx5 fcitx5-bamboo" ;;
+    *) echo "unknown engine: ${2:-}" >&2; exit 2 ;;
+    esac
+    export WILDOS_RESTORE_LABEL="Before adding a typing method"
+    log "install: start, $packages"
+
+    step "Checking for updates"
+    run apt-get -q update || true
+
+    step "Downloading"
+    # shellcheck disable=SC2086
+    run $APT install --download-only $packages || { log "install: download failed"; exit 6; }
+
+    step "Installing"
+    # shellcheck disable=SC2086
+    run $APT install $packages || { log "install: install failed"; exit 6; }
+    if [ "$2" = lotus ]; then
+        user=$(getent passwd "${PKEXEC_UID:-}" | cut -d: -f1)
+        [ -n "$user" ] && start_server "$user"
+    fi
+    log "install: done"
+    step "Done"
+    ;;
+move)
+    users=$(vietnamese_users)
+    if [ -z "$users" ]; then
+        exit 0
+    fi
+    if ! installed fcitx5-lotus || ! installed fcitx5-frontend-gtk3; then
+        export WILDOS_RESTORE_LABEL="Before moving Vietnamese typing to Lotus"
+        log "move: start for $(echo $users)"
+        run apt-get -q -o DPkg::Lock::Timeout=1800 update || true
+        # shellcheck disable=SC2086
+        run $APT install $LOTUS || { log "move: install failed, Settings offers the download"; exit 0; }
+    fi
+    for user in $users; do
+        systemctl is-enabled --quiet "fcitx5-lotus-server@$user.service" 2>/dev/null || start_server "$user"
+    done
+    log "move: done"
+    ;;
+*)
+    echo "usage: $0 install lotus|bamboo, or $0 move" >&2
+    exit 2
+    ;;
+esac

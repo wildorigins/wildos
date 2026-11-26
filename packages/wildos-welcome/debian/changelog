@@ -1,3 +1,11 @@
+wildos-welcome (0.1.11) trixie; urgency=medium
+
+  * The language and time zone on the first start have search boxes, so
+    nobody has to scroll a long list. Search by a language's own name or
+    by a city or country.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 15:00:00 +0000
+
 wildos-welcome (0.1.10) trixie; urgency=medium
 
   * Now also in Bengali, Bulgarian, Catalan, Croatian, Danish, Estonian,

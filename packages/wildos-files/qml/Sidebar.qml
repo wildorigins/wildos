@@ -161,12 +161,17 @@ Item {
 
                 background: Rectangle {
                     radius: UI.Style.radiusXs
-                    color: button.down ? UI.Style.surfacePressed
-                         : button.hovered || eject.hovered || placeDrop.containsDrag ? UI.Style.surfaceHover
-                         : place.current ? UI.Style.surfaceSelected : "transparent"
+                    // Fades in on hover and clears at once, so moving along
+                    // the list never lights two places, and the light theme's
+                    // white hover never fades through grey. It comes before
+                    // the colour so it sees the change in hover first.
                     Behavior on color {
+                        enabled: button.hovered || eject.hovered || placeDrop.containsDrag
                         ColorAnimation { duration: UI.Style.hoverDuration }
                     }
+                    color: button.down ? UI.Style.surfacePressed
+                         : button.hovered || eject.hovered || placeDrop.containsDrag ? UI.Style.surfaceHover
+                         : place.current ? UI.Style.surfaceSelected : UI.Style.surfaceHoverClear
 
                     // On the row's own edge: the list clips at its sides.
                     UI.FocusRing {

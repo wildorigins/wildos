@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>V redu</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Ni na voljo, dokler je med vašimi tipkovnicami način vnosa, kot je vietnamščina (Telex)</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7335,6 +7339,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Vietnamščina (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Vietnamščina (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Čakanje na vaše geslo</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Preverjanje posodobitev</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Prenašanje</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Nameščanje</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Nič ni bilo preneseno, ker geslo ni bilo vneseno.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Načina vnosa ni bilo mogoče prenesti. Preverite internetno povezavo in poskusite znova.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7650,6 +7689,22 @@
         <message>
             <source>Cancel</source>
             <translation>Prekliči</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Pisanje v vietnamščini zahteva prenos</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>To traja minuto.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS način vnosa prenese enkrat, nato pa nanj preklopite s tipko Windows + preslednica.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Prenesi</translation>
         </message>
     </context>
     <context>

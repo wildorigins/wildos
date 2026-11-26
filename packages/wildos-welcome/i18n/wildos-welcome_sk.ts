@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Pokračovať</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Hľadať jazyky</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Hľadať podľa mesta alebo krajiny</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

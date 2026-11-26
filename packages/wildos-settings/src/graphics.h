@@ -39,6 +39,7 @@ class Graphics : public QObject
 
 public:
     explicit Graphics(QObject *parent = nullptr);
+    ~Graphics() override;
 
     bool hasNvidia() const { return !m_device.isEmpty(); }
     QString nvidiaName() const { return m_name; }

@@ -179,6 +179,14 @@
             <source>Use a Windows 11 file you have</source>
             <translation>お持ちの Windows 11 ファイルを使う</translation>
         </message>
+        <message>
+            <source>Wild OS is in a virtual machine, so Windows would run inside a second one and be very slow</source>
+            <translation>Wild OS が仮想マシンで動作しているため、Windows はその中の 2 つ目の仮想マシンで動作することになり、非常に遅くなります</translation>
+        </message>
+        <message>
+            <source>Virtual machine</source>
+            <translation>仮想マシン</translation>
+        </message>
     </context>
     <context>
         <name>KeyField</name>
@@ -734,6 +742,14 @@
             <source>Set up anyway</source>
             <translation>このままセットアップ</translation>
         </message>
+        <message>
+            <source>In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.</source>
+            <translation>仮想マシンでは、セットアップに数時間かかることがあり、Windows アプリの動作も非常に遅くなります。Windows モードは、PC 自体にインストールされた Wild OS 向けです。</translation>
+        </message>
+        <message>
+            <source>Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.</source>
+            <translation>Windows モードは、仮想マシンではなく、PC 自体にインストールされた Wild OS 向けです。</translation>
+        </message>
     </context>
     <context>
         <name>StepReady</name>
@@ -855,10 +871,6 @@
         <message>
             <source>Setting up Windows mode</source>
             <translation>Windows モードをセットアップしています</translation>
-        </message>
-        <message>
-            <source>This takes about 25 minutes. Close this window and keep using your PC; we'll let you know when it's ready.</source>
-            <translation>約 25 分かかります。このウィンドウを閉じて PC を使い続けてください。準備ができたらお知らせします。</translation>
         </message>
         <message>
             <source>If your PC restarts or sleeps, setup carries on where it left off.</source>
@@ -995,6 +1007,10 @@
         <message>
             <source>Close</source>
             <translation>閉じる</translation>
+        </message>
+        <message>
+            <source>This takes under an hour on most PCs, longer on an older one. Close this window and keep using your PC; we'll let you know when it's ready.</source>
+            <translation>ほとんどの PC では 1 時間かかりませんが、古い PC ではさらにかかります。このウィンドウを閉じて PC を使い続けてください。準備ができたらお知らせします。</translation>
         </message>
     </context>
     <context>

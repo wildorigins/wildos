@@ -61,12 +61,16 @@ Grid {
 
             background: Rectangle {
                 radius: 9
+                // Fades in on hover and clears at once, so moving along a list
+                // never lights two items. It comes before the colour so it sees
+                // the change in hover first.
+                Behavior on color {
+                    enabled: card.hovered
+                    ColorAnimation { duration: UI.Style.hoverDuration }
+                }
                 color: card.current ? UI.Style.accentAlpha(0.10, 0.09) : card.down ? UI.Style.surfacePressed : card.hovered ? UI.Style.surfaceHover : UI.Style.surfaceRaised
                 border.width: 1
                 border.color: card.current ? UI.Style.accent : UI.Style.borderSubtle
-                Behavior on color {
-                    ColorAnimation { duration: UI.Style.hoverDuration }
-                }
 
                 UI.FocusRing {
                     visible: card.visualFocus

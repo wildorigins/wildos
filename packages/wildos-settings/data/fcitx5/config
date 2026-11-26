@@ -1,0 +1,43 @@
+# Fcitx 5 as Wild OS runs it: KWin owns the keyboard layouts and the keys
+# that switch them (Windows key + Space), and Wild OS turns the typing method
+# on and off with the layout. So Fcitx's own switching keys are all empty,
+# its pop-ups about the method in use stay hidden, and one state is shared by
+# every window, as a KWin layout is.
+[Hotkey]
+EnumerateWithTriggerKeys=False
+EnumerateSkipFirst=False
+
+[Hotkey/TriggerKeys]
+
+[Hotkey/AltTriggerKeys]
+
+[Hotkey/EnumerateForwardKeys]
+
+[Hotkey/EnumerateBackwardKeys]
+
+[Hotkey/EnumerateGroupForwardKeys]
+
+[Hotkey/EnumerateGroupBackwardKeys]
+
+[Hotkey/ActivateKeys]
+
+[Hotkey/DeactivateKeys]
+
+[Hotkey/TogglePreedit]
+
+[Behavior]
+ActiveByDefault=False
+ShareInputState=All
+ShowInputMethodInformation=False
+showInputMethodInformationWhenFocusIn=False
+ShowFirstInputMethodInformation=False
+AllowInputMethodForPassword=False
+
+# Its tray icon would sit beside the taskbar's own layout indicator, and the
+# others add shortcuts of their own (Ctrl+;, Super+`, Ctrl+Alt+Shift+U).
+[Behavior/DisabledAddons]
+0=notificationitem
+1=clipboard
+2=quickphrase
+3=unicode
+4=imselector

@@ -1,3 +1,31 @@
+wildos-desktop (0.1.37) trixie; urgency=medium
+
+  * PDFs opened in Brave open in Wild OS PDF, the default PDF app.
+
+ -- Wild OS Developers <dev@wildos.io>  Tue, 24 Nov 2026 09:11:08 +0000
+
+wildos-desktop (0.1.36) trixie; urgency=medium
+
+  * Google Chrome and Chromium no longer freeze on older NVIDIA cards using
+    the standard driver; like Brave, they draw without graphics acceleration
+    there.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 14:48:41 +0000
+
+wildos-desktop (0.1.35) trixie; urgency=medium
+
+  * Brave turns graphics acceleration off whenever the screens are on an
+    NVIDIA card using the open nouveau driver, also with the processor's
+    own graphics switched on and however Brave is started.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 09:30:00 +0000
+
+wildos-desktop (0.1.34) trixie; urgency=medium
+
+  * Brave types Vietnamese with Telex and VNI.
+
+ -- Wild OS Developers <dev@wildos.io>  Mon, 23 Nov 2026 08:47:37 +0000
+
 wildos-desktop (0.1.33) trixie; urgency=medium
 
   * Brave opens normally on NVIDIA cards using the standard driver, instead

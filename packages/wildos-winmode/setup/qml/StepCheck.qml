@@ -22,12 +22,14 @@ Page {
     text: qsTr("Run Windows programs like Word, Excel and Photoshop in their own windows, next to your other apps. Windows stays hidden in the background and only wakes when you open one.")
     // Only a download can be matched to Microsoft's signature, so a file
     // someone brings is never called genuine, only Windows 11 Pro.
-    note: page.ready && !Setup.coresOk ? qsTr("Windows will be slow on this processor. Programs take longer to open and run.")
+    note: page.ready && Setup.nested ? qsTr("In a virtual machine, setup can take hours and Windows apps are very slow. Windows mode is made for Wild OS installed on the PC itself.")
+        : page.ready && !Setup.coresOk ? qsTr("Windows will be slow on this processor. Programs take longer to open and run.")
         : page.ownIso && page.ready ? qsTr("Your file is checked to be Windows 11 Pro. Unlike a download, it can't be checked against Microsoft's signature.")
         : page.ready || Setup.checking ? qsTr("Windows downloads straight from Microsoft and uses your own licence.")
         : Setup.virtualisation !== "ok" ? qsTr("Windows mode can't start until virtualisation is switched on.")
         : !Setup.spaceOk ? qsTr("Windows mode needs about %1 free to set up.").arg(Setup.needLabel)
         : !Setup.coresOk ? qsTr("Windows mode needs a processor with 4 cores or more.")
+        : Setup.nested ? qsTr("Windows mode is made for Wild OS installed on the PC itself, not in a virtual machine.")
         : Setup.internet === "offline" ? qsTr("Connect to the internet to download Windows.")
         : qsTr("This PC doesn't have enough memory for Windows mode.")
 

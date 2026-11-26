@@ -876,6 +876,10 @@ Giữ nguyên mọi thứ bạn làm.</translation>
             <source>App ID %1</source>
             <translation>ID ứng dụng %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Đang chờ một lượt cài đặt khác xong</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Giữ nguyên mọi thứ bạn làm.</translation>
         <message>
             <source>About %1 hours left</source>
             <translation>Còn khoảng %1 giờ</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>Đang chờ một lượt cài đặt khác xong</translation>
         </message>
     </context>
     <context>

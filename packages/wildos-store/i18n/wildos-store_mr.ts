@@ -876,6 +876,10 @@ Keep everything you do.</source>
             <source>App ID %1</source>
             <translation>ॲप आयडी %1</translation>
         </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>दुसरे इंस्टॉल पूर्ण होण्याची वाट पाहत आहे</translation>
+        </message>
     </context>
     <context>
         <name>FlatpakBackend</name>
@@ -1542,6 +1546,10 @@ Keep everything you do.</source>
         <message>
             <source>About %1 hours left</source>
             <translation>सुमारे %1 तास बाकी</translation>
+        </message>
+        <message>
+            <source>Waiting for another install to finish</source>
+            <translation>दुसरे इंस्टॉल पूर्ण होण्याची वाट पाहत आहे</translation>
         </message>
     </context>
     <context>

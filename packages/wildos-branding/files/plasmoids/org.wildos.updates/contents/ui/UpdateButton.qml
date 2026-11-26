@@ -72,10 +72,14 @@ MouseArea {
         width: 32
         height: 40
         radius: 8
-        color: button.pressed ? UI.Style.surfacePressed : button.updates.expanded ? UI.Style.surfaceSelected : button.containsMouse ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: button.containsMouse
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: button.pressed ? UI.Style.surfacePressed : button.updates.expanded ? UI.Style.surfaceSelected : button.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
     }
 
     UI.Glyph {

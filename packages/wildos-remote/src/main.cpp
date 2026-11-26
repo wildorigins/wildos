@@ -215,6 +215,9 @@ int main(int argc, char *argv[])
     // The terminal window's QML goes before the engines and the
     // application it depends on.
     delete SessionWindow::instance(false);
+    // The main window too, while the engine is still whole: a dialog left
+    // open on it crashed the app on its way out.
+    delete incubator.object();
     return status;
 }
 

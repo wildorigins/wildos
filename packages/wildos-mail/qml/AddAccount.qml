@@ -321,12 +321,16 @@ Item {
                                     Layout.preferredWidth: 1
                                     implicitHeight: 54
                                     radius: UI.Style.radiusSm
+                                    // Fades in on hover and clears at once, so moving along a list
+                                    // never lights two items. It comes before the colour so it sees
+                                    // the change in hover first.
+                                    Behavior on color {
+                                        enabled: tileMouse.containsMouse
+                                        ColorAnimation { duration: 80 }
+                                    }
                                     color: chosen ? UI.Style.surfaceSelected : tileMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceRaised
                                     border.width: chosen ? 2 : 1
                                     border.color: chosen ? UI.Style.accent : UI.Style.borderSubtle
-                                    Behavior on color {
-                                        ColorAnimation { duration: 80 }
-                                    }
                                     Accessible.role: Accessible.RadioButton
                                     Accessible.name: modelData.name
                                     Accessible.checked: chosen

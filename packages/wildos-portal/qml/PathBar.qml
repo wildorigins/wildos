@@ -89,10 +89,14 @@ Rectangle {
                             width: crumbLabel.implicitWidth + 8
                             height: 24
                             radius: UI.Style.radiusXs
-                            color: crumbMouse.pressed ? UI.Style.surfacePressed : crumbMouse.containsMouse ? UI.Style.surfaceHover : "transparent"
+                            // Fades in on hover and clears at once, so moving along a list
+                            // never lights two items. It comes before the colour so it sees
+                            // the change in hover first.
                             Behavior on color {
+                                enabled: crumbMouse.containsMouse
                                 ColorAnimation { duration: UI.Style.hoverDuration }
                             }
+                            color: crumbMouse.pressed ? UI.Style.surfacePressed : crumbMouse.containsMouse ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
                             Accessible.role: Accessible.Button
                             Accessible.name: crumb.modelData.name
                             Accessible.onPressAction: bar.folder.openUrl(crumb.modelData.url)

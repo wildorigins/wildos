@@ -137,7 +137,13 @@ void FirstBoot::readLocales()
         return QString::localeAwareCompare(a.first, b.first) < 0;
     });
     for (const auto &entry : std::as_const(named)) {
-        m_languages.append(QVariantMap{{QStringLiteral("value"), entry.second}, {QStringLiteral("text"), entry.first}});
+        // What the search box matches besides the shown name: the language
+        // and country in that language ("Tiếng Việt", "Việt Nam") and the
+        // locale itself, so people find their language by its own name.
+        const QLocale l = localeOf(entry.second);
+        const QString search = QStringList{entry.first, l.nativeLanguageName(), l.nativeTerritoryName(), entry.second}.join(QLatin1Char(' '));
+        m_languages.append(QVariantMap{{QStringLiteral("value"), entry.second}, {QStringLiteral("text"), entry.first},
+                                       {QStringLiteral("search"), search}});
     }
 }
 
@@ -161,7 +167,12 @@ void FirstBoot::readZones()
         return oa != ob ? oa < ob : QString::localeAwareCompare(a.section(QLatin1Char('/'), -1), b.section(QLatin1Char('/'), -1)) < 0;
     });
     for (const QString &id : std::as_const(ids)) {
-        m_zoneList.append(QVariantMap{{QStringLiteral("value"), id}, {QStringLiteral("text"), zoneText(id)}});
+        // The search box also matches the zone's country and region, since
+        // a zone is named after one city ("Vietnam" finds Ho Chi Minh).
+        const QString country = QLocale::territoryToString(QLocale::codeToTerritory(m_countryOfZone.value(id)));
+        const QString search = QStringList{zoneText(id), QString(id).replace(QLatin1Char('_'), QLatin1Char(' ')), country}.join(QLatin1Char(' '));
+        m_zoneList.append(QVariantMap{{QStringLiteral("value"), id}, {QStringLiteral("text"), zoneText(id)},
+                                      {QStringLiteral("search"), search}});
     }
 }
 

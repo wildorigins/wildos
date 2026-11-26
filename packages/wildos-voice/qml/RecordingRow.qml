@@ -27,10 +27,14 @@ T.ItemDelegate {
 
     background: Rectangle {
         radius: UI.Style.radiusSm
-        color: row.selected ? UI.Style.surfaceSelected : row.hovered ? UI.Style.surfaceHover : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: row.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: row.selected ? UI.Style.surfaceSelected : row.hovered ? UI.Style.surfaceHover : UI.Style.surfaceHoverClear
 
         // Inside the row: the list clips, and the rows touch.
         UI.FocusRing {

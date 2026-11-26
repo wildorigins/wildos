@@ -35,6 +35,12 @@ bool isBin(const QUrl &url)
     return url.scheme() == QStringLiteral("trash");
 }
 
+// kio-admin's address for a folder opened as an administrator.
+bool isAdmin(const QUrl &url)
+{
+    return url.scheme() == QStringLiteral("admin");
+}
+
 bool isComputer(const QUrl &url)
 {
     return url == FolderModel::computerUrl();
@@ -391,7 +397,14 @@ QVariantList FolderModel::crumbs() const
     }
     QUrl url = m_url;
     url.setPath(QStringLiteral("/"));
-    add(m_url.host().isEmpty() ? m_url.scheme() : m_url.host(), url);
+    if (isAdmin(m_url)) {
+        // The same trail as the folder itself; the root steps out of
+        // administrator mode.
+        add(QCoreApplication::translate("FolderModel", "This computer"), computerUrl());
+        add(Drives::instance()->driveFor(QStringLiteral("/")).name, QUrl::fromLocalFile(QStringLiteral("/")));
+    } else {
+        add(m_url.host().isEmpty() ? m_url.scheme() : m_url.host(), url);
+    }
     const QStringList parts = m_url.path().split(QLatin1Char('/'), Qt::SkipEmptyParts);
     QString current;
     for (const QString &part : parts) {
@@ -436,6 +449,9 @@ QString FolderModel::scope() const
         }
         return writable() ? QCoreApplication::translate("FolderModel", "Shared on this computer") : QCoreApplication::translate("FolderModel", "System files");
     }
+    if (isAdmin(m_url)) {
+        return QCoreApplication::translate("FolderModel", "Administrator");
+    }
     return QCoreApplication::translate("FolderModel", "Network");
 }
 
@@ -456,6 +472,9 @@ QString FolderModel::scopeDetail() const
     }
     if (s == QCoreApplication::translate("FolderModel", "System files")) {
         return QCoreApplication::translate("FolderModel", "These folders belong to Wild OS. You can look around, but only an administrator can change them.");
+    }
+    if (s == QCoreApplication::translate("FolderModel", "Administrator")) {
+        return QCoreApplication::translate("FolderModel", "You opened this folder as an administrator. Anything you change here changes Wild OS itself, so take care.");
     }
     if (s == QCoreApplication::translate("FolderModel", "Network")) {
         return QCoreApplication::translate("FolderModel", "This folder is on another computer. Whoever runs that computer decides who can open it.");
@@ -542,6 +561,18 @@ void FolderModel::openUrl(const QUrl &address)
         }
     }
     navigate(url, true);
+}
+
+void FolderModel::openAsAdmin()
+{
+    if (!m_denied || !m_url.isLocalFile()) {
+        return;
+    }
+    QUrl url;
+    url.setScheme(QStringLiteral("admin"));
+    url.setPath(QDir::cleanPath(m_url.toLocalFile()));
+    // Back skips the "no permission" page, as it does on Windows.
+    navigate(url, false);
 }
 
 bool FolderModel::openText(const QString &input)
@@ -1155,7 +1186,7 @@ void FolderModel::onJobError(KIO::Job *job)
     case KIO::ERR_ACCESS_DENIED:
     case KIO::ERR_CANNOT_ENTER_DIRECTORY:
     case KIO::ERR_CANNOT_OPEN_FOR_READING:
-        setError(QCoreApplication::translate("FolderModel", "You do not have permission to open this folder."));
+        setError(QCoreApplication::translate("FolderModel", "You do not have permission to open this folder."), QString(), m_url.isLocalFile());
         break;
     case KIO::ERR_DOES_NOT_EXIST:
         setError(QCoreApplication::translate("FolderModel", "This folder does not exist any more. It may have been moved or deleted."));
@@ -1177,11 +1208,12 @@ void FolderModel::setLoading(bool on)
     }
 }
 
-void FolderModel::setError(const QString &text, const QString &detail)
+void FolderModel::setError(const QString &text, const QString &detail, bool denied)
 {
-    if (text != m_error || detail != m_errorDetail) {
+    if (text != m_error || detail != m_errorDetail || denied != m_denied) {
         m_error = text;
         m_errorDetail = detail;
+        m_denied = denied;
         Q_EMIT errorChanged();
     }
 }

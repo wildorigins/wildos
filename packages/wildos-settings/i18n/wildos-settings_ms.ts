@@ -451,6 +451,10 @@
             <source>OK</source>
             <translation>OK</translation>
         </message>
+        <message>
+            <source>Not available while a typing method such as Vietnamese (Telex) is in your keyboards</source>
+            <translation>Tidak tersedia semasa kaedah menaip seperti Bahasa Vietnam (Telex) ada dalam papan kekunci anda</translation>
+        </message>
     </context>
     <context>
         <name>AccountsPage</name>
@@ -7320,6 +7324,41 @@
         </message>
     </context>
     <context>
+        <name>Keyboard</name>
+        <message>
+            <source>Vietnamese (Telex)</source>
+            <translation>Bahasa Vietnam (Telex)</translation>
+        </message>
+        <message>
+            <source>Vietnamese (VNI)</source>
+            <translation>Bahasa Vietnam (VNI)</translation>
+        </message>
+        <message>
+            <source>Waiting for your password</source>
+            <translation>Menunggu kata laluan anda</translation>
+        </message>
+        <message>
+            <source>Checking for updates</source>
+            <translation>Menyemak kemas kini</translation>
+        </message>
+        <message>
+            <source>Downloading</source>
+            <translation>Memuat turun</translation>
+        </message>
+        <message>
+            <source>Installing</source>
+            <translation>Memasang</translation>
+        </message>
+        <message>
+            <source>Nothing was downloaded because the password was not given.</source>
+            <translation>Tiada apa-apa dimuat turun kerana kata laluan tidak diberikan.</translation>
+        </message>
+        <message>
+            <source>The typing method could not be downloaded. Check the internet connection and try again.</source>
+            <translation>Kaedah menaip tidak dapat dimuat turun. Semak sambungan internet dan cuba lagi.</translation>
+        </message>
+    </context>
+    <context>
         <name>KeyboardAdvancedPage</name>
         <message>
             <source>None</source>
@@ -7635,6 +7674,22 @@
         <message>
             <source>Cancel</source>
             <translation>Batal</translation>
+        </message>
+        <message>
+            <source>Vietnamese typing needs a download</source>
+            <translation>Menaip dalam Bahasa Vietnam memerlukan muat turun</translation>
+        </message>
+        <message>
+            <source>This takes a minute.</source>
+            <translation>Ini mengambil masa seminit.</translation>
+        </message>
+        <message>
+            <source>Wild OS downloads the typing method once, then Windows key + Space switches to it.</source>
+            <translation>Wild OS memuat turun kaedah menaip sekali sahaja, kemudian kekunci Windows + Space menukar kepadanya.</translation>
+        </message>
+        <message>
+            <source>Download</source>
+            <translation>Muat turun</translation>
         </message>
     </context>
     <context>

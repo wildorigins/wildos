@@ -22,10 +22,14 @@ T.AbstractButton {
     Accessible.name: label + (total.length > 0 ? ", " + total : "")
 
     background: Rectangle {
-        color: heading.down ? UI.Style.surfacePressed : heading.hovered ? UI.Style.surfaceRaised : "transparent"
+        // Fades in on hover and clears at once, so moving along a list
+        // never lights two items. It comes before the colour so it sees
+        // the change in hover first.
         Behavior on color {
+            enabled: heading.hovered
             ColorAnimation { duration: UI.Style.hoverDuration }
         }
+        color: heading.down ? UI.Style.surfacePressed : heading.hovered ? UI.Style.surfaceRaised : Qt.alpha(UI.Style.surfaceRaised, 0)
 
         UI.FocusRing {
             visible: heading.visualFocus

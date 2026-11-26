@@ -5,11 +5,21 @@
 #include <QStringList>
 #include <QVariantList>
 
+class QProcess;
+
 // Keyboard layouts, the key that switches between them, Caps Lock, the
 // compose and Alt Gr keys, the keyboard model and key repeat, kept where
 // KDE's keyboard module keeps them: the layouts, model and XKB options in
 // kxkbrc (KWin rereads it on org.kde.keyboard reloadConfig) and repeat and
 // Num Lock in kcminputrc, which KWin watches.
+//
+// A layout can also carry a typing method, as Windows' Vietnamese Telex
+// keyboard does: the keys are an ordinary layout's (US English for Telex),
+// and Fcitx 5 turns letters into Vietnamese while that entry is the one in
+// use. The method is kept beside the layout in kxkbrc (WildOSInputMethods,
+// one per layout) so moving and switching treat it as a layout like any
+// other; wildos-access starts Fcitx and follows the switches. Fcitx is
+// downloaded the first time a method is added.
 class Keyboard : public QObject
 {
     Q_OBJECT
@@ -28,9 +38,18 @@ class Keyboard : public QObject
     Q_PROPERTY(bool repeat READ repeat NOTIFY changed)
     Q_PROPERTY(int repeatDelay READ repeatDelay NOTIFY changed)
     Q_PROPERTY(int repeatRate READ repeatRate NOTIFY changed)
+    // A layout with a typing method whose download hasn't happened yet.
+    Q_PROPERTY(bool methodMissing READ methodMissing NOTIFY methodChanged)
+    // Some layout has a typing method, so Fcitx has the on-screen
+    // keyboard's place in KWin.
+    Q_PROPERTY(bool methodInUse READ methodInUse NOTIFY changed)
+    Q_PROPERTY(bool downloading READ downloading NOTIFY methodChanged)
+    Q_PROPERTY(QString downloadStep READ downloadStep NOTIFY methodChanged)
+    Q_PROPERTY(QString downloadError READ downloadError NOTIFY methodChanged)
 
 public:
     explicit Keyboard(QObject *parent = nullptr);
+    ~Keyboard() override;
 
     QVariantList layouts() const;
     int current() const { return m_current; }
@@ -44,13 +63,21 @@ public:
     bool repeat() const { return m_repeat; }
     int repeatDelay() const { return m_repeatDelay; }
     int repeatRate() const { return m_repeatRate; }
+    bool methodMissing() const;
+    bool methodInUse() const;
+    bool downloading() const { return m_process != nullptr; }
+    QString downloadStep() const { return m_step; }
+    QString downloadError() const { return m_error; }
 
-    // Every layout and variant XKB knows, as { layout, variant, name },
-    // sorted by name. Read once, on first use.
+    // Every layout and variant XKB knows, as { layout, variant, method,
+    // name }, sorted by name, with the typing methods among them. Read once,
+    // on first use.
     Q_INVOKABLE QVariantList available();
     // Every keyboard model XKB knows, as { model, name }, sorted by name.
     Q_INVOKABLE QVariantList models();
-    Q_INVOKABLE void add(const QString &layout, const QString &variant);
+    Q_INVOKABLE void add(const QString &layout, const QString &variant, const QString &method = QString());
+    // Fetches what the typing methods in the list need.
+    Q_INVOKABLE void download();
     Q_INVOKABLE void remove(int index);
     Q_INVOKABLE void move(int from, int to);
     Q_INVOKABLE void use(int index);
@@ -68,6 +95,7 @@ public:
 Q_SIGNALS:
     void changed();
     void currentChanged();
+    void methodChanged();
 
 private Q_SLOTS:
     void onLayoutChanged(uint index);
@@ -77,6 +105,7 @@ private:
     struct Layout {
         QString layout;
         QString variant;
+        QString method; // telex or vni, or empty for a plain layout
     };
 
     void loadNames();
@@ -85,6 +114,10 @@ private:
     void saveRepeat();
     QString optionWithPrefix(const QStringList &prefixes) const;
     void replaceOptions(const QStringList &prefixes, const QString &option);
+
+    QProcess *m_process = nullptr;
+    QString m_step;
+    QString m_error;
 
     QList<Layout> m_layouts;
     QStringList m_options;

@@ -19,6 +19,8 @@ blurEnabled=true
 contrastEnabled=true
 org.wildos.snapEnabled=true
 org.wildos.launchEnabled=true
+# Picture-in-picture videos from browsers stay on top (org.wildos.pip).
+org.wildos.pipEnabled=true
 # The taskbar's peek fades the windows out where they stand, as on Windows,
 # instead of sliding them off to the screen edges. Both effects animate
 # showing the desktop, so only one may run.

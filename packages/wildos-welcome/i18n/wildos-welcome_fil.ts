@@ -772,6 +772,14 @@
             <source>Continue</source>
             <translation>Magpatuloy</translation>
         </message>
+        <message>
+            <source>Search languages</source>
+            <translation>Maghanap ng wika</translation>
+        </message>
+        <message>
+            <source>Search by city or country</source>
+            <translation>Maghanap ayon sa lungsod o bansa</translation>
+        </message>
     </context>
     <context>
         <name>Sidebar</name>

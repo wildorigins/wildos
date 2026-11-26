@@ -23,8 +23,9 @@ import zlib
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # Each variant's window colour and text colours come from its colour scheme
-# (WildOS.colors, WildOSLight.colors, [Colors:Window]). The edge is the
-# design's border-glass: white on dark, a dark hairline on light.
+# (WildOS.colors, WildOSLight.colors, [Colors:Window]). The edge is Windows
+# 11's 1px border, Style.windowEdge in Wild OS apps: faint white on dark, a
+# grey hairline on light that still shows against a white window behind.
 VARIANTS = {
     "WildOS": {
         "name": "Wild OS",
@@ -44,7 +45,7 @@ VARIANTS = {
         "text": "26,26,26",
         "text_inactive": "96,96,96",
         "edge": "#000000",
-        "edge_opacity": 0.073,
+        "edge_opacity": 0.18,
         "hover": "#000000",
         "shadow_alpha": 0.22,
     },

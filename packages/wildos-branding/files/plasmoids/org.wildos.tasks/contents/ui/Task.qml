@@ -261,7 +261,7 @@ Item {
              : task.hovered || task.menuOpen || task.dropTarget ? (task.isActive ? Style.focusedHover : Style.hover)
              : task.demandsAttention ? Style.attention
              : task.isActive ? Style.focused
-             : "transparent"
+             : UI.Style.surfaceHoverClear
         Behavior on color {
             ColorAnimation { duration: Style.hoverDuration }
         }

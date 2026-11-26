@@ -4,6 +4,8 @@ files/42_wildos_console.cfg etc/default/grub.d/
 files/issue.wildos etc/
 files/getty/wildos.conf etc/systemd/system/getty@.service.d/
 files/udev/80-wildos-hide-system.rules usr/lib/udev/rules.d/
+files/apt/brave.sources etc/apt/sources.list.d/
+files/apt/wildos-brave-keyring.gpg usr/share/keyrings/
 files/apt/mullvad.sources etc/apt/sources.list.d/
 files/apt/mullvad-keyring.asc usr/share/keyrings/
 files/apt/wildos.sources etc/apt/sources.list.d/

@@ -128,7 +128,7 @@ namespace WildOS.Guest
         // Every window is redrawn whenever a client connects (the session's
         // connect time moves, which also catches a connection taking over one
         // Windows still thinks is open), and once more a moment later for
-        // apps that paint late. Mapping the drive can take up to 15 seconds,
+        // apps that paint late. Mapping the drive can take up to a minute,
         // so all of it runs beside the window list, which must keep going:
         // Wild OS reads from it whether an app is still open.
         static void OnConnect(bool redraw)
@@ -152,37 +152,81 @@ namespace WildOS.Guest
         // Z: is the folders Wild OS shares through the RemoteApp connection
         // (FreeRDP's /drive:wildos), which exists only while it is connected,
         // so it is mapped again on every connect. \\tsclient appears a moment
-        // after the connection does.
-        static void MapDrive()
+        // after the connection does, and on a slow PC (Wild OS itself in a
+        // virtual machine) that moment can be most of a minute.
+        static string SharedDrive()
         {
-            string drive = "Z:";
             try
             {
                 var settings = Json.ParseObject(File.ReadAllText(@"C:\ProgramData\WildOS\settings.json"));
                 string d = Json.Str(settings, "drive");
-                if (!string.IsNullOrEmpty(d)) drive = d + ":";
+                if (!string.IsNullOrEmpty(d)) return d + ":";
             }
             catch (Exception) { }
-            string share = @"\\tsclient\wildos";
+            return "Z:";
+        }
+
+        const string Share = @"\\tsclient\wildos";
+
+        static bool Mapped(string drive)
+        {
             var current = new StringBuilder(260);
             int length = current.Capacity;
-            if (Native.WNetGetConnection(drive, current, ref length) == 0 &&
-                string.Equals(current.ToString(), share, StringComparison.OrdinalIgnoreCase)) return;
-            Native.WNetCancelConnection2(drive, 0, true);
-            var resource = new Native.NETRESOURCE { dwType = Native.RESOURCETYPE_DISK, lpLocalName = drive, lpRemoteName = share };
+            return Native.WNetGetConnection(drive, current, ref length) == 0 &&
+                string.Equals(current.ToString(), Share, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool MapDrive(int seconds = 60)
+        {
+            string drive = SharedDrive();
+            if (Mapped(drive)) return true;
             int result = 0;
-            for (int attempt = 0; attempt < 15; attempt++)
+            for (int attempt = 0; attempt < seconds; attempt++)
             {
+                // A program started with the connection maps the drive from
+                // its own process too, so the other one may have got there
+                // first; a working mapping is never taken down.
+                if (Mapped(drive)) return true;
+                Native.WNetCancelConnection2(drive, 0, true);
+                var resource = new Native.NETRESOURCE { dwType = Native.RESOURCETYPE_DISK, lpLocalName = drive, lpRemoteName = Share };
                 result = Native.WNetAddConnection2(resource, null, null, 0);
                 if (result == 0)
                 {
-                    Log.Write("mapped " + drive + " to " + share);
+                    Log.Write("mapped " + drive + " to " + Share + (attempt > 0 ? " after " + attempt + " s" : ""));
                     MakeAutoRecover(drive);
-                    return;
+                    return true;
                 }
                 Thread.Sleep(1000);
             }
-            Log.Write("couldn't map " + drive + " to " + share + ": error " + result);
+            Log.Write("couldn't map " + drive + " to " + Share + ": error " + result);
+            return false;
+        }
+
+        // A program on the shared drive, or given a file or folder there,
+        // waits for the drive: started first, it found "Z:\Downloads" missing
+        // and Windows said the path doesn't exist.
+        static void WaitForDrive(Dictionary<string, object> m)
+        {
+            string drive = SharedDrive() + "\\";
+            bool onDrive = false;
+            foreach (string s in new[] { Json.Str(m, "path"), Json.Str(m, "cwd"), Json.Str(m, "arguments") })
+            {
+                if (s != null && s.IndexOf(drive, StringComparison.OrdinalIgnoreCase) >= 0) onDrive = true;
+            }
+            var list = Json.List(m, "args");
+            if (list != null)
+            {
+                foreach (object a in list)
+                {
+                    var s = a as string;
+                    if (s != null && s.IndexOf(drive, StringComparison.OrdinalIgnoreCase) >= 0) onDrive = true;
+                }
+            }
+            if (!onDrive) return;
+            lock (connecting)
+            {
+                MapDrive(30);
+            }
         }
 
         // Setup points Office's AutoRecover at this hidden folder but can't
@@ -525,6 +569,7 @@ namespace WildOS.Guest
         {
             string path = Json.Str(m, "path");
             if (string.IsNullOrEmpty(path)) return Message("error", "error", "no program given");
+            WaitForDrive(m);
             var args = new StringBuilder();
             var list = Json.List(m, "args");
             if (list != null)

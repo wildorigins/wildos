@@ -19,6 +19,24 @@ firmware-realtek
 firmware-atheros
 firmware-brcm80211
 firmware-sof-signed
+# Everything a PC needs to get online is here from the start, because
+# fetching a driver (driver-check) needs the internet first: Marvell Wi-Fi
+# in Surface Pro 4 to 7 and Surface Laptop 1 to 3, TI Wi-Fi, older USB
+# Wi-Fi adapters, Broadcom and QLogic wired network cards, older Broadcom
+# Bluetooth. Laptop speakers on Cirrus amps and Intel's older audio DSPs
+# come too, so sound works on the first start-up. About 10 MB.
+firmware-libertas
+firmware-ti-connectivity
+firmware-ath9k-htc
+firmware-carl9170
+firmware-zd1211
+atmel-firmware
+firmware-bnx2
+firmware-bnx2x
+firmware-qlogic
+bluez-firmware
+firmware-cirrus
+firmware-intel-sound
 
 # Live session: live user, installer and live-boot support. The installer
 # removes this from the installed system.

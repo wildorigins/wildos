@@ -184,6 +184,37 @@ def end_program_script(pid, image):
             f"{{ Stop-Process -Id {pid} -Force; 'ended' }} else {{ 'not running' }}")
 
 
+def app_problems_script(since_ms):
+    """PowerShell listing the Windows programs that stopped responding (event
+    1002) or crashed (1000) since `since_ms` (Unix ms), one per line:
+    ms|id|program|module, oldest first. Windows keeps the why there, and a
+    problem report only sees Wild OS's own log."""
+    since_ms = max(0, int(since_ms))
+    return ("$since = [DateTimeOffset]::FromUnixTimeMilliseconds(%d).UtcDateTime.ToLocalTime(); "
+            "Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000,1002; StartTime=$since} "
+            "-MaxEvents 20 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | ForEach-Object { "
+            "$v = $_.Properties | ForEach-Object { [string]$_.Value }; "
+            "$mod = if ($_.Id -eq 1000) { $v[3] } else { '' }; "
+            "'{0}|{1}|{2}|{3}' -f ([DateTimeOffset]$_.TimeCreated).ToUnixTimeMilliseconds(), $_.Id, $v[0], $mod }" % since_ms)
+
+
+def app_problem_lines(out):
+    """(latest ms, log lines) from app_problems_script's output."""
+    latest, lines = 0, []
+    for row in out.splitlines():
+        parts = row.strip().split("|")
+        if len(parts) != 4 or not parts[0].isdigit():
+            continue
+        ms, event, program, module = int(parts[0]), parts[1], parts[2], parts[3]
+        latest = max(latest, ms)
+        at = time.strftime("%H:%M:%S", time.localtime(ms / 1000))
+        if event == "1002":
+            lines.append(f"Windows: {program} stopped responding at {at} and was ended")
+        else:
+            lines.append(f"Windows: {program} crashed at {at}" + (f" in {module}" if module else ""))
+    return latest, lines
+
+
 def random_password():
     # The old builder's alphabet, without look-alike characters, and a fixed
     # tail that meets Windows' complexity rule.
@@ -229,7 +260,7 @@ TRIM_AFTER = 60
 TRIM_SETTLE = 15
 # Guest scripts brought up to date in an existing Windows when wild-guest
 # connects (guest_upkeep), in this order, each by the $version line inside it.
-UPKEEP_SCRIPTS = ("opengl", "tune")
+UPKEEP_SCRIPTS = ("prompts", "opengl", "tune")
 TUNE_DIR = r"C:\Program Files\Wild OS"
 
 
@@ -771,6 +802,9 @@ class Service:
         """Guest scripts newer than the ones this Windows has had run in it
         when wild-guest connects, in the background, one after another.
 
+        prompts.ps1 puts Windows' administrator prompts beside the app that
+        asked, in every Windows mode (issue 92).
+
         tune.ps1 keeps Windows lean. Only a Windows that setup gave it to
         (state["tune"] set by Setup.finish) gets newer versions this way; a
         Windows set up before it existed is left as it is, because the
@@ -1076,6 +1110,7 @@ class Service:
         try:
             if virsh.state(self.domain) == "running":
                 virsh.suspend(self.domain)
+            self.usb.give_back_for_save()
             virsh.run("managedsave", self.domain, "--running", timeout=300)
         finally:
             self.saving = False
@@ -1491,7 +1526,10 @@ class Service:
         msg = {"type": "launch", "path": path, "args": list(args)}
         if cwd:
             msg["cwd"] = cwd
-        return self.guest_request(msg, defer)
+        # wild-guest holds a launch from the shared drive until the drive is
+        # there, up to a minute and a half on a slow PC; ending the wait
+        # sooner would have the agent ask again and start the program twice.
+        return self.guest_request(msg, defer, 100)
 
     def m_windows(self, sender):
         return json.dumps(self.all_windows())
@@ -1589,6 +1627,26 @@ class Service:
         self.life.update(time.monotonic(), connection=bool(is_open))
         self.schedule_idle()
         self.changed()
+        if not is_open:
+            dbusutil.in_thread(self.log_app_problems)
+
+    def log_app_problems(self):
+        """Puts Windows' own records of apps that hung or crashed into this
+        log as the connection closes, so a problem report shows them. The
+        first look goes back a day."""
+        if virsh.state(self.domain) != "running":
+            return
+        since = self.state.get("app_problems_since") or int((time.time() - 86400) * 1000)
+        try:
+            _, out, _ = qga.powershell(self.domain, app_problems_script(since + 1), timeout=60)
+        except Exception as e:
+            log("Windows' app problems:", e)
+            return
+        latest, lines = app_problem_lines(out)
+        for line in lines:
+            log(line)
+        if latest:
+            GLib.idle_add(lambda: (self.state.update(app_problems_since=latest), self.save_state(), False)[2])
 
     def m_credentials(self, sender, defer):
         """A new password for the Windows account, set through the guest

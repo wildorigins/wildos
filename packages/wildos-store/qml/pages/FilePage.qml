@@ -143,6 +143,7 @@ PageFlick {
                         text: {
                             switch (pkg.phase) {
                             case "auth": return qsTr("Waiting for the password");
+                            case "wait": return qsTr("Waiting for another install to finish");
                             case "download": return qsTr("Downloading");
                             case "install": return qsTr("Installing");
                             }
@@ -160,7 +161,7 @@ PageFlick {
                         color: UI.Style.tone(0.12)
                         clip: true
 
-                        readonly property bool known: pkg.progress >= 0 && pkg.phase !== "auth"
+                        readonly property bool known: pkg.progress >= 0 && pkg.phase !== "auth" && pkg.phase !== "wait"
                         property real shown: Math.max(0, pkg.progress)
                         Behavior on shown {
                             enabled: !UI.Style.reducedMotion

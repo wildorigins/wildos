@@ -1,0 +1,83 @@
+Description: The text cursor follows the word an input method is composing
+
+Input methods such as Vietnamese Telex hold a word as preedit text while
+it is typed. The cursor was drawn across the whole preedit, so a bar
+cursor stayed at the start of the word while the letters appeared after
+it. It is now drawn in one cell at the input method's cursor position,
+after the word unless the input method says otherwise.
+Author: Wild OS Developers <dev@wildos.io>
+
+--- a/lib/TerminalDisplay.h
++++ b/lib/TerminalDisplay.h
+@@ -847,6 +847,9 @@
+     {
+         std::wstring preeditString;
+         QRect previousPreeditRect;
++        // Where the input method puts its cursor in the preedit, in
++        // characters; -1 when it hides it.
++        int preeditCursor = 0;
+     };
+     InputMethodData _inputMethodData;
+ 
+--- a/lib/TerminalDisplay.cpp
++++ b/lib/TerminalDisplay.cpp
+@@ -1471,9 +1471,10 @@
+     if ( preeditLength == 0 )
+         return {};
+ 
++    // One cell more than the text, for the cursor after it.
+     return QRect(_leftMargin + _fontWidth*cursorPosition().x(),
+                  _topMargin + _fontHeight*cursorPosition().y(),
+-                 _fontWidth*preeditLength,
++                 _fontWidth*(preeditLength + 1),
+                  _fontHeight);
+ }
+ 
+@@ -1490,8 +1491,19 @@
+     const Character* style = &_image[loc(cursorPos.x(),cursorPos.y())];
+ 
+     drawBackground(painter,rect,background,true);
+-    drawCursor(painter,rect,foreground,background,invertColors);
+-    drawCharacters(painter,rect,_inputMethodData.preeditString,style,invertColors);
++    // The cursor goes where the input method says, usually after the text
++    // being composed, not before it: drawn across the whole rect it sat at
++    // the start of the word while the letters went on after it.
++    QRect textRect = rect;
++    textRect.setWidth(rect.width() - _fontWidth);
++    drawCharacters(painter,textRect,_inputMethodData.preeditString,style,invertColors);
++    if (_inputMethodData.preeditCursor >= 0)
++    {
++        const int column = string_width(_inputMethodData.preeditString.substr(0, _inputMethodData.preeditCursor));
++        bool invertCursor = false;
++        drawCursor(painter,QRect(rect.left() + _fontWidth*column, rect.top(), _fontWidth, rect.height()),
++                   foreground,background,invertCursor);
++    }
+ 
+     _inputMethodData.previousPreeditRect = rect;
+ }
+@@ -1797,7 +1809,9 @@
+ void TerminalDisplay::updateCursor()
+ {
+   QRect cursorRect = imageToWidget( QRect(cursorPosition(),QSize(1,1)) );
+-  update(cursorRect);
++  // While a word is being composed its cursor is drawn after the word, so
++  // that cell blinks too.
++  update(cursorRect | preeditRect());
+ }
+ 
+ void TerminalDisplay::blinkCursorEvent()
+@@ -2895,6 +2909,14 @@
+     emit keyPressedSignal(&keyEvent, false);
+ 
+     _inputMethodData.preeditString = event->preeditString().toStdWString();
++    _inputMethodData.preeditCursor = static_cast<int>(_inputMethodData.preeditString.size());
++    for (const QInputMethodEvent::Attribute &a : event->attributes())
++    {
++        if (a.type == QInputMethodEvent::Cursor)
++            _inputMethodData.preeditCursor = a.length > 0
++                ? static_cast<int>(event->preeditString().left(qMax(0, a.start)).toStdWString().size())
++                : -1;
++    }
+     update(preeditRect() | _inputMethodData.previousPreeditRect);
+ 
+     event->accept();

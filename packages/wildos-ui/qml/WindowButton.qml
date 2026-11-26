@@ -33,7 +33,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         topRightRadius: button.cornerRadius
-        color: !button.lit && !button.down ? "transparent"
+        color: !button.lit && !button.down ? Qt.alpha(button.isClose ? Style.closeHover : Style.surfaceHover, 0)
              : button.isClose ? (button.down ? Style.closePressed : Style.closeHover)
              : button.down ? Style.surfacePressed : Style.surfaceHover
         Behavior on color {

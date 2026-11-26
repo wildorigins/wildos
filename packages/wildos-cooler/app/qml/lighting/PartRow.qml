@@ -40,10 +40,14 @@ T.AbstractButton {
             y: row.divider ? 1 : 0
             width: parent.width
             height: parent.height - y
-            color: row.down ? UI.Style.surfacePressed : row.current ? UI.Style.surfaceSelected : row.hovered ? UI.Style.surfaceControl : "transparent"
+            // Fades in on hover and clears at once, so moving along a list
+            // never lights two items. It comes before the colour so it sees
+            // the change in hover first.
             Behavior on color {
+                enabled: row.hovered
                 ColorAnimation { duration: UI.Style.hoverDuration }
             }
+            color: row.down ? UI.Style.surfacePressed : row.current ? UI.Style.surfaceSelected : row.hovered ? UI.Style.surfaceControl : "transparent"
 
             Rectangle {
                 visible: row.current

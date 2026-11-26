@@ -97,6 +97,21 @@ if [ -n "$entry" ]; then
     chmod 0755 "$root/etc/grub.d/30_windows"
 fi
 
+# Another system on this PC (Windows, or another Linux with its own boot
+# loader) means the start-up manager shows at every start, with its
+# countdown to Wild OS, rather than only while Space is held: otherwise the
+# other system seems to have gone. Settings > System > Start-up disk can put
+# it back to Space only.
+if [ -x "$root/usr/lib/wildos/startup-manager" ] && [ -d /sys/firmware/efi ]; then
+    boot_uuid=$(findmnt -no UUID -T "$root/boot" || true)
+    esp_uuid=$(findmnt -no UUID "$root/boot/efi" || true)
+    if in_target /usr/lib/wildos/startup-manager --scan --boot-uuid "$boot_uuid" --esp-uuid "$esp_uuid" 2>/dev/null \
+            | grep -Eq '"kind":"(windows|linux)"'; then
+        in_target grub-editenv /boot/grub/grubenv set wsm_mode=always || true
+        echo "another system found: the start-up manager shows at every start"
+    fi
+fi
+
 # SDDM reads /etc/sddm.conf after sddm.conf.d, so anything there would
 # override first-boot setup's session (99-wildos-setup.conf). Wild OS sets
 # SDDM up through sddm.conf.d only.

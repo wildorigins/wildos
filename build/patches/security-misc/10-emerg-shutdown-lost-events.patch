@@ -1,0 +1,46 @@
+--- a/emerg-shutdown.c
++++ b/emerg-shutdown.c
+@@ -692,6 +692,18 @@
+     exit(1);
+   }
+ 
++  /*
++   * Wild OS: start-up replays an event for every device at once, and a
++   * desktop signing in adds more. The default receive buffer overflowed in
++   * those bursts and events were dropped; 16 MiB holds a start-up's worth.
++   */
++  {
++    int rcvbuf = 16 * 1024 * 1024;
++    if (setsockopt(ns, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) != 0) {
++      (void)setsockopt(ns, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
++    }
++  }
++
+   /* Keyboard event listener setup
+    * Heavily inspired by systemd/src/login/logind-button.c and
+    * kloak/src/main.c */
+@@ -865,6 +877,24 @@
+ 
+       len = recvmsg(ns, &msg, 0);
+       if (len == -1) {
++        /*
++         * Wild OS: ENOBUFS only means events were dropped in a burst, not
++         * that a drive went away, and powering off for it cut the power on
++         * laptops at start-up and sign-in. A dropped event could have been
++         * the removal itself, so the watched devices are looked for
++         * directly: /dev is in memory, so this works with the drive gone.
++         */
++        if (errno == ENOBUFS && !paranoid_mode) {
++          for (tdl_idx = 0; tdl_idx < target_dev_list_len; tdl_idx++) {
++            if (access(target_dev_name_raw_list[tdl_idx], F_OK) != 0) {
++              kill_system();
++            }
++          }
++          continue;
++        }
++        if (errno == EINTR || errno == EAGAIN) {
++          continue;
++        }
+         kill_system();
+       }
+ 

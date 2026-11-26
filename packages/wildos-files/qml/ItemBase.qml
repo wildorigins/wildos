@@ -6,7 +6,7 @@ import WildOS.UI as UI
 // selection rules, open on double click, the context menu, middle click
 // for a new tab, dragging out and dropping into folders.
 Item {
-    id: item
+    id: entry
 
     required property var view
     required property int index
@@ -68,54 +68,54 @@ Item {
         hoverEnabled: true
         preventStealing: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        enabled: !item.renaming
-        drag.target: item.isDrive ? null : proxy
+        enabled: !entry.renaming
+        drag.target: entry.isDrive ? null : proxy
         drag.threshold: 8
         property bool pendingSingle: false
 
         onPressed: m => {
-            item.view.keyboardUsed = false;
-            item.view.focusContent();
+            entry.view.keyboardUsed = false;
+            entry.view.focusContent();
             if (m.button === Qt.MiddleButton) {
                 return;
             }
             if (m.button === Qt.RightButton) {
-                if (!item.selected) {
-                    item.view.folder.select(item.index, 0);
+                if (!entry.selected) {
+                    entry.view.folder.select(entry.index, 0);
                 }
                 return;
             }
-            pendingSingle = item.selected && !(m.modifiers & (Qt.ControlModifier | Qt.ShiftModifier));
+            pendingSingle = entry.selected && !(m.modifiers & (Qt.ControlModifier | Qt.ShiftModifier));
             if (!pendingSingle) {
-                item.view.folder.select(item.index, m.modifiers);
+                entry.view.folder.select(entry.index, m.modifiers);
             }
             proxy.Drag.mimeData = {
-                "text/uri-list": item.view.folder.selectedUrls().map(u => u.toString()).join("\r\n")
+                "text/uri-list": entry.view.folder.selectedUrls().map(u => u.toString()).join("\r\n")
             };
-            const moving = item.view.folder.selectedCount;
+            const moving = entry.view.folder.selectedCount;
             proxy.Drag.imageSourceSize = moving > 1 ? Qt.size(64, 64) : Qt.size(48, 48);
             proxy.Drag.imageSource = moving > 1
-                ? "image://dragicon/" + moving + "/" + encodeURIComponent(String(UI.Style.accent)) + "/" + encodeURIComponent(String(UI.Style.textOnAccent)) + "/" + encodeURIComponent(item.iconName)
-                : "image://icon/" + encodeURIComponent(item.iconName);
+                ? "image://dragicon/" + moving + "/" + encodeURIComponent(String(UI.Style.accent)) + "/" + encodeURIComponent(String(UI.Style.textOnAccent)) + "/" + encodeURIComponent(entry.iconName)
+                : "image://icon/" + encodeURIComponent(entry.iconName);
         }
         onReleased: m => {
             if (pendingSingle && !drag.active && m.button === Qt.LeftButton) {
-                item.view.folder.select(item.index, 0);
+                entry.view.folder.select(entry.index, 0);
             }
             pendingSingle = false;
         }
         onClicked: m => {
             if (m.button === Qt.MiddleButton) {
-                if (item.isDir && !item.isDrive) {
-                    item.view.newTab(item.url, false);
+                if (entry.isDir && !entry.isDrive) {
+                    entry.view.newTab(entry.url, false);
                 }
             } else if (m.button === Qt.RightButton) {
-                item.view.openItemMenu(item, m.x, m.y);
+                entry.view.openItemMenu(entry, m.x, m.y);
             }
         }
         onDoubleClicked: m => {
             if (m.button === Qt.LeftButton && !(m.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))) {
-                item.view.folder.activate(item.index);
+                entry.view.folder.activate(entry.index);
             }
         }
     }
@@ -123,17 +123,17 @@ Item {
     // Drawn on the item's own edge, not outside it as on a button: the
     // items sit 2px apart and the list clips at its sides.
     UI.FocusRing {
-        visible: item.focusMarked
+        visible: entry.focusMarked
         anchors.margins: 0
-        targetRadius: item.corner - 4
+        targetRadius: entry.corner - 4
         z: 1
     }
 
     Loader {
         anchors.fill: parent
-        active: item.hovered && !mouse.pressed && !item.renaming && item.nameLabel !== null && item.nameLabel.truncated
+        active: entry.hovered && !mouse.pressed && !entry.renaming && entry.nameLabel !== null && entry.nameLabel.truncated
         sourceComponent: UI.Tooltip {
-            text: item.name
+            text: entry.name
             visible: true
         }
     }
@@ -141,8 +141,8 @@ Item {
     DropArea {
         id: drop
         anchors.fill: parent
-        enabled: item.isDir && !item.selected
+        enabled: entry.isDir && !entry.selected
         onEntered: dragEvent => dragEvent.accept(dragEvent.proposedAction)
-        onDropped: dropEvent => item.view.dropUrls(dropEvent, item.url)
+        onDropped: dropEvent => entry.view.dropUrls(dropEvent, entry.url)
     }
 }

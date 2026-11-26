@@ -67,9 +67,12 @@ PageScroll {
                 id: strengthRow
                 title: qsTr("Strength")
                 enabled: page.active
-                status: qsTr("%1%").arg(Math.round((page.neutral - page.temperature) / (page.neutral - page.warmest) * 100))
+                // The slider's own value while it is dragged, so the number
+                // follows the pointer instead of waiting for the saved one.
+                status: qsTr("%1%").arg(strength.pressed ? Math.round(strength.value) : Math.round((page.neutral - page.temperature) / (page.neutral - page.warmest) * 100))
 
                 UI.Slider {
+                    id: strength
                     anchors.verticalCenter: parent.verticalCenter
                     width: 240
                     accessibleName: qsTr("Strength")

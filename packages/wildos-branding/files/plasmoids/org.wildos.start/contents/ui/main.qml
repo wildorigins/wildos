@@ -123,6 +123,27 @@ PlasmoidItem {
         }
     }
 
+    // Folders of pinned apps, made by dropping one app on another as on
+    // Windows 11. Each is { id, name, apps }; the apps stay pinned, so the
+    // rest of Wild OS still sees them as pinned to Start.
+    property var pinFolders: {
+        try {
+            const list = JSON.parse(Plasmoid.configuration.pinFolders || "[]");
+            return Array.isArray(list) ? list.filter(f => f && Array.isArray(f.apps)) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // A folder left with one app is no folder any more, as on Windows.
+    function setPinFolders(list: var): void {
+        const kept = list.filter(f => f.apps.length > 1);
+        const text = JSON.stringify(kept);
+        if (text !== Plasmoid.configuration.pinFolders) {
+            Plasmoid.configuration.pinFolders = text;
+        }
+    }
+
     // Row 0 of the root model is the flat, sorted list of every app because
     // categories and the favourites placeholder are switched off above.
     property var appsModel: null

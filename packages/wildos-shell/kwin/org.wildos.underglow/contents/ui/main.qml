@@ -5,7 +5,8 @@ import org.wildos.shell as WildOS
 
 // The taskbar underglow (UnderglowOptions board): a 2px line along the top
 // edge of the docked taskbar with a soft glow around it, in the accent, a
-// custom colour or a drifting spectrum, as chosen in Settings.
+// custom colour or a drifting spectrum, as chosen in Settings. On the
+// floating taskbar each pill gets its own along its top edge (#89).
 //
 // KWin draws it, in a strip window of its own laid over the taskbar's top
 // edge. Breathing and flowing then repaint only that strip inside the
@@ -21,6 +22,9 @@ Item {
 
     // The docked taskbars, one per screen that has one.
     property var docks: []
+    // What to light: each docked bar whole, or each of a floating bar's
+    // pills, as {dock, pill, radius, key}.
+    property var strips: []
     // The ones a full screen window is stacked over, whose glow would
     // otherwise sit on top of the game or video.
     property var covered: []
@@ -53,10 +57,10 @@ Item {
         return !w.deleted && !w.minimized && !w.hidden && onCurrentDesktop(w);
     }
 
-    // Plasma's panel is a dock window. Docked, the taskbar runs the full
-    // width of its screen along the bottom edge. A floating taskbar is a
-    // taller window with the pills drawn inside it, and a panel at another
-    // edge is not the taskbar, so neither has a top edge to light.
+    // Plasma's panel is a dock window. The taskbar runs the full width of
+    // its screen along the bottom edge, docked or floating (a floating
+    // taskbar is a taller window with the pills drawn inside it). A panel at
+    // another edge is not the taskbar.
     function isDockedTaskbar(w: var): bool {
         if (!w || w.deleted || !w.dock || !w.output) {
             return false;
@@ -72,12 +76,48 @@ Item {
         return a.length === b.length && a.every((w, i) => w === b[i]);
     }
 
+    function updateStrips(): void {
+        const next = [];
+        for (const dock of docks) {
+            if (!WildOS.TaskbarStyle.floating) {
+                next.push({ dock: dock, pill: Qt.rect(0, 0, 0, 0), radius: 0, key: dock.internalId + "" });
+                continue;
+            }
+            const screen = dock.output.name;
+            const radius = WildOS.Underglow.pillRadius(screen);
+            for (const pill of WildOS.Underglow.pills(screen)) {
+                next.push({ dock: dock, pill: pill, radius: radius,
+                            key: [dock.internalId, pill.x, pill.y, pill.width, pill.height, radius].join() });
+            }
+        }
+        // Kept as they are unless something moved, so the glow windows are
+        // not remade on every refresh.
+        if (next.map(s => s.key).join("|") !== strips.map(s => s.key).join("|")) {
+            strips = next;
+        }
+    }
+
+    Connections {
+        target: WildOS.Underglow
+        function onPillsChanged(): void {
+            root.updateStrips();
+        }
+    }
+
+    Connections {
+        target: WildOS.TaskbarStyle
+        function onFloatingChanged(): void {
+            root.updateStrips();
+        }
+    }
+
     function refresh(): void {
         const windows = KWin.Workspace.stackingOrder;
         const found = windows.filter(isDockedTaskbar);
         if (!sameList(found, docks)) {
             docks = found;
         }
+        updateStrips();
         const fullScreen = windows.filter(w => w.fullScreen && onScreen(w));
         WildOS.Underglow.fullScreen = fullScreen.length > 0;
         const over = found.filter(d => fullScreen.some(f => f.output === d.output && f.stackingOrder > d.stackingOrder));
@@ -153,10 +193,12 @@ Item {
     }
 
     Instantiator {
-        model: root.docks
+        model: root.strips
         delegate: Glow {
-            dock: modelData
-            covered: root.covered.indexOf(modelData) >= 0
+            dock: modelData.dock
+            pill: modelData.pill
+            radius: modelData.radius
+            covered: root.covered.indexOf(modelData.dock) >= 0
             ready: root.ready
             title: root.glowTitle
         }
