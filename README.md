@@ -170,6 +170,9 @@ Windows mode doesn't imitate Windows. It runs a real, licensed copy of Windows 1
 > [!NOTE]
 > Windows mode needs a **Windows 11 Pro** licence. Most PCs sold with Pro have the key stored in the firmware, and Wild OS finds and uses it. **Windows 11 Home isn't supported yet**, because the feature that shows programs as separate windows is only in Pro. We're working on our own way to support Home.
 
+> [!IMPORTANT]
+> Windows mode is made for Wild OS installed on a physical PC, and we only recommend it there. Windows mode is a virtual machine itself, so with Wild OS inside VirtualBox, Hyper-V or VMware, Windows runs as a virtual machine inside another one. Processors only have hardware support for one level of virtualisation, so the two layers pass much of Windows' work between them in software: setup can take hours and Windows apps are very slow, however fast the PC. Setup warns when it finds itself in a virtual machine. Trying the rest of Wild OS in a virtual machine is fine.
+
 Everything else in Wild OS works on any PC, with or without a Windows licence.
 
 ### Compatibility
@@ -195,12 +198,12 @@ Tested something? [Open an issue](https://github.com/wildorigins/wildos/issues) 
 | Memory | 4 GB | 16 GB, especially for Windows mode |
 | Storage | 40 GB | 128 GB SSD or more |
 | Firmware | UEFI or legacy BIOS | UEFI with Secure Boot |
-| Windows mode | Windows 11 Pro licence, virtualisation on | A PC sold with Windows 11 Pro |
+| Windows mode | Windows 11 Pro licence, virtualisation on, Wild OS installed on the PC itself (not in a virtual machine) | A PC sold with Windows 11 Pro |
 
 ## Try it
 
 > [!WARNING]
-> Wild OS is still in testing. Try it from the USB stick or in a virtual machine before installing over anything you care about.
+> Wild OS is still in testing. Try it from the USB stick or in a virtual machine before installing over anything you care about. Windows mode needs Wild OS on the PC itself: in a virtual machine it is very slow.
 
 1. **Download** the ISO from [wildos.io/download/iso](https://wildos.io/download/iso) and its checksums from [wildos.io/download/checksums](https://wildos.io/download/checksums). The checksums are signed with the Wild OS key in [packages/wildos-base/files/apt/wildos-updates-keyring.asc](packages/wildos-base/files/apt/wildos-updates-keyring.asc).
 2. **Verify** the download.
